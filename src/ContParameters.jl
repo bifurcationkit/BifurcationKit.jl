@@ -89,7 +89,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     @assert tol_stability >= 0 "You must provide a positive tolerance for tol_stability"
     @assert dsmax >= abs(ds) >= dsmin >= 0 "You must provide a valid interval (ordered) for ds. You passed $(dsmax) >= $(abs(ds)) >= $(dsmin) with \ndsmax = $dsmax\nds    = $ds\ndsmin = $dsmin"
     @assert abs(ds) >= dsmin_bisection >= 0 "You must provide a valid interval for `ds` and `dsmin_bisection`"
-    @assert p_max >= p_min "You must provide a valid interval [p_min, p_max] which contains the initial parameter value p₀"
+    @assert p_max >= p_min "You must provide a valid interval [p_min, p_max]"
     @assert iseven(n_inversion) "The option `n_inversion` number must be even"
     @assert 0 <= detect_bifurcation <= 3 "The option `detect_bifurcation` must belong to {0,1,2,3}"
     @assert 0 <= detect_event <= 2 "The option `detect_event` must belong to {0,1,2}"
@@ -115,7 +115,7 @@ function init(contparams::ContinuationPar,
     if contparams.newton_options.eigsolver isa DefaultEig
         n = length(getu0(prob))
         if n <= 50
-            @set! contparams.nev = n
+            @reset contparams.nev = n
         end
     end
     contparams

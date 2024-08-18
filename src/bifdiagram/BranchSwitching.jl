@@ -8,7 +8,7 @@ This function is the analog of [`continuation`](@ref) when the first two points 
 function continuation(prob::AbstractBifurcationProblem,
                     x0::Tv, par0,     # first point on the branch
                     x1::Tv, p1::Real, # second point on the branch
-                    alg, lens::Lens,
+                    alg, lens::AllOpticTypes,
                     contParams::ContinuationPar;
                     bothside::Bool = false,
                     kwargs...) where Tv

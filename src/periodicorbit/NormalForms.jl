@@ -411,7 +411,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     J[end, end] = 0
     h₂ = J \ (Icoll * rhs)
     # h₂ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
-                # h₂ = Icoll * h₂;@set! h₂[end]=0
+                # h₂ = Icoll * h₂;@reset h₂[end]=0
     h₂ₛ = get_time_slices(coll, h₂)
                 # a cause de Icoll
                 # h₂ₛ[:, end] .= h₂ₛ[:,1]
@@ -477,9 +477,9 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     newpd = @set pd.nf = nf
     @debug "[PD-NF-Iooss]" a₁ c
     if real(c) < 0
-        @set! newpd.type = :SuperCritical
+        @reset newpd.type = :SuperCritical
     else
-        @set! newpd.type = :SubCritical
+        @reset newpd.type = :SubCritical
     end
     return PeriodDoublingPO(pd.x0, T, v₁, v₁★, newpd, coll, false)
 end
@@ -879,7 +879,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2
     ns_new = (@set ns.nf = nf)
-    @set! ns_new.type = real(d) < 0 ? :SuperCritical : :SubCritical
+    @reset ns_new.type = real(d) < 0 ? :SuperCritical : :SubCritical
     return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, ns_new, coll, false)
 end
 

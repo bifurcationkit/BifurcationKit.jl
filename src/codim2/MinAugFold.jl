@@ -113,7 +113,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
-    if has_hessian(𝐅) == false || 𝐅.usehessian == false
+    if 𝐅.usehessian == false || has_hessian(𝐅) == false
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
         u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
@@ -168,13 +168,13 @@ residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
 save_solution(::FoldMAProblem, x, p) = x
 
-jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
+jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
 
-jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
+jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)
@@ -299,7 +299,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 
 # Simplified call
 
-    continuation_fold(br::AbstractBranchResult, ind_fold::Int64, lens2::Lens, options_cont::ContinuationPar ; kwargs...)
+    continuation_fold(br::AbstractBranchResult, ind_fold::Int64, lens2::AllOpticTypes, options_cont::ContinuationPar ; kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Fold point in `br` that you want to continue.
 
@@ -313,22 +313,22 @@ where the parameters are as above except that you have to pass the branch `br` f
     In order to trigger the detection, pass `detect_event = 1 or 2` in `options_cont`.
 """
 function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
-                foldpointguess::BorderedArray{vectype, 𝒯}, par,
-                lens1::Lens, lens2::Lens,
-                eigenvec, eigenvec_ad,
-                options_cont::ContinuationPar ;
-                update_minaug_every_step = 1,
-                normC = norm,
+                           foldpointguess::BorderedArray{vectype, 𝒯}, par,
+                           lens1::AllOpticTypes, lens2::AllOpticTypes,
+                           eigenvec, eigenvec_ad,
+                           options_cont::ContinuationPar ;
+                           update_minaug_every_step = 1,
+                           normC = norm,
 
-                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
-                bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
+                           bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                           bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
 
-                jacobian_ma::Symbol = :autodiff,
-                compute_eigen_elements = false,
-                usehessian = true,
-                kind = FoldCont(),
-                record_from_solution = nothing,
-                kwargs...) where {𝒯, vectype}
+                           jacobian_ma::Symbol = :autodiff,
+                           compute_eigen_elements = false,
+                           usehessian = true,
+                           kind = FoldCont(),
+                           record_from_solution = nothing,
+                           kwargs...) where {𝒯, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
@@ -515,7 +515,7 @@ end
 
 function continuation_fold(prob,
                 br::AbstractBranchResult, ind_fold::Int,
-                lens2::Lens,
+                lens2::AllOpticTypes,
                 options_cont::ContinuationPar = br.contparams ;
                 alg = br.alg,
                 normC = norm,

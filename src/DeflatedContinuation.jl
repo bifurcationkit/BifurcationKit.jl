@@ -278,9 +278,9 @@ function deflatedContinuation(dcIter::DefContIterable,
                 fromDeflatedNewton = true)
         # we confirm that the residual for the non deflated problem is small
         # this should be the case unless the user pass "bad" options
-        @set! soln.converged = soln.converged && contIt.normC(residual(contIt.prob, soln.u, prob_df.params)) < optnewton.tol
+        @reset soln.converged = soln.converged && contIt.normC(residual(contIt.prob, soln.u, prob_df.params)) < optnewton.tol
         if minimum(contIt.normC(soln.u - rt) for rt in deflationOp.roots) < optnewton.tol
-            @set! soln.converged = false
+            @reset soln.converged = false
         end
         return soln
     end

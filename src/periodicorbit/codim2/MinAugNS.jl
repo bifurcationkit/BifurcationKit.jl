@@ -221,17 +221,17 @@ residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
 save_solution(::NSMAProblem, x ,p) = x
 
 # we add :hopfpb in order to use HopfEig
-jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
+jacobian(nspb::NSMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 
-jacobian(nspb::NSMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
+jacobian(nspb::NSMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
 
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
+jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
 
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
-                        lens1::Lens, lens2::Lens,
+                        lens1::AllOpticTypes, lens2::AllOpticTypes,
                         eigenvec, eigenvec_ad,
                         options_cont::ContinuationPar ;
                         normC = norm,

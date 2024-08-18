@@ -9,7 +9,7 @@ Define a continuation iterator. This allows for example to do
 ```
 iter = ContIterable(prob, alg, opts; kwargs...)
 for state in iter
-	println("Continuation step = ", state.step)
+    println("Continuation step = ", state.step)
 end
 ```
 
@@ -635,7 +635,7 @@ function continuation(prob::AbstractBifurcationProblem,
         # are changed inplace like in Min. Aug. problems or 
         # periodic orbits computation
         itbwd = deepcopy(itfwd)
-        @set! itbwd.contparams.ds = -contparams.ds
+        @reset itbwd.contparams.ds = -contparams.ds
 
         resfwd = continuation(itfwd)
         resbwd = continuation(itbwd)

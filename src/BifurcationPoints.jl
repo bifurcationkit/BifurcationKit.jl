@@ -157,7 +157,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
         You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
         to find the zeros of the normal form polynomials.
         """
-        mutable struct $op{Tv, Tτ, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: $opt
+        mutable struct $op{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
 
@@ -287,7 +287,7 @@ You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zero
 
 - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
 """
-mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: Lens, Tevl, Tevr, Tnf} <: AbstractBranchPoint
+mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: AbstractBranchPoint
     "Bifurcation point"
     x0::Tv
 
@@ -336,7 +336,7 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct Hopf{Tv, Tτ, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
+mutable struct Hopf{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
     "Hopf point"
     x0::Tv
 
@@ -395,7 +395,7 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp::NeimarkSacker, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct NeimarkSacker{Tv, Tτ, T, Tω, Tpar, Tlens <: Lens, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
+mutable struct NeimarkSacker{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
     "Neimark-Sacker point"
     x0::Tv
 

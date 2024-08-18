@@ -341,7 +341,7 @@ re_make(prob; u0 = new_u0)
 function re_make(prob::AbstractBifurcationProblem;
                 u0 = prob.u0,
                 params = prob.params,
-                lens::Lens = prob.lens,
+                lens::AllOpticTypes = prob.lens,
                 record_from_solution = prob.recordFromSolution,
                 plot_solution = prob.plotSolution,
                 J = missing,
@@ -350,17 +350,17 @@ function re_make(prob::AbstractBifurcationProblem;
                 d3F = missing)
     prob2 = setproperties(prob; u0 = u0, params = params, lens = lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
     if ~ismissing(J)
-        @set! prob2.VF.J = J
+        @reset prob2.VF.J = J
     end
     if ~ismissing(Jᵗ)
-        @set! prob2.VF.Jᵗ = Jᵗ
+        @reset prob2.VF.Jᵗ = Jᵗ
     end
     if ~ismissing(d2F)
-        @set! prob2.VF.d2F = d2F
+        @reset prob2.VF.d2F = d2F
     end
 
     if ~ismissing(d3F)
-        @set! prob2.VF.d3F = d3F
+        @reset prob2.VF.d3F = d3F
     end
 
     return prob2

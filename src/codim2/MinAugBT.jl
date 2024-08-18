@@ -8,7 +8,7 @@ Structure to encode Bogdanov-Takens functional based on a Minimally Augmented fo
 
 $(FIELDS)
 """
-mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Sbdblock <: AbstractBorderedLinearSolver, Tlens <: Lens} <: AbstractProblemMinimallyAugmented{Tprob}
+mutable struct BTProblemMinimallyAugmented{Tprob <: AbstractBifurcationProblem, vectype, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Sbdblock <: AbstractBorderedLinearSolver, Tlens} <: AbstractProblemMinimallyAugmented{Tprob}
     "Functional F(x, p) - vector field - with all derivatives"
     prob_vf::Tprob
     "close to null vector of Jᵗ"
@@ -45,7 +45,7 @@ jad(pb::BTProblemMinimallyAugmented, args...) = jad(pb.prob_vf, args...)
 # constructor
 function BTProblemMinimallyAugmented(prob, a, b,
                             linsolve::AbstractLinearSolver,
-                            lens2::Lens;
+                            lens2::AllOpticTypes;
                             linbdsolver = MatrixBLS(),
                             linbdsolverAdjoint = linbdsolver,
                             linbdsolverBlock = linbdsolver,

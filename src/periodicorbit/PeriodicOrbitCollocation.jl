@@ -375,7 +375,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             ϕ = zeros(n_unknows),
                             xπ = zeros(n_unknows),
                             cache = POCollCache(eltype(pb), N, m))
-
+    
     # find best period candidate
     if optimal_period
         _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
@@ -927,7 +927,7 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
     end
 
     if options.linsolver isa COPLS
-        @set! options.linsolver = COPLS(probPO)
+        @reset options.linsolver = COPLS(probPO)
     end
 
     prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)

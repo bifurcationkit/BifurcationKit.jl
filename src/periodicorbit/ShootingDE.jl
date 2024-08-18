@@ -12,7 +12,7 @@ get_vector_field(pb::EnsembleProblem) = get_vector_field(pb.prob)
 ####################################################################################################
 ###                                     STANDARD SHOOTING
 ####################################################################################################
-_sync_jacobian!(sh) = @set! sh.flow.jacobian = sh.jacobian
+_sync_jacobian!(sh) = @reset sh.flow.jacobian = sh.jacobian
 
 # this constructor takes into account a parameter passed to the vector field
 # if M = 1, we disable parallel processing

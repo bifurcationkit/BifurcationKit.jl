@@ -142,7 +142,7 @@ end
 
 function continuation(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
-                    lens2::Lens,
+                    lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     start_with_eigen = false,
                     detect_codim2_bifurcation::Int = 0,
@@ -172,12 +172,12 @@ Continuation of curve of fold bifurcations of periodic orbits computed using sho
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the fold point
-- `lens2::Lens` second parameter axis
+- `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
 function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
-                    lens2::Lens,
+                    lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
@@ -218,12 +218,12 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the PD point
-- `lens2::Lens` second parameter axis
+- `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
 function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
-                    lens2::Lens,
+                    lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
                     start_with_eigen = false,
@@ -285,12 +285,12 @@ Continuation of curve of Neimark-Sacker bifurcations of periodic orbits computed
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the NS point
-- `lens2::Lens` second parameter axis
+- `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
 function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
-                    lens2::Lens,
+                    lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = br.alg,
                     start_with_eigen = false,

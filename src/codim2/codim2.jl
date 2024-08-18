@@ -170,7 +170,7 @@ function newton(br::AbstractBranchResult,
                 normN = norm,
                 options = br.contparams.newton_options,
                 start_with_eigen = false,
-                lens2::Lens = (@lens _),
+                lens2::AllOpticTypes = (@optic _),
                 kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
@@ -221,7 +221,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 """
 function continuation(br::AbstractBranchResult,
             ind_bif,
-            lens2::Lens,
+            lens2::AllOpticTypes,
             options_cont::ContinuationPar = br.contparams ;
             prob = br.prob,
             start_with_eigen = false,
@@ -323,9 +323,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         ζstar = pred.EigenVecAd(ds)
 
         # put back original options
-        @set! optionsCont.newton_options.eigsolver =
+        @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
-        @set! optionsCont.newton_options.linsolver = prob_ma.linsolver
+        @reset optionsCont.newton_options.linsolver = prob_ma.linsolver
 
         branch = continuation_hopf(prob_vf, alg,
             hopfpt, params,
@@ -356,9 +356,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         ζstar = pred.EigenVecAd(ds) |> real
 
         # put back original options
-        @set! optionsCont.newton_options.eigsolver =
+        @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
-        @set! optionsCont.newton_options.linsolver = prob_ma.linsolver
+        @reset optionsCont.newton_options.linsolver = prob_ma.linsolver
 
         branch = continuation_fold(prob_vf, alg,
             foldpt, params,
@@ -391,7 +391,7 @@ function correct_bifurcation(contres::ContResult)
     end
     for (ind, bp) in pairs(contres.specialpoint)
         if bp.type in keys(conversion)
-            @set! contres.specialpoint[ind].type = conversion[bp.type]
+            @reset contres.specialpoint[ind].type = conversion[bp.type]
         end
     end
     return contres

@@ -124,7 +124,7 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     # σx = zeros(Complex{T}, length(x))
     σx = similar(x, Complex{𝒯})
 
-    if has_hessian(𝐇) == false || 𝐇.usehessian == false
+    if 𝐇.usehessian == false || has_hessian(𝐇) == false
         cw = conj(w)
         vr = real(v); vi = imag(v)
         u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
@@ -174,13 +174,13 @@ residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
 save_solution(::HopfMAProblem, x ,p) = x
 
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
-jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
+jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
+jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{Lens, Nothing}, Tplot, Trecord} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)
@@ -301,7 +301,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 
 # Simplified call:
 
-    continuation_hopf(br::AbstractBranchResult, ind_hopf::Int, lens2::Lens, options_cont::ContinuationPar ;  kwargs...)
+    continuation_hopf(br::AbstractBranchResult, ind_hopf::Int, lens2::AllOpticTypes, options_cont::ContinuationPar ;  kwargs...)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` that you want to refine.
 
@@ -316,7 +316,7 @@ where the parameters are as above except that you have to pass the branch `br` f
 """
 function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 hopfpointguess::BorderedArray{vectype, Tb}, par,
-                lens1::Lens, lens2::Lens,
+                lens1::AllOpticTypes, lens2::AllOpticTypes,
                 eigenvec, eigenvec_ad,
                 options_cont::ContinuationPar ;
                 update_minaug_every_step = 1,
@@ -515,7 +515,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
         # careful here, we need to adjust the tolerance for stability to avoid
         # spurious ZH or HH bifurcations
-        @set! opt_hopf_cont.tol_stability = max(10opt_hopf_cont.newton_options.tol, opt_hopf_cont.tol_stability)
+        @reset opt_hopf_cont.tol_stability = max(10opt_hopf_cont.newton_options.tol, opt_hopf_cont.tol_stability)
     else
         if isnothing(event_user)
             event = ContinuousEvent(2, test_bt_gh, false, ("bt", "gh"), threshBT)
@@ -543,7 +543,7 @@ end
 
 function continuation_hopf(prob,
                         br::AbstractBranchResult, ind_hopf::Int64,
-                        lens2::Lens,
+                        lens2::AllOpticTypes,
                         options_cont::ContinuationPar = br.contparams;
                         alg = br.alg,
                         normC = norm,

@@ -64,11 +64,11 @@ function update(alg0::MoorePenrose,
     alg = @set alg0.tangent = tgt
 
     # for direct methods, we need a direct solver
-    if ~(alg.method == iterative) || alg.ls isa AbstractBorderedLinearSolver
-        @set! alg.ls = DefaultLS()
+    if alg.method != iterative || alg.ls isa AbstractBorderedLinearSolver
+        @reset alg.ls = DefaultLS()
     end
 
-    if isnothing(linearAlgo) && ~(alg.method == iterative)
+    if isnothing(linearAlgo) && alg.method != iterative
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
             return @set alg.ls.solver = contParams.newton_options.linsolver
         end

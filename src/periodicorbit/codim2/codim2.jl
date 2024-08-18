@@ -131,7 +131,7 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     end
     for (ind, bp) in pairs(contres.specialpoint)
         if bp.type in keys(conversion)
-            @set! contres.specialpoint[ind].type = conversion[bp.type]
+            @reset contres.specialpoint[ind].type = conversion[bp.type]
         end
     end
     return contres
@@ -216,7 +216,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
     nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)
     _contParams = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
-    @set! _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
+    @reset _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
     return _continuation(nf, br, _contParams, probPO; kwargs...)
 end
 
@@ -426,7 +426,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
         p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-        @set! contParams.newton_options.eigsolver = FloquetColl()
+        @reset contParams.newton_options.eigsolver = FloquetColl()
     else
         @debug "Shooting, get borders"
         J = jacobian_neimark_sacker(pbwrap, orbitguess, getparams(pbwrap), ωₙₛ)
@@ -556,7 +556,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
         p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-        @set! contParams.newton_options.eigsolver = FloquetColl()
+        @reset contParams.newton_options.eigsolver = FloquetColl()
     else
         @debug "Shooting, get borders"
         J = jacobian_neimark_sacker(pbwrap, orbitguess, getparams(pbwrap), ωₙₛ)

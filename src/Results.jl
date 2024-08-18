@@ -309,12 +309,12 @@ function _reverse(br0::ContResult)
     br = deepcopy(br0)
     nb = length(br.branch)
     if ~isnothing(br.branch)
-        @set! br.branch =
+        @reset br.branch =
             StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
     end
 
     if ~isnothing(br.specialpoint)
-        @set! br.specialpoint =
+        @reset br.specialpoint =
             [setproperties(pt;
                 step = nb - pt.step - 1,
                 idx = nb - pt.idx + 1,
@@ -322,12 +322,12 @@ function _reverse(br0::ContResult)
     end
 
     if ~isnothing(br.eig)
-        @set! br.eig =
+        @reset br.eig =
             [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
     end
 
     if ~isnothing(br.sol)
-        @set! br.sol =
+        @reset br.sol =
             [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
     end
     return br

@@ -213,7 +213,7 @@ $DocStrjacobianPOSh
 function newton(prob::AbstractShootingProblem,
                 orbitguess,
                 options::NewtonPar;
-                lens::Union{Lens, Nothing} = nothing,
+                lens::Union{AllOpticTypes, Nothing} = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
     jac = _build_jacobian(prob, orbitguess, getparams(prob); δ = δ)
@@ -240,7 +240,7 @@ function newton(prob::AbstractShootingProblem,
                 orbitguess::vectype,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, S, E};
-                lens::Union{Lens, Nothing} = nothing,
+                lens::Union{AllOpticTypes, Nothing} = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _build_jacobian(prob, orbitguess, getparams(prob))
@@ -552,10 +552,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # hence the results / parameters in br are kept intact
     if pb isa AbstractShootingProblem
         if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
-            @set! _contParams.newton_options.linsolver.N = length(orbitguess)
+            @reset _contParams.newton_options.linsolver.N = length(orbitguess)
         elseif _contParams.newton_options.linsolver isa FloquetWrapperLS
             if _contParams.newton_options.linsolver.solver isa GMRESIterativeSolvers
-                @set! _contParams.newton_options.linsolver.solver.N = length(orbitguess)
+                @reset _contParams.newton_options.linsolver.solver.N = length(orbitguess)
             end
         end
     end

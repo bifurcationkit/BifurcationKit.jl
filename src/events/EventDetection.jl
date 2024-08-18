@@ -143,7 +143,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         end
 
         # update the interval containing the event
-        state.step > 0 && (@set! interval[indinterval] = getp(state))
+        state.step > 0 && (@reset interval[indinterval] = getp(state))
 
         # we call the finalizer
         state.stopcontinuation = ~iter.finalise_solution(state.z, state.τ, state.step, nothing; state = state, bisection = true)
@@ -340,7 +340,7 @@ function get_event_type(event::PairOfEvents,
         evc = get_event_type(event.eventC, iter, state, verbosity, status, interval, 1:nC; typeE = "userC")
         evd = get_event_type(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
         @warn "More than one Event was detected $(evc[2].type)-$(evd[2].type). We call the continuous event to save data in the branch."
-        @set! evc[2].type = Symbol(evc[2].type, evd[2].type)
+        @reset evc[2].type = Symbol(evc[2].type, evd[2].type)
         return evc
     end
     if is_event_crossed(event.eventC, iter, state, 1:nC)

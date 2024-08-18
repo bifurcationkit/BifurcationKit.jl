@@ -228,9 +228,9 @@ struct SetOfEvents{Tc <: Tuple, Td <: Tuple}  <: AbstractEvent
     eventD::Td
 end
 
-SetOfEvents(callback::AbstractDiscreteEvent) = SetOfEvents((),(callback,))
-SetOfEvents(callback::AbstractContinuousEvent) = SetOfEvents((callback,),())
-SetOfEvents() = SetOfEvents((),())
+SetOfEvents(callback::AbstractDiscreteEvent) = SetOfEvents((), (callback,))
+SetOfEvents(callback::AbstractContinuousEvent) = SetOfEvents((callback,), ())
+SetOfEvents() = SetOfEvents((), ())
 SetOfEvents(cb::Nothing) = SetOfEvents()
 
 # For Varargs, use recursion to make it type-stable
@@ -256,7 +256,8 @@ function (eve::SetOfEvents)(iter, state)
     return (outc..., outd...)
 end
 
-initialize(eve::SetOfEvents, T) = map(x->initialize(x,T),eve.eventC)..., map(x->initialize(x,T),eve.eventD)...
+initialize(eve::SetOfEvents, T) = map(x -> initialize(x,T), eve.eventC)..., 
+                                  map(x -> initialize(x,T), eve.eventD)...
 
 # is x actually an event, we just need to test the continuous events
 function isonevent(eves::SetOfEvents, eValues)
