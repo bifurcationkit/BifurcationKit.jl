@@ -92,7 +92,7 @@ end
 n = 500
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l); 
+prob = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); 
         J = Jbru_sp, 
         # plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), # for Plots.jl
         # plot_solution = (ax, x, p) -> plotsol(ax, x), # For Makie.jl
@@ -113,13 +113,13 @@ hopfpt = get_normal_form(br, 1; verbose = true)
 ind_hopf = 1
 optnew = opts_br_eq.newton_options
 hopfpoint = @time newton(br, ind_hopf;
-                options = optnew, 
+                options = (@set optnew.verbose=true), 
                 normN = norminf);
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
 if 1==1
     br_hopf = @time continuation(
-        br, ind_hopf, (@lens _.β),
+        br, ind_hopf, (@optic _.β),
         ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 10.5, p_min = 5.1, detect_bifurcation = 0, newton_options = optnew);
         update_minaug_every_step = 1,
         start_with_eigen = true,

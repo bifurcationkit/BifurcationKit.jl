@@ -71,7 +71,7 @@ par = (p1 = -3., p2=-3., k=3)
 
 opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 1000, p_min = -3., p_max = 4.0, save_sol_every_step = 1, newton_options = NewtonPar(tol = 1e-10, verbose = false, max_iterations = 5), detect_bifurcation = 3, detect_event = 0, n_inversion = 8, dsmin_bisection = 1e-9, max_bisection_steps = 15, detect_fold=false, plot_every_step = 10)
 
-prob = BK.BifurcationProblem(Feve, -2ones(2), par, (@lens _.p1);
+prob = BK.BifurcationProblem(Feve, -2ones(2), par, (@optic _.p1);
         record_from_solution = (x, p) -> x[1])
 
 br0 = continuation(prob, PALC(), opts0;

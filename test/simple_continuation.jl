@@ -21,7 +21,7 @@ BK._reverse!(nothing)
 BK._append!(rand(2),rand(2))
 BK._append!(rand(2),nothing)
 
-BK.Fold(rand(2), nothing, 0.1, 0.1, (@lens _.p), rand(2), rand(2),1., :fold) |> BK.type
+BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2),1., :fold) |> BK.type
 BK._print_line(1, 1, (1,1))
 BK._print_line(1, nothing, (1,1))
 ####################################################################################################
@@ -47,7 +47,7 @@ BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
 
-prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
+prob = BK.BifurcationProblem(F, x0, -1.5, (@optic _); J = Jac_m)
 BK.isinplace(prob)
 BK._getvectortype(prob)
 show(prob)
@@ -109,7 +109,7 @@ BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
 BK.getparams(br1)
 
-@set! prob.recordFromSolution = (x,p) -> norm(x,2)
+@reset prob.recordFromSolution = (x,p) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
 
 # test for different norms
@@ -148,9 +148,9 @@ BK.empty!(Multiple(copy(x0), 0.01, 13))
 
 ## same but with failed prediction
 opts9_1 = ContinuationPar(opts9, dsmax = 0.2, max_steps = 125, ds = 0.1)
-@set! opts9_1.newton_options.tol = 1e-14
-@set! opts9_1.newton_options.verbose = false
-@set! opts9_1.newton_options.max_iterations = 3
+@reset opts9_1.newton_options.tol = 1e-14
+@reset opts9_1.newton_options.verbose = false
+@reset opts9_1.newton_options.max_iterations = 3
 br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
 @test length(br9_1) == 126
 BK.empty!(Multiple(copy(x0), 0.01, 13))
@@ -228,9 +228,9 @@ for talgo in (Bordered(), Secant())
     @test length(brbd) > 2
 end
 prob.u0 .= ones(N)*3
-@set! prob.params = -3.
+@reset prob.params = -3.
 brbd = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2))
-@set! prob.params = -3.2
+@reset prob.params = -3.2
 brbd  = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2), verbosity = 0)
 @test isnothing(brbd)
 ####################################################################################################
@@ -238,7 +238,7 @@ brbd  = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2), verbosity 
 opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds = 0.001, max_steps = 140, p_min = -3., newton_options = NewtonPar(verbose = false), detect_bifurcation = 3)
 x0 = 0.01 * ones(2)
 
-prob = BK.BifurcationProblem(F, x0, -1.5, (@lens _); J = Jac_m)
+prob = BK.BifurcationProblem(F, x0, -1.5, (@optic _); J = Jac_m)
 x0 = newton(prob, opts.newton_options)
 x1 = newton((@set prob.params = -1.45), opts.newton_options)
 
@@ -246,10 +246,10 @@ br0 = continuation(prob, PALC(), opts, verbosity=3)
 BK.get_eigenelements(br0, br0.specialpoint[1])
 BK.detect_loop(br0, x0.u, -1.45)
 
-@set! prob.params = -1.5
+@reset prob.params = -1.5
 br1 = continuation(prob, PALC(), ContinuationPar(opts; ds = -0.001))
 
-br2 = continuation(prob, x0.u, -1.5, x1.u, -1.45, PALC(tangent = Bordered()), (@lens _), opts)
+br2 = continuation(prob, x0.u, -1.5, x1.u, -1.45, PALC(tangent = Bordered()), (@optic _), opts)
 ####################################################################################################
 # test for computing both sides
 br3 = continuation(prob, PALC(tangent = Bordered()), opts; bothside = true)
@@ -259,7 +259,7 @@ BK._perturbSolution(1, 0, 1)
 BK._acceptSolution(1, 0)
 BK.DCState(rand(2))
 
-prob = BK.BifurcationProblem(F, [0.], 0.5, (@lens _); J = Jac_m)
+prob = BK.BifurcationProblem(F, [0.], 0.5, (@optic _); J = Jac_m)
 alg = BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.]]),
     perturb_solution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
     )
@@ -283,7 +283,7 @@ brdc[1]
 length(brdc)
 
 F2(u,p) = @. -u * (p + u * (2-5u)) * (p - .15 - u * (2+20u))
-prob2 = BK.BifurcationProblem(F2, [0.], 0.3, (@lens _))
+prob2 = BK.BifurcationProblem(F2, [0.], 0.3, (@optic _))
 brdc = continuation(prob2,
     BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.], [0.05]]); max_branches = 6),
     ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 15), plot_every_step = 40, detect_bifurcation = 3, p_min = -0.8);

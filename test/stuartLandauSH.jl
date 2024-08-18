@@ -31,7 +31,7 @@ par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
 par_hopf = (@set par_sl.r = 0.1)
 u0 = [.001, .001]
 
-prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@lens _.r))
+prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@optic _.r))
 
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
@@ -79,7 +79,7 @@ resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
 ####################################################################################################
 # test shooting interface M = 1
 @info "Single Shooting"
-_pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@lens _.r))
+_pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@optic _.r))
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
 @test _pb.flow.prob.p == _pb.par
@@ -121,7 +121,7 @@ _sol(0.1)
 ####################################################################################################
 # test automatic branch switching
 @info "Single Shooting aBS"
-_probsh = ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r))
+_probsh = ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r))
 br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0)
 
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
@@ -144,7 +144,7 @@ br_pok2 = continuation(br,1, opts_po_contMF, _probsh; normC = norminf)
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # case with 2 sections
-br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = false), ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@lens _.r)); normC = norminf)
+br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = false), ShootingProblem(2, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r)); normC = norminf)
 @test br_pok2_s2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2_s2.prob isa BK.WrapPOSh
 @test br_pok2_s2.period[1] ≈ 2pi rtol = 1e-7
@@ -222,7 +222,7 @@ BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
 probPsh = PoincareShootingProblem(prob, Rodas4(),
         # probMono, Rodas4(autodiff=false),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
-        lens = (@lens _.r))
+        lens = (@optic _.r))
 
 probPsh(outpo.u, par_hopf)
 probPsh(outpo.u, par_hopf, outpo.u)
@@ -250,9 +250,9 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, lens = (@lens _.r), jacobian = BK.AutoDiffDenseAnalytical())
+probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
 # version with analytical jacobian
-probPsh2 = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0, lens = (@lens _.r), jacobian = BK.AutoDiffDenseAnalytical())
+probPsh2 = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
 
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finite_differences( x-> probPsh(x, par_hopf), initpo_bar)
@@ -285,7 +285,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max =
 # centers = [zeros(2), zeros(2), zeros(2)]
 # initpo = [[0., 0.4], [0, -.3], [0.3, 0]]
 #
-# probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, lens = (@lens _.r), jacobian = :autodiffDenseAnalytical)
+# probPsh = PoincareShootingProblem(prob, KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, lens = (@optic _.r), jacobian = :autodiffDenseAnalytical)
 #
 # initpo_bar = reduce(vcat, [BK.R(probPsh, initpo[ii], ii) for ii in eachindex(centers)])
 # # same with projection function
@@ -320,14 +320,14 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max =
 @info "Multiple Poincaré Shooting aBS"
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @lens _.r); normC = norminf)
+br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
 @set! opts_po_cont.newton_options.eigsolver.dim = 20
 @set! opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
-br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @lens _.r); normC = norminf)
+br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @optic _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 

@@ -18,7 +18,7 @@ end
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
-prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2); record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
+prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2); record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
 
@@ -68,7 +68,7 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), 
 @test BK.converged(sn) && sn.itlineartot == 8
 
 for eigen_start in (true, false)
-    sn_br = continuation(br, 3, (@lens _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, jacobian_ma = :minaug)
+    sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, jacobian_ma = :minaug)
     @test sn_br.kind isa BK.FoldCont
     @test sn_br.specialpoint[1].type == :bt
     @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
@@ -77,7 +77,7 @@ for eigen_start in (true, false)
 
     # we test the jacobian and problem update
     par_sn = BK.setparam(br, sn_br.sol[end].x.p)
-    par_sn = set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
+    par_sn = BK.set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
     _J = BK.jacobian(prob, sn_br.sol[end].x.u, par_sn)
     _eigvals, eigvec, = eigen(_J)
     ind = argmin(abs.(_eigvals))
@@ -112,7 +112,7 @@ hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = 
 # we check that we truly have a bifurcation point.
 pb = hp.prob.prob
 ω = hp.u.p[2]
-par_hp = set(BK.getparams(br), BK.getlens(br), hp.u.p[1])
+par_hp = BK.set(BK.getparams(br), BK.getlens(br), hp.u.p[1])
 _J = pb.prob_vf.VF.J(hp.u.u, par_hp)
 _eigvals, eigvec, = eigen(_J)
 ind = argmin(abs.(_eigvals .- Complex(0, ω)))
@@ -132,7 +132,7 @@ hp = newton(br, 2;
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
 for eigen_start in (true, false)
-    hp_br = continuation(br, 2, (@lens _.k), ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, verbosity=0, plot=false)
+    hp_br = continuation(br, 2, (@optic _.k), ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, verbosity=0, plot=false)
     @test hp_br.kind isa BK.HopfCont
     @test hp_br.specialpoint[1].type == :gh
     @test hp_br.specialpoint[2].type == :nd

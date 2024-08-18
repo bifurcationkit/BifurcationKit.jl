@@ -112,7 +112,7 @@ par = (l = -0.1, ν = 1.3, L = L)
 
 @time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@lens _.l) ;
+prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@optic _.l) ;
     J =  J_shfft,
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
     record_from_solution = (x, p) -> norm(x))

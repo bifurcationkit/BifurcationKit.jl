@@ -8,7 +8,7 @@ Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2],
 opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = false)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 100, n_inversion = 4, tol_bisection_eigenvalue = 1e-8, dsmin_bisection = 1e-9)
 
-prob = BK.BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@lens _.μ))
+prob = BK.BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
 br = continuation(prob, PALC(), opts_br; normC = norminf, verbosity = 0)
 
 @test br.specialpoint[1].interval[1] ≈ -2.136344567951428e-5
@@ -71,7 +71,7 @@ bdiag = bifurcationdiagram(prob, PALC(), 2,
 # plot(bdiag)
 
 # same from the non-trivial branch
-prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@lens _.μ))
+prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
 br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf, verbosity = 0)
 bp = BK.get_normal_form(br, 1; verbose=false)
 nf = bp.nf
@@ -126,14 +126,14 @@ function Fbp2d(x, p)
              -x[3]]
 end
 
-prob2d = BK.BifurcationProblem(Fbp2d, [0.01, 0.01, 0.01], (μ = -0.2, ν = 0., α = -1), (@lens _.μ))
+prob2d = BK.BifurcationProblem(Fbp2d, [0.01, 0.01, 0.01], (μ = -0.2, ν = 0., α = -1), (@optic _.μ))
 
 let
-    prob2d = BK.BifurcationProblem(Fbp2d, [0.01, 0.01, 0.01], (μ = -0.2, ν = 0., α = -1), (@lens _.μ))
+    prob2d = BK.BifurcationProblem(Fbp2d, [0.01, 0.01, 0.01], (μ = -0.2, ν = 0., α = -1), (@optic _.μ))
     prob2d.VF.J(rand(3), prob2d.params)
 
     for α in (-1,1)
-        @set! prob2d.params.α = α
+        @reset prob2d.params.α = α
         # @infiltratex
         br = continuation(prob2d, PALC(), setproperties(opts_br; n_inversion = 2);
             plot = false, verbosity = 0, normC = norminf)
@@ -171,7 +171,7 @@ bp2d = BK.get_normal_form(br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
 ####################################################################################################
 # vector field to test nearby secondary bifurcations
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
-prob = BK.BifurcationProblem(FbpSecBif, [0.0], -0.2,  (@lens _))
+prob = BK.BifurcationProblem(FbpSecBif, [0.0], -0.2,  (@optic _))
 
 br_snd1 = BK.continuation(prob, PALC(),
     setproperties(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation=3); plot = false, normC = norminf)
@@ -210,7 +210,7 @@ function FbpD6(x, p)
              p.μ * x[2] + (p.a * x[1] * x[3] - p.b * x[2]^3 - p.c * (x[3]^2 + x[1]^2) * x[2]),
              p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c * (x[2]^2 + x[1]^2) * x[3])]
 end
-probD6 = BK.BifurcationProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@lens _.μ),)
+probD6 = BK.BifurcationProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@optic _.μ),)
 br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds = 0.001); normC = norminf)
 
 # plot(br;  plotfold = false)
@@ -258,7 +258,7 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
 par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
-probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@lens _.r))
+probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
 # detect hopf bifurcation
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, newton_options = (@set opt_newton.verbose = false), max_steps = 100)
@@ -290,10 +290,10 @@ show(hp)
 # test for the Cusp normal form
 Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
 par = (β1 = 0.0, β2 = -0.01, c = 3.)
-prob = BK.BifurcationProblem(Fcusp, [0.01], par, (@lens _.β1))
+prob = BK.BifurcationProblem(Fcusp, [0.01], par, (@optic _.β1))
 br = continuation(prob, PALC(), opts_br;)
 
-sn_codim2 = continuation(br, 1, (@lens _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
     update_minaug_every_step = 1,
     bdlinsolver = MatrixBLS()
     )
@@ -307,13 +307,13 @@ BK.type(cuspnf)
 # test for the Bogdanov-Takens normal form
 Fbt(x, p) = [x[2], p.β1 + p.β2 * x[2] + p.a * x[1]^2 + p.b * x[1] * x[2]]
 par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
-prob  = BK.BifurcationProblem(Fbt, [0.01, 0.01], par, (@lens _.β1))
+prob  = BK.BifurcationProblem(Fbt, [0.01, 0.01], par, (@optic _.β1))
 opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, tol_bisection_eigenvalue = 1e-8, dsmin_bisection = 1e-9, save_sol_every_step = 1)
 
 br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
 
-sn_codim2 = continuation(br, 2, (@lens _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     bdlinsolver = MatrixBLS()
@@ -322,7 +322,7 @@ sn_codim2 = continuation(br, 2, (@lens _.β2), ContinuationPar(opts_br, detect_b
 @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
 @test length(unique(sn_codim2.BT)) == length(sn_codim2)
 
-hopf_codim2 = continuation(br, 3, (@lens _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
+hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     bothside = true,
@@ -378,8 +378,8 @@ Hom.orbit(0,0)
 
 # branch switching from BT from Fold
 opt = sn_codim2.contparams
-@set! opt.newton_options.verbose = false
-@set! opt.max_steps = 20
+@reset opt.newton_options.verbose = false
+@reset opt.max_steps = 20
 hp_fromBT = continuation(sn_codim2, 1, opt;
     verbosity = 0, plot = false,
     δp = 1e-4,
@@ -403,15 +403,15 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x), x, p, 0.)
 par_sl = (r = -0.5, μ = 0., ν = 1.0, c3 = 0.1, c5 = 0.3)
-prob = BK.BifurcationProblem(Fsl2, [0.01, 0.01], par_sl, (@lens _.r))
+prob = BK.BifurcationProblem(Fsl2, [0.01, 0.01], par_sl, (@optic _.r))
 
-@set! opts_br.newton_options.verbose = false
-@set! opts_br.newton_options.tol = 1e-12
+@reset opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.tol = 1e-12
 opts_br = setproperties(opts_br;n_inversion = 10, max_bisection_steps = 25)
 
 br = continuation(prob, PALC(), opts_br)
 
-hopf_codim2 = continuation(br, 1, (@lens _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
+hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
     detect_codim2_bifurcation = 2,
     start_with_eigen = true,
     update_minaug_every_step = 1,
@@ -489,11 +489,11 @@ end
 
 
 par_hh = (β1 = 0.1, β2 = -0.3, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
-prob = BK.BifurcationProblem(Fhh, zeros(4), par_hh, (@lens _.β1))
+prob = BK.BifurcationProblem(Fhh, zeros(4), par_hh, (@optic _.β1))
 br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, max_steps = 20, detect_bifurcation=3, n_inversion = 2))
 
-@set! opts2.newton_options.verbose = false
-br_codim2 = continuation(br, 1, (@lens _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 2, update_minaug_every_step = 1)
+@reset opts2.newton_options.verbose = false
+br_codim2 = continuation(br, 1, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 2, update_minaug_every_step = 1)
 
 @test br_codim2.specialpoint[1].type == :hh
 hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)

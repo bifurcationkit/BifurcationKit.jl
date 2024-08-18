@@ -4,7 +4,7 @@ using Plots
 using Test, ForwardDiff, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
-##################################################################################################
+###################################################################################################
 function Pop!(du, X, p, t = 0)
     (;r,K,a,ϵ,b0,e,d) = p
     x, y, u, v = X
@@ -21,10 +21,10 @@ par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
-@set! opts_br.newton_options.verbose = true
+@reset opts_br.newton_options.verbose = true
 
 ################################################################################
 using DifferentialEquations
@@ -78,7 +78,7 @@ _sol = BK.get_periodic_orbit(probtrap, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8)
-@set! opts_po_cont.newton_options.verbose = true
+@reset opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probtrap, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
@@ -86,7 +86,7 @@ brpo_fold = continuation(probtrap, ci, PALC(), opts_po_cont;
 
 pt = get_normal_form(brpo_fold, 1)
 
-prob2 = @set probtrap.prob_vf.lens = @lens _.ϵ
+prob2 = @set probtrap.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
@@ -95,8 +95,8 @@ pt = get_normal_form(brpo_pd, 1)
 
 # codim 2 Fold
 opts_potrap_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 100, p_min = 0., p_max=1.2, n_inversion = 4, plot_every_step = 2)
-@set! opts_potrap_fold.newton_options.tol = 1e-9
-fold_po_trap1 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
+@reset opts_potrap_fold.newton_options.tol = 1e-9
+fold_po_trap1 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
@@ -110,8 +110,8 @@ plot(fold_po_trap1)
 
 # codim 2 PD
 opts_potrap_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 0, max_steps = 10, p_min = -1., plot_every_step = 1, dsmax = 1e-2, ds = -1e-3)
-@set! opts_potrap_pd.newton_options.tol = 1e-9
-pd_po_trap = continuation(brpo_pd, 1, (@lens _.b0), opts_potrap_pd;
+@reset opts_potrap_pd.newton_options.tol = 1e-9
+pd_po_trap = continuation(brpo_pd, 1, (@optic _.b0), opts_potrap_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
@@ -126,7 +126,7 @@ pd_po_trap = continuation(brpo_pd, 1, (@lens _.b0), opts_potrap_pd;
 plot(fold_po_trap, pd_po_trap)
 
 #####
-fold_po_trap2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_potrap_fold;
+fold_po_trap2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
@@ -155,7 +155,7 @@ brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     )
 pd = get_normal_form(brpo_fold, 1; prm = true)
 
-prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
+prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, max_steps=250);
     verbosity = 3, plot = true,
     argspo...
@@ -192,7 +192,7 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
-fold_po_coll2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_pocoll_fold;
+fold_po_coll2 = @time continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         update_minaug_every_step = 1,
@@ -208,8 +208,8 @@ fold_po_coll2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_pocoll_fold;
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 60, p_min = -1., plot_every_step = 10, dsmax = 3e-3, ds = 1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-9
-pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
+@reset opts_pocoll_pd.newton_options.tol = 1e-9
+pd_po_coll = @time continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         update_minaug_every_step = 1,
@@ -229,7 +229,7 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 plot(fold_po_coll1, pd_po_coll)
 
 #####
-fold_po_coll2 = continuation(brpo_fold, 2, (@lens _.ϵ), opts_pocoll_fold;
+fold_po_coll2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         update_minaug_every_step = 1,
@@ -260,7 +260,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 
 get_normal_form(brpo_ns, 1; prm = false)
 
-prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
+prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
@@ -270,8 +270,8 @@ get_normal_form(brpo_pd, 2, prm = true)
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-10
-pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
+@reset opts_pocoll_pd.newton_options.tol = 1e-10
+pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
@@ -293,8 +293,8 @@ plot!(pd_po_coll2, vars = (:ϵ, :b0))
 
 ns = get_normal_form(brpo_ns, 1)
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0., plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
-ns_po_coll = continuation(brpo_ns, 1, (@lens _.ϵ), opts_pocoll_ns;
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 1, max_steps = 20, p_min = 0., plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
+ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 1,
         start_with_eigen = false,
@@ -320,7 +320,7 @@ plot(sol2, xlims= (8,10))
 
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
-prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
+prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
@@ -329,8 +329,8 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 1, dsmax = 1e-2, ds = -1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-10
-pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
+@reset opts_pocoll_pd.newton_options.tol = 1e-10
+pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = false,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
@@ -338,7 +338,7 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
-        normN = norminf,
+        normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -358,13 +358,13 @@ _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3)
-@set! opts_po_cont.newton_options.verbose = false
+@reset opts_po_cont.newton_options.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...)
 pt = get_normal_form(br_fold_sh, 1)
 
-probsh2 = @set probsh.lens = @lens _.ϵ
+probsh2 = @set probsh.lens = @optic _.ϵ
 brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
@@ -374,8 +374,8 @@ pt = get_normal_form(brpo_pd_sh, 1)
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 3, max_steps = 200, p_min = 0.01, p_max = 1.2)
 @error "it fails if the tolerance tol is too high"
-@set! opts_posh_fold.newton_options.tol = 1e-12
-fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
+@reset opts_posh_fold.newton_options.tol = 1e-12
+fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
         verbosity = 2, plot = true,
         detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
@@ -384,7 +384,7 @@ fold_po_sh1 = continuation(br_fold_sh, 2, (@lens _.ϵ), opts_posh_fold;
         callback_newton = BK.cbMaxNorm(1),
         )
 
-fold_po_sh2 = continuation(br_fold_sh, 1, (@lens _.ϵ), opts_posh_fold;
+fold_po_sh2 = continuation(br_fold_sh, 1, (@optic _.ϵ), opts_posh_fold;
         verbosity = 2, plot = true,
         detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
@@ -397,10 +397,10 @@ fold_po_sh2 = continuation(br_fold_sh, 1, (@lens _.ϵ), opts_posh_fold;
 
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, max_steps = 40, p_min = -1.)
-@set! opts_posh_pd.newton_options.tol = 1e-12
+@reset opts_posh_pd.newton_options.tol = 1e-12
 @error "it fails if the tolerance tol is too high"
-@set! opts_posh_pd.newton_options.verbose = true
-pd_po_sh = continuation(brpo_pd_sh, 1, (@lens _.b0), opts_posh_pd;
+@reset opts_posh_pd.newton_options.verbose = true
+pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
         verbosity = 0, plot = true,
         detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
@@ -436,11 +436,11 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 ns = get_normal_form(brpo_ns, 1)
 
 # codim 2 NS
-opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 10, p_min = -0., p_max = 1.2)
-@set! opts_posh_ns.newton_options.tol = 1e-12
-@set! opts_posh_ns.newton_options.verbose = true
-ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
-        verbosity = 0, plot = true,
+opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 100, p_min = -0., p_max = 1.2, ds = 0.001)
+@reset opts_posh_ns.newton_options.tol = 1e-12
+@reset opts_posh_ns.newton_options.verbose = true
+ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
+        verbosity = 2, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         usehessian = false,
@@ -453,9 +453,9 @@ ns_po_sh = continuation(brpo_ns, 1, (@lens _.ϵ), opts_posh_ns;
         )
 
 plot(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
-    plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
-    plot!(fold_po_sh1, vars = (:ϵ, :b0), branchlabel = "FOLD")
-    plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")
+plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
+plot!(fold_po_sh1, vars = (:ϵ, :b0), branchlabel = "FOLD")
+plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")
 
 #########
 # find the PD case
@@ -466,7 +466,7 @@ plot(sol2, xlims= (8,10))
 
 probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
-prob2 = @set probshpd.lens = @lens _.ϵ
+prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
@@ -476,8 +476,8 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
 get_normal_form(brpo_pd, 2)
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 10, dsmax = 1e-2, ds = -1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-12
-pd_po_sh2 = continuation(brpo_pd, 2, (@lens _.b0), opts_pocoll_pd;
+@reset opts_pocoll_pd.newton_options.tol = 1e-12
+pd_po_sh2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,

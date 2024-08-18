@@ -2,15 +2,15 @@
 using Test, BifurcationKit
 const BK = BifurcationKit
 
-prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@lens _[1]))
+prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]))
 
 BK.residual(prob, prob.u0, prob.params)
 BK.jacobian(prob, prob.u0, prob.params)
 
-prob = BifurcationProblem((o,x,p,t=0)-> o.=x, rand(2), rand(2), (@lens _[1]); inplace = true)
+prob = BifurcationProblem((o,x,p)-> o.=x, rand(2), rand(2), (@optic _[1]); inplace = true)
 ######################################################################
 # test show of wraped problem
-prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@lens _[1]))
+prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]))
 BK.WrapPOTrap(prob, prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show
 BK.PDMAProblem((prob_vf = prob,), prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show    
 

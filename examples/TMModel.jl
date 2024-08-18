@@ -25,10 +25,10 @@ br = continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false, normC
 
 BK.plot(br, plotfold=false)
 ####################################################################################################
-br_fold = BK.continuation(br, 2, (@lens _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
+br_fold = BK.continuation(br, 1, (@optic _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
 plot(br_fold)
 ####################################################################################################
-# branching to PO from Hopf using Trapezoid
+# continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 80, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
 # arguments for periodic orbits

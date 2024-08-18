@@ -22,7 +22,7 @@ n = 101
 par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
-prob = BifurcationProblem(F_chan, sol0, par, (@lens _.α); 
+prob = BifurcationProblem(F_chan, sol0, par, (@optic _.α); 
     plot_solution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
@@ -67,7 +67,7 @@ outfold = @time newton(br, indfold)
 BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=false, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
-foldbranch = @time continuation(br, indfold, (@lens _.β),
+foldbranch = @time continuation(br, indfold, (@optic _.β),
     plot = false, verbosity = 0,
     jacobian_ma = :minaug,
     start_with_eigen = true,
@@ -83,7 +83,7 @@ BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at �
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=true, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 
-outfoldco = continuation((@set br.prob = prob2), indfold, (@lens _.β), optcontfold)
+outfoldco = continuation((@set br.prob = prob2), indfold, (@optic _.β), optcontfold)
 ###################################################################################################
 # Matrix Free example
 function dF_chan(x, dx, p)

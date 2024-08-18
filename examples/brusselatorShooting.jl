@@ -87,7 +87,7 @@ n = 100
 # different parameters to define the Brusselator model and guess for the stationary solution
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-probBif = BifurcationProblem(Fbru!, sol0, par_bru, (@lens _.l);
+probBif = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_sp,
         plot_solution = (x, p; ax1 = 0, kwargs...) -> (plotsol(x; label="", kwargs... )),
         record_from_solution = (x, p) -> x[div(n,2)]
@@ -101,8 +101,7 @@ br = @time continuation(
     opts_br_eq, verbosity = 0,
     plot = true,
     normC = norminf)
-####################################################################################################
-# Continuation of Periodic Orbit
+#################################################################################################### Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
@@ -143,7 +142,7 @@ probSh = ShootingProblem(prob,
     [orbitguess_f2[:,ii] for ii=1:dM:M];
     abstol = 1e-11, reltol = 1e-9,
     parallel = true, #pb with LoopVectorization
-    lens = (@lens _.l),
+    lens = (@optic _.l),
     par = par_hopf,
     update_section_every_step = 1,
     jacobian = BK.FiniteDifferencesMF(),
@@ -234,7 +233,7 @@ probHPsh = PoincareShootingProblem(prob, QNDF(), normals, centers;
     abstol = 1e-10, reltol = 1e-8,
     parallel = false,
     δ = 1e-8,
-    lens = (@lens _.l),
+    lens = (@optic _.l),
     par = par_hopf,
     jacobian = BK.FiniteDifferencesMF())
 

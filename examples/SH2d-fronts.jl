@@ -57,7 +57,7 @@ par = (l = -0.1, ν = 1.3, L1 = L1);
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20)
 
-prob = BifurcationProblem(F_sh, vec(sol0), par, (@lens _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
+prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, eigsolver = EigArpack(0.5, :LM))
 sol_hexa = @time newton(prob, optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
@@ -103,7 +103,7 @@ optfold = setproperties(optfold; p_min = -2., p_max= 2., dsmax = 0.1)
 # dispatch plot to fold solution
 plotsol!(x::BorderedArray, args...; k...) = plotsol!(x.u, args...; k...)
 
-brfold = continuation(br, 1, (@lens _.ν), optfold;
+brfold = continuation(br, 1, (@optic _.ν), optfold;
     verbosity = 3, plot = true,
     bdlinsolver = MatrixBLS(),
     jacobian_ma = :minaug,
@@ -116,7 +116,6 @@ brfold = continuation(br, 1, (@lens _.ν), optfold;
 
 plot(brfold)
 ###################################################################################################
-# using Jacobian free method
 using IncompleteLU
 prec = ilu(L1 + I, τ = 0.15);
 prec = lu(L1 + I);

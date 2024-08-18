@@ -60,7 +60,7 @@ par_br = (η = 1.0, a = -1., b = -3/2., H = 3.0, D = D, C = -0.6, Δ = blockdiag
 u0 = cos.(2X)
 solc0 = vcat(u0, u0)
 
-probBif = BifurcationProblem(Fbr, solc0, par_br, (@lens _.C) ;J = Jbr,
+probBif = BifurcationProblem(Fbr, solc0, par_br, (@optic _.C) ;J = Jbr,
     record_from_solution = (x, p) -> norm(x, Inf),
     plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
@@ -144,7 +144,7 @@ initpo = vcat(vec(orbitsection), 3.)
 BK.plot_periodic_shooting(initpo[1:end-1], 1);title!("")
 
 probSh = ShootingProblem(prob_sp, ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true,
-    lens = (@lens _.C), par = par_br_hopf, jacobian = BK.FiniteDifferencesMF())
+    lens = (@optic _.C), par = par_br_hopf, jacobian = BK.FiniteDifferencesMF())
 # probSh = ShootingProblem(prob_ode, Rodas4P(), [sol(280.0)]; abstol=1e-10, reltol=1e-4, parallel = true)
 
 plot(probSh(initpo, par_br_hopf))
@@ -283,7 +283,7 @@ plot(br_po, br_po_pd, legend=false)
 br_po_pdcodim2 = @time continuation(
     # arguments for branch switching from the first
     # Hopf bifurcation point
-    br_po, 1, (@lens _.a),
+    br_po, 1, (@optic _.a),
     # arguments for continuation
     optcontpo;
     # OPTIONAL parameters

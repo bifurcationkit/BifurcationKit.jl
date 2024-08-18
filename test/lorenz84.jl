@@ -5,7 +5,7 @@ using BifurcationKit, Test
 const BK = BifurcationKit
 ####################################################################################################
 function Lor(u, p, t = 0)
-    (; α,β,γ,δ,G,F,T) = p
+    (;α,β,γ,δ,G,F,T) = p
     X,Y,Z,U = u
     [
         -Y^2 - Z^2 - α*X + α*F - γ*U^2,
@@ -25,14 +25,14 @@ opts_br = ContinuationPar(p_min = -1.5, p_max = 3.0, ds = 0.001, dsmax = 0.025,
     # number of eigenvalues
     nev = 4, max_steps = 252)
 
-@set! opts_br.newton_options.max_iterations = 25
+@reset opts_br.newton_options.max_iterations = 25
 
 z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105288273117459]
 
 recordFromSolutionLor(u::AbstractVector, p) = (X = u[1], Y = u[2], Z = u[3], U = u[4])
 recordFromSolutionLor(u::BorderedArray, p) = recordFromSolutionLor(u.u, p)
 
-prob = BK.BifurcationProblem(Lor, z0, parlor, (@lens _.F);
+prob = BK.BifurcationProblem(Lor, z0, parlor, (@optic _.F);
     record_from_solution = recordFromSolutionLor,)
 
 br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)),
@@ -50,10 +50,10 @@ br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)
 @test prod(br.specialpoint[5].interval .≈ (1.5466483726208073, 1.5466483727182652))
 ####################################################################################################
 # this part is for testing the spectrum
-@set! opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.verbose = false
 
 # be careful here, Bordered predictor not good for Fold continuation
-sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.005, n_inversion = 8, save_sol_every_step = 1, max_steps = 60) ;
+sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.005, n_inversion = 8, save_sol_every_step = 1, max_steps = 60) ;
     normC = norminf,
     detect_codim2_bifurcation = 1,
     update_minaug_every_step = 1,
@@ -71,7 +71,7 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), 
 
 @test sn_codim2_test.eig[1].eigenvecs != nothing
 
-hp_codim2_test = continuation(br, 2, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, max_steps = 100) ;
+hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, max_steps = 100) ;
     normC = norminf,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
@@ -110,19 +110,19 @@ function testEV(br, verbose = false)
             ω0 = BK.getp(br.sol[ii].x, prob_ma)[2]
         end
         p1 = br.sol[ii].p
-        @test p1 == get(pt, lens1)
-        @test p0 == get(pt, lens2)
+        @test p1 == lens1(pt)
+        @test p0 == lens2(pt)
 
         # we test the functional
-        par1 = set(par0, lens1, p1)
-        par1 = set(par1, lens2, p0)
+        par1 = BK.set(par0, lens1, p1)
+        par1 = BK.set(par1, lens2, p0)
         @test par1.T == pt.T && par1.F == pt.F
         resf = prob_vf.VF.F(x0, par1)
         @test norminf(resf) < ϵ
         if prob_ma isa FoldProblemMinimallyAugmented
-            res = prob_ma(x0, p0, set(par0, lens1, p1))
+            res = prob_ma(x0, p0, BK.set(par0, lens1, p1))
         else
-            res = prob_ma(x0, p0, ω0, set(par0, lens1, p1))
+            res = prob_ma(x0, p0, ω0, BK.set(par0, lens1, p1))
         end
         @test resf == res[1]
         verbose && @show res
@@ -142,12 +142,12 @@ end
 testEV(sn_codim2_test)
 testEV(hp_codim2_test)
 ####################################################################################################
-@set! opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.verbose = false
 sn_codim2 = nothing
 for _jac in (:autodiff, :minaug, :finiteDifferences)
-    @info _jac
+    @warn _jac
     # be careful here, Bordered predictor not good for Fold continuation
-    sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
+    sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
         normC = norminf,
         jacobian_ma = _jac,
         # jacobian_ma = :minaug,
@@ -198,11 +198,11 @@ for _jac in (:autodiff, :minaug, :finiteDifferences)
 
     if sn_codim2.specialpoint[1].x isa BorderedArray
         sn_codim2_forbt = @set sn_codim2.specialpoint[1].x.u = Array(solbt.u.x0)
-        @set! sn_codim2_forbt.specialpoint[1].x.p = solbt.u.params.F
+        @reset sn_codim2_forbt.specialpoint[1].x.p = solbt.u.params.F
     else
         sn_codim2_forbt = @set sn_codim2.specialpoint[1].x = vcat(Array(solbt.u.x0), solbt.u.params.F)
     end
-    @set! sn_codim2_forbt.specialpoint[1].param = solbt.u.params.T
+    @reset sn_codim2_forbt.specialpoint[1].param = solbt.u.params.T
 
     bpbt_2 = get_normal_form(sn_codim2_forbt, 1; nev = 4, verbose = true)
     @test bpbt_2.nf.a ≈ 0.2144233509273467
@@ -234,7 +234,7 @@ end
 
 ####################################################################################################
 # test events
-sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
+sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,
     # jacobian_ma = _jac,
     # jacobian_ma = :minaug,
@@ -250,7 +250,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T),
 @test sn_codim2.specialpoint[2].type == Symbol("save-2")
 @test sn_codim2.specialpoint[3].type == Symbol("save-1")
 
-hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
+hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
     # verbosity = 3, plot = true,
     normC = norminf,
     detect_codim2_bifurcation = 2,
@@ -267,7 +267,7 @@ hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.
 @test hp_codim2_1.specialpoint[2].type == Symbol("save-2")
 @test hp_codim2_1.specialpoint[3].type == Symbol("save-1")
 ####################################################################################################
-sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
+sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,
     # jacobian_ma = _jac,
     # jacobian_ma = :minaug,
@@ -277,7 +277,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@lens _.T),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
 
-hp_codim2_1 = continuation(br, 3, (@lens _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
+hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
     verbosity = 0,
     normC = norminf,
     detect_codim2_bifurcation = 2,
@@ -379,8 +379,8 @@ using OrdinaryDiffEq
 prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifurcation = 0, max_steps = 3, detect_event = 0, ds = 0.001)
-@set! opts_fold_po.newton_options.verbose = false
-@set! opts_fold_po.newton_options.tol = 1e-8
+@reset opts_fold_po.newton_options.verbose = false
+@reset opts_fold_po.newton_options.tol = 1e-8
 
 for probPO in (
                 PeriodicOrbitOCollProblem(20, 3), 
@@ -402,9 +402,9 @@ end
 # branching HH to NS of periodic orbits
 prob_ode = ODEProblem(Lor, z0, (0, 1), hp_codim2_1.contparams, reltol = 1e-8, abstol = 1e-10)
 opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurcation = 1, max_steps = 10, ds = -0.01, detect_event = 0)
-# @set! opts_ns_po.newton_options.verbose = true
-@set! opts_ns_po.newton_options.tol = 1e-12
-@set! opts_ns_po.newton_options.max_iterations = 10
+# @reset opts_ns_po.newton_options.verbose = true
+@reset opts_ns_po.newton_options.tol = 1e-12
+@reset opts_ns_po.newton_options.max_iterations = 10
 for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), ShootingProblem(5, prob_ode, Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
         probPO;

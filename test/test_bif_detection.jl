@@ -69,7 +69,7 @@ dimBif = [ii for ii in 1:5]; append!(dimBif, [1 1 1 1])
 x0 = zeros(size(par.L, 1))
 
 optc = ContinuationPar(p_min = -1., p_max = 10., ds = 0.1, max_steps = 150, detect_bifurcation = 2, save_eigenvectors = false)
-prob = BK.BifurcationProblem(Ftb, x0, par, (@lens _.λ); J = Jtb)
+prob = BK.BifurcationProblem(Ftb, x0, par, (@optic _.λ); J = Jtb)
 alg = PALC()
 br1 = continuation(prob, alg, optc; verbosity = 0)
 testBranch(br1)
@@ -106,7 +106,7 @@ Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
 opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, max_steps = 130, p_min = -3., p_max = 0.1, newton_options = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 4), detect_bifurcation=3, n_inversion=4)
 
-prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@lens _); J = Jac_m, record_from_solution = (x,p)->x[1])
+prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@optic _); J = Jac_m, record_from_solution = (x,p)->x[1])
 br4 = continuation(prob4, alg, opts; verbosity = 0, plot=false)
 testBranch(br4)
 ####################################################################################################
@@ -123,7 +123,7 @@ par = (p1 = -3., p2=-3., k=3)
 
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 135, p_min = -3., p_max = 4.0, newton_options = NewtonPar(max_iterations = 5), detect_bifurcation = 3, n_inversion = 6, dsmin_bisection = 1e-9, max_bisection_steps = 15, nev = 2)
 
-prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@lens _.p1); record_from_solution = (x,p)->x[1])
+prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@optic _.p1); record_from_solution = (x,p)->x[1])
 br = continuation(prob, alg, (@set opts.detect_bifurcation = 3);
     plot = false, verbosity = 0,)
     show(br)

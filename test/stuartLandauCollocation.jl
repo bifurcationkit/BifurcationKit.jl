@@ -225,7 +225,7 @@ Ntst = 10
 m = 3
 N = 4
 nullvf(x,p) = zero(x)
-prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@lens _.r))
+prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 prob_col(_ci, par_sl);
@@ -239,10 +239,10 @@ m = 4
 N = 5
 const _al = I(N) + 0.1 .*rand(N,N)
 idvf(x,p) = _al*x
-prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _al)
+prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jcofd = ForwardDiff.jacobian(z -> prob_col(z, par_sl), _ci);
 Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
 @test norminf(Jcofd - Jco) < 1e-15
 
@@ -260,8 +260,8 @@ BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
 # test for the case of sparse arrays
 # jacobian using BlockArray
 const _asp = sparse(I(N) + 0.1 .*sprand(N,N,0.1))
-prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> _asp)
-prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@lens _.r) ; J = (x,p) -> Array(_asp))
+prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
+prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
 prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N = N, ϕ = copy(prob_col_dense.ϕ), xπ = copy(prob_col_dense.xπ))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);

@@ -19,7 +19,7 @@ par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 z0 = [0.001137, 0.891483, 0.062345]
 
-prob = BifurcationProblem(COm, z0, par_com, (@lens _.q2);
+prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2);
         record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(p_min = 0.5, p_max = 2.3, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, max_steps = 100)
@@ -34,7 +34,7 @@ br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
 ####################################################################################################
 @set! opts_br.newton_options = NewtonPar(max_iterations = 10, tol = 1e-12)
 
-sn_codim2 = continuation(br, 3, (@lens _.k),
+sn_codim2 = continuation(br, 3, (@optic _.k),
     ContinuationPar(opts_br, p_max = 2.2, p_min = 0., ds = -0.001, dsmax = 0.05, n_inversion = 8, max_steps = 50) ;
     normC = norminf,
     detect_codim2_bifurcation = 2,
@@ -80,7 +80,7 @@ bt = get_normal_form(sn_codim2, 2; autodiff = true)
 
 # very close to BT, stop event location at 1e-12
 brh = (@set br.alg.tangent = Bordered())
-hp_codim2 = continuation(brh, 2, (@lens _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 1, ds = -0.0001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 12, max_steps = 150, max_bisection_steps = 35 ) ;
+hp_codim2 = continuation(brh, 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 1, ds = -0.0001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 12, max_steps = 150, max_bisection_steps = 35 ) ;
     normC = norminf,
     # verbosity = 3, plot = true,
     detect_codim2_bifurcation = 2,

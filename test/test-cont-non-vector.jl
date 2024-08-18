@@ -21,7 +21,7 @@ function F0(x::Vector, r)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
-    prob = BK.BifurcationProblem(F0, [0.8], 1., (@lens _);
+    prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
             record_from_solution = (x, p) -> x[1],
             J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
             Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
@@ -72,7 +72,7 @@ end
 sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p) -> x.u[1])
+prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p) -> x.u[1])
 sol = newton(prob, opt_newton)
 @test BK.converged(sol)
 
@@ -86,7 +86,7 @@ BK.get_solp(br, 1)
 
 # plot(br);title!("")
 
-prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@lens _[1]);
+prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
     J = (x, r) -> Jacobian(x, r[1], r[2]),
     Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
     d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
@@ -97,7 +97,7 @@ br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
-outfoldco = continuation(br, 1, (@lens _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver), jacobian_ma = :minaug)
+outfoldco = continuation(br, 1, (@optic _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver), jacobian_ma = :minaug)
 
 # try with newtonDeflation
 # test with Newton deflation 1
@@ -159,7 +159,7 @@ opt_newton0 = NewtonPar(tol = 1e-10, max_iterations = 5, verbose = false, linsol
 
 prob = BK.BifurcationProblem(Fr,
         RecursiveVec([1 .+ 0.1*rand(1) for _ = 1:2]),
-        (r = 1.0, s = 1.), (@lens _.r);
+        (r = 1.0, s = 1.), (@optic _.r);
         delta = 1e-8,
         J  = (x, p) -> JacobianR(x, p.s),
         Jᵗ = (x, p) -> JacobianR(x, p.s),
@@ -190,11 +190,11 @@ outfold = newton(br0, 1; bdlinsolver = BorderingBLS(opt_newton0.linsolver))
 @test BK.converged(outfold)
 
 
-outfoldco = continuation(br0, 1, (@lens _.s), opts_br0,
+outfoldco = continuation(br0, 1, (@optic _.s), opts_br0,
     bdlinsolver = BorderingBLS(opt_newton0.linsolver), jacobian_ma = :minaug)
 
 br0sec = @set br0.alg.tangent = Secant()
-outfoldco = continuation(br0sec, 1, (@lens _.s), opts_br0,
+outfoldco = continuation(br0sec, 1, (@optic _.s), opts_br0,
     bdlinsolver = BorderingBLS(opt_newton0.linsolver),jacobian_ma = :minaug)
 
 # try with newtonDeflation

@@ -69,7 +69,7 @@ Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 n = 100
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
+prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
         J = Jbru_ana,
         record_from_solution = (x, p) -> norminf(x))
 
@@ -86,7 +86,7 @@ br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)),
 outhopf = newton(br, 1; start_with_eigen = true)
 outhopf = newton(br, 1; start_with_eigen = true)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 50, detect_bifurcation = 2)
-outhopfco = continuation(br, 1, (@lens _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, plot = false, jacobian_ma = :minaug)
+outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, plot = false, jacobian_ma = :minaug)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -164,10 +164,10 @@ br_d2f = (@set br.prob.VF.d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
 outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
-br_hopf = continuation(br, ind_hopf, (@lens _.β),
+br_hopf = continuation(br, ind_hopf, (@optic _.β),
             ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 
-br_hopf = continuation(br_d2f, ind_hopf, (@lens _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), jacobian_ma = :minaug)
 ####################################################################################################
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
@@ -190,7 +190,7 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@lens _.l);
+prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
         J = Jbru_sp,
         record_from_solution = (x, p) -> norminf(x))
 

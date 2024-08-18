@@ -73,7 +73,7 @@ sol0 = 0*ones(Nx, Ny) |> vec
 const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
 w .-= minimum(w)
 
-prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@lens _.λ);
+prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@optic _.λ);
         J = JFmit,
         record_from_solution = (x, p) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
         plot_solution = (x, p; k...) -> plotsol!(x ; k...),

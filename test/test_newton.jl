@@ -15,7 +15,7 @@ function test_newton(x0)
 
     opts = NewtonPar( tol = Ty(1e-8), verbose = false)
     prob = BifurcationProblem(F, x0, nothing; J = Jac)
-    newton(prob, opts; callback = BK.cbMaxNorm(100.0), normN = x->norm(x,Inf))
+    newton(prob, opts; callback = BK.cbMaxNorm(100.0), normN = norminf)
 end
 ####################################################################################################
 # we test the regular newton algorithm
@@ -45,7 +45,7 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     optn = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
     optc = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = 0.001,)
 
-    prob = BifurcationProblem(F, x0, p0, (@lens _); J = Jac)
+    prob = BifurcationProblem(F, x0, p0, (@optic _); J = Jac)
     iter = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
     state = iterate(iter)[1]
     BK.newton_palc(iter, state)

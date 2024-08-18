@@ -113,7 +113,7 @@ end
 
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 
-prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@lens _.l),
+prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
     J = (x, p) -> (dx -> dF_sh(x, p, dx)),
     # J = (x, p) -> J_sh(x, p),
     plot_solution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),

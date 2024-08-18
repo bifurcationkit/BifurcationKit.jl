@@ -91,7 +91,7 @@ par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, 
 sol0 = zeros(2Nx, Ny)
 
 # we group the differentials together
-prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@lens _.r); J = Jcgl)
+prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@optic _.r); J = Jcgl)
 
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
@@ -114,7 +114,7 @@ hopfpoint = newton(br, ind_hopf;
                     start_with_eigen = true)
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
-br_hopf = continuation(br, 1, (@lens _.γ),
+br_hopf = continuation(br, 1, (@optic _.γ),
     ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15); plot = true,
     update_minaug_every_step = 1,
     start_with_eigen = true, bothside = false,
@@ -376,7 +376,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 40.
 # optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 40.1, p_min = -10., newton_options = opt_po, max_steps = 10)
 
 outfoldco = @time BK.continuation_fold(probFold,
-    br_po, indfold, (@lens _.c5),
+    br_po, indfold, (@optic _.c5),
     optcontfold;
     jacobian_ma = :minaug,
     bdlinsolver = BorderingBLS(solver = ls, check_precision = false),
@@ -523,7 +523,7 @@ opt_po = @set opt_newton.verbose = true
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.2, max_steps = 35, plot_every_step = 3, newton_options = (@set opt_po.linsolver = lsgpu))
     br_pok2, upo , _= @time BK.continuation(
         poTrapMFGPU,
-        orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@lens _.r),
+        orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.01), (@optic _.r),
         opts_po_cont; jacobianPO = :FullMatrixFree,
         verbosity = 2,
         record_from_solution = (u, p) -> (u2 = norm(u), period = sum(u[end:end])),

@@ -100,7 +100,7 @@ par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, 
 sol0 = 0.1rand(2Nx, Ny)
 sol0_f = vec(sol0)
 
-prob = BK.BifurcationProblem(Fcgl!, sol0_f, par_cgl, (@lens _.r); J = Jcgl)
+prob = BK.BifurcationProblem(Fcgl!, sol0_f, par_cgl, (@optic _.r); J = Jcgl)
 ####################################################################################################
 eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
@@ -135,7 +135,7 @@ probSh = ShootingProblem(
     # we pass the ODEProblem encoding the flow and the time stepper
     prob_sp, ETDRK2(krylov = true),
     [sol[:, end]], abstol = 1e-10, reltol = 1e-8,
-    lens = (@lens _.r),
+    lens = (@optic _.r),
     jacobian = BK.FiniteDifferencesMF())
 
 @assert BK.getparams(probSh) == @set par_cgl.r = 1.2

@@ -22,7 +22,7 @@ par_chan = (α = 3.3, β = 0.01)
 n = 101
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 opt_newton = NewtonPar(tol = 1e-9, verbose = false)
-prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@lens _.α);
+prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@optic _.α);
     plot_solution = (x, p; kwargs...) -> (plot!(x;label="", kwargs...)))
 out = newton( prob, opt_newton)
 
@@ -56,8 +56,8 @@ outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eig
 @test BK.converged(outfold) && outfold.itnewton == 2
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=false, tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
-outfoldco = continuation(br, 2, (@lens _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1, plot = false)
-outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@lens _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1)
+outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1, plot = false)
+outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1)
 
 # manual handling
 indfold = 1

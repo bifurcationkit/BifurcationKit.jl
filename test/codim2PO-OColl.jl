@@ -19,10 +19,10 @@ par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop!, z0, par_pop, (@lens _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
-@set! opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.verbose = false
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
@@ -47,7 +47,7 @@ solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 _sol = BK.get_periodic_orbit(probcoll, solpo.u, 1)
 
 opts_po_cont = setproperties(opts_br, max_steps = 40, save_eigenvectors = true, tol_stability = 1e-8)
-@set! opts_po_cont.newton_options.verbose = false
+@reset opts_po_cont.newton_options.verbose = false
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 0, plot = false,
     argspo...
@@ -66,8 +66,8 @@ pd = get_normal_form(brpo_pd, 1, prm = false)
 ################################################################################
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
-@set! opts_pocoll_fold.newton_options.tol = 1e-12
-fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
+@reset opts_pocoll_fold.newton_options.tol = 1e-12
+fold_po_coll1 = continuation(brpo_fold, 1, (@optic _.ϵ), opts_pocoll_fold;
         verbosity = 0, plot = false,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
@@ -79,8 +79,8 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 3, p_min = -1., dsmax = 1e-2, ds = 1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-9
-pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
+@reset opts_pocoll_pd.newton_options.tol = 1e-9
+pd_po_coll = continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
         verbosity = 0, plot = false,
         detect_codim2_bifurcation = 1,
         start_with_eigen = false,
@@ -96,7 +96,7 @@ pd_po_coll = continuation(brpo_pd, 1, (@lens _.b0), opts_pocoll_pd;
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
 
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
@@ -110,7 +110,7 @@ get_normal_form(brpo_ns, 1)
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = false)
 
-prob2 = @set probcoll.prob_vf.lens = @lens _.ϵ
+prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 0, plot = false,
     argspo...,
@@ -152,7 +152,7 @@ _solpo = pd_po_coll2.sol[end].x.u
 _p1 = pd_po_coll2.sol[end].x.p
 _p2 = pd_po_coll2.sol[end].p
 _param = BK.setparam(pd_po_coll2, _p1)
-_param = set(_param, (@lens _.ϵ), _p2)
+_param = @set _param.ϵ = _p2
 
 # _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
@@ -173,7 +173,7 @@ _solpo = ns_po_coll.sol[end].x.u
 _p1 = ns_po_coll.sol[end].x.p
 _p2 = ns_po_coll.sol[end].p
 _param = BK.setparam(ns_po_coll, _p1[1])
-_param = set(_param, (@lens _.ϵ), _p2)
+_param = @set _param.ϵ = _p2
 
 # _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))

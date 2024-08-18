@@ -38,7 +38,7 @@ par_car = (ϵ = 0.7, X = X, dx = dx)
 sol = -(1 .- par_car.X.^2)
 recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
 
-prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@lens _.ϵ);
+prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@optic _.ϵ);
     J = Jac_carr,
     record_from_solution = recordFromSolution)
 

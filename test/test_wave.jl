@@ -77,7 +77,7 @@ sol0 = zeros(par_cgl.N)
 # _J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
 # @test _J0 ≈ _J1
 
-prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@lens _.r); J = Jcgl)
+prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@optic _.r); J = Jcgl)
 
 eigls = EigArpack(1.0, :LM)
 eigls = DefaultEig()

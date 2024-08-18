@@ -20,14 +20,14 @@ for b in (0, 0.21)
     Fbp(u, p) = @. u + (p.μ * p.a) * u + p.c * u^3 + p.b * u^2
     pars_bp = (μ = -0.2, a = -0.456, c = -1.234, b = b)
 
-    probMap = BK.BifurcationProblem((x, p) -> Fbp(x, p) .- x, [0.0], pars_bp, (@lens _.μ))
+    probMap = BK.BifurcationProblem((x, p) -> Fbp(x, p) .- x, [0.0], pars_bp, (@optic _.μ))
 
     _opts = opts_br
 
     @set! _opts.newton_options.eigsolver = EigMaps(DefaultEig())
     br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-    prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@lens _.μ))
+    prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@optic _.μ))
 
     bp = BK.BranchPointMap(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_bp.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
     show(bp)
@@ -48,12 +48,12 @@ end
 Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
 pars_pd = (μ = -0.2, a = 0.456, c = -1.234)
 
-probMap = BK.BifurcationProblem((x, p) -> Fpd(x, p) .- x, [0.0], pars_pd, (@lens _.μ))
+probMap = BK.BifurcationProblem((x, p) -> Fpd(x, p) .- x, [0.0], pars_pd, (@optic _.μ))
 
-@set! opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
+@reset opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
 br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@lens _.μ))
+prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@optic _.μ))
 
 pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 
@@ -81,10 +81,10 @@ end
 Fns(x, p) = Fns!(similar(x), x, p, 0.)
 pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -1.123 - 0.456im)
 
-prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@lens _.μ))
+prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))
 br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-prob = BK.BifurcationProblem(Fns, [0.0], pars_pd, (@lens _.μ))
+prob = BK.BifurcationProblem(Fns, [0.0], pars_pd, (@optic _.μ))
 ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 
 nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
