@@ -31,7 +31,7 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     a = 𝐅.a
     b = 𝐅.b
     # update parameter
-    par = _set_param(params, getlens(𝐅), p)
+    par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
     _, σ, cv, = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Linear solver for J did not converge."
@@ -79,7 +79,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # parameter axis
     lens = getlens(𝐅)
     # update parameter
-    par0 = _set_param(par, lens, p)
+    par0 = set(par, lens, p)
 
     # we compute the jacobian. It is used at least 3 times below. This avoids doing 3 times the 
     # (possibly) costly building of J(x, p)
@@ -106,10 +106,10 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jfold ####################
-    dₚF = minus(residual(𝐅.prob_vf, x, _set_param(par, lens, p + ϵ1)),
-                residual(𝐅.prob_vf, x, _set_param(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
-    dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, _set_param(par, lens, p + ϵ3)), v),
-                  apply(jacobian(𝐅.prob_vf, x, _set_param(par, lens, p - ϵ3)), v));
+    dₚF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
+                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
+    dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
+                  apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
     rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
@@ -395,8 +395,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         x = getvec(z.u) # fold point
         p1 = getp(z.u)  # first parameter
         p2 = z.p        # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         a = 𝐅.a
         b = 𝐅.b
@@ -434,8 +434,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         x = getvec(z)    # fold point
         p1 = getp(z)     # first parameter
         p2 = getp(state) # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         probfold = iter.prob.prob
 
@@ -574,7 +574,7 @@ FoldEig(solver) = FoldEig(solver, nothing)
 function (eig::FoldEig)(Jma, nev; kwargs...)
     # il ne faut pas mettre a jour les deux params?
     n = min(nev, length(getvec(Jma.x)))
-    J = jacobian(Jma.prob.prob_vf, getvec(Jma.x), _set_param(Jma.params, getlens(Jma.prob), getp(Jma.x)))
+    J = jacobian(Jma.prob.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.prob), getp(Jma.x)))
     eigenelts = eig.eigsolver(J, n; kwargs...)
     return eigenelts
 end

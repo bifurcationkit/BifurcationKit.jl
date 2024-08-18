@@ -143,11 +143,11 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     x = _copy(z_pred.u)
     p = z_pred.p
     x_pred = _copy(x)
-    res_f = residual(prob, x, _set_param(par, paramlens, p))
+    res_f = residual(prob, x, set(par, paramlens, p))
 
     dX = _copy(res_f) # copy(res_f)
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
-    dFdp = _copy(residual(prob, x, _set_param(par, paramlens, p + ϵ)))
+    dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
     minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
 
     res = normN(res_f)
@@ -174,11 +174,11 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        copyto!(dFdp, residual(prob, x, _set_param(par, paramlens, p + ϵ)))
+        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
         minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
-        J = jacobian(prob, x, _set_param(par, paramlens, p))
+        J = jacobian(prob, x, set(par, paramlens, p))
         if method == direct || method == pInv
             Jb = hcat(J, dFdp)
 
@@ -206,13 +206,13 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         end
 
         p = clamp(p, p_min, p_max)
-        res_f .= residual(prob, x, _set_param(par, paramlens, p))
+        res_f .= residual(prob, x, set(par, paramlens, p))
         res = normN(res_f)
 
         if method == iterative
             # compute jacobian
-            J = jacobian(prob, x, _set_param(par, paramlens, p))
-            copyto!(dFdp, residual(prob, x, _set_param(par, paramlens, p + ϵ)))
+            J = jacobian(prob, x, set(par, paramlens, p))
+            copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
             minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)

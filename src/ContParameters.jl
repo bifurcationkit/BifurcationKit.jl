@@ -39,7 +39,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
 - `detect_loop` [WORK IN PROGRESS] detect loops in the branch and stop the continuation
 
 !!! tip "Mutating"
-    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
+    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Accessors.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
 """
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation

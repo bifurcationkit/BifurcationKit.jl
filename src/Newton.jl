@@ -12,7 +12,7 @@ $(TYPEDFIELDS)
 - `αmin  = 0.001 `: minimal value of the damping `alpha`
 
 !!! tip "Mutating"
-    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Setfield.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
+    For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Accessors.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
     "absolute tolerance for `F(x)`"

@@ -10,6 +10,7 @@ module BifurcationKit
     using ForwardDiff
 
 
+    include("Accessors.jl")
     include("Problems.jl")
     include("jacobianTypes.jl")
 

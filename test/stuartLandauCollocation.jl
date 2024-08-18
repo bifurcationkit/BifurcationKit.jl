@@ -19,8 +19,8 @@ end
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
 par_hopf = (@set par_sl.r = 0.1)
-probsl = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r))
-probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@lens _.r), inplace = true)
+probsl = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
+probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)

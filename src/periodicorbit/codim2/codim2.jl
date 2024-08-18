@@ -159,7 +159,7 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, c
         lenses = get_lenses(wrap_ma)
         p1, = getp(z.u, 𝐏𝐛)   # first parameter, ca bug pour Folds si p1,_ = getp(...)
         p2 = z.p              # second parameter
-        pars = _set_param(getparams(prob_sh), lenses, (p1, p2))
+        pars = _set(getparams(prob_sh), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"
         updatesection!(prob_sh, x, pars)
     end
@@ -247,8 +247,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = gh.lens
-    newparams = _set_param(gh.params, lens1, pred.params[1])
-    newparams = _set_param(newparams, lens2, pred.params[2])
+    newparams = set(gh.params, lens1, pred.params[1])
+    newparams = set(newparams, lens2, pred.params[2])
 
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
@@ -297,7 +297,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
                 )
 
     # create fold point guess
-    foldpointguess = BorderedArray(orbitguess, get(newparams, lens1))
+    foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
     jacpo = jacobian(probsh_fold, orbitguess, getparams(probsh_fold)).jacpb
@@ -365,8 +365,8 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = hh.lens
     _params = whichns == 1 ? pred.params1 : pred.params2
-    newparams = _set_param(hh.params, lens1, _params[1])
-    newparams = _set_param(newparams, lens2, _params[2])
+    newparams = set(hh.params, lens1, _params[1])
+    newparams = set(newparams, lens2, _params[2])
 
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
@@ -407,7 +407,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
 
     # create fold point guess
     ωₙₛ = whichns == 1 ? pred.k1 : pred.k2
-    nspointguess = BorderedArray(_copy(orbitguess), [get(newparams, lens1), ωₙₛ])
+    nspointguess = BorderedArray(_copy(orbitguess), [_get(newparams, lens1), ωₙₛ])
     
     # get the approximate null vectors
     if pbwrap isa WrapPOColl
@@ -489,8 +489,8 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = zh.lens
-    newparams = _set_param(zh.params, lens1, _params[1])
-    newparams = _set_param(newparams, lens2, _params[2])
+    newparams = set(zh.params, lens1, _params[1])
+    newparams = set(newparams, lens2, _params[2])
 
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)

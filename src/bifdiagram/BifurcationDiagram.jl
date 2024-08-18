@@ -167,7 +167,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
         plotfunc = get(kwargs, :plot_solution, plot_default)
         optscont = options(_pt.x, _pt.param, _level + 1)
-        @set! optscont.ds *= _dsfactor
+        @reset optscont.ds *= _dsfactor
 
         continuation(get_contresult(node.γ), _id, optscont;
             nev = optscont.nev, 

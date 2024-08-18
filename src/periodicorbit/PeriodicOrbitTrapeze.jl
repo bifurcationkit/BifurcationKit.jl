@@ -1,4 +1,4 @@
-using BlockArrays, SparseArrays, Setfield
+using BlockArrays, SparseArrays
 
 # structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps
 struct TimeMesh{T}
@@ -131,7 +131,7 @@ get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline getparams(pb::PeriodicOrbitTrapProblem) = getparams(pb.prob_vf)
 @inline getlens(pb::PeriodicOrbitTrapProblem) = getlens(pb.prob_vf)
 @inline getdelta(pb::PeriodicOrbitTrapProblem) = getdelta(pb.prob_vf)
-setparam(pb::PeriodicOrbitTrapProblem, p) = _set_param(getparams(pb), getlens(pb), p)
+setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
 # type unstable!
 @inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
     if returnArray == false

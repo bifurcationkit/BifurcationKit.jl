@@ -3,7 +3,7 @@
 # # https://github.com/JuliaDiffEq/DiffEqBase.jl/blob/1c86896dfcc0c383ef501014c56a3f8dfc8a63bb/src/nlsolve/newton.jl
 # using DiffEqBase: AbstractODEProblem
 # using DiffEqOperators
-# using Setfield
+# using Accessors
 # using OrdinaryDiffEq
 #
 # const DEP{iip} = AbstractODEProblem{uType, tType, iip} where {uType, tType}
@@ -71,7 +71,7 @@
 #     # we extract the vector field
 #     if de_prob isa DEP{false}
 #         fnewton = x -> de_prob.f(x, p0, de_prob.tspan[1])
-#         f = (x, p) -> de_prob.f(x, _set_param(p0, param_axis, p), de_prob.tspan[1])
+#         f = (x, p) -> de_prob.f(x, set(p0, param_axis, p), de_prob.tspan[1])
 #     else
 #         fnewton = x -> (out = similar(x);de_prob.f(out, x, p0, de_prob.tspan[1]);out)
 #         f =  (x, p) -> (out = similar(x);de_prob.f(out, x, set(p0, param_axis, p), de_prob.tspan[1]);out)
@@ -108,6 +108,6 @@
 #
 # function continuation(de_prob::DEP, param_axis::Lens, contParams::ContinuationPar{T, S, E};kwargs...) where {T, S, E}
 #     @unpack f, df, x0 = ContinuationProblem(de_prob, param_axis)
-#     p = Setfield.get(de_prob.p, param_axis)
+#     p = Accessors.get(de_prob.p, param_axis)
 #     continuation(f, x0, p, contParams; kwargs...)
 # end

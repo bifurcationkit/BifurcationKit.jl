@@ -444,13 +444,13 @@ function Fzh(u, p)
 end
 
 par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
-prob = BK.BifurcationProblem(Fzh, [0.05, 0.0, 0.0], par_zh, (@lens _.β1))
+prob = BK.BifurcationProblem(Fzh, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))
 br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, max_steps = 70, detect_bifurcation=3, n_inversion = 2), verbosity = 0)
 
 _cparams = br.contparams
 opts2 = @set _cparams.newton_options.verbose = false
 opts2 = setproperties(opts2 ; n_inversion = 10, ds = 0.001)
-br_codim2 = continuation(br, 2, (@lens _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
+br_codim2 = continuation(br, 2, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
 
 @test br_codim2.specialpoint[1].type == :zh
 zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)

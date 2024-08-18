@@ -154,12 +154,6 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 # this is to use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 ####################################################################################################
-# different jacobian types which parametrize the way jacobians of PO are computed
-struct AutoDiffDense <: AbstractJacobianMatrix end
-struct DenseAnalytical <: AbstractJacobianMatrix end
-struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
-struct MatrixFree <: AbstractJacobianMatrix end
-####################################################################################################
 const DocStrjacobianPOSh = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `[AutoDiffMF(), MatrixFree(), AutodiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()]`. This is used to select a way of inverting the jacobian dG
     - For `MatrixFree()`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system

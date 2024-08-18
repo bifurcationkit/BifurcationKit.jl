@@ -37,10 +37,10 @@ sol = solve(prob_de, Rodas5())
 ################################################################################
 @info "plotting function"
 argspo = (record_from_solution = (x, p) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
+        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p)))
+                period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
 @info "import AD"

@@ -31,7 +31,7 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) whe
     a = 𝐇.a
     b = 𝐇.b
     # update parameter
-    par = _set_param(params, getlens(𝐇), p)
+    par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
     _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
@@ -84,7 +84,7 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     lens = getlens(𝐇)
 
     # update parameter
-    par0 = _set_param(par, lens, p)
+    par0 = set(par, lens, p)
 
     # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the possibly costly building of J(x, p)
     J_at_xp = jacobian(𝐇.prob_vf, x, par0)
@@ -105,10 +105,10 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jhopf ####################
-    dₚF   = (residual(𝐇.prob_vf, x, _set_param(par, lens, p + ϵ1)) -
-             residual(𝐇.prob_vf, x, _set_param(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
-    dJvdp = (apply(jacobian(𝐇.prob_vf, x, _set_param(par, lens, p + ϵ3)), v) -
-             apply(jacobian(𝐇.prob_vf, x, _set_param(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
+    dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
+             residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
+    dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
+             apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
     σₚ = -dot(w, dJvdp)
 
     # case of sigma_omega
@@ -400,8 +400,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         x = getvec(z.u, 𝐇)   # hopf point
         p1, ω = getp(z.u, 𝐇) # first parameter
         p2 = z.p              # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         a = 𝐇.a
         b = 𝐇.b
@@ -445,8 +445,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         x = getvec(z, 𝐇)   # hopf point
         p1, ω = getp(z, 𝐇) # first parameter
         p2 = getp(state)   # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         probhopf = iter.prob.prob
 
@@ -621,7 +621,7 @@ function (eig::HopfEig)(Jma, nev; kwargs...)
     n = min(nev, length(Jma.x.u))
     x = Jma.x.u     # hopf point
     p1, ω = Jma.x.p # first parameter
-    newpar = _set_param(Jma.params, getlens(Jma.hopfpb), p1)
+    newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
     J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
     eigenelts = eig.eigsolver(J, n; kwargs...)
     return eigenelts

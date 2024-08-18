@@ -4,6 +4,7 @@ authors = ["Romain Veltz <rveltz@salk.edu>"]
 version = "0.4.0"
 
 [deps]
+Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"

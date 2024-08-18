@@ -119,7 +119,7 @@ for (op, at) in (
             - `getparams(pb)` calls `pb.params`
             - `getlens(pb)` calls `pb.lens`
             - `getparam(pb)` calls `get(pb.params, pb.lens)`
-            - `setparam(pb, p0)` calls `_set_param(pb.params, pb.lens, p0)`
+            - `setparam(pb, p0)` calls `set(pb.params, pb.lens, p0)`
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
@@ -129,14 +129,14 @@ for (op, at) in (
             - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`.
 
             """
-            struct $op{Tvf, Tu, Tp, Tl <: Lens, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
+            struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)"
                 VF::Tvf
                 "Initial guess"
                 u0::Tu
                 "parameters"
                 params::Tp
-                "It can be of two types. Either it is an `Int` which specifies which component of `params` is used for continuation. Alternatively, one can use a `Setfield.Lens` which specifies which parameter axis among `params` is used for continuation. For example, if `params = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@lens _.α)`. Also, if you have an array of parameters `params = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@lens _[1])`. For more information, we refer to `SetField.jl`."
+                "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])`. For more information, we refer to `Accessors.jl`."
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
@@ -160,7 +160,7 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, Lens}, Tplot, Trecord} <: $at{Tprob}
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, AllOpticTypes}, Tplot, Trecord} <: $at{Tprob}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -184,7 +184,7 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, Lens}, Tplot, Trecord} <: $at
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, AllOpticTypes}, Tplot, Trecord} <: $at
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -204,7 +204,7 @@ for (op, at) in (
     # forward getters
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
         @eval begin
-            function $op(_F, u0, parms, lens = (@lens _);
+            function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
                          vjp = nothing,
                          J = nothing,
@@ -218,8 +218,8 @@ for (op, at) in (
                          delta = convert(eltype(u0), 1e-8),
                          save_solution = save_solution_default,
                          inplace = false)
-                @assert lens isa Int || Lens <: Lens
-                new_lens = lens isa Int ? (@lens _[lens]) : lens
+                @assert lens isa Int || lens isa AllOpticTypes
+                new_lens = lens isa Int ? (@optic _[lens]) : lens
                 if inplace
                     F = _F
                 else
@@ -260,8 +260,8 @@ function getparams(pb::AbstractBifurcationProblem)
     pb.params
 end
 @inline getlens(pb::AbstractBifurcationProblem) = pb.lens
-getparam(pb::AbstractBifurcationProblem) = get(pb.params, pb.lens)
-setparam(pb::AbstractBifurcationProblem, p0) = _set_param(pb.params, pb.lens, p0)
+getparam(pb::AbstractBifurcationProblem) = _get(pb.params, pb.lens)
+setparam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
 

@@ -129,14 +129,14 @@ function modify_po_record(probPO, kwargs, par, lens)
     else
         if probPO isa AbstractPODiffProblem
             return _recordsol = (x, p; k...) -> begin
-                period = getperiod(probPO, x, _set_param(par, lens, p))
-                sol = get_periodic_orbit(probPO, x, _set_param(par, lens, p))
+                period = getperiod(probPO, x, set(par, lens, p))
+                sol = get_periodic_orbit(probPO, x, set(par, lens, p))
                 max = @views maximum(sol[1,:])
                 min = @views minimum(sol[1,:])
                 return (max = max, min = min, amplitude = max - min, period = period)
             end
         else
-            return _recordsol = (x, p; k...) -> (period = getperiod(probPO, x, _set_param(par, lens, p)),)
+            return _recordsol = (x, p; k...) -> (period = getperiod(probPO, x, set(par, lens, p)),)
         end
     end
 end

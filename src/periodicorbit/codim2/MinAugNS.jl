@@ -57,7 +57,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
     # update parameter
-    par = _set_param(params, getlens(𝐍𝐒), p)
+    par = set(params, getlens(𝐍𝐒), p)
     J = jacobian_neimark_sacker(𝐍𝐒.prob_vf, x, par, ω)
     σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
@@ -113,7 +113,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     # parameter axis
     lens = getlens(𝐍𝐒)
     # update parameter
-    par0 = _set_param(par, lens, p)
+    par0 = set(par, lens, p)
 
     # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
     JNS = jacobian_neimark_sacker(POWrap, x, par0, ω) # jacobian with period NS boundary condition
@@ -133,10 +133,10 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
     ################### and inversion of Jpd ####################
-    dₚF = minus(residual(POWrap, x, _set_param(par, lens, p + ϵ1)),
-                residual(POWrap, x, _set_param(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
-    dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, _set_param(par, lens, p + ϵ3), ω), v),
-                  apply(jacobian_neimark_sacker(POWrap, x, _set_param(par, lens, p - ϵ3), ω), v));
+    dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
+                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
+    dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p + ϵ3), ω), v),
+                  apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p - ϵ3), ω), v));
     rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
@@ -314,8 +314,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         x = getvec(z.u, 𝐍𝐒)   # NS point
         p1, ω = getp(z.u, 𝐍𝐒) # first parameter
         p2 = z.p              # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         a = 𝐍𝐒.a
         b = 𝐍𝐒.b
@@ -364,8 +364,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         x = getvec(z, 𝐍𝐒)   # NS point
         p1, ω = getp(z, 𝐍𝐒) # first parameter
         p2 = getp(state)    # second parameter
-        newpar = _set_param(par, lens1, p1)
-        newpar = _set_param(newpar, lens2, p2)
+        newpar = set(par, lens1, p1)
+        newpar = set(newpar, lens2, p2)
 
         prob_ns = iter.prob.prob
         pbwrap = prob_ns.prob_vf

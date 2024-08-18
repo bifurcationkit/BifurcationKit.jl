@@ -270,7 +270,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         u0 = _copy(getx(_st)) # maybe we can remove this copy?
         prob_df = re_make(contIt.prob;
                             u0 = alg.perturb_solution(u0, _p, _idb),
-                            params = _set_param(par, lens, _p))
+                            params = set(par, lens, _p))
         soln = newton(prob_df, deflationOp,
                 setproperties(optnewton; max_iterations = alg.max_iter_defop);
                 normN = contIt.normC,

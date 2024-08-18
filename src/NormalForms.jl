@@ -68,7 +68,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     p = bifpt.param
 
     # parameter for vector field
-    parbif = _set_param(getparams(br), lens, p)
+    parbif = set(getparams(br), lens, p)
 
     # jacobian at bifurcation point
     L = jacobian(prob, x0, parbif)
@@ -117,10 +117,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # coefficient of p
     δ = getdelta(prob)
     if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, _set_param(parbif, lens, z)), p)
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
     else
-        R01 = (residual(prob, x0, _set_param(parbif, lens, p + δ)) .- 
-               residual(prob, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     a = dot(R01, ζ★)
     Ψ01, cv, it = ls(L, E(R01))
@@ -130,10 +130,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z -> apply(jacobian(prob, x0, _set_param(parbif, lens, z)), ζ), p)
+        R11 = ForwardDiff.derivative(z -> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
     else
-        R11 = (apply(jacobian(prob, x0, _set_param(parbif, lens, p + δ)), ζ) - 
-               apply(jacobian(prob, x0, _set_param(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
+               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     end
 
     b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
@@ -593,7 +593,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of p
     dgidp = Vector{Tvec}(undef, N)
     δ = getdelta(prob)
-    R01 = (residual(prob_vf, x0, _set_param(parbif, lens, p + δ)) .- residual(prob_vf, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
+    R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
     for ii in 1:N
         dgidp[ii] = dot(R01, ζ★s[ii])
     end
@@ -602,7 +602,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of x*p
     d2gidxjdpk = zeros(Tvec, N, N)
     for ii in 1:N, jj in 1:N
-        R11 = (apply(jacobian(prob_vf, x0, _set_param(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, _set_param(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
+        R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
         Ψ01, cv, it = ls(Linv, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
@@ -691,7 +691,7 @@ function predictor(bp::NdBranchPoint, δp::T;
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
                                     (rand(n) .- 0.5) .* 1.1, _ds)
         if ~isnothing(J)
-            @set! prob.VF.J = J
+            @reset prob.VF.J = J
         end
         failures = 0
         # we allow for 30 failures of nonlinear deflation
@@ -748,9 +748,9 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
         deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
 
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-                                    zeros(n), _ds, @lens _)
+                                    zeros(n), _ds, @optic _)
         if ~isnothing(J)
-            @set! prob.VF.J = J
+            @reset prob.VF.J = J
         end
         failures = 0
         # we allow for 30 failures of nonlinear deflation
@@ -796,7 +796,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
-    parbif = _set_param(pt.params, lens, p)
+    parbif = set(pt.params, lens, p)
     ω = pt.ω
     ζ = pt.ζ
     cζ = conj.(pt.ζ)
@@ -813,14 +813,14 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
     # −LΨ001 = R01
-    R01 = (residual(prob, x0, _set_param(parbif, lens, p + δ)) .- 
-           residual(prob, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
+    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
-    av = (apply(jacobian(prob, x0, _set_param(parbif, lens, p + δ)), ζ) .-
-          apply(jacobian(prob, x0, _set_param(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
+          apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     av .+= 2 .* R2(ζ, Ψ001)
     a = dot(av, ζ★)
 
@@ -840,7 +840,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     b = dot(bv, ζ★)
 
     verbose && println((a = a, b = b))
-    @set! pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
+    @reset pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
     if real(b) < 0
         pt.type = :SuperCritical
     elseif real(b) > 0
@@ -896,7 +896,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # parameter for vector field
     p = bifpt.param
-    parbif = _set_param(getparams(br), lens, p)
+    parbif = set(getparams(br), lens, p)
     L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
 
     if ~detailed
@@ -1010,7 +1010,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
-    parbif = _set_param(pt.params, lens, p)
+    parbif = set(pt.params, lens, p)
     ζ = pt.ζ |> real
     ζ★ = pt.ζ★ |> real
     δ = getdelta(prob)
@@ -1027,10 +1027,10 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     E(x) = x .- dot(ζ★, x) .* ζ
 
     # coefficient of x*p
-    R01 = (residual(prob, x0, _set_param(parbif, lens, p + δ)) .- 
-           residual(prob, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
-    R11 = (apply(jacobian(prob, x0, _set_param(parbif, lens, p + δ)), ζ) .- 
-           apply(jacobian(prob, x0, _set_param(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
+           apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
 
     # (I − L)⋅Ψ01 = R01
     Ψ01, cv, it = ls(L, -E(R01); a₀ = -1)
@@ -1099,7 +1099,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     x0 = pt.x0
     p = pt.p
     lens = pt.lens
-    parbif = _set_param(pt.params, lens, p)
+    parbif = set(pt.params, lens, p)
     ω = pt.ω
     ζ = pt.ζ
     cζ = conj.(pt.ζ)
@@ -1116,14 +1116,14 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # (I−L)⋅Ψ001 = R001
     if detailed
-        R001 = (residual(prob, x0, _set_param(parbif, lens, p + δ)) .- 
-                residual(prob, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
+        R001 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
         Ψ001, cv, it = ls(L, -R001; a₁ = -1)
         ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
         # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
-        av = (apply(jacobian(prob, x0, _set_param(parbif, lens, p + δ)), ζ) .-
-            apply(jacobian(prob, x0, _set_param(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
+            apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
         av .+= 2 .* R2(ζ, Ψ001)
         a = dot(ζ★, av) * cis(-ω)
         verbose && println("──▶ a  = ", a)
@@ -1147,7 +1147,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # return coefficients of the normal form
     verbose && println((a = a, b = b))
-    @set! pt.nf = (a = a, b = b)
+    @reset pt.nf = (a = a, b = b)
     if real(b) < 0
         pt.type = :SuperCritical
     elseif real(b) > 0
@@ -1200,7 +1200,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # parameter for vector field
     p = bifpt.param
-    parbif = _set_param(getparams(br), lens, p)
+    parbif = set(getparams(br), lens, p)
     L = jacobian(br.prob, convert(Teigvec, bifpt.x), parbif)
 
     # right eigenvector
@@ -1281,10 +1281,10 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     # coefficient of p
     δ = getdelta(prob)
     if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, _set_param(parbif, lens, z)), p)
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
     else
-        R01 = (residual(prob, x0, _set_param(parbif, lens, p + δ)) .- 
-               residual(prob, x0, _set_param(parbif, lens, p - δ))) ./ (2δ)
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     a = dot(R01, ζ★)
 
@@ -1297,10 +1297,10 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, _set_param(parbif, lens, z)), ζ), p)
+        R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
     else
-        R11 = (apply(jacobian(prob, x0, _set_param(parbif, lens, p + δ)), ζ) - 
-               apply(jacobian(prob, x0, _set_param(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
+               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
     end
 
     b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)

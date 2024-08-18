@@ -280,12 +280,12 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     Icoll = I(coll, _getsolution(pd.x0), par)
 
     F(u, p) = residual(coll.prob_vf, u, p)
-    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, _set_param(p, lens, z)), get(par, lens))
-    dₚF(u, p) = (residual(coll.prob_vf, u, _set_param(p, lens, p₀ + δ)) .- 
-                 residual(coll.prob_vf, u, _set_param(p, lens, p₀ - δ))) ./ (2δ)
+    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
+    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p₀ + δ)) .- 
+                 residual(coll.prob_vf, u, set(p, lens, p₀ - δ))) ./ (2δ)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
-    F11(u, p, du) = (A(u, _set_param(p, lens, p₀ + δ), du) .- 
-                     A(u, _set_param(p, lens, p₀ - δ), du)) ./ (2δ)
+    F11(u, p, du) = (A(u, set(p, lens, p₀ + δ), du) .- 
+                     A(u, set(p, lens, p₀ - δ), du)) ./ (2δ)
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
@@ -817,7 +817,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     h₂₀= J[1:end-1,1:end-1] \ rhs[1:end-1];h₂₀ = vcat(vec(h₂₀), 0)
     # h₂₀ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
-    h₂₀ = Icoll * h₂₀;@set! h₂₀[end]=0
+    h₂₀ = Icoll * h₂₀;@reset h₂₀[end]=0
     h₂₀ₛ = get_time_slices(coll, h₂₀)
                 # a cause de Icoll
                 h₂₀ₛ[:, end] .= h₂₀ₛ[:,1]
@@ -1035,7 +1035,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
             δp = pred.δp
         elseif nf.prm == false && get(nf.nf.nf, :c₁₁, nothing) != nothing
             # Iooss normal form
-            @unpack c₁₁, b3 = nf.nf.nf
+            (;c₁₁, b3) = nf.nf.nf
             c₃ = b3
             ∂p = c₁₁ * δp
             if c₃ * ∂p > 0
@@ -1081,8 +1081,8 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
     orbitguess = copy(nf.po)[begin:end-1] .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, copy(nf.po)[begin:end-1] .- ampfactor .* ζs, nf.po[end])
 
-    @set! pbnew.M = 2nf.prob.M
-    @set! pbnew.ds = _duplicate(pbnew.ds) ./ 2
+    @reset pbnew.M = 2nf.prob.M
+    @reset pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
     updatesection!(pbnew, orbitguess, setparam(pbnew, pnew))
     return (;orbitguess, pnew, prob = pbnew, ampfactor, δp)
@@ -1110,8 +1110,8 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem },
     pbnew = deepcopy(nf.prob)
     ζs = nf.ζ
 
-    @set! pbnew.section = _duplicate(pbnew.section)
-    @set! pbnew.M = pbnew.section.M
+    @reset pbnew.section = _duplicate(pbnew.section)
+    @reset pbnew.M = pbnew.section.M
     orbitguess = copy(nf.po) .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
 

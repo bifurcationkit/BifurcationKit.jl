@@ -34,3 +34,31 @@ struct FullSparse <: AbstractJacobianType end
 Same as FullSparse but the Jacobian is allocated only once and updated inplace. This is much faster than FullSparse but the sparsity pattern of the vector field must be constant.
 """
 struct FullSparseInplace <: AbstractJacobianType end
+
+
+# different jacobian types which parametrize the way jacobians of PO are computed
+
+"""
+The jacobian is computed with automatic differentiation, works for dense matrices. Can be used for debugging.
+"""
+struct AutoDiffDense <: AbstractJacobianMatrix end
+
+"""
+The jacobian is computed with an analytical formula works for dense matrices. This is the default algorithm.
+"""
+struct DenseAnalytical <: AbstractJacobianMatrix end
+
+"""
+Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula. Mainly used for Shooting.
+"""
+struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
+
+"""
+The jacobian is computed using Jacobian-Free method, namely a jacobian vector product (jvp).
+"""
+struct MatrixFree <: AbstractJacobianMatrix end
+
+"""
+The jacobian for Minimally Augmented problem is based on an analytical formula and is matrix based.
+"""
+struct MinAugMatrixBased <: AbstractJacobianMatrix end
