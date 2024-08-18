@@ -519,11 +519,11 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                 eveDetected && (verbose && printstyled(color=:red, "──▶ Event detected before p = ", getp(state), "\n"))
                 # save the event if detected and / or use bisection to locate it precisely
                 if eveDetected
-                    _T = eltype(it); status = :guess; intervalevent = (_T(0),_T(0))
+                    _T = eltype(it); status = :guess; interval_event = (_T(0),_T(0))
                     if contparams.detect_event > 1
-                        status, intervalevent = locate_event!(it.event, it, state, it.verbosity > 2)
+                        status, interval_event = locate_event!(it.event, it, state, it.verbosity > 2)
                     end
-                    success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, intervalevent)
+                    success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, interval_event)
                     state.stopcontinuation |= ~success
                     if event_pt.type != :none
                         push!(contRes.specialpoint, event_pt)

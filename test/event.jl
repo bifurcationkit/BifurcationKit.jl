@@ -97,20 +97,20 @@ br = continuation(args...; kwargs...,
     verbosity = 0, # test printing
     event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
-@test br.specialpoint[1].type==:userC
+@test br.specialpoint[1].type == :userC
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1)),)
 @test length(br.specialpoint) == 7
-@test br.specialpoint[1].type==Symbol("userC-1")
+@test br.specialpoint[1].type == Symbol("userC-1")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1),("User-2.0", "User1.0"))
     )
 @test length(br.specialpoint) == 7
-@test br.specialpoint[2].type==Symbol("User-2.0")
+@test br.specialpoint[2].type == Symbol("User-2.0")
 testBranch(br)
 
 # code for testing a single value
@@ -118,21 +118,21 @@ br = continuation(args...; kwargs...,
     event = BK.SaveAtEvent((-2.,))
     )
 @test length(br.specialpoint)-1 == 3
-@test br.specialpoint[2].type==Symbol("save")
+@test br.specialpoint[2].type == Symbol("save")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.SaveAtEvent((-2., 0., 1.))
     )
 @test length(br.specialpoint) == 6
-@test br.specialpoint[2].type==Symbol("save-1")
+@test br.specialpoint[2].type == Symbol("save-1")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.FoldDetectEvent,
     )
 @test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("fold")
+@test br.specialpoint[1].type == Symbol("fold")
 testBranch(br)
 ####################################################################################################
 # discrete events
@@ -140,22 +140,22 @@ br = continuation(args...; kwargs...,
     event = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2),
     )
 @test length(br.specialpoint) == 4
-@test br.specialpoint[1].type==:userD
+@test br.specialpoint[1].type == :userD
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.DiscreteEvent(2, (iter, state) -> (getp(state)> -2,getp(state)>0)),
     )
 @test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("userD-1")
+@test br.specialpoint[1].type == Symbol("userD-1")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
     event = BK.DiscreteEvent(2, (iter, state) -> (getp(state)> -2,getp(state)>0),("userD-2", "UserD0")),
     )
 @test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("userD-2")
-@test br.specialpoint[4].type==Symbol("UserD0")
+@test br.specialpoint[1].type == Symbol("userD-2")
+@test br.specialpoint[4].type == Symbol("UserD0")
 testBranch(br)
 ####################################################################################################
 br = continuation(args...; kwargs...,
@@ -176,8 +176,8 @@ br = continuation(args...; kwargs..., verbosity = 0,
         BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)),
         )
 @test length(br.specialpoint) == 5
-@test br.specialpoint[1].type==Symbol("userD")
-@test br.specialpoint[4].type==Symbol("userC")
+@test br.specialpoint[1].type == Symbol("userD")
+@test br.specialpoint[4].type == Symbol("userC")
 testBranch(br)
 
 br = continuation(args...; kwargs..., verbosity = 0,
@@ -186,9 +186,9 @@ br = continuation(args...; kwargs..., verbosity = 0,
         BK.DiscreteEvent(2, (iter, state) -> (getp(state)> -2, getp(state)>-1)) )
     )
 @test length(br.specialpoint) == 9
-@test br.specialpoint[1].type==Symbol("userD-1")
-@test br.specialpoint[4].type==Symbol("userD-2")
-@test br.specialpoint[5].type==Symbol("userC-1")
+@test br.specialpoint[1].type == Symbol("userD-1")
+@test br.specialpoint[4].type == Symbol("userD-2")
+@test br.specialpoint[5].type == Symbol("userC-1")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
@@ -196,7 +196,7 @@ br = continuation(args...; kwargs...,
         BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),
         BK.BifDetectEvent),)
 @test length(br.specialpoint) == 10
-@test br.specialpoint[1].type==Symbol("userC")
+@test br.specialpoint[1].type == Symbol("userC")
 testBranch(br)
 
 br = continuation(args...; kwargs...,
@@ -205,8 +205,8 @@ br = continuation(args...; kwargs...,
         BK.DiscreteEvent(1, (iter, state) -> getp(state)>2)),
     )
 @test length(br.specialpoint) == 8
-@test br.specialpoint[1].type==Symbol("fold")
-@test br.specialpoint[3].type==Symbol("userD")
+@test br.specialpoint[1].type == Symbol("fold")
+@test br.specialpoint[3].type == Symbol("userD")
 testBranch(br)
 ####################################################################################################
 # test SetOfEvents
@@ -222,9 +222,9 @@ br = continuation(args2...; kwargs...,
     )
 # plot(br, legend = :bottomright)
 @test length(br.specialpoint) == 12
-@test br.specialpoint[1].type==Symbol("bp")
-@test br.specialpoint[5].type==Symbol("userC1")
-@test br.specialpoint[6].type==Symbol("userC2-1")
+@test br.specialpoint[1].type == Symbol("bp")
+@test br.specialpoint[5].type == Symbol("userC1")
+@test br.specialpoint[6].type == Symbol("userC2-1")
 testBranch(br)
 
 evd1 = BK.DiscreteEvent(1, (iter, state) -> getp(state)>0)
@@ -235,9 +235,9 @@ br = continuation(args2...; kwargs...,
     )
     # plot(br, legend = :bottomright)
 @test length(br.specialpoint) == 11
-@test br.specialpoint[1].type==Symbol("userD2-1")
-@test br.specialpoint[6].type==Symbol("userC1")
-@test br.specialpoint[7].type==Symbol("userC2-1")
+@test br.specialpoint[1].type == Symbol("userD2-1")
+@test br.specialpoint[6].type == Symbol("userC1")
+@test br.specialpoint[7].type == Symbol("userC2-1")
 testBranch(br)
 
 eves3 = SetOfEvents(eves1, eves2)
@@ -247,9 +247,9 @@ br = continuation(args2...; kwargs...,
     )
 # plot(br, legend = :bottomright)
 @test length(br.specialpoint) == 17
-@test br.specialpoint[1].type==Symbol("userD3-1")
-@test br.specialpoint[2].type==Symbol("bp")
-@test br.specialpoint[11].type==Symbol("userC2-1")
+@test br.specialpoint[1].type == Symbol("userD3-1")
+@test br.specialpoint[2].type == Symbol("bp")
+@test br.specialpoint[11].type == Symbol("userC2-1")
 testBranch(br)
 
 br = continuation(args2...; kwargs...,
