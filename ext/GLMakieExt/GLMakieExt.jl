@@ -21,7 +21,9 @@ module GLMakieExt
                            get_color,
                            colorbif,
                            get_plot_backend,
-                           BK_Makie
+                           BK_Makie,
+                           plotAllDCBranch,
+                           plot_DCont_branch
 
     # TODO block precompilation
     get_plot_backend() = BK_Makie()

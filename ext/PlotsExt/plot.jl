@@ -41,7 +41,24 @@ function plot_branch_cont(contres::ContResult,
                 label = "",
                 subplot = 2) |> display
 end
+####################################################################################################
+plotAllDCBranch(branches) = display(plot(branches..., label = ""))
 
+function plot_DCont_branch(::Union{BK_Plots, BK_NoPlot},
+                            branches, 
+                            nbrs::Int, 
+                            nactive::Int,
+                            nstep::Int)
+    plot(branches...; label = "", title  = "$nbrs branches, actives = $(nactive), step = $nstep")
+    for br in branches
+    (length(br) > 1) && plot!([br.branch[end-1:end].param], 
+            [getproperty(br.branch,1)[end-1:end]], 
+            label = "", arrow = true, color = :red)
+    end
+    scatter!([br.branch[1].param for br in branches], 
+             [br.branch[1][1] for br in branches], 
+              marker = :cross, color=:green, label = "") |> display
+end
 ####################################################################################################
 # plotting function of the periodic orbits
 function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)

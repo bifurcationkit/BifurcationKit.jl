@@ -240,3 +240,12 @@ function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-
     end
 end
 ####################################################################################################
+plotAllDCBranch(branches) = plot(branches...)
+
+function plot_DCont_branch(::BK_Makie,
+                            branches, 
+                            nbrs::Int, 
+                            nactive::Int,
+                            nstep::Int)
+    plot(branches...)
+end

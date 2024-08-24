@@ -16,7 +16,10 @@ module PlotsExt
                            _hasstability,
                            filter_bifurcations,
                            get_color,
-                           AbstractResult
+                           AbstractResult,
+                           BK_NoPlot, BK_Plots,
+                           plotAllDCBranch,
+                           plot_DCont_branch
 
     include("plot.jl")
 end

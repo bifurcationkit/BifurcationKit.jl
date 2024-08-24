@@ -166,26 +166,8 @@ function get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) wher
 end
 
 # plotting functions
-function plot_DCont_branch(branches, 
-                            nbrs::Int, 
-                            nactive::Int,
-                            nstep::Int)
-    _bcd_plot = get_plot_backend()
-    if _bcd_plot == BK_Plots()
-        plot(branches...; label = "", title  = "$nbrs branches, actives = $(nactive), step = $nstep")
-    else
-        plot(branches...)
-    end
-    for br in branches
-        (length(br) > 1 && _bcd_plot == BK_Plots()) && plot!([br.branch[end-1:end].param], 
-                                [getproperty(br.branch,1)[end-1:end]], 
-                                label = "", arrow = true, color = :red)
-    end
-    _bcd_plot == BK_Plots() && scatter!([br.branch[1].param for br in branches], 
-             [br.branch[1][1] for br in branches], 
-             marker = :cross, color=:green, label = "") |> display
-end
-plotAllDCBranch(branches) = display(plot(branches..., label = ""))
+function plotAllDCBranch end
+function plot_DCont_branch end
 
 
 """
@@ -316,7 +298,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         # number of active branches
         nactive = mapreduce(isactive, +, dcstates)
         if plot && mod(nstep, contParams.plot_every_step) == 0
-            plot_DCont_branch(branches, nbrs, nactive, nstep)
+            plot_DCont_branch(get_plot_backend(), branches, nbrs, nactive, nstep)
         end
 
         # only look for new branches if the number of active branches is too small
