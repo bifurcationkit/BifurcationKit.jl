@@ -126,7 +126,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
     # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolverAdjoint)
     ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)

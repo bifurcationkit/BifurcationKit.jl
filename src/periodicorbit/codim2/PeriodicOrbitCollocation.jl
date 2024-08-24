@@ -128,7 +128,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # update section
     # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
-    updatesection!(coll, ϕ, nothing)
+    # updatesection!(coll, ϕ, nothing)
 
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
