@@ -102,7 +102,6 @@ BK._getvectortype(prob)
 show(prob)
 
 br0 = @time continuation(prob, PALC(), opts)
-plot(br0)
 br0 = @time continuation(prob, 
                 BK.AutoSwitch(
                     alg = PALC(tangent = Bordered()), 
@@ -110,9 +109,7 @@ br0 = @time continuation(prob,
                     ),
                 ContinuationPar(opts0, max_steps = 47, detect_fold = false, newton_options = NewtonPar(max_iterations = 5), dsmax = 0.051); 
                 verbosity = 1)
-plot(br0, marker = :d)
-# plot!(br0.param, )
-
+###############
 br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
 BK._getfirstusertype(br0)
 BK.propertynames(br0)

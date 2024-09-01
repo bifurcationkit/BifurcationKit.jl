@@ -104,9 +104,9 @@ push!(deflationOp, rand(_T,1))
 deflationOp[1]
 @test deflationOp(zeros(_T, 1)) isa _T
 @test deflationOp(rand(_T, 1), rand(_T, 1)) isa _T
-copy(deflationOp)
-pop!(deflationOp)
-empty!(deflationOp)
+_defop = copy(deflationOp)
+pop!(_defop)
+empty!(_defop)
 
 
 # test of custom distance
