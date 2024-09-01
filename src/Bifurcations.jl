@@ -34,8 +34,11 @@ end
 # if fold point is located, store it in contres
 function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
+    n_br = length(branch)
+    lazy_params = LazyRows(branch)
+
     # Fold point detection based on continuation parameter monotony
-    if iter.contparams.detect_fold && length(branch) > 2 && detect_fold(branch[end-2:end].param...)
+    if iter.contparams.detect_fold && length(branch) > 2 && detect_fold(lazy_params[n_br-2].param, lazy_params[n_br-1].param, lazy_params[n_br].param)
         if iter.verbosity > 0
             printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
         end
@@ -54,7 +57,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
             status = :guess,
             δ = (0, 0),
             precision = -1.,
-            interval = (branch[end-1].param, branch[end-1].param)))
+            interval = (lazy_params[n_br-1].param, lazy_params[n_br-1].param)))
         return true
     else
         return false
