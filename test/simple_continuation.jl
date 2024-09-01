@@ -1,6 +1,7 @@
 #using Revise
 # using Plots
 using Test
+using ForwardDiff
 using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
@@ -99,6 +100,18 @@ prob = BK.BifurcationProblem(F_simple, x0, -1.5, (@optic _); J = Jac_simple)
 BK.isinplace(prob)
 BK._getvectortype(prob)
 show(prob)
+
+br0 = @time continuation(prob, PALC(), opts)
+plot(br0)
+br0 = @time continuation(prob, 
+                BK.AutoSwitch(
+                    alg = PALC(tangent = Bordered()), 
+                    tol_param = 0.45,
+                    ),
+                ContinuationPar(opts0, max_steps = 47, detect_fold = false, newton_options = NewtonPar(max_iterations = 5), dsmax = 0.051); 
+                verbosity = 1)
+plot(br0, marker = :d)
+# plot!(br0.param, )
 
 br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
 BK._getfirstusertype(br0)

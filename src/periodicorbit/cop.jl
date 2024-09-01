@@ -601,7 +601,8 @@ function (ls::COPBLS)(_Jc, dR,
                     R::AbstractVecOrMat, n::T,
                     ξu::T = T(1), ξp::T = T(1);
                     shift::Ts = nothing, 
-                    Mass::Tm = LinearAlgebra.I, 
+                    Mass::Tm = LinearAlgebra.I,
+                    dotp = nothing,
                     applyξu! = nothing)  where {T <: Number, Ts, Tm}
     Jc = _get_matrix(_Jc) # to handle FloquetWrapper
     if isnothing(shift)
