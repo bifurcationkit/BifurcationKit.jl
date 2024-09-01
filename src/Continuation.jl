@@ -242,11 +242,11 @@ end
             (isindomain(it, getp(state)) || state.step == 0) &&
             (state.stopcontinuation == false)
 
-function get_state_summary(it, state)
+function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, Teigvals}
     x = getx(state)
     p = getp(state)
     pt = record_from_solution(it)(x, p)
-    stable = compute_eigenelements(it) ? is_stable(state) : nothing
+    stable = Teigvals!=Nothing ? is_stable(state) : nothing
     return mergefromuser(pt, 
                         (param = p,
                         itnewton = state.itnewton,
