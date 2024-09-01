@@ -1,6 +1,6 @@
 ####################################################################################################
 """
-This function checks whether the solution with eigenvalues `eigvalues` is stable and also compute the number of unstable eigenvalues with nonzero imaginary part
+This function checks whether the solution with eigenvalues `eigvalues` is stable. It also computes the number of unstable eigenvalues with nonzero imaginary part
 """
 function is_stable(contparams::ContinuationPar, eigvalues)::NamedTuple{(:isstable, :n_unstable, :n_imag), Tuple{Bool, Int64, Int64}}
     # the return type definition above is to remove type instability in continuation
@@ -68,9 +68,9 @@ function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval:
     # this boolean ensures that edge cases are handled
     known::Bool = false
 
-    # get current number of unstable eigenvalues and
-    # unstable eigenvalues with nonzero imaginary part
+    # get current/previous number of unstable eigenvalues and
     n_unstable, n_unstable_prev = state.n_unstable
+    # unstable eigenvalues with nonzero imaginary part
     n_imag, n_imag_prev = state.n_imag
 
     # computation of the index of the bifurcating eigenvalue
@@ -79,7 +79,7 @@ function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval:
     tp = :none
 
     δn_unstable = abs(n_unstable - n_unstable_prev)
-    δn_imag        = abs(n_imag - n_imag_prev)
+    δn_imag     = abs(n_imag - n_imag_prev)
 
     # codim 1 bifurcation point detection based on eigenvalues distribution
     if δn_unstable == 1
@@ -120,7 +120,7 @@ function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval:
 
     if known
         # record information about the bifurcation point
-        # because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information)  corresponding to the current bifurcation point are saved in br.eig[step+1]
+        # because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information) corresponding to the current bifurcation point are saved in br.eig[step+1]
         specialpoint = SpecialPoint(it, state, tp, status, interval;
             δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
             idx = state.step + 1,

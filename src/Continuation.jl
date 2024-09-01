@@ -345,6 +345,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
     # newton parameters
     (;p_min, p_max, max_steps, newton_options, η, ds) = it.contparams
+
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
         return nothing
@@ -383,7 +384,10 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 end
 
 # same as previous function but when two (initial guesses) points are provided
-function iterate_from_two_points(it::ContIterable, u₀, p₀::T, u₁, p₁::T; _verbosity = it.verbosity) where T
+function iterate_from_two_points(it::ContIterable, 
+                                    u₀, p₀::T, 
+                                    u₁, p₁::T; 
+                                    _verbosity = it.verbosity) where T
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
     # compute eigenvalues to get the type. Necessary to give a ContResult

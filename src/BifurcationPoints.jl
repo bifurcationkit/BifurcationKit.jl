@@ -89,8 +89,8 @@ Return the dimension of the kernel of the special point.
 # constructors
 SpecialPoint(x0, τ, T::Type, printsol) = SpecialPoint(type = :none,
                                             idx = 0,
-                                            param = T(0),
-                                            norm  = T(0),
+                                            param = zero(T),
+                                            norm  = zero(T),
                                             printsol = printsol,
                                             x = x0,
                                             τ = τ,
@@ -101,7 +101,13 @@ SpecialPoint(x0, τ, T::Type, printsol) = SpecialPoint(type = :none,
                                             precision = T(-1),
                                             interval = (zero(T), zero(T)))
 
-SpecialPoint(it::ContIterable, state::ContState, type::Symbol, status::Symbol, interval; ind_ev = 0, δ = (0,0), idx = state.step ) = SpecialPoint(;
+SpecialPoint(it::ContIterable,
+             state::ContState,
+             type::Symbol,
+             status::Symbol,
+             interval; ind_ev = 0,
+             δ = (0,0),
+             idx = state.step ) = SpecialPoint(;
                                 type,
                                 idx,
                                 param = getp(state),

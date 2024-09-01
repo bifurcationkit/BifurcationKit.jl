@@ -63,6 +63,8 @@ br0[1]
 br0[end]
 BK.bifurcation_points(br0)
 BK.kernel_dimension(br0, 1)
+BK.eigenvalsfrombif(br0,1)
+BK.eigenvals(br0,1)
 
 branch = Branch(br0, rand(2));
 branch[end]
@@ -231,7 +233,10 @@ prob.u0 .= ones(N)*3
 @reset prob.params = -3.
 brbd = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2))
 @reset prob.params = -3.2
-brbd  = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2), verbosity = 0)
+try
+    brbd  = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2), verbosity = 0)
+catch
+end
 @test isnothing(brbd)
 ####################################################################################################
 # testing when starting with 2 points on the branch

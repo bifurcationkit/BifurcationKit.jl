@@ -410,7 +410,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─ Method = \n", pbPO, "\n")
 
     if pred.amp > 0.1
-        @warn "The amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small $(pred.amp). You can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
+        @warn "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
     M = get_mesh_size(pbPO)

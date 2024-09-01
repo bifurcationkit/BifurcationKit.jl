@@ -925,7 +925,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
-    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
 
     # normalise left eigenvector
     ζ★ ./= dot(ζ, ζ★)
@@ -990,7 +990,7 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
                     2 .* real.(hp.ζ .* A(t)) .+
                     ds .* nf.Ψ001 .+
                     abs2(A(t)) .* real.(nf.Ψ110) .+
-                    2 .* real.(A(t)^2 * nf.Ψ200) ,
+                    2 .* real.(A(t)^2 .* nf.Ψ200) ,
             amp = 2amp,
             ω = ω,
             period = abs(2pi/ω),
