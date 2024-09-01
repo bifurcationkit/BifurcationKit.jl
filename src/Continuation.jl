@@ -385,13 +385,10 @@ function iterate_from_two_points(it::ContIterable,
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
     # compute eigenvalues to get the type. Necessary to give a ContResult
+    eigvals, eigvecs = (nothing, nothing)
+    cveig::Bool = true
     if compute_eigenelements(it)
         eigvals, eigvecs, cveig, = compute_eigenvalues(it, (z = z,), u₀, getparams(it.prob), it.contparams.nev)
-        if ~save_eigenvectors(it)
-            eigvecs = nothing
-        end
-    else
-        eigvals, eigvecs = nothing, nothing
     end
 
     # compute event value and store it into state
