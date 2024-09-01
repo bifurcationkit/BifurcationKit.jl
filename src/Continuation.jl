@@ -348,7 +348,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
-        return nothing
+        throw("Stopping continuation.")
     end
 
     # apply Newton algorithm to initial guess
