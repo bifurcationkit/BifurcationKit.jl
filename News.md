@@ -3,8 +3,8 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
-## Near future
-- Setfield.jl has been changed to Accessors.jl
+## [0.4.0]
+- Setfield.jl is not anymore the main component of BifurcationKit to support parameter axis. It has been changed in favour of Accessors.jl
 
 ## [0.3.7]
 - remove `Requires.jl` and use extensions. This requires julia>=1.9
