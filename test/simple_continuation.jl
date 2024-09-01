@@ -1,12 +1,14 @@
-# using Revise
+using Revise
 # using Plots
 using Test
 using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
 N = 1
-F = (x, p; k = 2) -> p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
-Jac_m = (x, p; k = 2) -> diagm(0 => p[1] .+ x.^k)
+
+F0_simple(x, p) = p[1] .* x
+F_simple(x, p; k = 2) = p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
+Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
 # test creation of specific scalar product
 _dt = BK.DotTheta(dot)
@@ -47,12 +49,25 @@ BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
 
-prob = BK.BifurcationProblem(F, x0, -1.5, (@optic _); J = Jac_m)
+_prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
+opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40)
+_br0 = @time continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
+
+@test BK._hasstability(_br0) == false
+@test _br0.contparams == opts0
+@test _br0.contparams.save_sol_every_step == 0 && ~BK.hassolution(_br0)
+
+opts0 = ContinuationPar(opts0, detect_bifurcation = 1, save_eigenvectors = false)
+_br0 = @time continuation(_prob0, PALC(), opts0)
+@test ~(_br0.contparams.save_eigenvectors) && ~BK.haseigenvector(_br0)
+
+
+prob = BK.BifurcationProblem(F_simple, x0, -1.5, (@optic _); J = Jac_simple)
 BK.isinplace(prob)
 BK._getvectortype(prob)
 show(prob)
 
-br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(17.98 k allocations: 1.155 MiB)
+br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
 BK._getfirstusertype(br0)
 BK.propertynames(br0)
 BK.compute_eigenvalues(opts)
@@ -63,7 +78,7 @@ br0[1]
 br0[end]
 BK.bifurcation_points(br0)
 BK.kernel_dimension(br0, 1)
-BK.eigenvalsfrombif(br0,1)
+BK.eigenvalsfrombif(br0, 1)
 BK.eigenvals(br0,1)
 
 branch = Branch(br0, rand(2));
@@ -80,21 +95,15 @@ end
 br0 = continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = (state; kwargs...)->(true));
 
 ###### Used to check type stability of the methods
-# using RecursiveArrayTools
 iter = ContIterable(prob, PALC(), opts)
-state = iterate(iter)[1]
-# test copy, copyto!
-state1 = copy(state);copyto!(state1, state)
-contRes = ContResult(iter, state)
-continuation!(iter, state, contRes)
 eltype(iter)
 length(iter)
-#
-typeof(contRes)
 
-# state = iterate(iter)[1]
-#      contRes = BK.ContResult(iter, state)
-#      @code_warntype continuation!(iter, state, contRes)
+# begin
+#     state = iterate(iter)[1]
+#     contRes = BK.ContResult(iter, state)
+#     @code_warntype continuation!(iter, state, contRes)
+# end
 #####
 
 opts = ContinuationPar(opts; detect_bifurcation = 3, save_eigenvectors=true)
@@ -135,7 +144,7 @@ br5a = continuation(prob, PALC(), opts, finalise_solution = finalise_solution)
 # test for different predictors
 br6 = continuation(prob, PALC(tangent = Secant()), opts)
 
-optsnat = ContinuationPar(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
+optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
 br7 = continuation((@set prob.recordFromSolution = (x,p)->x[1]), Natural(), optsnat)
 
 # tangent prediction with Bordered predictor
@@ -242,7 +251,7 @@ end
 opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds = 0.001, max_steps = 140, p_min = -3., newton_options = NewtonPar(verbose = false), detect_bifurcation = 3)
 x0 = 0.01 * ones(2)
 
-prob = BK.BifurcationProblem(F, x0, -1.5, (@optic _); J = Jac_m)
+prob = BK.BifurcationProblem(F_simple, x0, -1.5, (@optic _); J = Jac_simple)
 x0 = newton(prob, opts.newton_options)
 x1 = newton((@set prob.params = -1.45), opts.newton_options)
 
@@ -263,7 +272,7 @@ BK._perturbSolution(1, 0, 1)
 BK._acceptSolution(1, 0)
 BK.DCState(rand(2))
 
-prob = BK.BifurcationProblem(F, [0.], 0.5, (@optic _); J = Jac_m)
+prob = BK.BifurcationProblem(F_simple, [0.], 0.5, (@optic _); J = Jac_simple)
 alg = BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.]]),
     perturb_solution = (x,p,id) -> (x .+ 0.1 .* rand(length(x)))
     )

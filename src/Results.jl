@@ -111,11 +111,13 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the solution are saved in the branch
-@inline hassolution(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} ) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg } = Tsol != Nothing
+# c'est faux ca! a tester
+@inline hassolution(br::ContResult) = br.contparams.save_sol_every_step > 0
 @inline hassolution(br::AbstractBranchResult) = hassolution(br.γ)
 
 # check whether the eigenvectors are saved in the branch
-@inline haseigenvector(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} ) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg } = Teigvec != Nothing
+# c'est faux ca, a tester
+@inline haseigenvector(br::ContResult) = br.contparams.save_eigenvectors && haseigenvalues(br)
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline _hasstability(br::AbstractBranchResult) = _hasstability(br.branch)
