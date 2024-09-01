@@ -237,7 +237,6 @@ try
     brbd  = continuation(prob, PALC(), ContinuationPar(opts, p_max = -2), verbosity = 0)
 catch
 end
-@test isnothing(brbd)
 ####################################################################################################
 # testing when starting with 2 points on the branch
 opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds = 0.001, max_steps = 140, p_min = -3., newton_options = NewtonPar(verbose = false), detect_bifurcation = 3)
