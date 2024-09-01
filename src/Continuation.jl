@@ -305,17 +305,11 @@ function ContResult(it::AbstractContinuationIterable,
     x0 = _copy(getx(state))
     p0 = getp(state)
     pt = record_from_solution(it)(x0, p0)
-    eiginfo = compute_eigenelements(it) ? (state.eigvals, state.eigvecs) : nothing
-    return _contresult(it.prob,
-                        getalg(it),
+    return _contresult(it, state,
                         pt,
                         get_state_summary(it, state), 
                         save_solution(it.prob, x0, setparam(it.prob, p0)), 
-                        state.τ, 
-                        eiginfo,
-                        getcontparams(it),
-                        compute_eigenelements(it),
-                        it.kind)
+                        getcontparams(it))
 end
 
 # function to update the state according to the event

@@ -234,28 +234,28 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _contresult(prob, alg, printsol, br, x0, τ, eiginfo, contParams::ContinuationPar{T, S, E}, computeEigElements::Bool, kind::AbstractContinuationKind) where {T, S, E}
+ function _contresult(iter,
+                      state,
+                      printsol,
+                      br,
+                      x0,
+                      contParams::ContinuationPar{T, S, E}) where {T, S, E}
     # example of bifurcation point
-    bif0 = SpecialPoint(x0, τ, T, namedprintsol(printsol))
-    # shall we save full solution?
-    sol = contParams.save_sol_every_step > 0 ? [(x = x0, p = getparam(prob), step = 0)] : nothing
-    n_unstable = 0; n_imag = 0; stability = true
-
-    if computeEigElements
-        evvectors = save_eigenvectors(contParams) ? eiginfo[2] : nothing
-        _evvectors = (eigenvals = eiginfo[1], eigenvecs = evvectors, converged = true, step = 0)
-    else
-        _evvectors = (eigenvals = nothing, eigenvecs = nothing, converged = true, step = 0)
-    end
+    bif0 = SpecialPoint(x0, state.τ, T, namedprintsol(printsol))
+    # save full solution?
+    sol = contParams.save_sol_every_step > 0 ? [(x = x0, p = getparam(iter.prob), step = 0)] : [(x = empty(x0), p = getparam(iter.prob), step = 0)]
+    n_unstable = n_imag = 0
+    stability = true
+    _evvectors = (eigenvals = state.eigvals, eigenvecs = state.eigvecs, converged = true, step = 0)
     return ContResult(
-        branch = StructArray([br]),
-        specialpoint = Vector{typeof(bif0)}(undef, 0),
-        eig = computeEigElements ? [_evvectors] : empty([_evvectors]),
-        sol = sol,
-        contparams =  contParams,
-        alg = alg,
-        kind = kind,
-        prob = prob)
+                    branch = StructArray([br]),
+                    specialpoint = Vector{typeof(bif0)}(undef, 0),
+                    eig = compute_eigenelements(iter) ? [_evvectors] : empty([_evvectors]),
+                    sol = sol,
+                    contparams = contParams,
+                    alg = iter.alg,
+                    kind = iter.kind,
+                    prob = iter.prob)
 end
 
 """
