@@ -43,7 +43,7 @@ Internal function to select the keys out of nt that are valid for the continuati
 Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
 """
 function _keep_opts_cont(nt) 
-    NamedTuple{filter(in((:kind,
+    return NamedTuple{filter(in((:kind,
                             :filename,
                             :plot,
                             :normC,
@@ -73,7 +73,7 @@ function ContIterable(prob::AbstractBifurcationProblem,
         unrecognized = keys(kwargs)
         printstyled(unrecognized; bold = true, color = :red)
         print("\n\n")
-        @assert false
+        throw("Stopping continuation.")
     end
 
     return ContIterable(;kind,
