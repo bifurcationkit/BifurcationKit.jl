@@ -56,7 +56,7 @@ Automatic branch switching at branch points based on a computation of the normal
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
 - `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
-- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
