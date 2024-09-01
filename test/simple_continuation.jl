@@ -1,4 +1,4 @@
-using Revise
+#using Revise
 # using Plots
 using Test
 using BifurcationKit, LinearAlgebra, SparseArrays
