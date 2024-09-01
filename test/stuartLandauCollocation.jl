@@ -19,8 +19,8 @@ end
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
 par_hopf = (@set par_sl.r = 0.1)
-probsl = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
-probsl_ip = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true)
+probsl = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
+probsl_ip = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
@@ -54,14 +54,10 @@ BK.getmaximum(prob_col, _ci, par_sl)
 @test BK.∂(sin, 2)(0.) == 0
 prob_col(_ci, par_sl) #|> scatter
 BK.get_time_slices(prob_col, _ci)
+
 # interpolate solution
 sol = BK.POSolution(prob_col, _ci)
 sol(rand())
-
-# using ForwardDiff
-# J(x,p) = ForwardDiff.jacobian(u -> prob_col(u,  p), x)
-# _J = J(vcat(vec(_ci), 1),  par_sl)
-#     heatmap(_J .!= 0, yflip = true)
 ####################################################################################################
 prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
 _ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
@@ -147,8 +143,6 @@ _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
 _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
 @test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2), 3) ≈ 3/2
 @test BK.∫(prob_col, _ci1, _ci2, 3) ≈ 3/2 # test vector form
-
-
 ####################################################################################################
 Ntst = 50
 m = 4
@@ -186,11 +180,11 @@ args = (
     end,)
 
 optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
-@set! optcontpo.ds = -0.01
-@set! optcontpo.newton_options.verbose = false
+@reset optcontpo.ds = -0.01
+@reset optcontpo.newton_options.verbose = false
 
 prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
-@set! prob_col2.jacobian = BK.AutoDiffDense()
+@reset prob_col2.jacobian = BK.AutoDiffDense()
 sol_po = newton(prob_col2, _ci, optcontpo.newton_options);
 
 # test solution
@@ -205,7 +199,7 @@ let
 end
 
 # 0.131970 seconds (32.51 k allocations: 309.737 MiB, 14.97% gc time)
-@set! prob_col2.update_section_every_step = 1
+@reset prob_col2.update_section_every_step = 1
 br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
     verbosity = 0, plot = false,
     args...,
@@ -218,7 +212,7 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
     );
 
 newton(prob_col2, _ci, NewtonPar())
-newton(prob_col2, _ci, NewtonPar(linsolver=COPLS()))
+newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
 ####################################################################################################
 # test analytical jacobian
 Ntst = 10

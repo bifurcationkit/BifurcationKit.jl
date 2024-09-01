@@ -1,6 +1,6 @@
 # this test is designed to test the ability of the package to use a state space that is not an AbstractArray.
 # using Revise
-using Test, Random, Setfield
+using Test, Random
 using BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
@@ -21,12 +21,12 @@ function F0(x::Vector, r)
 end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
-    prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
-            record_from_solution = (x, p) -> x[1],
-            J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
-            Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
-            d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
-    sol0 = newton(prob, opt_newton0)
+prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
+        record_from_solution = (x, p) -> x[1],
+        J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
+        Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
+        d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
+sol0 = newton(prob, opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton0; max_iterations = 70, tol = 1e-8), detect_bifurcation = 0, max_steps = 150)
 
@@ -84,7 +84,7 @@ BK.get_solx(br, 1)
 BK.get_solp(br, 1)
 @test br.param[end] == -1
 
-# plot(br);title!("")
+# plot(br)
 
 prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
     J = (x, r) -> Jacobian(x, r[1], r[2]),
@@ -110,12 +110,6 @@ push!(deflationOp, soldef1.u)
 Random.seed!(1231)
 # test with Newton deflation 2
 soldef2 = newton(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
-
-deflationOp[1]
-length(deflationOp)
-pop!(deflationOp)
-empty!(deflationOp)
-
 ####################################################################################################
 using KrylovKit
 
@@ -144,7 +138,7 @@ function (J::JacobianR)(dx)
     return out
 end
 
-struct linsolveBd_r <: BK.AbstractBorderedLinearSolver end
+struct linsolveBd_r <: BK.AbstractLinearSolver end
 
 function (l::linsolveBd_r)(J, dx)
     x = J.x

@@ -25,15 +25,14 @@ DotTheta(dt) = DotTheta(dt, nothing)
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
 (dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
 
-# Implementation of the norm associated to DotTheta
-# we restrict the type of the parameters because for complex problems, we still want the parameter to be real
+# implementation of the norm associated to DotTheta
 (dt::DotTheta)(u, p::T, θ::T) where T = sqrt(dt(u, u, p, p, θ))
 
 (dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, θ)
 (dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)
 ####################################################################################################
 # equation of the arc length constraint
-arcLengthEq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
+arc_length_eq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -51,27 +50,26 @@ $(TYPEDFIELDS)
     "Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
-    θ::T                        = 0.5
+    θ::T = 0.5
     "[internal], "
     _bothside::Bool = false
     "Bordered linear solver used to invert the jacobian of the newton bordered problem. It is also used to compute the tangent for the predictor `Bordered()`, "
     bls::Tbls = MatrixBLS()
-    "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...)"
-    dotθ::Tdot                  = DotTheta()
+    "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...) or when a specific (FEM) dot product is provided."
+    dotθ::Tdot = DotTheta()
 
     @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
 end
 getlinsolver(alg::PALC) = alg.bls
-@inline getdot(alg::PALC) = alg.dotθ
-@inline getθ(alg::PALC) = alg.θ
+getdot(alg::PALC) = alg.dotθ
+getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
-@inline getdot(it::ContIterable) = getdot(it.alg)
-@inline getθ(it::ContIterable) = getθ(it.alg)
+getdot(it::ContIterable) = getdot(it.alg)
+getθ(it::ContIterable) = getθ(it.alg)
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, onoroff::Bool) = internal_adaptation!(alg.tangent, onoroff)
-
 
 function Base.empty!(alg::PALC)
     empty!(alg.tangent)
@@ -90,21 +88,22 @@ function update(alg::PALC, contParams::ContinuationPar, linear_algo)
 end
 
 function initialize!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::PALC,
-                        nrm = false)
-    # for the initialisation step, we do not use a Bordered predictor which fails at bifurcation points
+                     iter::AbstractContinuationIterable,
+                     alg::PALC,
+                     nrm = false)
+    # for the initialisation step, we do not use a Bordered predictor which 
+    # fails at bifurcation points. Instead, we start with a Secant predictor
     gettangent!(state, iter, Secant(), getdot(alg))
-    # we want to start at (u0, p0), not at (u1, p1)
+    # we want to start at (u0, p0), not (u1, p1)
     copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
     addtangent!(state, nrm)
 end
 
 function getpredictor!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::PALC,
-                        nrm = false)
+                       iter::AbstractContinuationIterable,
+                       alg::PALC,
+                       nrm = false)
     # we compute the tangent
     # if the state has not converged, we dot not update the tangent
     # state.z has been updated only if converged(state) == true
@@ -128,9 +127,9 @@ function addtangent!(state::AbstractContinuationState, nrm = false)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::PALC,
-                        nrm = false) = addtangent!(state, nrm)
+                  iter::AbstractContinuationIterable,
+                  alg::PALC,
+                  nrm = false) = addtangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
@@ -141,10 +140,10 @@ function corrector!(state::AbstractContinuationState,
         return corrector!(state, it, Natural(); kwargs...)
     end
     sol = newton_palc(it, state, getdot(alg); 
-                    linearbdalgo = alg.bls, 
-                    normN = it.normC, 
-                    callback = it.callback_newton, 
-                    kwargs...)
+                      linearbdalgo = alg.bls, 
+                      normN = it.normC, 
+                      callback = it.callback_newton, 
+                      kwargs...)
 
     # update fields, in particular the `converged` one
     _update_field_but_not_sol!(state, sol)
@@ -165,13 +164,13 @@ struct Secant <: AbstractTangentComputation end
 
 # This function is used for initialisation in iterate_from_two_points
 function _secant_tangent!(τ::M, 
-                                z₁::M, 
-                                z₀::M, 
-                                it::AbstractContinuationIterable, 
-                                ds, 
-                                θ, 
-                                verbosity, 
-                                dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
+                          z₁::M, 
+                          z₀::M, 
+                          it::AbstractContinuationIterable, 
+                          ds, 
+                          θ, 
+                          verbosity, 
+                          dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
     copyto!(τ, z₁)
@@ -186,13 +185,13 @@ gettangent!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable,
             algo::Secant,
             dotθ) = _secant_tangent!(state.τ, 
-                                        state.z, 
-                                        state.z_old, 
-                                        iter, 
-                                        state.ds, 
-                                        getθ(iter), 
-                                        iter.verbosity, 
-                                        dotθ)
+                                     state.z, 
+                                     state.z_old, 
+                                     iter, 
+                                     state.ds, 
+                                     getθ(iter), 
+                                     iter.verbosity, 
+                                     dotθ)
 ###############################################
 """
     Bordered Tangent predictor
@@ -203,6 +202,7 @@ internal_adaptation!(::Bordered, ::Bool) = nothing
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
+# N = length(τ.u)
 # ┌                           ┐┌  ┐   ┌   ┐
 # │      J            dFdl    ││τu│ = │ 0 │
 # │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
@@ -210,7 +210,8 @@ internal_adaptation!(::Bordered, ::Bool) = nothing
 # it is updated inplace
 function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    tgtalgo::Bordered, dotθ)
+                    tgt_algo::Bordered, 
+                    dotθ)
     (it.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(it.prob)
     τ = state.τ
@@ -400,8 +401,9 @@ function newton_palc(iter::AbstractContinuationIterable,
     # record the damping parameter
     α0 = α
 
-    # N = θ⋅dot(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
-    N(u, _p) = arcLengthEq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
+    # n = length(u)
+    # N = θ⋅dot(x - z0.u, τ0.u) / n + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
+    N(u, _p) = arc_length_eq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
     normAC(resf, resn) = max(normN(resf), abs(resn))
 
     # initialise variables

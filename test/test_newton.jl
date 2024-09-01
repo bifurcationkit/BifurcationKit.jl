@@ -95,14 +95,19 @@ BK.is_symmetric(defpb)
 BK.getlens(defpb)
 BK.getparam(defpb)
 BK.setparam(defpb, 0.)
+length(defpb)
 
 @test defpb(rand(_T, 1), nothing) |> eltype == _T
 @test defpb(rand(_T, 1), nothing, rand(_T, 1)) |> eltype == _T
 
 push!(deflationOp, rand(_T,1))
+deflationOp[1]
 @test deflationOp(zeros(_T, 1)) isa _T
 @test deflationOp(rand(_T, 1), rand(_T, 1)) isa _T
 copy(deflationOp)
+pop!(deflationOp)
+empty!(deflationOp)
+
 
 # test of custom distance
 deflationOp2 = DeflationOperator(_T(2), BifurcationKit.CustomDist((u,v)->norm(u-v)), _T(1), deflationOp.roots)

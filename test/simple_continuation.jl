@@ -84,7 +84,12 @@ BK.eigenvals(br0,1)
 branch = Branch(br0, rand(2));
 branch[end]
 ###### start at p_min and see if it continues the solution
-for alg in (Natural(), PALC(), PALC(tangent = Bordered()), Multiple(copy(x0), 0.01,13), PALC(tangent=Polynomial(Bordered(), 2, 6, copy(x0))), MoorePenrose())
+for alg in (Natural(),
+            PALC(),
+            PALC(tangent = Bordered()),
+            Multiple(copy(x0), 0.01,13), 
+            PALC(tangent=Polynomial(Bordered(), 2, 6, copy(x0))), 
+            MoorePenrose())
     br0 = continuation(re_make(prob, params = opts.p_min), alg, opts)
     @test length(br0) > 10
     br0 = continuation(re_make(prob, params = opts.p_max), Natural(), ContinuationPar(opts, ds = -0.01))
