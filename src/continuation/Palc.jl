@@ -23,7 +23,7 @@ DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x
 DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
-(dt::DotTheta)(u1, u2, p1::T, p2::T, θ::T) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * (one(T) - θ))
+(dt::DotTheta)(u1, u2, p1::T, p2, θ, θₚ = one(T) - θ) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * θₚ)
 
 # implementation of the norm associated to DotTheta
 (dt::DotTheta)(u, p::T, θ::T) where T = sqrt(dt(u, u, p, p, θ))
