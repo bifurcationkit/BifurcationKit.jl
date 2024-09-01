@@ -11,8 +11,8 @@ F_simple(x, p; k = 2) = p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
 Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
 # test creation of specific scalar product
-_dt = BK.DotTheta(dot)
-_dt = BK.DotTheta()
+BK.DotTheta(dot)
+BK.DotTheta()
 # tests for the predictors
 BK.mergefromuser(1., (a = 1,))
 BK.mergefromuser(rand(2), (a = 1,))
@@ -46,9 +46,43 @@ BK.empty(PALC(tangent = Bordered()))
 BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
 ####################################################################################################
+# test the update functionalities of the AbstractContinuationAlgorithm
+BK.update(PALC(), ContinuationPar(), MatrixBLS())
+BK.update(PALC(bls=MatrixBLS(nothing)), ContinuationPar(), nothing).bls.solver == ContinuationPar().newton_options.linsolver
+####################################################################################################
+# test the PALC linear solver interface
+let
+    opts = ContinuationPar(p_min = -3.)
+    prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)
+    sol = newton(prob, NewtonPar())
+    iter = ContIterable(prob, PALC(), opts)
+    state = iterate(iter)[1]
+    # jacobian of palc functional
+    z0 = BorderedArray(sol.u, prob.params)
+    τ0 = BorderedArray(0*sol.u.+0.1, 1.); state.τ.u .= τ0.u; state.τ.p = τ0.p
+    # N = θ⋅dotp(x - z0.u, τ0.u) + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
+    N(u, _p) = BK.arc_length_eq(BK.getdot(iter), BK.minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, BK.getθ(iter), opts.ds)
+    _Jpalc = ForwardDiff.jacobian( X -> vcat(BK.residual(prob, X[1:end-1], X[end]), N(X[1:end-1], X[end])), vcat(z0.u, z0.p) )
+    # solve associated linear problem
+    rhs = rand(length(sol.u)+1)
+    sol_fd = _Jpalc \ rhs
+    _J0 = BK.jacobian(prob, sol.u, prob.params)
+    _dFdp = ForwardDiff.derivative(t -> F_simple(sol.u, t), prob.params)
+    args = (iter, state,
+            _J0, _dFdp,
+            rhs[1:end-1], rhs[end])
+    for bls in (MatrixBLS(), BorderingBLS(DefaultLS()),MatrixFreeBLS(GMRESIterativeSolvers()))
+        @debug bls
+        sol_bls = BK.solve_bls_palc(bls, args... )
+        @test sol_bls[1] ≈ sol_fd[1:end-1]
+        @test sol_bls[2] ≈ sol_fd[end]
+    end
+end
+####################################################################################################
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
-
+###############
+# basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
 opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40)
 _br0 = @time continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
@@ -60,8 +94,7 @@ _br0 = @time continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
 opts0 = ContinuationPar(opts0, detect_bifurcation = 1, save_eigenvectors = false)
 _br0 = @time continuation(_prob0, PALC(), opts0)
 @test ~(_br0.contparams.save_eigenvectors) && ~BK.haseigenvector(_br0)
-
-
+###############
 prob = BK.BifurcationProblem(F_simple, x0, -1.5, (@optic _); J = Jac_simple)
 BK.isinplace(prob)
 BK._getvectortype(prob)

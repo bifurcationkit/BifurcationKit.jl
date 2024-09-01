@@ -79,7 +79,8 @@ end
 function update(alg::PALC, contParams::ContinuationPar, linear_algo)
     if isnothing(linear_algo)
         if isnothing(alg.bls.solver)
-            return @set alg.bls.solver = contParams.newton_options.linsolver
+            bls = alg.bls
+            return @set alg.bls = update_bls(bls, contParams.newton_options.linsolver)
         end
     else
         return @set alg.bls = linear_algo
@@ -227,7 +228,8 @@ function gettangent!(state::AbstractContinuationState,
     J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
-    τu, τp, flag, itl = getlinsolver(it)( it, state,
+    τu, τp, flag, itl = solve_bls_palc(getlinsolver(it),
+                                        it, state,
                                         J, dFdl,
                                         0*state.z.u, one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
@@ -445,7 +447,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         # │ J     dFdp ││u │ = │res_f│
         # │ τ0.u  τ0.p ││up│   │res_n│
         # └            ┘└  ┘   └     ┘
-        u, up, flag, itlinear = linsolver(iter, state, J, dFdp, res_f, res_n)
+        u, up, flag, itlinear = solve_bls_palc(linsolver, iter, state, J, dFdp, res_f, res_n)
         ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
 

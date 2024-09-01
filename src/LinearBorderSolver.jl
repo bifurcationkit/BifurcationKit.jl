@@ -1,8 +1,9 @@
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
-# the following stuctures, say `struct BDLS;...;end` rely on the hypotheses:
+# the following stuctures, say `struct BDLS <: AbstractBorderedLinearSolver;...;end` 
+# rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
-# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing) must be provided
+# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing, dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
 
 # Reminder we want to solve the linear system
 # Cramer's rule gives σ = det(J) / det(M)
@@ -10,6 +11,31 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # M = │ J    b ││ v │ = │0│
 #     │ c'   d ││ σ │   │1│
 #     └        ┘└   ┘   └ ┘
+
+# version used in PALC
+function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
+                        iter::AbstractContinuationIterable,
+                        state::AbstractContinuationState,
+                        J, dR, 
+                        R, n::T; 
+                        shift::Ts = nothing,
+                        dotp = getdot(iter).dot,
+                        applyξu! = getdot(iter).apply!) where {T, Ts}
+    # the following parameters are used for the pseudo arc length continuation
+    # ξu = θ / length(dz.u)
+    # ξp = 1 - θ
+    θ = getθ(iter)
+    return (lbs)(J, dR,
+                 state.τ.u, state.τ.p,
+                 R, n,
+                 θ,          # ξu
+                 one(T) - θ; # ξp
+                 shift,
+                 dotp,
+                 applyξu!)
+end
+
+update_bls(lbs::AbstractBorderedLinearSolver, ls) = throw("")
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -64,7 +90,7 @@ function (lbs::BorderingBLS)(J, dR,
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
     # in which the dot product is dotp(x,y) = dot(x,y) / length(x). For more general 
-    # dot products like dotp(x,y) = dot(x,S,y)
+    # dot products like dotp(x,y) = dot(x, S, y)
     # it is better to directly use dotp instead of rescaling ξu
 
     k = 0 # number of BEC iterations
@@ -134,15 +160,6 @@ function residualBEC(lbs::BorderingBLS,
     return δX, δl
 end
 
-# version used in PALC
-(lbs::BorderingBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
-                J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
-                    	(lbs)(J, dR,
-                                state.τ.u, state.τ.p,
-                                R, n,
-                                getθ(iter), one(T) - getθ(iter);
-                                shift = shift, dotp = getdot(iter).dot)
-
 # specific version with b,c,d being matrices / tuples of vectors
 # ┌         ┐
 # │  J    b │
@@ -209,6 +226,7 @@ function (lbs::MatrixBLS)(J, dR,
                           ξu::T = one(T), 
                           ξp::T = one(T);
                           shift::Ts = nothing, 
+                          dotp = nothing,
                           applyξu! = nothing)  where {T <: Number, Ts}
 
     if isnothing(shift)
@@ -236,16 +254,6 @@ function (lbs::MatrixBLS)(J, dR,
     res = A \ rhs
     return (@view res[begin:end-1]), res[end], true, 1
 end
-
-# version used in PALC
-(lbs::MatrixBLS)(iter::AbstractContinuationIterable, state::AbstractContinuationState,
-                     J, dR, R, n::T; shift::Ts = nothing) where {T, Ts} =
-                            (lbs)(J, dR,
-                                state.τ.u, state.τ.p,
-                                R, n,
-                                getθ(iter), one(T) - getθ(iter);
-                                shift = shift,
-                                applyξu! = getdot(iter).apply!)
 
 # version used for normal form computation
 # specific version with a,b,c being matrices / tuples of vectors
@@ -393,25 +401,14 @@ function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  ξu::Tξ = 1, 
                                  ξp::Tξ = 1; 
                                  shift = nothing, 
-                                 dotp = dot) where {T <: Number, Tξ, S}
+                                 dotp = dot,
+                                 applyξu! = nothing
+                                 ) where {T <: Number, Tξ, S}
     linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol), get_par_bls(sol), cv, it
 end
-
-# version used in PALC
-(lbs::MatrixFreeBLS)(iter::AbstractContinuationIterable, 
-                    state::AbstractContinuationState,
-                    J, dR, 
-                    R, n::T;
-                    shift::Ts = nothing) where {T, Ts} =
-        (lbs)(J, dR,
-                state.τ.u, state.τ.p,
-                R, n,
-                getθ(iter), one(T) - getθ(iter);
-                shift = shift, 
-                dotp = getdot(iter).dot)
 
 # version for blocks
 function (lbs::MatrixFreeBLS)(::Val{:Block}, 
@@ -460,3 +457,8 @@ function  (l::LSFromBLS)(J, rhs1, rhs2)
 
     return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end
+####################################################################################################
+update_bls(lbs::BorderingBLS, ls) = (@set lbs.solver = ls)
+update_bls(lbs::MatrixBLS, ls) = (@set lbs.solver = ls)
+update_bls(lbs::MatrixFreeBLS, ls) = (@set lbs.solver = ls)
+update_bls(lbs::LSFromBLS, ls) = (@set lbs.solver = ls)
