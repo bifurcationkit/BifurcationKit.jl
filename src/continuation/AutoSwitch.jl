@@ -1,5 +1,15 @@
+"""
+$(TYPEDEF)
+
+Continuation algorithm which switches automatically between Natural continuation and PALC depending on the stiffness of the branch being continued.
+
+$(TYPEDFIELDS)
+
+"""
 struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
+    "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
     alg::Talg
+    "tolerance for switching to PALC(), default value = 0.5"
     tol_param::T
 end
 
