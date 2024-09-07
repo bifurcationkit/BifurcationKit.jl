@@ -59,7 +59,9 @@ end
 sol0 = Fun( x -> x * (1-x), Interval(0.0, 1.0))
 const Δ = Derivative(sol0.space, 2);
 par_af = (α = 3., β = 0.01)
-prob = BifurcationProblem(F_chan, sol0, par_af, (@optic _.α); J = Jac_chan, plot_solution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
+prob = BifurcationProblem(F_chan, sol0, par_af, (@optic _.α); 
+            J = Jac_chan, 
+            plot_solution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
 sol = @time BK.newton(prob, optnew, normN = norminf)

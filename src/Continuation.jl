@@ -245,7 +245,7 @@ end
 function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, Teigvals}
     x = getx(state)
     p = getp(state)
-    pt = record_from_solution(it)(x, p)
+    pt = record_from_solution(it)(x, p; iter = it, state = state)
     stable = Teigvals!=Nothing ? is_stable(state) : nothing
     return mergefromuser(pt, 
                         (param = p,
@@ -304,7 +304,7 @@ function ContResult(it::AbstractContinuationIterable,
                     state::AbstractContinuationState)
     x0 = _copy(getx(state))
     p0 = getp(state)
-    pt = record_from_solution(it)(x0, p0)
+    pt = record_from_solution(it)(x0, p0; iter = it, state = state)
     return _contresult(it, state,
                         pt,
                         get_state_summary(it, state), 

@@ -20,7 +20,7 @@ par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.001137, 0.891483, 0.062345]
 
 prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2);
-        record_from_solution = (x, p) -> (x = x[1], y = x[2], s = x[3]))
+        record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(p_min = 0.5, p_max = 2.3, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, max_steps = 100)
 

@@ -75,7 +75,7 @@ w .-= minimum(w)
 
 prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@optic _.λ);
         J = JFmit,
-        record_from_solution = (x, p) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
+        record_from_solution = (x, p; k...) -> (nw = normbratu(x), n2 = norm(x), n∞ = norminf(x)),
         plot_solution = (x, p; k...) -> plotsol!(x ; k...),
         # plot_solution = (ax, x, p; ax1 = nothing, k...) -> plotsol!(ax, x ; k...),
         issymmetric = true)
@@ -118,16 +118,16 @@ opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, p_max = 3.5,
 
 br = @time continuation(prob, PALC(), opts_br; kwargsC...)
 
-BK.plot(br)
+plot(br)
 ####################################################################################################
 # automatic branch switching
 br1 = continuation(br, 3; kwargsC...)
 
-BK.plot(br, br1, plotfold=false)
+plot(br, br1, plotfold=false)
 
 br2 = continuation(br1, 1; kwargsC...)
 
-BK.plot(br, br1, br2, plotfold=false)
+plot(br, br1, br2, plotfold=false)
 ####################################################################################################
 # bifurcation diagram
 function optionsCont(x,p,l; opt = opts_br)

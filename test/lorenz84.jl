@@ -29,8 +29,8 @@ opts_br = ContinuationPar(p_min = -1.5, p_max = 3.0, ds = 0.001, dsmax = 0.025,
 
 z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105288273117459]
 
-recordFromSolutionLor(u::AbstractVector, p) = (X = u[1], Y = u[2], Z = u[3], U = u[4])
-recordFromSolutionLor(u::BorderedArray, p) = recordFromSolutionLor(u.u, p)
+recordFromSolutionLor(u::AbstractVector, p; k...) = (X = u[1], Y = u[2], Z = u[3], U = u[4])
+recordFromSolutionLor(u::BorderedArray, p; k...) = recordFromSolutionLor(u.u, p)
 
 prob = BK.BifurcationProblem(Lor, z0, parlor, (@optic _.F);
     record_from_solution = recordFromSolutionLor,)

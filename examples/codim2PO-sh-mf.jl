@@ -21,10 +21,10 @@ par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, 
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
-@set! opts_br.newton_options.verbose = true
+@reset opts_br.newton_options.verbose = true
 
 ################################################################################
 using DifferentialEquations
@@ -37,7 +37,7 @@ sol = solve(prob_de, Rodas5())
 
 plot(sol)
 ################################################################################
-argspo = (record_from_solution = (x, p) -> begin
+argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, set(getparams(p.prob), BK.getlens(p.prob), p.p))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
@@ -92,7 +92,7 @@ res1 = AD.pullback_function(AD.ZygoteBackend(), x->flow(x, prob_de,1), sol0_f)(s
 
 AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getparams(probsh)), cish)(cish)[1]
 
-@set! probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+@reset probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
 eigpo = EigKrylovKit(x₀ = rand(4))
@@ -103,7 +103,7 @@ _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3, newton_options = optnpo)
-@set! opts_po_cont.newton_options.verbose = true
+@reset opts_po_cont.newton_options.verbose = true
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
     verbosity = 3, plot = true,
     linear_algo = MatrixFreeBLS(@set lspo.N = lspo.N+1),
@@ -121,10 +121,10 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0.01, p_max = 1.2)
-@set! opts_posh_fold.newton_options.tol = 1e-9
+@reset opts_posh_fold.newton_options.tol = 1e-9
 
 # use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
-@set! opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
+@reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
 fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
     verbosity = 2, plot = true,
     detect_codim2_bifurcation = 0,
@@ -157,9 +157,9 @@ plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, max_steps = 40, p_min = -1.)
-@set! opts_posh_pd.newton_options.tol = 1e-8
+@reset opts_posh_pd.newton_options.tol = 1e-8
 # use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
-# @set! opts_posh_pd.newton_options.linsolver.solver.N = opts_posh_pd.newton_options.linsolver.solver.N+1
+# @reset opts_posh_pd.newton_options.linsolver.solver.N = opts_posh_pd.newton_options.linsolver.solver.N+1
 pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
     verbosity = 2, plot = true,
     detect_codim2_bifurcation = 0,
@@ -190,7 +190,7 @@ probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params =
             # jacobian = BK.FiniteDifferencesMF()
             )
 
-@set! probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+@reset probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 3, plot = true,
@@ -205,7 +205,7 @@ ns = get_normal_form(brpo_ns, 1)
 # codim 2 NS
 using AbbreviatedStackTraces
 opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 100, p_min = -0., p_max = 1.2)
-@set! opts_posh_ns.newton_options.tol = 1e-9
+@reset opts_posh_ns.newton_options.tol = 1e-9
 ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         verbosity = 2, plot = true,
         detect_codim2_bifurcation = 0,

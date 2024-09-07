@@ -168,7 +168,7 @@ BK.hassolution(Branch(br1, nothing)) # test the method
 br1.param
 BK.getparams(br1)
 
-@reset prob.recordFromSolution = (x,p) -> norm(x,2)
+@reset prob.recordFromSolution = (x,p; k...) -> norm(x,2)
 br2 = continuation(prob, PALC(), opts)
 
 # test for different norms
@@ -193,7 +193,7 @@ br5a = continuation(prob, PALC(), opts, finalise_solution = finalise_solution)
 br6 = continuation(prob, PALC(tangent = Secant()), opts)
 
 optsnat = setproperties(opts; ds = 0.001, dsmax = 0.1, dsmin = 0.0001)
-br7 = continuation((@set prob.recordFromSolution = (x,p)->x[1]), Natural(), optsnat)
+br7 = continuation((@set prob.recordFromSolution = (x,p;k...)->x[1]), Natural(), optsnat)
 
 # tangent prediction with Bordered predictor
 br8 = continuation(prob, PALC(tangent = Bordered()), opts)

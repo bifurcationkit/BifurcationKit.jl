@@ -3,7 +3,7 @@ using LinearAlgebra, Test
 using BifurcationKit, Test
 const BK = BifurcationKit
 
-recordFromSolution(x, p) = (u1 = x[1], u2 = x[2])
+recordFromSolution(x, p; k...) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
 function lur!(dz, u, p, t)
     (; α, β) = p
@@ -34,7 +34,7 @@ function plotPO(x, p; k...)
 end
 
 # record function
-function recordPO(x, p)
+function recordPO(x, p; k...)
 	xtt = get_periodic_orbit(p.prob, x, p.p)
 	period = getperiod(p.prob, x, p.p)
 	return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
@@ -83,7 +83,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
     verbosity = 0, plot = false,
     ampfactor = .2, δp = -0.005,
     usedeflation = true,
-    record_from_solution = (x, p) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
+    record_from_solution = (x, p; k...) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
     normC = norminf
     )
 

@@ -90,7 +90,7 @@ sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 probBif = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_sp,
         plot_solution = (x, p; ax1 = 0, kwargs...) -> (plotsol(x; label="", kwargs... )),
-        record_from_solution = (x, p) -> x[div(n,2)]
+        record_from_solution = (x, p; k...) -> x[div(n,2)]
         )
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
@@ -177,7 +177,7 @@ br_po = @time continuation(deepcopy(probSh), outpo.u, PALC(),
         # (Base.display(contResult.eig[end].eigenvals) ;true),
     callback_newton = BK.cbMaxNorm(1.),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], length(1:dM:M); kwargs...),
-    record_from_solution = (u, p) -> u[end], normC = norminf)
+    record_from_solution = (u, p; k...) -> u[end], normC = norminf)
 
 ####################################################################################################
 # automatic branch switching with Shooting

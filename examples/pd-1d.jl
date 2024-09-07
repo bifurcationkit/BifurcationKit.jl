@@ -61,7 +61,7 @@ u0 = cos.(2X)
 solc0 = vcat(u0, u0)
 
 probBif = BifurcationProblem(Fbr, solc0, par_br, (@optic _.C) ;J = Jbr,
-    record_from_solution = (x, p) -> norm(x, Inf),
+    record_from_solution = (x, p; k...) -> norm(x, Inf),
     plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
 # eigls = DefaultEig()
@@ -101,7 +101,7 @@ br_po = @time continuation(
     plot = true,
     callback_newton = BK.cbMaxNorm(1e2),
     plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
-    record_from_solution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
+    record_from_solution = (u, p; k...) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
 plot(br, br_po, label = "")
@@ -121,7 +121,7 @@ br_po_pd = @time continuation(
     # jacobianPO = :FullSparseInplace,
     # jacobianPO = :BorderedSparseInplace,
     plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
-    record_from_solution = (u, p) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
+    record_from_solution = (u, p; k...) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
 plot(br, br_po, br_po_pd, label = "")
@@ -167,7 +167,7 @@ br_po_sh = @time continuation(probSh, outposh.u, PALC(), optcontpo;
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
-    record_from_solution = (u, p) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
+    record_from_solution = (u, p; k...) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
@@ -251,7 +251,7 @@ br_po = @time continuation(
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    record_from_solution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    record_from_solution = (u, p; k...) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
     normC = norminf)
 
 plot(br, br_po, label = "")
@@ -273,7 +273,7 @@ br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifu
         heatmap!(outt[:,:]'; color = :viridis, subplot = 3)
         plot!(br_po; legend=false, subplot=1)
     end,
-    record_from_solution = (u, p) -> (BK.getmaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
+    record_from_solution = (u, p; k...) -> (BK.getmaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
     )
 
 plot(br_po, br_po_pd, legend=false)
@@ -296,7 +296,7 @@ br_po_pdcodim2 = @time continuation(
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    record_from_solution = (u, p) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    record_from_solution = (u, p; k...) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
     normC = norminf)
 ####################################################################################################
 # aBS Poincare Shooting

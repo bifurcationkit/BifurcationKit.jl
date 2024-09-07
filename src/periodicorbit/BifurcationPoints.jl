@@ -131,7 +131,7 @@ function Base.show(io::IO, ns::NeimarkSackerPO)
     println(io, "├─ Period at the periodic orbit T ≈ ", abs(ns.T))
     println(io, "├─ Second period of the bifurcated torus ≈ ", abs(2pi*ns.ω*ns.T))
     if ns.prm
-        println(io, "├─ Normal form z -> z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+        println(io, "├─ Normal form z ─▶ z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
     else
         println(io, "├─ Normal form:\n├\t∂τ = 1 + a⋅|ξ|²\n├\t∂ξ = iθ/T⋅ξ + d⋅ξ⋅|ξ|²")
     end

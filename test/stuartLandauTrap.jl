@@ -65,7 +65,7 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
         PALC(),    (@set opts_po_cont.newton_options.linsolver = _ls);
         verbosity = 0, plot = false,
         linear_algo = BorderingBLS(solver = _ls, check_precision = false),
-        record_from_solution = (u, p) -> BK.getamplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
+        record_from_solution = (u, p; k...) -> BK.getamplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
 
     BK.get_periodic_orbit(br_po, 1)
 end

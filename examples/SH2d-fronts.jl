@@ -57,7 +57,7 @@ par = (l = -0.1, ν = 1.3, L1 = L1);
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20)
 
-prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
+prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, eigsolver = EigArpack(0.5, :LM))
 sol_hexa = @time newton(prob, optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
@@ -97,7 +97,7 @@ br = @time continuation(
 ###################################################################################################
 # codim2 Fold continuation
 optfold = @set optcont.detect_bifurcation = 0
-@set! optfold.newton_options.verbose = true
+@reset optfold.newton_options.verbose = true
 optfold = setproperties(optfold; p_min = -2., p_max= 2., dsmax = 0.1)
 
 # dispatch plot to fold solution
@@ -127,7 +127,7 @@ function dF_sh2(du, u, p)
 end
 
 prob2 = @set prob.VF.J = (u, p) -> (du -> dF_sh2(du, u, p))
-@set! prob2.u0 = vec(sol0)
+@reset prob2.u0 = vec(sol0)
 
 sol_hexa = @time newton(prob2, @set optnew.linsolver = ls)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
@@ -168,7 +168,11 @@ plot!(br)
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 optcontdf = @set optcont.newton_options.verbose = false
 
-algdc = BK.DefCont(deflation_operator = deflationOp, perturb_solution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))), max_iter_defop = 50, max_branches = 40, seek_every_step = 5,)
+algdc = BK.DefCont(deflation_operator = deflationOp, 
+            perturb_solution = (x,p,id) -> (x  .+ 0.1 .* rand(length(x))), 
+            max_iter_defop = 50, 
+            max_branches = 40, 
+            seek_every_step = 5,)
 
 brdf = continuation(prob, algdc, setproperties(optcontdf; detect_bifurcation = 0, plot_every_step = 1);
     plot = true, verbosity = 2,

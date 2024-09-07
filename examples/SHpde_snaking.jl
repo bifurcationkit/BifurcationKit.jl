@@ -30,7 +30,7 @@ parSH = (λ = -0.1, ν = 2., L1 = L1)
 sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
 
 prob = BifurcationProblem(R_SH, sol0, parSH, (@optic _.λ); J = Jac_sp,
-    record_from_solution = (x, p) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
+    record_from_solution = (x, p; k...) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
     plot_solution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
     )
 ####################################################################################################

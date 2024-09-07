@@ -84,7 +84,7 @@ br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_ste
 ####################################################################################################
 # Case of the pitchfork
 par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0)
-prob_pf = BK.re_make(prob, params = par_pf, record_from_solution = (x,p)->(x[1], norm(x)))
+prob_pf = BK.re_make(prob, params = par_pf, record_from_solution = (x,p;k...)->(x[1], norm(x)))
 brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = norminf)
 
 bpp = BK.get_normal_form(brp, 1; verbose=true)

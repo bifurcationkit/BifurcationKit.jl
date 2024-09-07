@@ -1069,7 +1069,7 @@ function continuation(prob::PeriodicOrbitTrapProblem,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar;
-                    record_from_solution = (u, p) -> (period = u[end],),
+                    record_from_solution = (u, p; k...) -> (period = u[end],),
                     linear_algo = nothing,
                     kwargs...)
     _linear_algo = isnothing(linear_algo) ?  BorderingBLS(solver = _contParams.newton_options.linsolver, check_precision = false) : linear_algo

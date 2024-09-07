@@ -106,7 +106,7 @@ Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 
 opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, max_steps = 130, p_min = -3., p_max = 0.1, newton_options = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 4), detect_bifurcation=3, n_inversion=4)
 
-prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@optic _); J = Jac_m, record_from_solution = (x,p)->x[1])
+prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@optic _); J = Jac_m, record_from_solution = (x,p;k...)->x[1])
 br4 = continuation(prob4, alg, opts; verbosity = 0, plot=false)
 testBranch(br4)
 ####################################################################################################
@@ -123,7 +123,7 @@ par = (p1 = -3., p2=-3., k=3)
 
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 135, p_min = -3., p_max = 4.0, newton_options = NewtonPar(max_iterations = 5), detect_bifurcation = 3, n_inversion = 6, dsmin_bisection = 1e-9, max_bisection_steps = 15, nev = 2)
 
-prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@optic _.p1); record_from_solution = (x,p)->x[1])
+prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@optic _.p1); record_from_solution = (x,p;k...)->x[1])
 br = continuation(prob, alg, (@set opts.detect_bifurcation = 3);
     plot = false, verbosity = 0,)
     show(br)

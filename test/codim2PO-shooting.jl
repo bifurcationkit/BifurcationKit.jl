@@ -19,7 +19,7 @@ par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 200)
 ################################################################################
@@ -30,7 +30,7 @@ sol = solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
 sol = solve(prob_de, Rodas5())
 ################################################################################
-argspo = (record_from_solution = (x, p) -> begin
+argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),

@@ -22,7 +22,7 @@ end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
 prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
-        record_from_solution = (x, p) -> x[1],
+        record_from_solution = (x, p;k...) -> x[1],
         J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
@@ -72,7 +72,7 @@ end
 sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
-prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p) -> x.u[1])
+prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p;k...) -> x.u[1])
 sol = newton(prob, opt_newton)
 @test BK.converged(sol)
 

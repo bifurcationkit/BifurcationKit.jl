@@ -172,7 +172,7 @@ poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hop
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
-@set! poTrapMF.prob_vf.VF.J = (x, p) ->  (dx -> dFcgl(x, p, dx))
+@reset poTrapMF.prob_vf.VF.J = (x, p) ->  (dx -> dFcgl(x, p, dx))
 
 poTrap(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
@@ -205,7 +205,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 ls(Jpo, rand(ls.N))
 
 opt_po = @set opt_newton.verbose = true
-@set! opt_po.linsolver = ls
+@reset opt_po.linsolver = ls
 
 outpo_f = @time newton(poTrapMF, orbitguess_f, opt_po; normN = norminf)
 BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, Nx*Ny, M; ratio = 2),"\n")
@@ -219,7 +219,7 @@ br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
         plot = true,
         # plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-        record_from_solution = (u, p) -> BK.getamplitude(poTrapMF, u, par_cgl; ratio = 2),
+        record_from_solution = (u, p; k...) -> BK.getamplitude(poTrapMF, u, par_cgl; ratio = 2),
         normC = norminf)
 
 branches = Any[br_pok2]
@@ -232,13 +232,15 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, poTrapMF;
-    ampfactor = 3.,
-    verbosity = 3, plot = true,
+    # ampfactor = 3.,
+    verbosity = 3, 
+    plot = true,
     # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
     finalise_solution = (z, tau, step, contResult; k...) ->
     (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-    record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), normC = norminf)
+    record_from_solution = (u, p; k...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), 
+    normC = norminf)
 ####################################################################################################
 # Experimental, full Inplace
 @views function NL!(f, u, p, t = 0.)
@@ -302,7 +304,7 @@ out_ = similar(sol0f)
 @time Fcgl!(out_, sol0f, par_cgl)
 @time dFcgl!(out_, sol0f, par_cgl, sol0f)
 
-probInp = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@lens _.r); J = dFcgl!, inplace = true)
+probInp = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 ls(Jpo, rand(ls.N))

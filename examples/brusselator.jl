@@ -96,7 +96,7 @@ prob = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_sp, 
         # plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), # for Plots.jl
         # plot_solution = (ax, x, p) -> plotsol(ax, x), # For Makie.jl
-        record_from_solution = (x, p) -> x[div(n,2)])
+        record_from_solution = (x, p; k...) -> x[div(n,2)])
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
 opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), max_steps = 1060, n_inversion = 6, tol_bisection_eigenvalue = 1e-20, max_bisection_steps = 30)

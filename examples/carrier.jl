@@ -36,7 +36,7 @@ X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
 sol = -(1 .- par_car.X.^2)
-recordFromSolution(x, p) = (x[2]-x[1]) * sum(x->x^2, x)
+recordFromSolution(x, p; k...) = (x[2]-x[1]) * sum(x->x^2, x)
 
 prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@optic _.ϵ);
     J = Jac_carr,

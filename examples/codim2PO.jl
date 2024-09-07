@@ -36,7 +36,7 @@ sol = solve(prob_de, Rodas5())
 
 plot(sol)
 ################################################################################
-function recordFromSolution(x, p)
+function recordFromSolution(x, p; k...)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
     _max = maximum(xtt[1,:])
     _min = minimum(xtt[1,:])
@@ -148,19 +148,19 @@ _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = ContinuationPar(opts_br, max_steps = 50, tol_stability = 1e-8, n_inversion = 6)
-@set! opts_po_cont.newton_options.verbose = true
+@reset opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
     )
-pd = get_normal_form(brpo_fold, 1; prm = true)
+pd = get_normal_form(brpo_fold, 1; prm = false)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, max_steps=250);
     verbosity = 3, plot = true,
     argspo...
     )
-pt = get_normal_form(brpo_pd, 1, prm = true)
+pt = get_normal_form(brpo_pd, 1, prm = false)
 #########
 # pd branch switching
 brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,
@@ -180,8 +180,8 @@ opts_pocoll_fold = ContinuationPar(brpo_fold.contparams,
                                   p_max = 1.2,
                                   n_inversion = 4,
                                   plot_every_step = 10)
-@set! opts_pocoll_fold.newton_options.tol = 1e-12
-fold_po_coll1 = continuation(brpo_fold, 1, (@lens _.ϵ), opts_pocoll_fold;
+@reset opts_pocoll_fold.newton_options.tol = 1e-12
+fold_po_coll1 = continuation(brpo_fold, 1, (@optic _.ϵ), opts_pocoll_fold;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,

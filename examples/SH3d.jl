@@ -117,12 +117,12 @@ prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
     J = (x, p) -> (dx -> dF_sh(x, p, dx)),
     # J = (x, p) -> J_sh(x, p),
     plot_solution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),
-    record_from_solution = (x, p) -> (n2 = norm(x), n8 = norm(x, 8)),
+    record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)),
     issymmetric = true)
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, linsolver = @set ls.verbose = 0)
-@set! optnew.eigsolver = eigSH3d
-# @set! optnew.linsolver = DefaultLS()
+@reset optnew.eigsolver = eigSH3d
+# @reset optnew.linsolver = DefaultLS()
 sol_hexa = @time newton(prob, optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 
@@ -173,11 +173,11 @@ br = @time continuation(
     # end
     )
 
-plot(br)
+BK.plot(br)
 ####################################################################################################
 get_normal_form(br, 3; nev = 25)
 
-br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10, detect_bifurcation = 3, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
+br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,
     δp = 0.005,
     verbosedeflation = true,

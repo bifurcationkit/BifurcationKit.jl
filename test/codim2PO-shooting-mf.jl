@@ -36,7 +36,7 @@ prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol =
 sol = solve(prob_de, Rodas5())
 ################################################################################
 @info "plotting function"
-argspo = (record_from_solution = (x, p) -> begin
+argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),

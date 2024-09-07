@@ -115,7 +115,7 @@ par = (l = -0.1, ν = 1.3, L = L)
 prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@optic _.l) ;
     J =  J_shfft,
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
-    record_from_solution = (x, p) -> norm(x))
+    record_from_solution = (x, p; k...) -> norm(x))
 
 opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
 sol_hexa = @time newton(prob, opt_new, normN = norminf);
