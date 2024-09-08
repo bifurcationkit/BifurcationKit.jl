@@ -248,11 +248,11 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # solving the linear system of size n+2
     c = 3dot(p0, H1100) - dot(p0, B(q1, q1))
-    H0010, K10, cv, it = bls_block(Val(:Block), L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
+    H0010, K10, cv, it = solve_bls_block(bls_block, L, J1s, (A12_1, A12_2), A22, q1, [dot(p1, B(q1, q1))/2, c])
     ~cv && @debug "[BT K10] Linear solver for J did not converge. it = $it"
     @assert size(H0010) == size(x0)
 
-    H0001, K11, cv, it = bls_block(Val(:Block), L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
+    H0001, K11, cv, it = solve_bls_block(bls_block, L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
     ~cv && @debug "[BT K11] Linear solver for J did not converge. it = $it"
     @assert size(H0001) == size(x0)
 

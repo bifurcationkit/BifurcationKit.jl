@@ -225,7 +225,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
         σ2x = σ2x1 + σ2x2
         ########## Resolution of the bordered linear system ########
         # we invert Jbt
-        dX, dsig, flag, it = 𝐁𝐓.linbdsolverBlock(Val(:Block), J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
+        dX, dsig, flag, it = solve_bls_block(𝐁𝐓.linbdsolverBlock, J_at_xp, (dp1F, dp2F), (σ1x, σ2x), σp, rhsu, rhsp)
         ~flag && @debug "Block Bordered Linear solver for J did not converge."
     end
 

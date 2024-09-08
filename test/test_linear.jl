@@ -194,13 +194,13 @@ let
     ls = DefaultLS()
 
     linBdsolver = BK.MatrixBLS(ls)
-    sol_bd1u, sol_bd1p, _, _ = linBdsolver(Val(:Block), J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+    sol_bd1u, sol_bd1p, _, _ = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
     @test sol_explicit[1:end-m] ≈ sol_bd1u
     @test sol_explicit[end-m+1:end] ≈ sol_bd1p
 
     for ls in (DefaultLS(), GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
         linBdsolver = BK.BorderingBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
         @assert success
         @test sol_explicit[1:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
@@ -210,7 +210,7 @@ let
     Jmf = x -> J * x
     for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
         linBdsolver = BK.BorderingBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
         @assert success
         @test sol_explicit[1:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
@@ -230,7 +230,7 @@ let
     # test MatrixFreeBLS
     for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J0,1)))
         linBdsolver = BK.MatrixFreeBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = linBdsolver(Val(:Block), Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
         @assert success
         @test sol_explicit[1:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p

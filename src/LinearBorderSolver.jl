@@ -165,13 +165,13 @@ end
 # │  J    b │
 # │  c'   d │
 # └         ┘
-function (lbs::BorderingBLS)(::Val{:Block}, 
-                             J, 
-                             b::NTuple{M, AbstractVector}, 
-                             c::NTuple{M, AbstractVector}, 
-                             d::AbstractMatrix, 
-                             rhst, 
-                             rhsb) where M
+function solve_bls_block(lbs::BorderingBLS, 
+                            J, 
+                            b::NTuple{M, AbstractVector}, 
+                            c::NTuple{M, AbstractVector}, 
+                            d::AbstractMatrix, 
+                            rhst, 
+                            rhsb) where M
     m = size(d, 1)
     @assert length(b) == length(c) == m == M
     x1 = lbs.solver(J, rhst)[1]
@@ -261,7 +261,7 @@ end
 # │  J    a │
 # │  b'   c │
 # └         ┘
-function (lbs::MatrixBLS)(::Val{:Block},
+function solve_bls_block(lbs::MatrixBLS,
                            J,
                            a::Tuple,
                            b::Tuple,
@@ -411,7 +411,7 @@ function (lbs::MatrixFreeBLS{S})(J,   dR,
 end
 
 # version for blocks
-function (lbs::MatrixFreeBLS)(::Val{:Block}, 
+function solve_bls_block(lbs::MatrixFreeBLS, 
                                 J, a,
                                 b, c, 
                                 rhst, rhsb; 
