@@ -944,7 +944,7 @@ end
 """
 $(SIGNATURES)
 
-This is the Newton Solver for computing a periodic orbit using orthogonal collocation method.
+This is the Newton solver for computing a periodic orbit using orthogonal collocation method.
 Note that the linear solver has to be apropriately set up in `options`.
 
 # Arguments

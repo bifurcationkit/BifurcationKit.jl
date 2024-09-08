@@ -36,19 +36,19 @@ X = LinRange(-1,1,N)
 dx = X[2] - X[1]
 par_car = (ϵ = 0.7, X = X, dx = dx)
 sol = -(1 .- par_car.X.^2)
-recordFromSolution(x, p; k...) = (x[2]-x[1]) * sum(x->x^2, x)
+record_from_solution(x, p; k...) = (x[2]-x[1]) * sum(x->x^2, x)
 
 prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@optic _.ϵ);
     J = Jac_carr,
-    record_from_solution = recordFromSolution)
+    record_from_solution)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
 out = @time newton(prob, optnew, normN = norminf)
-plot(out.u, label="Solution")
+plot(out.u, label = "Solution")
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), max_steps = 300, detect_bifurcation = 3, nev = 40, n_inversion = 6, max_bisection_steps = 25)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), nev = 40, n_inversion = 6)
 br = @time continuation(
-    prob, PALC(bls = BorderingBLS(solver = DefaultLS(), check_precision = false)), optcont;
+    prob, PALC(bls = BorderingBLS(solver = DefaultLS())), optcont;
     plot = true, verbosity = 0,
     normC = norminf)
 
@@ -87,7 +87,7 @@ alg = DefCont(deflation_operator = deflationOp,
 
 brdc = @time continuation(
     (@set prob.params.ϵ = 0.6), alg,
-    setproperties(optcont; ds = -0.0001, dsmin=1e-5, max_steps = 20000,
+    setproperties(optcont; ds = -0.0001, dsmin = 1e-5, max_steps = 20000,
         p_max = 0.7, p_min = 0.05, detect_bifurcation = 0, plot_every_step = 40,
         newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 100, verbose = false)),
     ;verbosity = 1,
@@ -97,7 +97,7 @@ brdc = @time continuation(
 plot(brdc, legend=true)#, marker=:d)
 ####################################################################################################
 # bifurcation diagram
-diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS(), check_precision = false)), 2,
+diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
         (@set optcont.newton_options.verbose=false);
         plot = true)
 
