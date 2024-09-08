@@ -23,7 +23,7 @@ function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
 function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, δt; k...) end
 
 # [Optional] Flow which returns the tuple `(t, u(t))`. Optional, mainly used for plotting on the user side.
-function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, δt = Inf; k...) end
+function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, δt; k...) end
 
 # [Optional] Serial version of `dflow`. Used internally for parallel multiple shooting. Returns a named Tuple `(u = ..., du = ..., t = t)`
 function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, tΣ; kwargs...) end
