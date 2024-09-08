@@ -249,7 +249,7 @@ function continuation(br::AbstractBranchResult,
 end
 ####################################################################################################
 # branch switching at BT / ZH / HH bifurcation point
-function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int,
+function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         options_cont::ContinuationPar = br.contparams;
         alg = br.alg,
         δp = nothing, 
@@ -266,7 +266,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob}, ind_bif::Int,
         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
         bdlinsolver_adjoint = bdlinsolver,
         bdlinsolver_block = bdlinsolver,
-        kwargs...) where {Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+        kwargs...) where {Tkind <: TwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)

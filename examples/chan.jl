@@ -40,18 +40,14 @@ br_mp = @time continuation( prob, MoorePenrose(tangent = alg), optscont; plot = 
 # Example with deflation technique
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
 
-optdef = setproperties(optnewton; tol = 1e-10, max_iterations = 100)
+optdef = NewtonPar(optnewton; tol = 1e-10, max_iterations = 500)
 
 outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef)
 outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef, Val(:autodiff))
 
-outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.1*sol0)), deflationOp, optdef)
-
-outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.1*sol0)), deflationOp, optdef, Val(:autodiff))
-
 plot(sol.u, label="newton")
-    plot!(sol0, label="init guess")
-    plot!(outdef1.u, label="deflation-1")
+plot!(sol0, label="init guess")
+plot!(outdef1.u, label="deflation-1")
 
 #save newly found point to look for new ones
 push!(deflationOp, outdef1.u)
@@ -103,7 +99,7 @@ optnewton_mf = NewtonPar(tol = 1e-11, verbose = false, linsolver = ls)
 prob2 = @set prob.VF.J = (x, p) -> (dx -> dF_chan(x, dx, p))
 out_mf = @time newton(prob2, @set optnewton_mf.verbose = true)
 
-opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.01, p_max = 4.2, nev = 5, plot_every_step = 40, newton_options = setproperties(optnewton_mf; max_iterations = 70, tol = 1e-8), max_steps = 150, detect_bifurcation = 0)
+opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.01, p_max = 4.2, nev = 5, plot_every_step = 40, newton_options = NewtonPar(optnewton_mf; max_iterations = 10, tol = 1e-8), max_steps = 150, detect_bifurcation = 0)
 brmf = @time continuation(prob2, PALC(bls = MatrixFreeBLS(ls)), opts_cont_mf)
 
 plot(brmf)
