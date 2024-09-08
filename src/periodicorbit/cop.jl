@@ -629,18 +629,3 @@ function (ls::COPBLS)(_Jc, dR,
     res = solve_cop(ls.cache.coll, ls.J, rhs, ls.cache)
     return (@view res[begin:end-1]), res[end], true, 1
 end
-
-
-(lbs::COPBLS)(iter::AbstractContinuationIterable, 
-              state::AbstractContinuationState,
-              J, dR, 
-              R, n::T; 
-              shift::Ts = nothing, 
-              Mass::Tm = LinearAlgebra.I) where {T, Ts, Tm} =
-      (lbs)(J, dR,
-            state.τ.u, state.τ.p,
-            R, n,
-            getθ(iter), one(T) - getθ(iter);
-            shift,
-            Mass,
-            applyξu! = getdot(iter).apply!)
