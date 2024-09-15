@@ -68,7 +68,7 @@ probBif = BifurcationProblem(Fbr, solc0, par_br, (@optic _.C) ;J = Jbr,
 eigls = EigArpack(0.5, :LM)
 optnewton = NewtonPar(eigsolver = eigls, verbose=true, max_iterations = 3200, tol=1e-9)
 
-out = @time newton(probBif, optnewton, normN = norminf)
+out = @time BK.solve(probBif, Newton(), optnewton, normN = norminf)
 plot();plot!(X,out.u[1:N]);plot!(X,solc0[1:N], label = "sol0",line=:dash)
 
 optcont = ContinuationPar(dsmax = 0.051, ds = -0.001, p_min = -1.8, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = optnewton, max_steps = 370, n_inversion = 10, max_bisection_steps = 25)
@@ -132,10 +132,10 @@ f1 = DiffEqArrayOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
 
-sol = @time solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
+sol = @time DifferentialEquations.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
 
 prob_ode = ODEProblem(Fbr, solc0, (0.0, 280.0), par_br_hopf)
-sol = @time solve(prob_ode, Rodas4P(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
+sol = @time DifferentialEquations.solve(prob_ode, Rodas4P(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
 orbitsection = Array(sol[:,[end]])
 # orbitsection = orbitguess[:, 1]
 
@@ -153,7 +153,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verb
 # ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 20, linsolver = ls)
 # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-outposh = @time newton(probSh, initpo, optn; normN = norminf)
+outposh = @time BK.newton(probSh, initpo, optn; normN = norminf)
 BK.converged(outposh) && printstyled(color=:red, "--> T = ", outposh.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh.u, par_br_hopf; ratio = 2),"\n")
 
 plot(initpo[1:end-1], label = "Init guess"); plot!(outposh.u[1:end-1], label = "sol")
@@ -183,7 +183,7 @@ f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd; abstol=1e-14, reltol=1e-14, dt = 0.01)
 # solution close to the PD point.
 
-solpd = @time solve(prob_sp, ETDRK2(krylov=true), progress = true)
+solpd = @time DifferentialEquations.solve(prob_sp, ETDRK2(krylov=true), progress = true)
     # heatmap(sol.t, X, sol[1:N,:], color=:viridis, xlim=(20,280.0))
 
 orbitsectionpd = Array(solpd[:,end-100])
@@ -201,7 +201,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, v
 # ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 12, linsolver = ls)
 # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-outposh_pd = @time newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
+outposh_pd = @time BK.newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
         # callback = (state; kwargs...) -> (@show state.x[end];true),
         normN = norminf)
 BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh_pd.u, (@set par_br.C = -0.86); ratio = 2),"\n")

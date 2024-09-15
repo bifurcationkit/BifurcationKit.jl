@@ -83,7 +83,7 @@ eigls = EigArpack(1.0, :LM)
 eigls = DefaultEig()
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
-out = @time newton(prob, opt_newton, normN = norminf)
+out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
 br = continuation(prob, PALC(), opts_br, verbosity = 0)

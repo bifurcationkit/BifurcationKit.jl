@@ -118,7 +118,7 @@ prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@optic _.l) ;
     record_from_solution = (x, p; k...) -> norm(x))
 
 opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
-sol_hexa = @time newton(prob, opt_new, normN = norminf);
+sol_hexa = @time BK.solve(prob, Newton(), opt_new, normN = norminf);
 println("--> norm(sol) = ", norminf(sol_hexa.u))
 
 plotsol(sol_hexa.u)
@@ -126,7 +126,7 @@ plotsol(sol_hexa.u)
 deflationOp = DeflationOperator(2, 1.0, [sol_hexa.u])
 
 opt_new = @set opt_new.max_iterations = 250
-outdef = @time newton(re_make(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
+outdef = @time BK.solve(re_make(prob, u0 = 0.4 .* sol_hexa.u .* AF([exp(-1(x+0lx)^2/25) for x in X, y in Y])),
             deflationOp, opt_new, normN = x -> maximum(abs, x))
 println("--> norm(sol) = ", norm(outdef.u))
 plotsol(outdef.u) |> display

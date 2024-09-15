@@ -861,11 +861,9 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
         prob = WrapPOTrap(probPO, jac, orbitguess, getparams(probPO.prob_vf), getlens(probPO.prob_vf), nothing, nothing)
 
         if isnothing(defOp)
-            return newton(prob, options; kwargs...)
-            # return newton(probPO, jac, orbitguess, par, options; kwargs...)
+            return solve(prob, Newton(), options; kwargs...)
         else
-            # return newton(probPO, jac, orbitguess, par, options, defOp; kwargs...)
-            return newton(prob, defOp, options; kwargs...)
+            return solve(prob, defOp, options; kwargs...)
         end
     else # bordered linear solvers
         if jacobianPO == :BorderedLU
@@ -890,9 +888,9 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
         prob = WrapPOTrap(probPO, jacPO, orbitguess, getparams(probPO.prob_vf), getlens(probPO.prob_vf), nothing, nothing)
 
         if isnothing(defOp)
-            return newton(prob, (@set options.linsolver = lspo); kwargs...)
+            return solve(prob, Newton(), (@set options.linsolver = lspo); kwargs...)
         else
-            return newton(prob, defOp, (@set options.linsolver = lspo); kwargs...)
+            return solve(prob, defOp, (@set options.linsolver = lspo); kwargs...)
         end
     end
 end

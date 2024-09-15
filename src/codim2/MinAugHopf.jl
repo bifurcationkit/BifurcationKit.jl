@@ -237,7 +237,7 @@ function newton_hopf(prob,
     opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
 
     # solve the hopf equations
-    return newton(prob_h, opt_hopf, normN = normN, kwargs...)
+    return solve(prob_h, Newton(), opt_hopf, normN = normN, kwargs...)
 end
 
 function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;

@@ -1,3 +1,7 @@
+abstract type AbstractNonLinearSolver end
+
+struct Newton <: AbstractNonLinearSolver end
+################################################################################################
 abstract type AbstractJacobianType end
 abstract type AbstractJacobianFree <: AbstractJacobianType end
 abstract type AbstractJacobianMatrix <: AbstractJacobianType end

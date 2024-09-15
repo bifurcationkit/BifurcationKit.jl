@@ -307,7 +307,8 @@ Compared to [`newton`](@ref), the only different arguments are
     - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
     - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
-function newton(prob::AbstractBifurcationProblem,
+# GROS PB DE AMBIGUITE LA SEULE SOLUTION EST DE FAIRE solve(prob, Newton(), opt)
+function solve(prob::AbstractBifurcationProblem,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, L, E},
                 _linsolver::DeflatedProblemCustomLS = DeflatedProblemCustomLS();
@@ -322,25 +323,25 @@ function newton(prob::AbstractBifurcationProblem,
     # change the linear solver
     opt_def = @set options.linsolver = linsolver
 
-    return newton(deflatedPb, opt_def; kwargs...)
+    return solve(deflatedPb, Newton(), opt_def; kwargs...)
 end
 
-function newton(prob::AbstractBifurcationProblem,
+function solve(prob::AbstractBifurcationProblem,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, L, E},
                 ::Val{:autodiff}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
     # we create the new functional
     deflatedPb = DeflatedProblem(prob, defOp, AutoDiff())
-    return newton(deflatedPb, options; kwargs...)
+    return solve(deflatedPb, Newton(), options; kwargs...)
 end
 
-function newton(prob::AbstractBifurcationProblem,
+function solve(prob::AbstractBifurcationProblem,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, L, E},
                 ::Val{:fullIterative}; kwargs...) where {Tp, T, Tdot, vectype, L, E}
     # we create the new functional
     deflatedPb = DeflatedProblem(prob, defOp, Val(:fullIterative))
-    return newton(deflatedPb, options; kwargs...)
+    return solve(deflatedPb, Newton(), options; kwargs...)
 end
 
 """
@@ -365,11 +366,11 @@ function newton(prob::AbstractBifurcationProblem,
                 linsolver = DeflatedProblemCustomLS();
                 kwargs...) where {T, vectype, L, E}
     prob0 = re_make(prob, u0 = x0, params = p0)
-    sol0 = newton(prob0, options; kwargs...)
+    sol0 = solve(prob0, Newton(), options; kwargs...)
     @assert converged(sol0) "Newton did not converge to the trivial solution x0."
     push!(defOp, sol0.u)
     prob1 = re_make(prob0, u0 = x1)
-    sol1 = newton(prob1, defOp, (@set options.max_iterations = 10options.max_iterations), linsolver; kwargs...)
+    sol1 = solve(prob1, defOp, (@set options.max_iterations = 10options.max_iterations), linsolver; kwargs...)
     ~converged(sol1) && @error "Deflated Newton did not converge to the non-trivial solution ( i.e. on the bifurcated branch)."
     @debug "deflated Newton" x0 x1 sol0.u sol1.u
     # we test if the two solutions are different. We first get the norm

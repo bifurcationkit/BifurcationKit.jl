@@ -696,7 +696,7 @@ function predictor(bp::NdBranchPoint, δp::T;
         failures = 0
         # we allow for 30 failures of nonlinear deflation
         while failures < nbfailures
-            outdef1 = newton(prob, deflationOp, optn, Val(:autodiff); normN = normN)
+            outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN = normN)
             if converged(outdef1)
                 push!(deflationOp, ampfactor .* outdef1.u)
             else
@@ -757,7 +757,7 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
         for ci in igs
             prob.u0 .= [ci...] * ampfactor
             # outdef1 = newton(prob, deflationOp, optn, Val(:autodiff); normN = normN)
-            outdef1 = newton(prob, optn; normN = normN)
+            outdef1 = solve(prob, Newton(), optn; normN = normN)
             @debug _ds ci outdef1.converged prob.u0 outdef1.u
             if converged(outdef1)
                 push!(deflationOp, outdef1.u)

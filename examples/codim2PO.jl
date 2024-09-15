@@ -30,9 +30,9 @@ opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_
 using DifferentialEquations
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
-sol = solve(prob_de, alg)
+sol = DifferentialEquations.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
-sol = solve(prob_de, Rodas5())
+sol = DifferentialEquations.solve(prob_de, Rodas5())
 
 plot(sol)
 ################################################################################
@@ -72,7 +72,7 @@ probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian =
 plot(sol)
 probtrap(ci, prob.params) |> plot
 
-solpo = newton(probtrap, ci, NewtonPar(verbose = true))
+solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 
 _sol = BK.get_periodic_orbit(probtrap, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
@@ -142,7 +142,7 @@ probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 
 plot(sol)
 probcoll(ci, prob.params) |> plot
 
-solpo = newton(probcoll, ci, NewtonPar(verbose = true));
+solpo = BK.newton(probcoll, ci, NewtonPar(verbose = true));
 
 _sol = BK.get_periodic_orbit(probcoll, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')

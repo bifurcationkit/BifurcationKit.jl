@@ -273,9 +273,9 @@ function get_first_points_on_branch(br::AbstractBranchResult,
         probp = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p + ds))
         if usedeflation
-            solbif = newton(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
+            solbif = solve(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
         else
-            solbif = newton(probp, optnDf; callback = cbnewton, normN = normn)
+            solbif = solve(probp, Newton(), optnDf; callback = cbnewton, normN = normn)
         end
         converged(solbif) && push!(defOpp, solbif.u)
     end
@@ -286,7 +286,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
         probm = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p - ds))
         if usedeflation
-            solbif = newton(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
+            solbif = solve(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
         else
             solbif = newton(probm, optnDf; callback = cbnewton, normN = normn)
         end

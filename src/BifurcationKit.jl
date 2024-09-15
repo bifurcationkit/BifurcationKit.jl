@@ -136,7 +136,7 @@ module BifurcationKit
     export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS, AutoSwitch
 
     # newton methods
-    export NewtonPar, newton, newton_palc, newton_hopf, NonLinearSolution
+    export NewtonPar, Newton, solve, newton, newton_palc, newton_hopf, NonLinearSolution
 
     # continuation methods
     export ContinuationPar, ContResult, continuation, continuation!, continuation_fold, continuation_hopf, continuation_potrap, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint

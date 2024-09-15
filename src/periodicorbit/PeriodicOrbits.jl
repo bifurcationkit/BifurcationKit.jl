@@ -212,7 +212,7 @@ function newton(prob::AbstractShootingProblem,
                 kwargs...)
     jac = _build_jacobian(prob, orbitguess, getparams(prob); δ = δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    return newton(probw, options; kwargs...)
+    return solve(probw, Newton(), options; kwargs...)
 end
 
 """
@@ -239,7 +239,7 @@ function newton(prob::AbstractShootingProblem,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _build_jacobian(prob, orbitguess, getparams(prob))
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    return newton(probw, defOp, options; kwargs...)
+    return solve(probw, defOp, options; kwargs...)
 end
 
 ####################################################################################################

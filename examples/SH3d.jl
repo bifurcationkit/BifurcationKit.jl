@@ -123,7 +123,7 @@ prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, linsolver = @set ls.verbose = 0)
 @reset optnew.eigsolver = eigSH3d
 # @reset optnew.linsolver = DefaultLS()
-sol_hexa = @time newton(prob, optnew)
+sol_hexa = @time BK.solve(prob, Newton(), optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 
 contour3dMakie(sol0)

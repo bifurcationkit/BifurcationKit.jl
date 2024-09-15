@@ -214,7 +214,7 @@ function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
         jac = (x, p) -> (dx ->  prob(x, p, dx))
     end
     probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), record_from_solution(prob.prob_vf), plot_solution(prob.prob_vf))
-    return newton(probwp, optn; kwargs...,)
+    return solve(probwp, Newton(), optn; kwargs...,)
 end
 
 function continuation(prob::TWProblem,

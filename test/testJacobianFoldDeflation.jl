@@ -24,11 +24,11 @@ sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 opt_newton = NewtonPar(tol = 1e-9, verbose = false)
 prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@optic _.α);
     plot_solution = (x, p; kwargs...) -> (plot!(x;label="", kwargs...)))
-out = newton( prob, opt_newton)
+out = BK.solve(prob, Newton(), opt_newton)
 
 # test with secant continuation
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, p_max = 4.1, max_steps = 120, newton_options = opt_newton, detect_bifurcation = 3)
-br = continuation( prob, PALC(), opts_br0)
+br = continuation(prob, PALC(), opts_br0)
 ####################################################################################################
 # deflation newton solver, test of jacobian expression
 deflationOp = DeflationOperator(2, dot, 1.0, [out.u])
@@ -44,9 +44,9 @@ deflationOp = DeflationOperator(2, dot, 1.0, [out.u])
 chanDefPb = DeflatedProblem(prob, deflationOp, DefaultLS())
 
 opt_def = NewtonPar(opt_newton; tol = 1e-10, max_iterations = 1000, verbose = false)
-outdef1 = newton((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def)
+outdef1 = BK.solve((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def)
 # @test BK.converged(outdef1)
-outdef1 = newton((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def, Val(:autodiff))
+outdef1 = BK.solve((@set prob.u0 = out.u .* (1 .+0.01*rand(n))), deflationOp, opt_def, Val(:autodiff))
 @test BK.converged(outdef1)
 ####################################################################################################
 # Fold continuation, test of Jacobian expression

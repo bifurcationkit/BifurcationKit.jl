@@ -64,7 +64,7 @@ prob = BifurcationProblem(F_chan, sol0, par_af, (@optic _.α);
             plot_solution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
-sol = @time BK.newton(prob, optnew, normN = norminf)
+sol = @time BK.solve(prob, Newton(), optnew, normN = norminf)
 
 plot(sol.u, label="Solution")
 

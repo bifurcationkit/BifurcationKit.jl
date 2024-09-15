@@ -26,7 +26,7 @@ prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
         J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
-sol0 = newton(prob, opt_newton0)
+sol0 = BK.solve(prob, Newton(), opt_newton0)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton0; max_iterations = 70, tol = 1e-8), detect_bifurcation = 0, max_steps = 150)
 
@@ -73,7 +73,7 @@ sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
 prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p;k...) -> x.u[1])
-sol = newton(prob, opt_newton)
+sol = BK.solve(prob, Newton(), opt_newton)
 @test BK.converged(sol)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton; max_iterations = 70, tol = 1e-8), detect_bifurcation = 0, max_steps = 150, save_sol_every_step = 1)
@@ -103,13 +103,13 @@ outfoldco = continuation(br, 1, (@optic _[2]), opts_br; bdlinsolver = BorderingB
 # test with Newton deflation 1
 deflationOp = DeflationOperator(2, 1.0, [zero(sol.u)])
 soldef0 = BorderedArray([0.1], 0.0)
-soldef1 = newton(BK.re_make(prob, u0 = soldef0), deflationOp, opt_newton)
+soldef1 = BK.solve(BK.re_make(prob, u0 = soldef0), deflationOp, opt_newton)
 
 push!(deflationOp, soldef1.u)
 
 Random.seed!(1231)
 # test with Newton deflation 2
-soldef2 = newton(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
+soldef2 = BK.solve(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
 ####################################################################################################
 using KrylovKit
 
@@ -159,7 +159,7 @@ prob = BK.BifurcationProblem(Fr,
         Jᵗ = (x, p) -> JacobianR(x, p.s),
         d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))
 
-sol = newton(prob, opt_newton0)
+sol = BK.solve(prob, Newton(), opt_newton0)
 
 Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
 
@@ -194,7 +194,7 @@ outfoldco = continuation(br0sec, 1, (@optic _.s), opts_br0,
 # try with newtonDeflation
 # test with Newton deflation 1
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
-soldef1 = newton(BK.re_make(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
+soldef1 = BK.solve(BK.re_make(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
     deflationOp, (@set opt_newton0.max_iterations = 20))
 
 push!(deflationOp, soldef1.u)

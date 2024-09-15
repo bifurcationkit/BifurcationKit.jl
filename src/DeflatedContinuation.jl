@@ -113,7 +113,7 @@ function updatebranch!(dcIter::DefContIterable,
 
     getpredictor!(state, it)
     pbnew = re_make(it.prob; u0 = _copy(getx(state)), params = setparam(it, current_param))
-    sol1 = newton(pbnew, defOp, it.contparams.newton_options, alg.jacobian;
+    sol1 = solve(pbnew, defOp, it.contparams.newton_options, alg.jacobian;
                     normN = it.normC,
                     callback = it.callback_newton,
                     iterationC = step,
@@ -253,7 +253,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         prob_df = re_make(contIt.prob;
                             u0 = alg.perturb_solution(u0, _p, _idb),
                             params = set(par, lens, _p))
-        soln = newton(prob_df, deflationOp,
+        soln = solve(prob_df, deflationOp,
                 setproperties(optnewton; max_iterations = alg.max_iter_defop);
                 normN = contIt.normC,
                 callback = contIt.callback_newton,

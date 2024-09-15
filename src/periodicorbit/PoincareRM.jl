@@ -119,7 +119,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
                                 x₀,
                                 par)
 
-    solΠ = newton(probΠ, Π.options)
+    solΠ = solve(probΠ, Newton(), Π.options)
     ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map."
     return solΠ.u
 end
@@ -167,7 +167,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
-    solΠ = newton(probΠ, NewtonPar())
+    solΠ = solve(probΠ, Newton(), NewtonPar())
     ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map. Residuals = $(solΠ.residuals)"
     return solΠ.u
 end

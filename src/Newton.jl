@@ -115,7 +115,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 end
 
 """
-        newton(prob::AbstractBifurcationProblem, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
+        solve(prob::AbstractBifurcationProblem, ::Newton, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
 
 This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers (LS)](@ref) for more informations.
 
@@ -143,7 +143,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 !!! warning "Linear solver"
     Make sure that the linear solver (Matrix-Free...) corresponds to your jacobian (Matrix-Free vs. Matrix based).
 """
-newton(prob::AbstractBifurcationProblem, options::NewtonPar; kwargs...) = _newton(prob, getu0(prob), getparams(prob), options::NewtonPar; kwargs...)
+solve(prob::AbstractBifurcationProblem, ::Newton, options::NewtonPar; kwargs...) = _newton(prob, getu0(prob), getparams(prob), options::NewtonPar; kwargs...)
 # newton(F, J, x0, p0, options::NewtonPar; kwargs...) = newton(BifurcationProblem(F, x0, p0; J = J), options; kwargs...)
 
 # default callback

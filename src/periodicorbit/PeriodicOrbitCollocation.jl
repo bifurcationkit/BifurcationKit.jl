@@ -933,11 +933,9 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
     prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
 
     if isnothing(defOp)
-        return newton(prob, options; kwargs...)
-        # return newton(probPO, jac, orbitguess, par, options; kwargs...)
+        return solve(prob, Newton(), options; kwargs...)
     else
-        # return newton(probPO, jac, orbitguess, par, options, defOp; kwargs...)
-        return newton(prob, defOp, options; kwargs...)
+        return solve(prob, defOp, options; kwargs...)
     end
 end
 

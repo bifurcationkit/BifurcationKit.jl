@@ -332,7 +332,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
     end
 
     # solve the BT equations
-    sol = newton(prob_bt, optn_bt; normN = normN, kwargs...)
+    sol = solve(prob_bt, Newton(), optn_bt; normN = normN, kwargs...)
 
     # save the solution in BogdanovTakens
     pbt = get_par_bls(sol.u, 2)

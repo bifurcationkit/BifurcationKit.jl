@@ -55,7 +55,7 @@ BK.update(PALC(bls=MatrixBLS(nothing)), ContinuationPar(), nothing).bls.solver =
 let
     opts = ContinuationPar(p_min = -3.)
     prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)
-    sol = newton(prob, NewtonPar())
+    sol = BK.solve(prob, Newton(), NewtonPar())
     iter = ContIterable(prob, PALC(), opts)
     state = iterate(iter)[1]
     # jacobian of palc functional
@@ -300,8 +300,8 @@ opts = BK.ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds = 0.001, max_steps = 1
 x0 = 0.01 * ones(2)
 
 prob = BK.BifurcationProblem(F_simple, x0, -1.5, (@optic _); J = Jac_simple)
-x0 = newton(prob, opts.newton_options)
-x1 = newton((@set prob.params = -1.45), opts.newton_options)
+x0 = BK.solve(prob, Newton(), opts.newton_options)
+x1 = BK.solve((@set prob.params = -1.45), Newton(), opts.newton_options)
 
 br0 = continuation(prob, PALC(), opts, verbosity=3)
 BK.get_eigenelements(br0, br0.specialpoint[1])

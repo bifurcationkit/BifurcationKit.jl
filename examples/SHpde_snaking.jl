@@ -35,7 +35,7 @@ prob = BifurcationProblem(R_SH, sol0, parSH, (@optic _.λ); J = Jac_sp,
     )
 ####################################################################################################
 optnew = NewtonPar(tol = 1e-12)
-sol1 = newton(prob, optnew)
+sol1 = BK.solve(prob, Newton(), optnew)
 Plots.plot(X, sol1.u)
 
 opts = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds = 0.01,

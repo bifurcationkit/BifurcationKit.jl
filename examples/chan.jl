@@ -27,7 +27,7 @@ prob = BifurcationProblem(F_chan, sol0, par, (@optic _.α);
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
 # ca fait dans les 63.59k Allocations
-sol = @time newton( prob, optnewton)
+sol = @time BK.solve(prob, Newton(), optnewton)
 
 optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.1, p_max = 4.25, nev = 5, detect_fold = true, plot_every_step = 10, newton_options = NewtonPar(max_iterations = 10, tol = 1e-9, verbose = false), max_steps = 150)
 
@@ -42,8 +42,8 @@ deflationOp = DeflationOperator(2, 1.0, [sol.u])
 
 optdef = NewtonPar(optnewton; tol = 1e-10, max_iterations = 500)
 
-outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef)
-outdef1 = newton(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef, Val(:autodiff))
+outdef1 = BK.solve(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef)
+outdef1 = BK.solve(re_make(prob; u0 = sol.u .* (1 .+ 0.01*rand(n))), deflationOp, optdef, Val(:autodiff))
 
 plot(sol.u, label="newton")
 plot!(sol0, label="init guess")
@@ -51,7 +51,7 @@ plot!(outdef1.u, label="deflation-1")
 
 #save newly found point to look for new ones
 push!(deflationOp, outdef1.u)
-outdef2 = @time newton((@set prob.u0 = sol0), deflationOp, optdef; callback = BK.cbMaxNorm(1e5))
+outdef2 = @time BK.solve((@set prob.u0 = sol0), deflationOp, optdef; callback = BK.cbMaxNorm(1e5))
 plot!(outdef2.u, label="deflation-2")
 #################################################################################################### Continuation of the Fold Point using minimally augmented formulation
 optscont = (@set optscont.newton_options = setproperties(optscont.newton_options; verbose = true, tol = 1e-10))
@@ -110,7 +110,7 @@ P[1,1:2] .= [1, 0.];P[end,end-1:end] .= [0, 1.]
 
 lsp = GMRESIterativeSolvers(reltol = 1e-5, N = length(sol.u), restart = 20, maxiter=10, Pl = lu(P))
 optnewton_mf = NewtonPar(tol = 1e-9, verbose = false, linsolver = lsp)
-out_mf = @time newton(prob2, @set optnewton_mf.verbose = true)
+out_mf = @time BK.solve(prob2, Newton(), @set optnewton_mf.verbose = true)
 
 plot(brmf, color=:red)
 
@@ -120,7 +120,7 @@ brmf = @time continuation(prob2, PALC(tangent = Bordered(), bls = BorderingBLS(l
 plot(brmf,color=:blue)
 
 alg = brmf.alg
-brmf = @time continuation(prob2, MoorePenrose(tangent = alg, directLS = false), (@set opts_cont_mf.newton_options = optnewton_mf))
+brmf = @time continuation(prob2, MoorePenrose(tangent = alg, method = BifurcationKit.iterative), (@set opts_cont_mf.newton_options = optnewton_mf))
 
 plot(brmf,color=:blue)
 

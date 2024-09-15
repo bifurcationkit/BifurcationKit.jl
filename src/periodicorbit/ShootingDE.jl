@@ -82,7 +82,9 @@ function PoincareShootingProblem(prob::ODEProblem,
     pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
     affect!(integrator, idx) = terminate!(integrator)
     # we put nothing option to have an upcrossing
-    cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
+    cb = VectorContinuousCallback(pSection, affect!, hyp.M; 
+                                    interp_points = interp_points, 
+                                    affect_neg! = nothing)
     # change ODEProblem -> EnsembleProblem in the parallel case
     _M = hyp.M
     parallel = _M == 1 ? false : parallel

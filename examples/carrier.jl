@@ -43,7 +43,7 @@ prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@optic _.ϵ);
     record_from_solution)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)
-out = @time newton(prob, optnew, normN = norminf)
+out = @time BK.solve(prob, Newton(), optnew, normN = norminf)
 plot(out.u, label = "Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), nev = 40, n_inversion = 6)
@@ -67,7 +67,7 @@ function perturbsol(sol, p, id)
     return sol .+ solp .* sol0
 end
 
-outdef1 = @time newton(
+outdef1 = @time BK.solve(
     (@set prob.u0 = perturbsol(-out.u, 0, 0)), deflationOp,
     # perturbsol(deflationOp[1],0,0), par_def,
     optdef;

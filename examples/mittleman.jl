@@ -84,7 +84,7 @@ eigls = EigArpack(20.5, :LM)
 # eigls = EigKrylovKit(dim = 70)
 # eigls = EigArpack()
 opt_newton = NewtonPar(tol = 1e-8, verbose = true, eigsolver = eigls, max_iterations = 20)
-sol = newton(prob, opt_newton, normN = norminf)
+sol = BK.solve(prob, Newton(), opt_newton, normN = norminf)
 
 plotsol(sol.u)
 ####################################################################################################

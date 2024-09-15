@@ -349,7 +349,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && printstyled("━"^18*"  INITIAL GUESS   "*"━"^18, bold = true, color = :magenta)
 
     # we pass additional kwargs to newton so that it is sent to the newton callback
-    sol₀ = newton(prob, newton_options; 
+    sol₀ = solve(prob, Newton(), newton_options; 
                     normN = it.normC,
                     callback = callback(it),
                     iterationC = 0,
@@ -363,7 +363,8 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && println("──▶ parameter = ", p₀, ", initial step")
     verbose && printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
 
-    sol₁ = newton(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
+    sol₁ = solve(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
+                            Newton(),
                             newton_options; 
                             normN = it.normC,
                             callback = callback(it),

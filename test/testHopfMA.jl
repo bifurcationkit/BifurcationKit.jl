@@ -77,7 +77,7 @@ prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
 @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-out = newton(BK.re_make(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), opt_newton)
+out = BK.solve(BK.re_make(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), Newton(), opt_newton)
 
 opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
 br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
@@ -143,7 +143,7 @@ outhopf = newton(br, 1)
 pbgopfperso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
                 hopfpt, par_bru;
                 J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
-outhopf = newton(pbgopfperso, NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
+outhopf = BK.solve(pbgopfperso, Newton(), NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
 @test BK.converged(outhopf)
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
@@ -212,7 +212,7 @@ BK.get_time_diff(poTrap, orbitguess_f)
 # newton to find Periodic orbit
 _prob = BK.BifurcationProblem((x, p) -> poTrap(x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
 opt_po = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 150)
-outpo_f = @time newton(_prob, opt_po)
+outpo_f = @time BK.solve(_prob, Newton(), opt_po)
 @test BK.converged(outpo_f)
     # println("--> T = ", outpo_f[end])
 # flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")

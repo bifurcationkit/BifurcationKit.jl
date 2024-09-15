@@ -15,7 +15,7 @@ function test_newton(x0)
 
     opts = NewtonPar( tol = Ty(1e-8), verbose = false)
     prob = BifurcationProblem(F, x0, nothing; J = Jac)
-    newton(prob, opts; callback = BK.cbMaxNorm(100.0), normN = norminf)
+    BK.solve(prob, Newton(), opts; callback = BK.cbMaxNorm(100.0), normN = norminf)
 end
 ####################################################################################################
 # we test the regular newton algorithm
@@ -140,13 +140,13 @@ end
 # test of the different newton solvers
 deflationOp = DeflationOperator(2, dot, _T(1), [[_T(1)]])
 
-sol = newton(prob, deflationOp, NewtonPar())
+sol = BK.solve(prob, deflationOp, NewtonPar())
 @test BK.converged(sol)
-sol = newton(prob, deflationOp, NewtonPar(), Val(:autodiff))
+sol = BK.solve(prob, deflationOp, NewtonPar(), Val(:autodiff))
 @test BK.converged(sol)
-sol = newton(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()),)
+sol = BK.solve(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()),)
 @test BK.converged(sol)
-sol = newton(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()), Val(:fullIterative))
+sol = BK.solve(prob, deflationOp, NewtonPar(linsolver = GMRESKrylovKit()), Val(:fullIterative))
 @test BK.converged(sol)
 ####################################################################################################
 # test newton adapted to branch switching
