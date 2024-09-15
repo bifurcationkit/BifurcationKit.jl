@@ -28,9 +28,9 @@ using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
 # alg = Vern9()
-sol = solve(prob_de, alg)
+sol = OrdinaryDiffEq.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
-sol = solve(prob_de, Rodas5())
+sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -95,8 +95,8 @@ pd_po_coll = continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
 ################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
-sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
+sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
+sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
 
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
@@ -120,7 +120,7 @@ get_normal_form(brpo_pd, 2)
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 2, p_min = 1.e-2, dsmax = 1e-2, ds = 1e-3)
-@set! opts_pocoll_pd.newton_options.tol = 1e-10
+@reset opts_pocoll_pd.newton_options.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 0, plot = false,
         detect_codim2_bifurcation = 1,

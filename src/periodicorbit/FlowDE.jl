@@ -40,7 +40,11 @@ function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs.
     return FlowDE(prob, alg, nothing, nothing, kwargs, get(kwargs, :callback, nothing), nothing, nothing, 1e-8)
 end
 
-function Flow(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2; kwargs...)
+function Flow(prob1::Union{ODEProblem, EnsembleProblem}, 
+              alg1, 
+              prob2::Union{ODEProblem, EnsembleProblem}, 
+              alg2; 
+              kwargs...)
     return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), nothing, nothing, 1e-8)
 end
 ####################################################################################################
@@ -66,7 +70,7 @@ end
 function _flow(x, p, tm, pb::ODEProblem, alg; kwargs...)
     _prob = remake(pb; u0 = x, tspan = (zero(tm), tm), p = p)
     # the use of concrete_solve makes it compatible with Zygote
-    sol = solve(_prob, alg; save_everystep = false, kwargs...)
+    sol = SciMLBase.solve(_prob, alg; save_everystep = false, kwargs...)
     return (t = sol.t[end], u = sol.u[end])
 end
 ####################################################################################################
@@ -82,7 +86,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, p, tm; kw...) where {T1 <: Ens
     # see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
     _epb = setproperties(fl.prob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
-    sol = solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
+    sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
 end
@@ -92,13 +96,13 @@ function dflowMonoSerial(x::AbstractVector, p, dx, tm, pb::ODEProblem, alg; k...
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = p)
     # the use of concrete_solve makes it compatible with Zygote
-    sol = solve(_prob, alg, save_everystep = false; k...)[end]
+    sol = SciMLBase.solve(_prob, alg, save_everystep = false; k...)[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
 function dflow_fdSerial(x, p, dx, tm, pb::ODEProblem, alg; δ = convert(eltype(x), 1e-9), kwargs...)
     sol1 = _flow(x .+ δ .* dx, p, tm, pb, alg; kwargs...).u
-    sol2 = _flow(x              , p, tm, pb, alg; kwargs...).u
+    sol2 = _flow(x           , p, tm, pb, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
 end
 
@@ -118,7 +122,7 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: E
     N = size(x, 1)
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = p)
     _epb = setproperties(fl.probMono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
-    sol = solve(_epb, fl.algMono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
+    sol = SciMLBase.solve(_epb, fl.algMono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
     return sol.u
 end
 
@@ -137,13 +141,13 @@ end
 # this function takes into account a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, p, tm; kw...) where {T1 <: ODEProblem}
     _prob = remake(fl.prob; u0 = x, tspan = (zero(tm), tm), p = p)
-    sol = solve(_prob, fl.alg; fl.kwargsDE..., kw...)
+    sol = SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, p, tm; kw...) where {T1 <: EnsembleProblem}
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = p)
     _epb = setproperties(fl.prob, prob_func = _prob_func)
-    sol = solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
+    sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, par, δt; k...) where {T1 <: ODEProblem}

@@ -40,7 +40,12 @@ end
 ShootingProblem(M::Int, prob::ODEType, alg; kwargs...) = ShootingProblem(prob, alg, M, nothing; kwargs...)
 
 # idem but with an ODEProblem to define the derivative of the flow
-function ShootingProblem(prob1::ODEType, alg1, prob2::ODEType, alg2, ds, section; parallel = false, par = prob1.p, kwargs...)
+function ShootingProblem(prob1::ODEType, alg1, 
+                         prob2::ODEType, alg2, 
+                         ds, section; 
+                         parallel = false, 
+                         par = prob1.p, 
+                         kwargs...)
     _M = length(ds)
     parallel = _M == 1 ? false : parallel
     _pb1 = parallel ? EnsembleProblem(prob1) : prob1
@@ -67,13 +72,13 @@ end
 ###                                     POINCARE SHOOTING
 ####################################################################################################
 function PoincareShootingProblem(prob::ODEProblem,
-                                alg,
-                                hyp::SectionPS;
-                                δ = 1e-8,
-                                interp_points = 50,
-                                parallel = false,
-                                par = prob.p,
-                                kwargs...)
+                                 alg,
+                                 hyp::SectionPS;
+                                 δ = 1e-8,
+                                 interp_points = 50,
+                                 parallel = false,
+                                 par = prob.p,
+                                 kwargs...)
     pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
     affect!(integrator, idx) = terminate!(integrator)
     # we put nothing option to have an upcrossing

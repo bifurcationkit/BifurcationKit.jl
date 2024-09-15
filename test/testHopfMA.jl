@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, LinearAlgebra, SparseArrays, Setfield, ForwardDiff
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff
 const BK = BifurcationKit
 
 f1(u, v) = u^2 * v

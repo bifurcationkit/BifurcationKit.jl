@@ -385,7 +385,7 @@ hp_fromBT = continuation(sn_codim2, 1, opt;
     δp = 1e-4,
     update_minaug_every_step = 1,
     )
-
+# plot(sn_codim2, hp_fromBT)
 ########################################
 # update the BT point using newton and MA formulation
 solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = :autodiff)

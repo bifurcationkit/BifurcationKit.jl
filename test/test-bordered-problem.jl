@@ -1,5 +1,5 @@
 # using Revise, Plots
-using Test, BifurcationKit, KrylovKit, LinearAlgebra, Setfield
+using Test, BifurcationKit, KrylovKit, LinearAlgebra
 const BK = BifurcationKit
 
 # test for constrained problems
@@ -30,7 +30,7 @@ newton(prob, optnewton)
 
 _tau = BorderedArray(rand(n), 1.0)
 g(x, p, tau = _tau) = dot(x, tau.u) + (p[1] - 3.) * tau.p
-pb = BorderedProblem(F_chan, g, @lens _[1])
+pb = BorderedProblem(F_chan, g, @optic _[1])
 
 # test functional with AbstractVector form
 pb(vcat(sol.u, 3.1), par)

@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, LinearAlgebra, Setfield, SparseArrays, ForwardDiff
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff
 const BK = BifurcationKit
 
 n = 250*150

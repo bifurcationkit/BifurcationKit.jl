@@ -1,7 +1,7 @@
 # using Revise
 # using Plots
 using Test
-using BifurcationKit, Setfield
+using BifurcationKit
 
 const BK = BifurcationKit
 ###################################################################################################
@@ -216,7 +216,7 @@ ev3 = BK.BifDetectEvent
 eves1 = BK.SetOfEvents(ev1, ev2, ev3)
 
 args2 = @set args[end].detect_event = 2
-@set! kwargs.verbosity = 0
+@reset kwargs.verbosity = 0
 br = continuation(args2...; kwargs...,
     event = eves1,
     )
@@ -241,7 +241,7 @@ br = continuation(args2...; kwargs...,
 testBranch(br)
 
 eves3 = SetOfEvents(eves1, eves2)
-@set! kwargs.verbosity = 0
+@reset kwargs.verbosity = 0
 br = continuation(args2...; kwargs...,
     event = eves3,
     )

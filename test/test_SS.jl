@@ -1,5 +1,5 @@
 # using Revise
-using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools, Setfield
+using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools
 const BK = BifurcationKit
 N = 10
 M = 5
@@ -30,7 +30,7 @@ section(x::BorderedArray, T) = section(vec(x.u[:,:]), T)
 section(x::BorderedArray, T, dx, dT) = section(vec(x.u[:,:]), T, vec(dx.u[:,:]), dT)
 par = nothing
 
-fl = BK.Flow(vf, flow, dflow); @set! fl.flowFull = flow
+fl = BK.Flow(vf, flow, dflow); @reset fl.flowFull = flow
 BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
 probSh = BK.ShootingProblem(M = M, flow = fl,

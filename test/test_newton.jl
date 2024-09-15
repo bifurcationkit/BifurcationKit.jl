@@ -42,11 +42,11 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     z0 = BorderedArray(x0, p0)
     τ0 = BorderedArray(rand(T, N), convert(typeof(p0), 0.2))
     zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
-    optn = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
-    optc = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = 0.001,)
+    optn  = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
+    optc  = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = 0.001,)
 
-    prob = BifurcationProblem(F, x0, p0, (@optic _); J = Jac)
-    iter = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
+    prob  = BifurcationProblem(F, x0, p0, (@optic _); J = Jac)
+    iter  = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
     state = iterate(iter)[1]
     BK.newton_palc(iter, state)
 end

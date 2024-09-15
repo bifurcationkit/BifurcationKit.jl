@@ -1,5 +1,5 @@
 # using Revise
-using BifurcationKit, SparseArrays, LinearAlgebra, Plots, Setfield
+using BifurcationKit, SparseArrays, LinearAlgebra, Plots
 const BK = BifurcationKit
 
 k = 2

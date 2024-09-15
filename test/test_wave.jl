@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, SparseArrays, LinearAlgebra, Setfield, ForwardDiff
+using BifurcationKit, SparseArrays, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
 const FD = ForwardDiff
 
@@ -174,16 +174,16 @@ optn = NewtonPar(tol = 1e-8)
 opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 3, detect_bifurcation = 2)
 continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@set! opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
+@reset opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
 continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
 BK.GEigArpack(nothing, :LR)
-@set! opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
+@reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
 continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@set! opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
-@set! opt_cont_br.newton_options.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
-@set! opt_cont_br.detect_bifurcation = 0
+@reset opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
+@reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+@reset opt_cont_br.detect_bifurcation = 0
 continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :FiniteDifferences), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)

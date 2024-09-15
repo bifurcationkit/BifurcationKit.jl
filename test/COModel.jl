@@ -32,7 +32,7 @@ br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
 @test br.specialpoint[4].param ≈ 1.04204851
 @test br.specialpoint[5].param ≈ 1.05158367
 ####################################################################################################
-@set! opts_br.newton_options = NewtonPar(max_iterations = 10, tol = 1e-12)
+@reset opts_br.newton_options = NewtonPar(max_iterations = 10, tol = 1e-12)
 
 sn_codim2 = continuation(br, 3, (@optic _.k),
     ContinuationPar(opts_br, p_max = 2.2, p_min = 0., ds = -0.001, dsmax = 0.05, n_inversion = 8, max_steps = 50) ;

@@ -1,6 +1,6 @@
 # using Revise
 using BifurcationKit
-using Test, Setfield, LinearAlgebra
+using Test, LinearAlgebra
 # using Plots
 const BK = BifurcationKit
 ####################################################################################################
@@ -22,7 +22,7 @@ prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2); record_from_solution 
 
 opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
 
-# @set! opts_br.newton_options.verbose = true
+# @reset opts_br.newton_options.verbose = true
 alg = PALC()
 br = @time continuation(prob, alg, opts_br;
     plot = false, verbosity = 0, normC = norminf,
@@ -51,8 +51,8 @@ snpt = get_normal_form(br, 3)
 @test snpt.nf.b2 ≈ 0.2693795490512864 rtol = 1e-3
 @test snpt.nf.b3 ≈ 12.340786210650833 rtol = 1e-3
 
-@set! opts_br.newton_options.verbose = false
-@set! opts_br.newton_options.max_iterations = 10
+@reset opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.max_iterations = 10
 
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
@@ -96,7 +96,7 @@ hppt = get_normal_form(br, 2)
 @test hppt.nf.a ≈ 2.546719962189168 + 1.6474887797814664im
 @test hppt.nf.b ≈ 4.3536804635557855 + 15.441272421860365im
 
-@set! opts_br.newton_options.verbose = false
+@reset opts_br.newton_options.verbose = false
 
 hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true)
 # printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)

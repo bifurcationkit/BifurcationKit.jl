@@ -114,7 +114,7 @@ res_exp = debugTmpForσ \ rhs
 @test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
 #############################################
 # same with foldpb.issymmetric = true
-@set! foldpb.prob_vf.VF.isSymmetric = true
+@reset foldpb.prob_vf.VF.isSymmetric = true
 rhs = rand(n+1)
 Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))

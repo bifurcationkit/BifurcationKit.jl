@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, Setfield, LinearAlgebra, ForwardDiff, SparseArrays
+using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
 ##################################################################
 # The goal of these tests is to test all combinations of options

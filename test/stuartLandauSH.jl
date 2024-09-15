@@ -42,7 +42,7 @@ probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 BK._getVectorField(ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
 BK._getVectorField(EnsembleProblem(ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
 ####################################################################################################
-sol = solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
+sol = OrdinaryDiffEq.solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 # test generation of initial guess from ODESolution
@@ -64,7 +64,7 @@ res = _pb(initpo, par_hopf)
 
 # test the flowDE interface
 _pb_par = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9, parallel = true)
-_flow = _pb_par.flow; @set! _flow.vjp = (args...; kw...) -> nothing
+_flow = _pb_par.flow; @reset _flow.vjp = (args...; kw...) -> nothing
 BK.vjp(_flow, initpo, par_hopf, initpo, 0.1)
 BK.jvp(_pb_par.flow, initpo, par_hopf, initpo, 0.1)
 
@@ -325,8 +325,8 @@ br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingPro
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
-@set! opts_po_cont.newton_options.eigsolver.dim = 20
-@set! opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
+@reset opts_po_cont.newton_options.eigsolver.dim = 20
+@reset opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
 br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @optic _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
@@ -335,9 +335,9 @@ br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_e
 # BK.MonodromyQaD(br_sh.functional, br.sol)
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_bar), maxiter = 500, verbose = false)
-@set! opts_po_cont.detect_bifurcation = 0
-@set! opts_po_cont.newton_options.linsolver = ls
-@set! opts_po_cont.save_sol_every_step = 1
+@reset opts_po_cont.detect_bifurcation = 0
+@reset opts_po_cont.newton_options.linsolver = ls
+@reset opts_po_cont.save_sol_every_step = 1
 
 for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDenseAnalytical(), BK.FiniteDifferences())
     @info M, jacobianPO
