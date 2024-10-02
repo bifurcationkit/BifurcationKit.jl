@@ -19,7 +19,10 @@ module PlotsExt
                            AbstractResult,
                            BK_NoPlot, BK_Plots,
                            plotAllDCBranch,
-                           plot_DCont_branch
+                           plot_DCont_branch,
+                           SolPeriodicOrbit,
+                           TwoParamCont
 
+    include("RecipesPlots.jl")
     include("plot.jl")
 end
