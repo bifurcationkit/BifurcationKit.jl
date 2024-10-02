@@ -24,8 +24,5 @@ module GLMakieExt
                            BK_Makie,
                            plotAllDCBranch,
                            plot_DCont_branch
-
-    # TODO block precompilation
-    get_plot_backend() = BK_Makie()
     include("plot.jl")
 end
