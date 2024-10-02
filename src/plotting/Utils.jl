@@ -6,6 +6,7 @@ function get_plot_backend()
     return BK_NoPlot()
 end
 
+const pb = get_plot_backend()
 
 function get_plot_vars(contres, vars)
     if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}
