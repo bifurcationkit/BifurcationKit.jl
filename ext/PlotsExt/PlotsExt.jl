@@ -1,6 +1,7 @@
 module PlotsExt
     using Plots, BifurcationKit
-    import BifurcationKit: plot_branch_cont,
+    import BifurcationKit: _plot_backend,
+    plot_branch_cont,
                            plot_periodic_potrap,
                            plot_periodic_shooting!,
                            plot_periodic_shooting,
@@ -25,4 +26,9 @@ module PlotsExt
 
     include("RecipesPlots.jl")
     include("plot.jl")
+
+function __init__()
+    _plot_backend[] = BK_Plots()
+    return nothing
+end
 end

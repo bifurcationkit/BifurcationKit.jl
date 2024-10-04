@@ -132,7 +132,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
-    if pb == BK_Makie()
+    if get_plot_backend() == BK_Makie()
         plotsol = (ax, x, p; ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p; ax1, k...)
     else
         plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; fromcodim2 = true, k...)

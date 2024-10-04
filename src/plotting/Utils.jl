@@ -1,12 +1,8 @@
 ####################################################################################################
 
-function get_plot_backend()
-    !isnothing(Base.get_extension(BifurcationKit,:GLMakieExt)) && return BK_Makie()
-    !isnothing(Base.get_extension(BifurcationKit, :PlotsExt)) && return BK_Plots()
-    return BK_NoPlot()
-end
+const _plot_backend = Ref{AbstractPlotBackend}(BK_NoPlot())
+get_plot_backend() = _plot_backend[]
 
-const pb = get_plot_backend()
 
 function get_plot_vars(contres, vars)
     if vars isa Tuple{Symbol, Symbol} || typeof(vars) <: Tuple{Int64, Int64}

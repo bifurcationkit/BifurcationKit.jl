@@ -1,6 +1,7 @@
 module GLMakieExt
     using GLMakie, BifurcationKit
-    import BifurcationKit: plot, 
+    import BifurcationKit: _plot_backend,
+    plot, 
                            plot!,
                            hasbranch,
                            plot_branch_cont,
@@ -25,4 +26,9 @@ module GLMakieExt
                            plotAllDCBranch,
                            plot_DCont_branch
     include("plot.jl")
+
+function __init__()
+    _plot_backend[] = BK_Makie()
+    return nothing
+end
 end
