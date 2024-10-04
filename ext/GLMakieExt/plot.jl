@@ -43,11 +43,11 @@ function plot!(ax1, contres::AbstractBranchResult;
             bifpt = filterBifurcations(bifpt)
         end
         scatter!(ax1, 
-        [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
-        [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt];
-        marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), 
-        markersize = 10, 
-        color = map(x -> colorbif[x.type], bifpt),
+                [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
+                [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt];
+                marker = map(x -> (x.status == :guess) && (plotcirclesbif==false) ? :rect : :circle, bifpt), 
+                markersize = 10, 
+                color = map(x -> get_color(x.type), bifpt),
         )
     end
     
@@ -57,11 +57,11 @@ function plot!(ax1, contres::AbstractBranchResult;
         (length(bps) == 0) && return
         for pt in bps
             scatter!(ax1, 
-            [applytoX(getproperty(contres[pt.idx], ind1))], 
-            [applytoY(getproperty(contres[pt.idx], ind2))];
-            color = get_color(pt.type),
-            markersize = 10,
-            label = "$(pt.type)")
+                    [applytoX(getproperty(contres[pt.idx], ind1))], 
+                    [applytoY(getproperty(contres[pt.idx], ind2))];
+                    color = get_color(pt.type),
+                    markersize = 10,
+                    label = "$(pt.type)")
         end
         GLMakie.axislegend(ax1, merge = true, unique = true)
     end
@@ -219,7 +219,7 @@ function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     _plot_bifdiag_makie!(ax, bd; code, level, k...)
 
     display(fig)
-    fig
+    fig, ax
 end
 
 function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
