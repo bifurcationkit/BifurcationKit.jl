@@ -104,7 +104,6 @@ module BifurcationKit
 
     # plotting
     include("plotting/Utils.jl")
-    include("plotting/RecipesPlots.jl")
 
     # wrappers for SciML
     include("Diffeqwrap.jl")
