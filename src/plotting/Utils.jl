@@ -1,7 +1,7 @@
 ####################################################################################################
 
 function get_plot_backend()
-    !isnothing(Base.get_extension(BifurcationKit,:MakieExt)) && return BK_Makie()
+    !isnothing(Base.get_extension(BifurcationKit,:GLMakieExt)) && return BK_Makie()
     !isnothing(Base.get_extension(BifurcationKit,:PlotsExt)) && return BK_Plots()
     return BK_NoPlot()
 end
