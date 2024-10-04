@@ -151,4 +151,4 @@ function modify_po_plot(::BK_Makie, probPO, kwargs)
     _plotsol2 = isnothing(_plotsol) ? (ax, x, p; k...) -> nothing : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
 end
 
-modify_po_plot(probPO, kwargs) = modify_po_plot(pb, probPO, kwargs)
+modify_po_plot(probPO, kwargs) = modify_po_plot(_plot_backend, probPO, kwargs)

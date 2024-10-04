@@ -21,6 +21,7 @@ module PlotsExt
                            plotAllDCBranch,
                            plot_DCont_branch,
                            SolPeriodicOrbit,
+                           hasbranch,
                            TwoParamCont
 
     include("RecipesPlots.jl")

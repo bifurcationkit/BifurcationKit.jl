@@ -298,7 +298,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         # number of active branches
         nactive = mapreduce(isactive, +, dcstates)
         if plot && mod(nstep, contParams.plot_every_step) == 0
-            plot_DCont_branch(pb, branches, nbrs, nactive, nstep)
+            plot_DCont_branch(_plot_backend, branches, nbrs, nactive, nstep)
         end
 
         # only look for new branches if the number of active branches is too small
