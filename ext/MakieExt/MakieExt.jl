@@ -1,5 +1,5 @@
-module GLMakieExt
-    using GLMakie, BifurcationKit
+module MakieExt
+    using Makie, BifurcationKit
     import BifurcationKit: _plot_backend,
     plot, 
                            plot!,
