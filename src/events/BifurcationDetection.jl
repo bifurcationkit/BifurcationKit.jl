@@ -1,13 +1,39 @@
 """
-    `SaveAtEvent(positions::Tuple)`
+    $(SIGNATURES)
 
 This event implements the detection of when the parameter values, used during continuation, equals one of the values in `positions`. This state is then saved in the branch.
 
 For example, you can use it like `continuation(args...; event = SaveAtEvent((1., 2., -3.)))`
+
+The options `use_newton` triggers the use of Newton algorithm to finalise detection.
 """
-function SaveAtEvent(positions::Tuple) 
+function SaveAtEvent(positions::NTuple; use_newton = false) 
     labels = length(positions) == 1 ? ("save",) : ntuple(x -> "save-$x", length(positions))
-    ContinuousEvent(length(positions), (it, state) -> map(x -> x - getp(state), positions), labels)
+    finaliser = use_newton ? finaliser_sae : default_finalise_event!
+    ContinuousEvent(length(positions), (it, state) -> map(x -> x - getp(state), positions), labels; finaliser, data = positions)
+end
+
+function finaliser_sae(event_point, it, state, success)
+    p0 = event_point.param
+    ps = it.event.data
+    p = argmin(x -> abs(x - p0), ps)
+
+    prob = it.prob
+    (;newton_options, ) = it.contparams
+    sol = solve(re_make(prob; params = setparam(it, p), u0 = event_point.x),
+                            Newton(),
+                            newton_options; 
+                            normN = it.normC,
+                            callback = callback(it),
+                            iterationC = 0,
+                            p = p)
+    if converged(sol)
+        copyto!(event_point.x, sol.u)
+        @reset event_point.param = p
+        @reset event_point.precision = newton_options.tol
+        state.z.p = p
+    end
+    event_point
 end
 ####################################################################################################
 # detection of Fold bifurcation, should be based on Bordered

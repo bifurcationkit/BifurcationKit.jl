@@ -115,7 +115,7 @@ testBranch(br)
 
 # code for testing a single value
 br = continuation(args...; kwargs...,
-    event = BK.SaveAtEvent((-2.,))
+    event = BK.SaveAtEvent((-2.,), use_newton = true)
     )
 @test length(br.specialpoint)-1 == 3
 @test br.specialpoint[2].type == Symbol("save")

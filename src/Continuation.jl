@@ -521,6 +521,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                     end
                     success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, interval_event)
                     state.stopcontinuation |= ~success
+                    event_pt = finalise_event!(event_pt, it.event, it, state, success)
                     if event_pt.type != :none
                         push!(contRes.specialpoint, event_pt)
                     end

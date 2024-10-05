@@ -8,6 +8,10 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 # initialize function, must return the same type as eve(iter, state)
 initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
 
+# finalise event
+finalise_event!(event_point, eve::AbstractEvent, it, state, success) = event_point
+default_finalise_event!(event_point, it, state, success) = event_point
+
 # whether the event requires computing eigen-elements
 @inline compute_eigen_elements(::AbstractEvent) = false
 
@@ -83,11 +87,11 @@ A continuous call back returns a **tuple/scalar** value and we seek its zeros.
 
 $(TYPEDFIELDS)
 """
-struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
+struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
     "number of events, ie the length of the result returned by the callback function"
     nb::Int64
 
-    ", ` (iter, state) -> NTuple{nb, T}` callback function which, at each continuation state, returns a tuple. For example, to detect crossing 1.0 and -2.0, you can pass `(iter, state) -> (getp(state)+2, getx(state)[1]-1)),`. Note that the type `T` should match the one of the parameter specified by the `::Lens` in `continuation`."
+    ", ` (iter, state) -> NTuple{nb, T}` callback function which, at each continuation state, returns a tuple. For example, to detect crossing at 1.0 and at -2.0, you can pass `(iter, state) -> (getp(state)+2, getx(state)[1]-1)),`. Note that the type `T` should match the one of the parameter specified by the `::Lens` in `continuation`."
     condition::Tcb
 
     "whether the event requires to compute eigen elements"
@@ -99,20 +103,27 @@ struct ContinuousEvent{Tcb, Tl, T} <: AbstractContinuousEvent
     "Tolerance on event value to declare it as true event."
     tol::T
 
-    function ContinuousEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing, tol::T = 0) where {N,T}
+    "Finaliser function"
+    finaliser::Tf
+
+    "Place to store some personal data"
+    data::Td
+
+    function ContinuousEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing, tol::T = 0; finaliser::TF = default_finalise_event!, data::Td = nothing) where {N,T,TF,Td}
         @assert nb > 0 "You need to return at least one callback"
         condition = convert_to_tuple_eve ∘ fct
-        new{typeof(condition), typeof(labels), T}(nb, condition, cev, labels, tol)
+        new{typeof(condition), typeof(labels), T, TF, Td}(nb, condition, cev, labels, tol, finaliser, data)
     end
 end
 
-function ContinuousEvent(nb::Int, fct, labels = nothing)
-    ContinuousEvent(nb, fct, false, labels)
+function ContinuousEvent(nb::Int, fct, labels = nothing; k...)
+    ContinuousEvent(nb, fct, false, labels; k...)
 end
 
 @inline compute_eigenelements(eve::ContinuousEvent) = eve.computeEigenElements
 @inline length(eve::ContinuousEvent) = eve.nb
 @inline has_custom_labels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+finalise_event!(event_point, eve::ContinuousEvent, it, state, success) = eve.finaliser(event_point, it, state, success)
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -122,7 +133,7 @@ A discrete call back returns a discrete value and we seek when it changes.
 
 $(TYPEDFIELDS)
 """
-struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
+struct DiscreteEvent{Tcb, Tl, Tf, Td} <: AbstractDiscreteEvent
     "number of events, ie the length of the result returned by the callback function"
     nb::Int64
 
@@ -135,20 +146,27 @@ struct DiscreteEvent{Tcb, Tl} <: AbstractDiscreteEvent
     "Labels used to display information. For example `labels[1]` is used to qualify an event occurring in the first component. You can use `labels = (\"hopf\",)` or `labels = (\"hopf\", \"fold\")`. You must have `labels::Union{Nothing, NTuple{N, String}}`."
     labels::Tl
 
-    function DiscreteEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing) where {N}
+    "Finaliser function"
+    finaliser::Tf
+
+    "Place to store some personal data"
+    data::Td
+
+    function DiscreteEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing; finaliser::TF = default_finalise_event!, data::Td = nothing) where {N, TF, Td}
         @assert nb > 0 "You need to return at least one callback"
         condition = convert_to_tuple_eve ∘ fct
-        new{typeof(condition), typeof(labels)}(nb, condition, cev, labels)
+        new{typeof(condition), typeof(labels), TF, Td}(nb, condition, cev, labels, finaliser, data)
     end
 end
 
-function DiscreteEvent(nb::Int, fct, labels = nothing)
-    DiscreteEvent(nb, fct, false, labels)
+function DiscreteEvent(nb::Int, fct, labels = nothing; k...)
+    DiscreteEvent(nb, fct, false, labels; k...)
 end
 
 @inline compute_eigenelements(eve::DiscreteEvent) = eve.computeEigenElements
 @inline length(eve::DiscreteEvent) = eve.nb
 @inline has_custom_labels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+finalise_event!(event_point, eve::DiscreteEvent, it, state, success) = eve.finaliser(event_point, it, state, success)
 
 function labels(eve::Union{ContinuousEvent{Tcb, Nothing}, DiscreteEvent{Tcb, Nothing}}, ind) where Tcb
     if length(eve) == 1
@@ -196,12 +214,18 @@ function (eve::PairOfEvents)(iter, state)
 end
 
 initialize(eve::PairOfEvents, T) = initialize(eve.eventC, T)..., initialize(eve.eventD, T)...
+
 function is_event_crossed(eve::PairOfEvents, iter, state, ind = :)
     nc = length(eve.eventC)
     n = length(eve)
     resC = is_event_crossed(eve.eventC, iter, state, 1:nc)
     resD = is_event_crossed(eve.eventD, iter, state, nc+1:n)
     return resC || resD
+end
+
+function finalise_event!(event_point, eve::PairOfEvents, it, state, success)
+    event_point = finalise_event!(event_point, eve.eventC, it, state, success)
+    finalise_event!(event_point, eve.eventD, it, state, success)
 end
 ####################################################################################################
 """
@@ -280,4 +304,14 @@ function is_event_crossed(event::SetOfEvents, iter, state)
         res = res | is_event_crossed(eve, iter, state, nC + i)
     end
     return  res
+end
+
+function finalise_event!(event_point, seve::SetOfEvents, it, state, success)
+    for eve in seve.eventC
+        event_point = finalise_event!(event_point, eve, it, state, success)
+    end
+    for eve in seve.eventD
+        event_point = finalise_event!(event_point, eve, it, state, success)
+    end
+    event_point
 end
