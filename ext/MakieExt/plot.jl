@@ -5,6 +5,27 @@ function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, va
     return ([Point2f0(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
+function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
+    if isdefined(Main,:CairoMakie) && Makie.current_backend() == Main.CairoMakie
+        xx = similar(x, length(x) + 2 * (length(indices) - 1))
+        for (i, ind) in enumerate(indices)
+            if i == 1
+                xx[1:ind+1] .= @views x[1:ind+1]
+            else
+                xx[(2*(i-1)+1).+(indices[i-1]-1:ind)] .= @views x[(indices[i-1]-1:ind).+1]
+            end
+            if ind != last(indices)
+                xx[2*(i-1)+ind] = xx[2*(i-1)+ind-1]
+                xx[2*(i-1)+ind+1] = splitval ? NaN : xx[2*(i-1)+ind-1]
+            end
+        end
+
+        return xx
+    else
+        return x
+    end
+end
+
 function plot!(ax1, contres::AbstractBranchResult;
     plotfold=false,
     plotstability=true,
@@ -25,19 +46,14 @@ function plot!(ax1, contres::AbstractBranchResult;
 
     # stability linewidth
     linewidth = linewidthunstable
+    indices = getproperty.(contres.specialpoint, :idx)
+    # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
-        linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
-        linewidth = linewidthstable
+        linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
     end
-    xbranch = map(applytoX, getproperty(contres.branch, ind1))
-    ybranch = map(applytoY, getproperty(contres.branch, ind2))
-    @info propertynames(ax1)
-    if any(isodd, contres.stable)
-        lines!(ax1, xbranch, [(isodd(s) ? y : NaN64) for (y, s) in zip(ybranch, contres.stable)], linewidth=linewidthstable, label=branchlabel)
-    end
-    if any(iseven, contres.stable)
-        lines!(ax1, xbranch, [(iseven(s) ? y : NaN64) for (y, s) in zip(ybranch, contres.stable)], linewidth=linewidthunstable, label=branchlabel)
-    end
+    xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
+    ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
+    lines!(ax1, xbranch, ybranch, linewidth=linewidth, label=branchlabel)
     ax1.xlabel = xlab
     ax1.ylabel = ylab
 
