@@ -244,8 +244,14 @@ end
 EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Symbol, interval) = SpecialPoint(it, state, Utype, status, interval; idx = state.step + 1)
 
 # I put the callback in first argument even if it is in iter in order to allow for dispatch
-# function to tell the event type based  on the coordinates of the zero
-function get_event_type(event::AbstractEvent, iter::AbstractContinuationIterable, state, verbosity, status::Symbol, interval::Tuple{T, T}, ind = :) where T
+# function to tell the event type based on the coordinates of the zero
+function get_event_type(event::AbstractEvent, 
+                        iter::AbstractContinuationIterable,
+                        state,
+                        verbosity,
+                        status::Symbol,
+                        interval::Tuple{T, T}, 
+                        ind = :) where T
     # record information about the event point
     userpoint = EventSpecialPoint(iter, state, :user, status, interval)
     (verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")

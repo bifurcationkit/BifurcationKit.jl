@@ -356,17 +356,17 @@ Generate a periodic orbit problem from a solution.
 """
 function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             bifprob::AbstractBifurcationProblem,
-                            sol::AbstractTimeseriesSolution,
+                            sol_ode::AbstractTimeseriesSolution,
                             period;
                             optimal_period::Bool = true)
-    u0 = sol(0)
+    u0 = sol_ode(0)
     @assert u0 isa AbstractVector
     N = length(u0)
 
     n, m, Ntst = size(pb)
     n_unknows = N * (1 + m * Ntst)
 
-    par = sol.prob.p
+    par = sol_ode.prob.p
     prob_vf = re_make(bifprob, params = par)
 
     pbcoll = setproperties(pb,
@@ -379,10 +379,10 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     # find best period candidate
     if optimal_period
         _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
-        period = _times[argmin(norm(sol(t) - sol(0)) for t in _times)]
+        period = _times[argmin(norm(sol_ode(t) - sol_ode(0)) for t in _times)]
     end
 
-    ci = generate_solution(pbcoll, t -> sol(t), period)
+    ci = generate_solution(pbcoll, t -> sol_ode(t), period)
     pbcoll.ϕ .= @view ci[begin:end-1]
 
     return pbcoll, ci

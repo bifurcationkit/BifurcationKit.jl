@@ -121,6 +121,7 @@ function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
     println(io, "├─ dimension      : ", pb.N)
     println(io, "├─ jacobian       : ", pb.jacobian)
     println(io, "├─ update section : ", pb.update_section_every_step)
+    println(io, "├─ # unknowns without phase condition) : ", pb.M * pb.N)
     println(io, "└─ inplace        : ", isinplace(pb))
 end
 
@@ -150,8 +151,6 @@ function PeriodicOrbitTrapProblem(prob, ϕ::vectype, xπ::vectype, m::Union{Int,
 
     return PeriodicOrbitTrapProblem(prob_vf = prob, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu = ongpu, massmatrix = massmatrix)
 end
-
-# PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); isinplace = false, ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, ls; isinplace = isinplace, ongpu = ongpu, massmatrix = massmatrix)
 
 function PeriodicOrbitTrapProblem(prob_vf,
                                     ϕ::vectype,
