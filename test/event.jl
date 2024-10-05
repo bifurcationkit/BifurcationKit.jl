@@ -122,7 +122,7 @@ br = continuation(args...; kwargs...,
 testBranch(br)
 
 br = continuation(args...; kwargs...,
-    event = BK.SaveAtEvent((-2., 0., 1.))
+    event = BK.SaveAtEvent((-2., 0., 1.), use_newton = true)
     )
 @test length(br.specialpoint) == 6
 @test br.specialpoint[2].type == Symbol("save-1")
