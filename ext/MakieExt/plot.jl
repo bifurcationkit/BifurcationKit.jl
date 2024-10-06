@@ -7,7 +7,7 @@ end
 
 function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
     # Adapt behavior for CairoMakie only
-    if isdefined(Main, :CairoMakie) && Makie.current_backend() == Main.CairoMakie
+    if !isempty(indices) && isdefined(Main, :CairoMakie) && Makie.current_backend() == Main.CairoMakie
         xx = similar(x, length(x) + 2 * (length(indices)))
         for (i, ind) in enumerate(indices)
             if ind == first(indices)
