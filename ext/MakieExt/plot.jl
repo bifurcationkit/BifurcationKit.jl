@@ -1,11 +1,11 @@
 using Makie: Point2f0
 
-function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars=nothing, applytoY=identity, applytoX=identity)
+function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars = nothing, applytoY = identity, applytoX = identity)
     ind1, ind2 = get_plot_vars(contres, vars)
     return ([Point2f0(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
-function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool=true) where {T<:Real}
+function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
     # Adapt behavior for CairoMakie only
     if isdefined(Main, :CairoMakie) && Makie.current_backend() == Main.CairoMakie
         xx = similar(x, length(x) + 2 * (length(indices)))
@@ -31,19 +31,7 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitv
     end
 end
 
-function plot!(ax1, contres::AbstractBranchResult;
-    plotfold=false,
-    plotstability=true,
-    plotspecialpoints=true,
-    putspecialptlegend=true,
-    filterspecialpoints=false,
-    vars=nothing,
-    linewidthunstable=1.0,
-    linewidthstable=3.0linewidthunstable,
-    plotcirclesbif=true,
-    branchlabel=nothing,
-    applytoY=identity,
-    applytoX=identity)
+function plot!(ax1, contres::AbstractBranchResult; plotfold = false, plotstability = true, plotspecialpoints = true, putspecialptlegend = true, filterspecialpoints = false, vars = nothing, linewidthunstable = 1.0, linewidthstable = 3.0linewidthunstable, plotcirclesbif = true, branchlabel = nothing, applytoY = identity, applytoX = identity)
 
     # names for axis labels
     ind1, ind2 = get_plot_vars(contres, vars)
@@ -58,7 +46,7 @@ function plot!(ax1, contres::AbstractBranchResult;
     end
     xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
     ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
-    lines!(ax1, xbranch, ybranch, linewidth=linewidth, label=branchlabel)
+    lines!(ax1, xbranch, ybranch, linewidth = linewidth, label = branchlabel)
     ax1.xlabel = xlab
     ax1.ylabel = ylab
 
@@ -68,13 +56,7 @@ function plot!(ax1, contres::AbstractBranchResult;
         if filterspecialpoints == true
             bifpt = filterBifurcations(bifpt)
         end
-        scatter!(ax1,
-            [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
-            [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt];
-            marker=map(x -> (x.status == :guess) && (plotcirclesbif == false) ? :rect : :circle, bifpt),
-            markersize=10,
-            color=map(x -> get_color(x.type), bifpt),
-        )
+        scatter!(ax1, [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]; marker = map(x -> (x.status == :guess) && (plotcirclesbif == false) ? :rect : :circle, bifpt), markersize = 10, color = map(x -> get_color(x.type), bifpt))
     end
 
     # add legend for bifurcation points
@@ -82,32 +64,14 @@ function plot!(ax1, contres::AbstractBranchResult;
         bps = unique(x -> x.type, [pt for pt in bifpt if (pt.type != :none && (plotfold || pt.type != :fold))])
         (length(bps) == 0) && return
         for pt in bps
-            scatter!(ax1,
-                [applytoX(getproperty(contres[pt.idx], ind1))],
-                [applytoY(getproperty(contres[pt.idx], ind2))];
-                color=get_color(pt.type),
-                markersize=10,
-                label="$(pt.type)")
+            scatter!(ax1, [applytoX(getproperty(contres[pt.idx], ind1))], [applytoY(getproperty(contres[pt.idx], ind2))]; color = get_color(pt.type), markersize = 10, label = "$(pt.type)")
         end
-        Makie.axislegend(ax1, merge=true, unique=true)
+        Makie.axislegend(ax1, merge = true, unique = true)
     end
     ax1
 end
 
-function plot_branch_cont(contres::ContResult,
-    state,
-    iter,
-    plotuserfunction;
-    plotfold=false,
-    plotstability=true,
-    plotspecialpoints=true,
-    putspecialptlegend=true,
-    filterspecialpoints=false,
-    linewidthunstable=1.0,
-    linewidthstable=3.0linewidthunstable,
-    plotcirclesbif=true,
-    applytoY=identity,
-    applytoX=identity)
+function plot_branch_cont(contres::ContResult, state, iter, plotuserfunction; plotfold = false, plotstability = true, plotspecialpoints = true, putspecialptlegend = true, filterspecialpoints = false, linewidthunstable = 1.0, linewidthstable = 3.0linewidthunstable, plotcirclesbif = true, applytoY = identity, applytoX = identity)
     sol = getsolution(state)
     if length(contres) == 0
         return
@@ -123,23 +87,23 @@ function plot_branch_cont(contres::ContResult,
         linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
     end
 
-    fig = Figure(size=(1200, 700))
-    ax1 = fig[1:2, 1] = Axis(fig, xlabel=String(xlab), ylabel=String(ylab), tellheight=true)
+    fig = Figure(size = (1200, 700))
+    ax1 = fig[1:2, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
 
-    ax2 = fig[1, 2] = Axis(fig, xlabel="step [$(state.step)]", ylabel=String(xlab))
-    lines!(ax2, contres.step, contres.param, linewidth=linewidth)
+    ax2 = fig[1, 2] = Axis(fig, xlabel = "step [$(state.step)]", ylabel = String(xlab))
+    lines!(ax2, contres.step, contres.param, linewidth = linewidth)
 
     if compute_eigenelements(iter)
         eigvals = contres.eig[end].eigenvals
-        ax_ev = fig[3, 1:2] = Axis(fig, xlabel="ℜ", ylabel="ℑ")
-        scatter!(ax_ev, real.(eigvals), imag.(eigvals), strokewidth=0, markersize=10, color=:black)
+        ax_ev = fig[3, 1:2] = Axis(fig, xlabel = "ℜ", ylabel = "ℑ")
+        scatter!(ax_ev, real.(eigvals), imag.(eigvals), strokewidth = 0, markersize = 10, color = :black)
         # add stability boundary
         maxIm = maximum(imag, eigvals)
         minIm = minimum(imag, eigvals)
         if maxIm - minIm < 1e-6
             maxIm, minIm = 1, -1
         end
-        lines!(ax_ev, [0, 0], [maxIm, minIm], color=:blue, linewidth=linewidthunstable)
+        lines!(ax_ev, [0, 0], [maxIm, minIm], color = :blue, linewidth = linewidthunstable)
     end
 
     # plot arrow to indicate the order of computation
@@ -148,14 +112,14 @@ function plot_branch_cont(contres::ContResult,
         y = getproperty(contres.branch, 1)[end]
         u = contres.branch[end].param - contres.branch[end-1].param
         v = getproperty(contres.branch, 1)[end] - getproperty(contres.branch, 1)[end-1]
-        Makie.arrows!(ax1, [x], [y], [u], [v], color=:green, arrowsize=20,)
+        Makie.arrows!(ax1, [x], [y], [u], [v], color = :green, arrowsize = 20)
     end
 
     plot!(ax1, contres; plotfold, plotstability, plotspecialpoints, putspecialptlegend, filterspecialpoints, linewidthunstable, linewidthstable, plotcirclesbif, applytoY, applytoX)
 
     if isnothing(plotuserfunction) == false
-        ax_perso = fig[2, 2] = Axis(fig, tellheight=true)
-        plotuserfunction(ax_perso, sol.u, sol.p; ax1=ax1)
+        ax_perso = fig[2, 2] = Axis(fig, tellheight = true)
+        plotuserfunction(ax_perso, sol.u, sol.p; ax1 = ax1)
     end
 
     display(fig)
@@ -171,7 +135,7 @@ function plot(contres::AbstractBranchResult; kP...)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
     fig = Figure()
-    ax1 = fig[1, 1] = Axis(fig, xlabel=String(xlab), ylabel=String(ylab), tellheight=true)
+    ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
 
     plot!(ax1, contres; kP...)
     display(fig)
@@ -180,9 +144,7 @@ end
 
 plot(brdc::DCResult; kP...) = plot(brdc.branches...; kP...)
 
-function plot(brs::AbstractBranchResult...;
-    branchlabel=["$i" for i = 1:length(brs)],
-    kP...)
+function plot(brs::AbstractBranchResult...; branchlabel = ["$i" for i = 1:length(brs)], kP...)
     if length(brs) == 0
         return
     end
@@ -190,9 +152,9 @@ function plot(brs::AbstractBranchResult...;
     ax1 = fig[1, 1] = Axis(fig)
 
     for (id, contres) in pairs(brs)
-        plot!(ax1, contres; branchlabel=branchlabel[id], kP...)
+        plot!(ax1, contres; branchlabel = branchlabel[id], kP...)
     end
-    Makie.axislegend(ax1, merge=true, unique=true)
+    Makie.axislegend(ax1, merge = true, unique = true)
     display(fig)
     fig, ax1
 end
@@ -214,15 +176,15 @@ end
 #     end
 # end
 
-function plot_periodic_potrap(outpof, n, M; ratio=2)
+function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
     if ratio == 1
-        heatmap(outpo[1:n, :]', ylabel="Time", color=:viridis)
+        heatmap(outpo[1:n, :]', ylabel = "Time", color = :viridis)
     else
         fig = Makie.Figure()
-        ax1 = Axis(fig[1, 1], ylabel="Time")
-        ax2 = Axis(fig[1, 2], ylabel="Time")
+        ax1 = Axis(fig[1, 1], ylabel = "Time")
+        ax2 = Axis(fig[1, 2], ylabel = "Time")
         # Makie.heatmap!(ax1, rand(2,2))
         Makie.heatmap!(ax1, outpo[1:n, :]')
         Makie.heatmap!(ax2, outpo[n+2:end, :]')
@@ -242,7 +204,7 @@ end
 # end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
-function plot(bd::BifDiagNode; code=(), level=(-Inf, Inf), k...)
+function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd)
         return
     end
@@ -256,13 +218,13 @@ function plot(bd::BifDiagNode; code=(), level=(-Inf, Inf), k...)
     fig, ax
 end
 
-function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code=(), level=(-Inf, Inf), k...)
+function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd)
         return
     end
 
     _bd = get_branch(bd, code)
-    _plot_bifdiag_makie!(ax, _bd.child; code=(), level=level, k...)
+    _plot_bifdiag_makie!(ax, _bd.child; code = (), level = level, k...)
 
     # !! plot root branch in last so the bifurcation points do not alias, for example a 2d BP would be plot as a 1d BP if the order were reversed
     if level[1] <= _bd.level <= level[2]
@@ -270,7 +232,7 @@ function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code=(), level=(-Inf, Inf), k
     end
 end
 
-function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code=(), level=(-Inf, Inf), k...)
+function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf), k...)
     for b in bd
         _plot_bifdiag_makie!(ax, b; code, level, k...)
     end
@@ -278,10 +240,6 @@ end
 ####################################################################################################
 plotAllDCBranch(branches) = plot(branches...)
 
-function plot_DCont_branch(::BK_Makie,
-    branches,
-    nbrs::Int,
-    nactive::Int,
-    nstep::Int)
+function plot_DCont_branch(::BK_Makie, branches, nbrs::Int, nactive::Int, nstep::Int)
     plot(branches...)
 end
