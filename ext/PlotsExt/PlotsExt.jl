@@ -1,7 +1,7 @@
 module PlotsExt
     using Plots, BifurcationKit
     import BifurcationKit: _plot_backend,
-    plot_branch_cont,
+                           plot_branch_cont,
                            plot_periodic_potrap,
                            plot_periodic_shooting!,
                            plot_periodic_shooting,
@@ -18,6 +18,8 @@ module PlotsExt
                            filter_bifurcations,
                            get_color,
                            AbstractResult,
+                           get_plot_backend,
+                           set_plot_backend!,
                            BK_NoPlot, BK_Plots,
                            plotAllDCBranch,
                            plot_DCont_branch,
@@ -28,7 +30,7 @@ module PlotsExt
     include("plot.jl")
 
 function __init__()
-    _plot_backend[] = BK_Plots()
+    set_plot_backend!(BK_Plots())
     return nothing
 end
 end

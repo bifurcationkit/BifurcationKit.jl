@@ -1,5 +1,5 @@
 module BifurcationKit
-    using Printf, Dates, LinearMaps, BlockArrays, RecipesBase, StructArrays
+    using Printf, Dates, LinearMaps, BlockArrays, StructArrays
     using Reexport
     @reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
     using Parameters: @with_kw, @unpack, @with_kw_noshow

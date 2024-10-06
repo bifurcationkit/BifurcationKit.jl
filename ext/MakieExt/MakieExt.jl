@@ -1,7 +1,7 @@
-module GLMakieExt
-    using GLMakie, BifurcationKit
+module MakieExt
+    using Makie, BifurcationKit
     import BifurcationKit: _plot_backend,
-    plot, 
+                           plot, 
                            plot!,
                            hasbranch,
                            plot_branch_cont,
@@ -22,13 +22,14 @@ module GLMakieExt
                            get_color,
                            colorbif,
                            get_plot_backend,
+                           set_plot_backend!,
                            BK_Makie,
                            plotAllDCBranch,
                            plot_DCont_branch
     include("plot.jl")
 
 function __init__()
-    _plot_backend[] = BK_Makie()
+    set_plot_backend!(BK_Makie())
     return nothing
 end
 end
