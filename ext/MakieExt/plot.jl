@@ -5,21 +5,26 @@ function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, va
     return ([Point2f0(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
-function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
-    if isdefined(Main,:CairoMakie) && Makie.current_backend() == Main.CairoMakie
-        xx = similar(x, length(x) + 2 * (length(indices) - 1))
+function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool=true) where {T<:Real}
+    # Adapt behavior for CairoMakie only
+    if isdefined(Main, :CairoMakie) && Makie.current_backend() == Main.CairoMakie
+        xx = similar(x, length(x) + 2 * (length(indices)))
         for (i, ind) in enumerate(indices)
-            if i == 1
-                xx[1:ind+1] .= @views x[1:ind+1]
+            if ind == first(indices)
+                xx[1:ind] .= @views x[1:ind]
             else
-                xx[(2*(i-1)+1).+(indices[i-1]-1:ind)] .= @views x[(indices[i-1]-1:ind).+1]
+                xx[(2*(i-1)).+(indices[i-1]+1:ind)] .= @views x[(indices[i-1]+1:ind)]
             end
-            if ind != last(indices)
-                xx[2*(i-1)+ind] = xx[2*(i-1)+ind-1]
-                xx[2*(i-1)+ind+1] = splitval ? NaN : xx[2*(i-1)+ind-1]
+            if !splitval
+                xx[2*(i-1)+ind] = x[ind-1]
             end
+            # Add a NaN is necessary, otherwise continue with same value as before (useful for linewidth)
+            xx[2*(i-1)+ind+1] = splitval ? NaN : x[ind-1]
+            # Repeat last value before NaN, but adapt for linewidth
+            xx[2*(i-1)+ind+2] = splitval ? x[ind] : x[ind+1]
         end
-
+        # Fill the rest of the extended array
+        xx[last(indices)+2*length(indices)+1:end] .= @views x[last(indices)+1:end]
         return xx
     else
         return x
@@ -46,7 +51,7 @@ function plot!(ax1, contres::AbstractBranchResult;
 
     # stability linewidth
     linewidth = linewidthunstable
-    indices = getproperty.(contres.specialpoint, :idx)
+    indices = [sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
         linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
