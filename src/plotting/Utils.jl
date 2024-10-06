@@ -2,6 +2,10 @@
 
 const _plot_backend = Ref{AbstractPlotBackend}(BK_NoPlot())
 get_plot_backend() = _plot_backend[]
+function set_plot_backend!(backend::AbstractPlotBackend)
+    _plot_backend[] = backend
+    return nothing
+end
 
 
 function get_plot_vars(contres, vars)
