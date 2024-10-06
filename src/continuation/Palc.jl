@@ -95,7 +95,7 @@ function initialize!(state::AbstractContinuationState,
     # for the initialisation step, we do not use a Bordered predictor which 
     # fails at bifurcation points. Instead, we start with a Secant predictor
     gettangent!(state, iter, Secant(), getdot(alg))
-    # we want to start at (u0, p0), not (u1, p1)
+    # we want to start at (u0, p0), not at (u1, p1)
     copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
     addtangent!(state, nrm)
@@ -203,7 +203,6 @@ internal_adaptation!(::Bordered, ::Bool) = nothing
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
-# N = length(τ.u)
 # ┌                           ┐┌  ┐   ┌   ┐
 # │      J            dFdl    ││τu│ = │ 0 │
 # │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
