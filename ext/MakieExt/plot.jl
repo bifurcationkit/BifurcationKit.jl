@@ -31,7 +31,18 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitv
     end
 end
 
-function plot!(ax1, contres::AbstractBranchResult; plotfold = false, plotstability = true, plotspecialpoints = true, putspecialptlegend = true, filterspecialpoints = false, vars = nothing, linewidthunstable = 1.0, linewidthstable = 3.0linewidthunstable, plotcirclesbif = true, branchlabel = nothing, applytoY = identity, applytoX = identity)
+function plot!(ax1, contres::AbstractBranchResult; 
+                plotfold = false,
+                plotstability = true,
+                plotspecialpoints = true,
+                putspecialptlegend = true,
+                filterspecialpoints = false,
+                vars = nothing,
+                linewidthunstable = 1.0,
+                linewidthstable = 3.0linewidthunstable,
+                plotcirclesbif = true,
+                branchlabel = nothing,
+                applytoY = identity, applytoX = identity)
 
     # names for axis labels
     ind1, ind2 = get_plot_vars(contres, vars)
@@ -56,7 +67,12 @@ function plot!(ax1, contres::AbstractBranchResult; plotfold = false, plotstabili
         if filterspecialpoints == true
             bifpt = filterBifurcations(bifpt)
         end
-        scatter!(ax1, [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt], [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt]; marker = map(x -> (x.status == :guess) && (plotcirclesbif == false) ? :rect : :circle, bifpt), markersize = 10, color = map(x -> get_color(x.type), bifpt))
+        scatter!(ax1, 
+                [applytoX(getproperty(contres[pt.idx], ind1)) for pt in bifpt],
+                [applytoY(getproperty(contres[pt.idx], ind2)) for pt in bifpt];
+                marker = map(x -> (x.status == :guess) && (plotcirclesbif == false) ? :rect : :circle, bifpt), markersize = 10,
+                color = map(x -> get_color(x.type),
+                bifpt))
     end
 
     # add legend for bifurcation points
@@ -64,14 +80,31 @@ function plot!(ax1, contres::AbstractBranchResult; plotfold = false, plotstabili
         bps = unique(x -> x.type, [pt for pt in bifpt if (pt.type != :none && (plotfold || pt.type != :fold))])
         (length(bps) == 0) && return
         for pt in bps
-            scatter!(ax1, [applytoX(getproperty(contres[pt.idx], ind1))], [applytoY(getproperty(contres[pt.idx], ind2))]; color = get_color(pt.type), markersize = 10, label = "$(pt.type)")
+            scatter!(ax1, 
+                    [applytoX(getproperty(contres[pt.idx], ind1))], 
+                    [applytoY(getproperty(contres[pt.idx], ind2))]; 
+                    color = get_color(pt.type),
+                    markersize = 10,
+                    label = "$(pt.type)")
         end
         Makie.axislegend(ax1, merge = true, unique = true)
     end
     ax1
 end
 
-function plot_branch_cont(contres::ContResult, state, iter, plotuserfunction; plotfold = false, plotstability = true, plotspecialpoints = true, putspecialptlegend = true, filterspecialpoints = false, linewidthunstable = 1.0, linewidthstable = 3.0linewidthunstable, plotcirclesbif = true, applytoY = identity, applytoX = identity)
+function plot_branch_cont(contres::ContResult,
+                          state,
+                          iter,
+                          plotuserfunction; plotfold = false,
+                          plotstability = true,
+                          plotspecialpoints = true,
+                          putspecialptlegend = true,
+                          filterspecialpoints = false,
+                          linewidthunstable = 1.0,
+                          linewidthstable = 3.0linewidthunstable,
+                          plotcirclesbif = true,
+                          applytoY = identity,
+                          applytoX = identity)
     sol = getsolution(state)
     if length(contres) == 0
         return
