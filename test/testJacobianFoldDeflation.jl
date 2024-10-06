@@ -86,6 +86,12 @@ Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
 J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
 res_fd =  J_fold_fd \ rhs
 
+# test against analytical jacobian
+_fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
+@test norminf(J_ana - J_fold_fd) < 1e-5
+
+###
 Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
 jacFoldSolver = BK.FoldLinearSolverMinAug()
 debugTmpForσ = zeros(n+1,n+1) # temporary array for debugging σ

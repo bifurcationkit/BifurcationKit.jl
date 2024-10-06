@@ -12,7 +12,7 @@ end
 ####################################################################################################
 @inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
 @inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
-
+###################################################################################################
 # this function encodes the functional
 function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
@@ -49,34 +49,8 @@ end
     res = 𝐇(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
-################################################################################
-# Struct to invert the jacobian of the Hopf MA problem.
-struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
-
-"""
-This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
-"""
-function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
-                             duu, dup, duω;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
-    ################################################################################################
-    # N = length(du) - 2
-    # The Jacobian J of the vector field is expressed at (x, p)
-    # the jacobian expression Jhopf of the hopf problem is
-    #           ┌             ┐
-    #  Jhopf =  │  J  dpF   0 │
-    #           │ σx   σp  σω │
-    #           └             ┘
-    ########## Resolution of the bordered linear system ########
-    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
-    # The second equation
-    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
-    # thus becomes
-    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
-    # This 2 x 2 system is then solved to get (dp, dω)
-    ############### Extraction of function names #################
+###################################################################################################
+function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
     a = 𝐇.a
     b = 𝐇.b
 
@@ -115,13 +89,67 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     # σω = dot(w, Complex{T}(0, 1) * v)
     σω = Complex{𝒯}(0, 1) * dot(w, v)
 
+    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw, σω)
+end
+###################################################################################################
+function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+    𝐇 = pdpb.prob
+    x = @view X[begin:end-2]
+    p = X[end-1]
+    ω = X[end]
+    𝒯 = eltype(p)
+
+    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω = _get_bordered_terms(𝐇, x, p, ω, par)
+
+    cw = conj(w)
+    vr = real(v); vi = imag(v)
+    u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
+    u1i = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vi, par0, cw, true)
+    u2 = apply(JAd_at_xp,  cw)
+    σxv2r = @. -(u1r - u2) / ϵ2
+    σxv2i = @. -(u1i - u2) / ϵ2
+    σₓ = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
+
+    Jhopf = hcat(_get_matrix(J_at_xp), dₚF, zero(dₚF))
+    Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
+    Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
+end
+################################################################################
+# Struct to invert the jacobian of the Hopf MA problem.
+struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
+
+"""
+This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
+"""
+function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
+                            duu, dup, duω;
+                            debugArray = nothing) where 𝒯
+    ################################################################################################
+    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
+    ################################################################################################
+    # N = length(du) - 2
+    # The Jacobian J of the vector field is expressed at (x, p)
+    # the jacobian expression Jhopf of the hopf problem is
+    #           ┌             ┐
+    #  Jhopf =  │  J  dpF   0 │
+    #           │ σx   σp  σω │
+    #           └             ┘
+    ########## Resolution of the bordered linear system ########
+    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
+    # The second equation
+    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
+    # thus becomes
+    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
+    # This 2 x 2 system is then solved to get (dp, dω)
+
+    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω = _get_bordered_terms(𝐇, x, p, ω, par)
+
     # we solve J⋅x1 = duu and J⋅x2 = dₚF
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dₚF)
     ~cv && @debug "Linear solver for J did not converge"
 
     # the case of ∂_xσ is a bit more involved
     # we first need to compute the value of ∂_xσ written σx
-    # σx = zeros(Complex{T}, length(x))
     σx = similar(x, Complex{𝒯})
 
     if 𝐇.usehessian == false || has_hessian(𝐇) == false
@@ -365,6 +393,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     elseif jacobian_ma == :finiteDifferences
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_h = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+    elseif jacobian_ma == :MinAugMatrixBased
+        hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
+        prob_h = HopfMAProblem(𝐇, MinAugMatrixBased(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
         prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
@@ -628,7 +660,7 @@ function (eig::HopfEig)(Jma, nev; kwargs...)
 end
 
 @views function (eig::HopfEig)(Jma::AbstractMatrix, nev; kwargs...)
-    eigenelts = eig.eigsolver(Jma[1:end-2,1:end-2], nev; kwargs...)
+    eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], nev; kwargs...)
     return eigenelts
 end
 

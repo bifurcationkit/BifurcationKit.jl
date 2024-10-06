@@ -66,7 +66,7 @@ end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 
-n = 100
+n = 10
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
@@ -117,6 +117,11 @@ rhs = rand(length(hopfpt))
 jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
 sol_fd = jac_hopf_fd \ rhs
 
+# test against analytical jacobian
+_hopf_ma_problem = BK.HopfMAProblem(hopfvariable, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+J_ana = BK.jacobian(_hopf_ma_problem, Bd2Vec(hopfpt), par_bru)
+@test norminf(J_ana - jac_hopf_fd) < 1e-3
+
 # create a linear solver
 hopfls = BK.HopfLinearSolverMinAug()
 tmpVecforσ = zeros(ComplexF64, 2+2n)
@@ -145,6 +150,7 @@ pbgopfperso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
                 J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
 outhopf = BK.solve(pbgopfperso, Newton(), NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
 @test BK.converged(outhopf)
+
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
     n = div(length(x),2)
@@ -165,17 +171,19 @@ outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
 br_hopf = continuation(br, ind_hopf, (@optic _.β),
-            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
+            jacobian_ma = :minaug)
 
-br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), jacobian_ma = :minaug)
+br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), 
+            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
+            jacobian_ma = :minaug)
 ####################################################################################################
 ind_hopf = 1
 hopfpt = BK.HopfPoint(br, ind_hopf)
 
 l_hopf = hopfpt.p[1]
-ωH       = hopfpt.p[2] |> abs
+ωH     = hopfpt.p[2] |> abs
 M = 20
-
 
 orbitguess = zeros(2n, M)
 phase = []; scalphase = []
@@ -192,7 +200,7 @@ l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt
 
 prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
         J = Jbru_sp,
-        record_from_solution = (x, p) -> norminf(x))
+        record_from_solution = (x, p; k...) -> norminf(x))
 
 poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n    )
 

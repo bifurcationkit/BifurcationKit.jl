@@ -48,31 +48,8 @@ end
     res = 𝐅(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
-
 ###################################################################################################
-# Struct to invert the jacobian of the fold MA problem.
-struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
-
-function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
-                            rhsu, rhsp;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing,
-    # then no debugging mode is entered. If it is AbstractArray, then it is populated
-    ################################################################################################
-    # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
-    # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
-    # We solve Jfold⋅res = rhs := [rhsu, rhsp]
-    # The Jacobian expression of the Fold problem is
-    #           ┌         ┐
-    #  Jfold =  │  J  dpF │
-    #           │ σx   σp │
-    #           └         ┘
-    # where σx := ∂_xσ and σp := ∂_pσ
-    # We recall the expression of
-    #  σx = -< w, d2F(x,p)[v, x2]>
-    # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = 1
-    ########################## Extraction of function names ########################################
+function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
     a = 𝐅.a
     b = 𝐅.b
 
@@ -112,6 +89,48 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
                   apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
     rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
+
+    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw)
+end
+###################################################################################################
+function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+    𝐅 = pdpb.prob
+    x = @view X[begin:end-1]
+    p = X[end]
+
+    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0 = _get_bordered_terms(𝐅, x, p, par)
+
+    u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
+    u2 = apply(JAd_at_xp, w) # TODO ON CONNAIT u2!!
+    σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
+
+    [_get_matrix(J_at_xp) dₚF ; σₓ' σₚ]
+end
+###################################################################################################
+# Struct to invert the jacobian of the fold MA problem.
+struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
+
+function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
+                            rhsu, rhsp;
+                            debugArray = nothing) where 𝒯
+    ################################################################################################
+    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing,
+    # then no debugging mode is entered. If it is AbstractArray, then it is populated
+    ################################################################################################
+    # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
+    # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
+    # We solve Jfold⋅res = rhs := [rhsu, rhsp]
+    # The Jacobian expression of the Fold problem is
+    #           ┌         ┐
+    #  Jfold =  │  J  dpF │
+    #           │ σx   σp │
+    #           └         ┘
+    # where σx := ∂_xσ and σp := ∂_pσ
+    # We recall the expression of
+    #  σx = -< w, d2F(x,p)[v, x2]>
+    # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = 1
+
+    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw = _get_bordered_terms(𝐅, x, p, par)
 
     if 𝐅.usehessian == false || has_hessian(𝐅) == false
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
@@ -361,6 +380,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     elseif jacobian_ma == :finiteDifferences
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
         prob_f = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+    elseif jacobian_ma == :MinAugMatrixBased
+        foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
+        prob_f = FoldMAProblem(𝐅, MinAugMatrixBased(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
         prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
