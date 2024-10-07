@@ -4,7 +4,7 @@ using BifurcationKit, Test
 const BK = BifurcationKit
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
-    (; r,K,a,ϵ,b0,e,d) = p
+    (;r,K,a,ϵ,b0,e,d) = p
     x, y, u, v = X
     p = a * x / (b0 * (1 + ϵ * u) + x)
     du[1] = r * (1 - x/K) * x - p * y
@@ -67,7 +67,7 @@ pd = get_normal_form(brpo_pd, 1, prm = false)
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
 @reset opts_pocoll_fold.newton_options.tol = 1e-12
-fold_po_coll1 = continuation(brpo_fold, 1, (@optic _.ϵ), opts_pocoll_fold;
+fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_pocoll_fold;
         verbosity = 0, plot = false,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
@@ -80,18 +80,21 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@optic _.ϵ), opts_pocoll_fold;
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 3, p_min = -1., dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-9
-pd_po_coll = continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
-        verbosity = 0, plot = false,
-        detect_codim2_bifurcation = 1,
-        start_with_eigen = false,
-        usehessian = false,
-        jacobian_ma = :minaug,
-        normC = norminf,
-        callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
-        )
 
-@test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
+for jma in (:minaug, :MinAugMatrixBased, )
+    comp_ev = jma == :minaug ? 3 : 0
+    pd_po_coll = @time continuation(deepcopy(brpo_pd), 1, (@optic _.b0), ContinuationPar(opts_pocoll_pd; detect_bifurcation = comp_ev);
+            verbosity = 0, plot = false,
+            detect_codim2_bifurcation = jma == :minaug ? 1 : 0,
+            start_with_eigen = false,
+            usehessian = false,
+            jacobian_ma = jma,
+            normC = norminf,
+            callback_newton = BK.cbMaxNorm(10),
+            bothside = true,
+            )
+    @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
+end
 ################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
@@ -132,12 +135,29 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         bothside = true,
         )
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 2, p_min = 0., dsmax = 1e-2, ds = 1e-3)
-ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
+opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
+@reset opts_pocoll_ns.newton_options.verbose = false
+
+ns_po_coll = @time continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         verbosity = 0, plot = false,
         detect_codim2_bifurcation = 1,
+        update_minaug_every_step = 0,
         start_with_eigen = false,
         usehessian = false,
+
+        jacobian_ma = :MinAugMatrixBased,
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(10),
+        bothside = true,
+        )
+
+ns_po_coll = @time continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
+        verbosity = 0, plot = false,
+        detect_codim2_bifurcation = 1,
+        update_minaug_every_step = 0,
+        start_with_eigen = false,
+        usehessian = false,
+
         jacobian_ma = :minaug,
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
@@ -154,17 +174,23 @@ _p2 = pd_po_coll2.sol[end].p
 _param = BK.setparam(pd_po_coll2, _p1)
 _param = @set _param.ϵ = _p2
 
-# _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
-_Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+# _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jpdad)
 _duu = rand(length(_x.u))
-_sol = BK.PDMALinearSolver(_solpo, _p1, _probpd.prob, _param, _duu, 1.; debugArray = _Jma )
+𝐏𝐝 = _probpd.prob
+_sol = BK.PDMALinearSolver(_solpo, _p1, 𝐏𝐝, _param, _duu, 1.; debugArray = _Jma )
 _solfd = _Jpdad \ vcat(_duu, 1)
 
-# @test norm(_Jpdad - _Jma, Inf) < 1e-6
-# @test norm(_solfd[1:end-1] - _sol[1], Inf) < 1e-3
-# @test abs(_solfd[end] - _sol[2]) < 1e-2
+@test norminf(_Jpdad - _Jma) < 1e-8
+@test norminf(_solfd[1:end-1] - _sol[1]) < 1e-3 # it comes from FD in σₓ
+@test abs(_solfd[end] - _sol[2]) < 5e-3
+
+_probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
+J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
+@test norminf(_Jpdad - J_pd_mat) < 1e-8
+
 #########
 # test of the implementation of the jacobian for the NS case
 _probns = ns_po_coll.prob
@@ -175,15 +201,20 @@ _p2 = ns_po_coll.sol[end].p
 _param = BK.setparam(ns_po_coll, _p1[1])
 _param = @set _param.ϵ = _p2
 
-# _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
-_Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+# _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
 _Jma = zero(_Jnsad)
+_duu = rand(317)
 _dp = rand()
 _sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _dp, 1.; debugArray = _Jma )
 _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
-# @test norm(_Jnsad - _Jma, Inf) < 1e-6
-# @test norm(_solfd[1:end-2] - _sol[1], Inf) < 1e-2
-# @test abs(_solfd[end-1] - _sol[2]) < 1e-2
-# @test abs(_solfd[end] - _sol[3]) < 1e-2
+@test norminf(_Jnsad - _Jma) < 1e-8
+@test norminf(_solfd[1:end-2] - _sol[1]) < 1e-2
+@test abs(_solfd[end-1] - _sol[2]) < 1e-2
+@test abs(_solfd[end] - _sol[3]) < 1e-2
+
+_probpd_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
+J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
+@test norminf(_Jnsad - J_ns_mat) < 1e-8

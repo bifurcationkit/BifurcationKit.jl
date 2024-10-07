@@ -70,7 +70,69 @@ end
     res = 𝐏𝐝(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
+###################################################################################################
+function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+    a = 𝐏𝐝.a
+    b = 𝐏𝐝.b
 
+    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    POWrap = 𝐏𝐝.prob_vf
+
+    # parameter axis
+    lens = getlens(𝐏𝐝)
+    # update parameter
+    par0 = set(par, lens, p)
+ 
+    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
+    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
+ 
+    # we do the following in order to avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
+    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
+ 
+    # we solve N[v, σ1] = [0, 1]
+    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
+    ~cv && @debug "Linear solver for N did not converge."
+ 
+    # # we solve Nᵗ[w, σ2] = [0, 1]
+    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
+    ~cv && @debug "Linear solver for Nᵗ did not converge."
+ 
+    δ = getdelta(POWrap)
+    ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
+ 
+    dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
+           residual(POWrap, x, set(par, lens, p - ϵₚ))); rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
+    dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
+             apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
+    rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
+    σₚ = -dot(w, dJvdp)
+
+    return (;JPD, JPD★, dₚF, σₚ, δ, ϵₜ, ϵₓ, v, w, par0, dJvdp, itv, itw)
+end
+###################################################################################################
+function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+    p = X[end]
+    x = @view X[begin:end-1]
+
+    𝐏𝐝 = pdpb.prob
+    𝒯 = eltype(p)
+
+    POWrap = 𝐏𝐝.prob_vf
+
+    @unpack dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0 = _get_bordered_terms(𝐏𝐝, x, p, par)
+
+    u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
+    u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
+    σₓ = minus(u2, u1); rmul!(σₓ, 1 / (2ϵₓ))
+
+    # a bit of a hack
+    xtmp = copy(x); xtmp[end] += ϵₜ
+    σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / (ϵₜ)
+
+    _Jpo = jacobian(POWrap, x, par0)
+
+    return [_Jpo.jacpb dₚF ; vcat(σₓ, σₜ)' σₚ]
+end
 ###################################################################################################
 # Struct to invert the jacobian of the pd MA problem.
 struct PDLinearSolverMinAug <: AbstractLinearSolver; end
@@ -98,41 +160,11 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     #            σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
     ########################## Extraction of function names ########################################
-    a = 𝐏𝐝.a
-    b = 𝐏𝐝.b
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐏𝐝.prob_vf
 
-    # parameter axis
-    lens = getlens(𝐏𝐝)
-    # update parameter
-    par0 = set(par, lens, p)
-
-    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
-    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
-
-    # we do the following in order to avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
-    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
-
-    # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
-    ~cv && @debug "Linear solver for N did not converge."
-
-    # # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
-    ~cv && @debug "Linear solver for Nᵗ did not converge."
-
-    δ = getdelta(POWrap)
-    ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
-    ################### computation of σx σp ####################
-    ################### and inversion of Jpd ####################
-    dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
-                residual(POWrap, x, set(par, lens, p - ϵₚ))); rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
-    dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
-                  apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
-    rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
-    σₚ = -dot(w, dJvdp)
+    @unpack dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0, itv, itw = _get_bordered_terms(𝐏𝐝, x, p, par)
 
     if has_hessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
         # We invert the jacobian of the PD problem when the Hessian of x -> F(x, p) is not known analytically.
@@ -286,23 +318,31 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian = usehessian)
 
+    # this is to remove this part from the arguments passed to continuation
+    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
+    _plotsol = modify_po_plot(prob, _kwargs)
+
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
 
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferences
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p...)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferencesMF
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+    elseif jacobian_ma == :MinAugMatrixBased
+        pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
+        prob_pd = PDMAProblem(𝐏𝐝, MinAugMatrixBased(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 

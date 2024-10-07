@@ -73,37 +73,8 @@ end
     res = 𝐍𝐒(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
-
 ###################################################################################################
-# Struct to invert the jacobian of the pd MA problem.
-struct NSLinearSolverMinAug <: AbstractLinearSolver; end
-
-function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
-                            duu, dup, duω;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. 
-	# If debugArray = nothing, then no debugging mode is entered. 
-	# If it is AbstractArray, then it is populated
-    ################################################################################################
-    # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
-    # where σ(x,p) is computed in the above functions and F is the periodic orbit
-    # functional. We recall that N⋅[v, σ] ≡ [0, 1]
-    # The Jacobian Jpd of the functional is expressed at (x, p)
-    # We solve here Jpd⋅res = rhs := [rhsu, rhsp, rhsω]
-    # The Jacobian expression of the NS problem is
-    #           ┌             ┐
-    #  Jhopf =  │  J  dpF   0 │
-    #           │ σx   σp  σω │
-    #           └             ┘
-    ########## Resolution of the bordered linear system ########
-    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
-    # The second equation
-    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
-    # thus becomes
-    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
-    # This 2 x 2 system is then solved to get (dp, dω)
-    ########################## Extraction of function names ########################################
+function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
 
@@ -143,6 +114,78 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     # case of ∂σ_ω
     σω = -(dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω+ϵ2), v)) - 
            dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
+
+    return (;JNS, JNS★, dₚF, σₚ, δ, ϵ2, ϵ3, v, w, par0, dJvdp, itv, itw, σω)
+end
+###################################################################################################
+function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+    𝐍𝐒 = pdpb.prob
+
+    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    POWrap = 𝐍𝐒.prob_vf
+
+    x = @view X[begin:end-2]
+    p = X[end-1]
+    ω = X[end]
+
+    𝒯 = eltype(p)
+
+    @unpack JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
+
+    cw = conj(w)
+    vr = real(v); vi = imag(v)
+    u1r = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω, cw, true)
+    u1i = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω, cw, true)
+    u2 = apply(JNS★, cw)
+    σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
+    σxv2i = @. -(u1i - u2) / ϵ2
+    σx = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
+
+    dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0 * vr, 1), par0, ω), v),
+                  apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0 * vr, 1), par0, ω), v));
+    rmul!(dJvdt, 𝒯(1/(2ϵ3)))
+    σt = -dot(w, dJvdt) 
+
+    _Jpo = jacobian(POWrap, x, par0)
+    Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
+    Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
+    Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
+end
+###################################################################################################
+# Struct to invert the jacobian of the ns MA problem.
+struct NSLinearSolverMinAug <: AbstractLinearSolver; end
+
+function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
+                            duu, dup, duω;
+                            debugArray = nothing) where 𝒯
+    ################################################################################################
+    # debugArray is used as a temp to be filled with values used for debugging. 
+	# If debugArray = nothing, then no debugging mode is entered. 
+	# If it is AbstractArray, then it is populated
+    ################################################################################################
+    # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
+    # where σ(x,p) is computed in the above functions and F is the periodic orbit
+    # functional. We recall that N⋅[v, σ] ≡ [0, 1]
+    # The Jacobian Jpd of the functional is expressed at (x, p)
+    # We solve here Jpd⋅res = rhs := [rhsu, rhsp, rhsω]
+    # The Jacobian expression of the NS problem is
+    #           ┌             ┐
+    #  Jhopf =  │  J  dpF   0 │
+    #           │ σx   σp  σω │
+    #           └             ┘
+    ########## Resolution of the bordered linear system ########
+    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
+    # The second equation
+    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
+    # thus becomes
+    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
+    # This 2 x 2 system is then solved to get (dp, dω)
+    ########################## Extraction of function names ########################################
+
+    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    POWrap = 𝐍𝐒.prob_vf
+
+    @unpack JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
 
     if has_hessian(𝐍𝐒) == false || 𝐍𝐒.usehessian == false
         cw = conj(w)
@@ -280,6 +323,11 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+    elseif jacobian_ma == :MinAugMatrixBased
+        nspointguess = vcat(nspointguess.u, nspointguess.p...)
+        prob_ns = NSMAProblem(𝐍𝐒, MinAugMatrixBased(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+    
     else
         prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
@@ -425,6 +473,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
+	
+    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2)
 
     # change the plotter
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
