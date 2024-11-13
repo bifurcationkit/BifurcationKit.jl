@@ -117,7 +117,6 @@ end
 ################################################################################
 # computes x-y into x and returns x
 minus!(x, y) = axpy!(-1, y, x)
-minus!(x::RecursiveVec, y::RecursiveVec) = VectorInterface.add!(x, y, -1, 1)
 minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
 minus!(x::T, y::T) where {T <: Number} = (x = x - y)
 function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) where {vectype, T}
