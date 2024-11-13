@@ -5,7 +5,6 @@ using Test
 using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
 @testset "BifurcationKit" begin
-
     @testset "Linear Solvers" begin
         include("problems.jl")
         include("precond.jl")

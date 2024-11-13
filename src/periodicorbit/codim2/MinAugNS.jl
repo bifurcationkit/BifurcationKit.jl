@@ -83,6 +83,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
 
     # parameter axis
     lens = getlens(𝐍𝐒)
+
     # update parameter
     par0 = set(par, lens, p)
 
@@ -103,7 +104,6 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
     δ = getdelta(POWrap)
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
-    ################### and inversion of Jpd ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
                 residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p + ϵ3), ω), v),
@@ -184,9 +184,9 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
-
     @unpack JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
 
+    # inversion of Jns 
     if has_hessian(𝐍𝐒) == false || 𝐍𝐒.usehessian == false
         cw = conj(w)
         vr = real(v); vi = imag(v)

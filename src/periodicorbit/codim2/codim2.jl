@@ -311,7 +311,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     q, = bdlinsolver(jacpo,  p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
     p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
 
-    @assert sum(isnan, q) == 0 "Please report this error to the website."
+    ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
     branch = continuation_fold(probsh_fold, alg,
@@ -345,7 +345,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             record_from_solution = nothing,
             plot_solution = nothing,
             kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
-    @assert whichns in (1, 2) "This parameter must belong to {1,2}."
+    ~(whichns in (1, 2)) && error("This parameter must belong to {1,2}.")
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     
     # compute predictor for point on new branch
@@ -371,7 +371,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
-    @assert lens1 == getlens(prob_vf) "Please open an issue on the website of BifurcationKit"
+    ~(lens1 == getlens(prob_vf)) && error("Please open an issue on the website of BifurcationKit")
 
     # build the variable to hold the functional for computing PO based on finite differences
     probPO, orbitguess = re_make(probPO, prob_vf, hh, hh.ζ.q1, orbitguess_a, period; orbit = _orbit)
@@ -436,7 +436,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         p = conj(q)
     end
 
-    @assert sum(isnan, q) == 0 "Please report this error to the website."
+    ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
     # the finalizer is handled in NS continuation
@@ -469,7 +469,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem, FoldMAProblem}}
-    @assert whichns in (1,2) "This parameter must belong to {1,2}."
+    ~(whichns in (1,2)) && error("This parameter must belong to {1,2}.")
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
 
     # compute predictor for point on new branch
@@ -495,7 +495,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
-    @assert lens1 == getlens(prob_vf) "Please open an issue on the website of BifurcationKit"
+    ~(lens1 == getlens(prob_vf)) && error("Please open an issue on the website of BifurcationKit")
 
     # build the variable to hold the functional for computing PO based on finite differences
     vp = zh.ζ[2]
@@ -566,7 +566,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         p = conj(q)
     end
 
-    @assert sum(isnan, q) == 0 "Please report this error to the website."
+    ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
     branch = continuation_ns(pbwrap, alg,

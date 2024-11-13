@@ -42,7 +42,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
-    if biftype == :bp || biftype == :fold
+    if biftype in (:bp, :fold)
         return continuation_coll_fold(br,
                                     ind_bif,
                                     lens2,
@@ -138,7 +138,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; fromcodim2 = true, k...)
     end
 
-    collFold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);
+    coll_fold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);
                 J = getprob(br).jacobian,
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> coll(z, p), x, dx1, dx2),
                 plot_solution = plotsol
@@ -147,7 +147,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    br_fold_po = continuation_fold(collFold,
+    br_fold_po = continuation_fold(coll_fold,
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen = start_with_eigen,

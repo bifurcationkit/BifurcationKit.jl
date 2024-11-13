@@ -7,7 +7,7 @@ const VI = VectorInterface
 """
 $(TYPEDEF)
 
-This defines an array (although not `<: AbstractArray`) to hold two arrays or an array and a scalar. This is useful when one wants to add constraints (phase, ...) to a functional for example. It is used throughout the package for the Pseudo Arc Length Continuation, for the continuation of Fold / Hopf points, for periodic orbits... It is also used to define periodic orbits as (orbit, period). As such, it is a convenient alternative to `cat`, `vcat` and friends. We chose not to make it a subtype of AbstractArray as we wish to apply the current package to general "arrays", see [Requested methods for Custom State](@ref). Finally, it proves useful for the GPU where the operation `x[end]` can be slow.
+This defines an array (although not `<: AbstractArray`) to hold two arrays or an array and a scalar. This is useful when one wants to add constraints (phase, ...) to a functional for example. It is used throughout the package for the Pseudo Arc Length Continuation (PALC), for the continuation of Fold / Hopf points, for periodic orbits... It is also used to define periodic orbits as (orbit, period). As such, it is a convenient alternative to `cat`, `vcat` and friends. We chose not to make it a subtype of AbstractArray as we wish to apply the current package to general "arrays", see [Requested methods for Custom State](@ref). Finally, it proves useful for the GPU where the operation `x[end]` can be slow.
 """
 mutable struct BorderedArray{vectype1, vectype2}
     u::vectype1
@@ -66,7 +66,6 @@ function rmul!(A::BorderedArray{vectype, Tv}, a::T, b::T) where {vectype, Tv <: 
 end
 
 rmul!(A::BorderedArray{vectype, Tv}, a::T) where {vectype, T <: Number, Tv} = rmul!(A, a, a)
-rmul!(A::RecursiveVec, a::Number) = VectorInterface.scale!(A, a)
 ################################################################################
 function mul!(A::BorderedArray{Tv1, Tp1}, B::BorderedArray{Tv2, Tp2}, α::T) where {Tv1, Tv2, Tp1, Tp2, T <: Number}
     mul!(A.u, B.u, α)
@@ -99,7 +98,6 @@ function axpy!(a::Number,
     Y.p = a * X.p + Y.p
     return Y
 end
-axpy!(a::Number, X::RecursiveVec, Y::RecursiveVec) = VectorInterface.add!(Y, X, a, 1)
 ################################################################################
 function axpby!(a::Number, X::BorderedArray{vectype, Tv1}, 
                 b::Number, Y::BorderedArray{vectype, Tv2}) where {vectype, Tv1, Tv2}
@@ -116,8 +114,6 @@ function axpby!(a::Number, X::BorderedArray{vectype, Tv1},
     Y.p = a * X.p + b * Y.p
     return Y
 end
-
-axpby!(a::Number, X::RecursiveVec, b::Number, Y::RecursiveVec) = VectorInterface.add!(Y,X, a, b)
 ################################################################################
 # computes x-y into x and returns x
 minus!(x, y) = axpy!(-1, y, x)

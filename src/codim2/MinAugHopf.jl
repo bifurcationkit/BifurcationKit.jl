@@ -78,7 +78,6 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     δ = getdelta(𝐇.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
-    ################### and inversion of Jhopf ####################
     dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
@@ -141,6 +140,7 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     # thus becomes
     #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
+    ################### inversion of Jhopf ####################
 
     @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω = _get_bordered_terms(𝐇, x, p, ω, par)
 
@@ -560,15 +560,15 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
     # solve the hopf equations
     br = continuation(
-        prob_h, alg,
-        (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
-        kwargs...,
-        kind = kind,
-        linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
-        normC = normC,
-        finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
-        event = event
-    )
+                prob_h, alg,
+                (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
+                kwargs...,
+                kind = kind,
+                linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
+                normC = normC,
+                finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
+                event = event
+            )
     @assert ~isnothing(br) "Empty branch!"
     return correct_bifurcation(br)
 end
@@ -649,19 +649,18 @@ struct HopfEig{S, P} <: AbstractCodim2EigenSolver
     prob::P
 end
 
-function (eig::HopfEig)(Jma, nev; kwargs...)
+function (eig::HopfEig)(Jma, nev; k...)
     n = min(nev, length(Jma.x.u))
     x = Jma.x.u     # hopf point
     p1, ω = Jma.x.p # first parameter
     newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
     J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
-    eigenelts = eig.eigsolver(J, n; kwargs...)
+    eigenelts = eig.eigsolver(J, n; k...)
     return eigenelts
 end
 
-@views function (eig::HopfEig)(Jma::AbstractMatrix, nev; kwargs...)
-    eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], nev; kwargs...)
-    return eigenelts
+@views function (eig::HopfEig)(Jma::AbstractMatrix, nev; k...)
+    eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], nev; k...)
 end
 
 geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

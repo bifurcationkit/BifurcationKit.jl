@@ -11,7 +11,7 @@ function TMvf!(dz, z, p, t = 0)
     SS0 = J * u * x * E + E0
     SS1 = α * log(1 + exp(SS0 / α))
     dz[1] = (-E + SS1) / τ
-    dz[2] = (1.0 - x) / τD - u * x * E
+    dz[2] = (1 - x) / τD - u * x * E
     dz[3] = (U0 - u) / τF +  U0 * (1 - u) * E
     dz
 end

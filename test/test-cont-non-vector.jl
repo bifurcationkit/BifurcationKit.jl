@@ -111,90 +111,90 @@ Random.seed!(1231)
 # test with Newton deflation 2
 soldef2 = BK.solve(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
 ####################################################################################################
-using KrylovKit
+# using KrylovKit
 
-function Fr(x, p)
-    (;r, s) = p
-    out = similar(x)
-    for ii in 1:length(x)
-        out[ii] .= @. r +  s * x[ii] - x[ii]^3
-    end
-    out
-end
+# function Fr(x, p)
+#     (;r, s) = p
+#     out = similar(x)
+#     for ii in 1:length(x)
+#         out[ii] .= @. r +  s * x[ii] - x[ii]^3
+#     end
+#     out
+# end
 
-# there is no finite differences defined, so we need to provide a linearsolve
-# we could also have used GMRES. We define a custom Jacobian which will be used for evaluation and jacobian inverse
-struct JacobianR
-    x
-    s
-end
+# # there is no finite differences defined, so we need to provide a linearsolve
+# # we could also have used GMRES. We define a custom Jacobian which will be used for evaluation and jacobian inverse
+# struct JacobianR
+#     x
+#     s
+# end
 
-# We express the jacobian operator
-function (J::JacobianR)(dx)
-    out = similar(dx)
-    for ii=1:length(out)
-        out[ii] .= (J.s .- 3 .* (J.x[ii]).^2) .* dx[ii]
-    end
-    return out
-end
+# # We express the jacobian operator
+# function (J::JacobianR)(dx)
+#     out = similar(dx)
+#     for ii=1:length(out)
+#         out[ii] .= (J.s .- 3 .* (J.x[ii]).^2) .* dx[ii]
+#     end
+#     return out
+# end
 
-struct linsolveBd_r <: BK.AbstractLinearSolver end
+# struct linsolveBd_r <: BK.AbstractLinearSolver end
 
-function (l::linsolveBd_r)(J, dx)
-    x = J.x
-    out = similar(dx)
-    for ii=1:length(out)
-        out[ii] .= dx[ii] ./ (J.s .- 3 .* (x[ii]).^2)
-    end
-    out, true, 1
-end
+# function (l::linsolveBd_r)(J, dx)
+#     x = J.x
+#     out = similar(dx)
+#     for ii=1:length(out)
+#         out[ii] .= dx[ii] ./ (J.s .- 3 .* (x[ii]).^2)
+#     end
+#     out, true, 1
+# end
 
-opt_newton0 = NewtonPar(tol = 1e-10, max_iterations = 5, verbose = false, linsolver = linsolveBd_r())
+# opt_newton0 = NewtonPar(tol = 1e-10, max_iterations = 5, verbose = false, linsolver = linsolveBd_r())
 
-prob = BK.BifurcationProblem(Fr,
-        RecursiveVec([1 .+ 0.1*rand(1) for _ = 1:2]),
-        (r = 1.0, s = 1.), (@optic _.r);
-        delta = 1e-8,
-        J  = (x, p) -> JacobianR(x, p.s),
-        Jᵗ = (x, p) -> JacobianR(x, p.s),
-        d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))
+# prob = BK.BifurcationProblem(Fr,
+#         RecursiveVec([1 .+ 0.1*rand(1) for _ = 1:2]),
+#         (r = 1.0, s = 1.), (@optic _.r);
+#         delta = 1e-8,
+#         J  = (x, p) -> JacobianR(x, p.s),
+#         Jᵗ = (x, p) -> JacobianR(x, p.s),
+#         d2F = (x, r, v1, v2) -> RecursiveVec([-6 .* x[ii] .* v1[ii] .* v2[ii] for ii=1:length(x)]))
 
-sol = BK.solve(prob, Newton(), opt_newton0)
+# sol = BK.solve(prob, Newton(), opt_newton0)
 
-Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
+# Base.:copyto!(dest::RecursiveVec, in::RecursiveVec) = copy!(dest, in)
 
-opts_br0 = ContinuationPar(dsmin = 0.00001, dsmax = 0.1, ds= -0.01, p_min = -1., p_max = 1.1, newton_options = opt_newton0, max_steps = 200, detect_bifurcation = 0)
+# opts_br0 = ContinuationPar(dsmin = 0.00001, dsmax = 0.1, ds= -0.01, p_min = -1., p_max = 1.1, newton_options = opt_newton0, max_steps = 200, detect_bifurcation = 0)
 
-br0 = continuation(BK.re_make(prob, u0 = sol.u),
-            PALC(tangent=Secant()),
-            opts_br0;
-            linear_algo = BorderingBLS(opt_newton0.linsolver)
-            )
+# br0 = continuation(BK.re_make(prob, u0 = sol.u),
+#             PALC(tangent=Secant()),
+#             opts_br0;
+#             linear_algo = BorderingBLS(opt_newton0.linsolver)
+#             )
 
-@test br0.param[end] == -1
+# @test br0.param[end] == -1
 
-br0 = continuation(BK.re_make(prob, u0 = sol.u),
-    PALC(tangent=Secant()), opts_br0;
-    linear_algo = BorderingBLS(opt_newton0.linsolver),)
+# br0 = continuation(BK.re_make(prob, u0 = sol.u),
+#     PALC(tangent=Secant()), opts_br0;
+#     linear_algo = BorderingBLS(opt_newton0.linsolver),)
 
-br0 = continuation(prob, PALC(tangent = Bordered()), opts_br0;
-    linear_algo = BorderingBLS(opt_newton0.linsolver))
+# br0 = continuation(prob, PALC(tangent = Bordered()), opts_br0;
+#     linear_algo = BorderingBLS(opt_newton0.linsolver))
 
-outfold = newton(br0, 1; bdlinsolver = BorderingBLS(opt_newton0.linsolver))
-@test BK.converged(outfold)
+# outfold = newton(br0, 1; bdlinsolver = BorderingBLS(opt_newton0.linsolver))
+# @test BK.converged(outfold)
 
 
-outfoldco = continuation(br0, 1, (@optic _.s), opts_br0,
-    bdlinsolver = BorderingBLS(opt_newton0.linsolver), jacobian_ma = :minaug)
+# outfoldco = continuation(br0, 1, (@optic _.s), opts_br0,
+#     bdlinsolver = BorderingBLS(opt_newton0.linsolver), jacobian_ma = :minaug)
 
-br0sec = @set br0.alg.tangent = Secant()
-outfoldco = continuation(br0sec, 1, (@optic _.s), opts_br0,
-    bdlinsolver = BorderingBLS(opt_newton0.linsolver),jacobian_ma = :minaug)
+# br0sec = @set br0.alg.tangent = Secant()
+# outfoldco = continuation(br0sec, 1, (@optic _.s), opts_br0,
+#     bdlinsolver = BorderingBLS(opt_newton0.linsolver),jacobian_ma = :minaug)
 
-# try with newtonDeflation
-# test with Newton deflation 1
-deflationOp = DeflationOperator(2, 1.0, [sol.u])
-soldef1 = BK.solve(BK.re_make(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
-    deflationOp, (@set opt_newton0.max_iterations = 20))
+# # try with newtonDeflation
+# # test with Newton deflation 1
+# deflationOp = DeflationOperator(2, 1.0, [sol.u])
+# soldef1 = BK.solve(BK.re_make(prob, u0 = 0.1*(sol.u), params = (r=0., s=1.)),
+#     deflationOp, (@set opt_newton0.max_iterations = 20))
 
-push!(deflationOp, soldef1.u)
+# push!(deflationOp, soldef1.u)

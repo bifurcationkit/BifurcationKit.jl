@@ -5,7 +5,7 @@ For an initial guess from the index of a Fold bifurcation point located in ContR
 """
 function foldpoint(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
-    @assert bptype == :bp || bptype == :nd || bptype == :fold "This should be a Fold / BP point. You passed a $bptype point."
+    @assert bptype in (:bp, :nd, :fold) "This should be a Fold / BP point. You passed a $bptype point."
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
@@ -55,6 +55,7 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
 
     # parameter axis
     lens = getlens(𝐅)
+
     # update parameter
     par0 = set(par, lens, p)
 
@@ -82,7 +83,6 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     δ = getdelta(𝐅.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
-    ################### and inversion of Jfold ####################
     dₚF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
                 residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
@@ -101,7 +101,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X, par) where {
     @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0 = _get_bordered_terms(𝐅, x, p, par)
 
     u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
-    u2 = apply(JAd_at_xp, w) # TODO ON CONNAIT u2!!
+    u2 = apply(JAd_at_xp, w) # TODO we know u2!!
     σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
 
     [_get_matrix(J_at_xp) dₚF ; σₓ' σₚ]
@@ -129,7 +129,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     # We recall the expression of
     #  σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = 1
-
+    ################### inversion of Jfold ####################
     @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw = _get_bordered_terms(𝐅, x, p, par)
 
     if 𝐅.usehessian == false || has_hessian(𝐅) == false
@@ -352,7 +352,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     @assert lens1 == getlens(prob)
 
     if alg isa PALC && alg.tangent isa Bordered
-        @warn "You selected the PALC continuation algorithm with Bordered predictor. The jacobian being singular on Fold points, this could lead to bad prediction and convergence. If you have issues, try a different tangent predictor like Secant for example, you can pass it like `alg = PALC()`."
+        @warn "You selected the PALC continuation algorithm with Bordered predictor. The jacobian being singular on Fold points, this could lead to bad prediction and convergence. If you have issues, try a different tangent predictor like Secant for example, you can pass it using `alg = PALC()`."
     end
 
     # options for the Newton Solver inherited from the ones the user provided
@@ -599,12 +599,10 @@ function (eig::FoldEig)(Jma, nev; kwargs...)
     n = min(nev, length(getvec(Jma.x)))
     J = jacobian(Jma.prob.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.prob), getp(Jma.x)))
     eigenelts = eig.eigsolver(J, n; kwargs...)
-    return eigenelts
 end
 
 @views function (eig::FoldEig)(Jma::AbstractMatrix, nev; kwargs...)
     eigenelts = eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
-    return eigenelts
 end
 
 geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

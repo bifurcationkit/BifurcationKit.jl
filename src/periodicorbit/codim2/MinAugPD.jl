@@ -80,6 +80,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
 
     # parameter axis
     lens = getlens(𝐏𝐝)
+
     # update parameter
     par0 = set(par, lens, p)
  

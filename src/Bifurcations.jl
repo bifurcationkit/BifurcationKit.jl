@@ -142,7 +142,7 @@ get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T,
 Function to locate precisely bifurcation points using a bisection algorithm. We make sure that at the end of the algorithm, the state is just after the bifurcation point (in the s coordinate).
 """
 function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
-    @assert detect_bifurcation(_state) "No bifurcation detected for the state"
+    ~detect_bifurcation(_state) && error("No bifurcation detected for the state")
     verbose && println("┌─── Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
     # type of scalars in iter
