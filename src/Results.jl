@@ -134,6 +134,31 @@ setparam(br::AbstractBranchResult, p0) = setparam(br.prob, p0)
 Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvecs = haseigenvector(br) ? br.eig[k].eigenvecs : nothing)
 Base.lastindex(br::ContResult) = length(br)
 
+function Base.getindex(br0::ContResult, k::UnitRange)
+    br = deepcopy(br0)
+
+    if ~isnothing(br.branch)
+        @reset br.branch = StructArray([setproperties(pt; step=pt.step + 1 - k[1]) for pt in br.branch[k]])
+    end
+
+    if ~isnothing(br.eig)
+        @reset br.eig = [setproperties(pt; step=pt.step + 1 - k[1]) for pt in br.eig[k]]
+    end
+
+    if ~isnothing(br.sol)
+        @reset br.sol = [setproperties(pt; step=pt.step + 1 - k[1]) for pt in br.sol[k]]
+    end
+
+    if ~isnothing(br.specialpoint)
+        @reset br.specialpoint = [
+            setproperties(pt; step=pt.step + 1 - k[1], idx=pt.idx + 1 - k[1])
+            for pt in br.specialpoint if pt.idx in k
+        ]
+    end
+
+    return br
+end
+
 """
 $(SIGNATURES)
 
@@ -236,12 +261,12 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _contresult(iter,
-                      state,
-                      printsol,
-                      br,
-                      x0,
-                      contParams::ContinuationPar{T, S, E}) where {T, S, E}
+function _contresult(iter,
+                     state,
+                     printsol,
+                     br,
+                     x0,
+                     contParams::ContinuationPar{T, S, E}) where {T, S, E}
     # example of bifurcation point
     bif0 = SpecialPoint(x0, state.τ, T, namedprintsol(printsol))
     # save full solution?
