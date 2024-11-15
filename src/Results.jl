@@ -331,6 +331,8 @@ Base.lastindex(br::Branch) = lastindex(br.γ)
 # for example, it allows to use the plot recipe for ContResult as is
 Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
 Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
+Base.getindex(br::Branch, k::UnitRange) = setproperties(br; γ = getindex(br.γ, k))
+
 ####################################################################################################
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing
