@@ -450,9 +450,12 @@ end
 
 @views function (eig::FloquetColl)(JacColl, nev; kwargs...)
     pbcoll = JacColl.pb
-    𝒯 = eltype(pbcoll)
     J = _get_matrix(JacColl)
     n, m, Ntst = size(pbcoll)
+    _eig_floquet_col(J, n, m, Ntst, nev)
+end
+
+function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
     nbcoll = n * m
     N = n
     In = LinearAlgebra.I(N)

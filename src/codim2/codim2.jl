@@ -234,17 +234,17 @@ function continuation(br::AbstractBranchResult,
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
-    return continuation_hopf(prob, br, ind_bif, lens2, _options_cont;
-        start_with_eigen,
-        compute_eigen_elements,
-        update_minaug_every_step,
-        kwargs...)
+        return continuation_hopf(prob, br, ind_bif, lens2, _options_cont;
+            start_with_eigen,
+            compute_eigen_elements,
+            update_minaug_every_step,
+            kwargs...)
     else
-    return continuation_fold(prob, br, ind_bif, lens2, _options_cont;
-        start_with_eigen,
-        compute_eigen_elements,
-        update_minaug_every_step,
-        kwargs...)
+        return continuation_fold(prob, br, ind_bif, lens2, _options_cont;
+            start_with_eigen,
+            compute_eigen_elements,
+            update_minaug_every_step,
+            kwargs...)
     end
 end
 ####################################################################################################

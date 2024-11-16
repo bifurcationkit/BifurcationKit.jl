@@ -219,7 +219,7 @@ function multicontinuation(br::AbstractBranchResult,
                         bpnf::NdBranchPoint,
                         options_cont::ContinuationPar = br.contparams;
                         δp = nothing,
-                        ampfactor = getvectoreltype(br)(1),
+                        ampfactor = _getvectoreltype(br)(1),
                         perturb = identity,
                         plot_solution = plot_solution(br.prob),
                         kwargs...)
