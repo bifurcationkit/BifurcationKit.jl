@@ -570,7 +570,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     end
     ζ★s = real.(ζ★s); λ★s = real.(λ★s)
     ζs = real.(ζs); λs = real.(λs)
-    verbose && println("──> VP     = ", λs, "\n──> VP★ = ", λ★s)
+    verbose && println("──▶ VP     = ", λs, "\n──▶ VP★ = ", λ★s)
 
     ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
 
@@ -597,7 +597,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     for ii in 1:N
         dgidp[ii] = dot(R01, ζ★s[ii])
     end
-    verbose && printstyled(color=:green,"──> a (∂/∂p) = ", dgidp, "\n")
+    verbose && printstyled(color=:green,"──▶ a (∂/∂p) = ", dgidp, "\n")
 
     # coefficients of x*p
     d2gidxjdpk = zeros(Tvec, N, N)
@@ -607,7 +607,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
     end
-    verbose && (printstyled(color=:green, "\n──> b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
+    verbose && (printstyled(color=:green, "\n──▶ b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
 
     # coefficients of x^2
     d2gidxjdxk = zeros(Tvec, N, N, N)
@@ -617,9 +617,9 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     end
 
     if verbose
-        printstyled(color=:green, "\n──> b2 (∂²/∂x²) = \n")
+        printstyled(color=:green, "\n──▶ b2 (∂²/∂x²) = \n")
         for ii in 1:N
-            printstyled(color=:blue, "──> component $ii\n")
+            printstyled(color=:blue, "──▶ component $ii\n")
             Base.display( d2gidxjdxk[ii,:,:] ./ 2)
         end
     end
@@ -649,9 +649,9 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         end
     end
     if verbose
-        printstyled(color=:green, "\n──> b3 (∂³/∂x³) = \n")
+        printstyled(color=:green, "\n──▶ b3 (∂³/∂x³) = \n")
         for ii in 1:N
-            printstyled(color=:blue, "──> component $ii\n")
+            printstyled(color=:blue, "──▶ component $ii\n")
             Base.display( d3gidxjdxkdxl[ii,:,:,:] ./ 6 )
         end
     end
@@ -673,14 +673,14 @@ This function provides prediction for what the zeros of the reduced equation / n
 - `normN` norm used for newton.
 """
 function predictor(bp::NdBranchPoint, δp::T;
-        verbose::Bool = false,
-        ampfactor = T(1),
-        nbfailures = 30,
-        maxiter = 100,
-        perturb = identity,
-        J = nothing,
-        normN = norminf,
-        optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+                    verbose::Bool = false,
+                    ampfactor = one(T),
+                    nbfailures = 50,
+                    maxiter = 100,
+                    perturb = identity,
+                    J = nothing,
+                    normN = norminf,
+                    optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -689,14 +689,15 @@ function predictor(bp::NdBranchPoint, δp::T;
     function _get_roots_nf(_ds)
         deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-                                    (rand(n) .- 0.5) .* 1.1, _ds)
+                                    (rand(n) .- 0.5) .* 1.1, 
+                                    _ds)
         if ~isnothing(J)
             @reset prob.VF.J = J
         end
         failures = 0
         # we allow for 30 failures of nonlinear deflation
         while failures < nbfailures
-            outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN = normN)
+            outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN)
             if converged(outdef1)
                 push!(deflationOp, ampfactor .* outdef1.u)
             else
@@ -708,8 +709,8 @@ function predictor(bp::NdBranchPoint, δp::T;
     end
     rootsNFm = _get_roots_nf(-abs(δp))
     rootsNFp = _get_roots_nf(abs(δp))
-    println("\n──> BS from Non simple branch point")
-    printstyled(color=:green, "──> we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
+    println("\n──▶ BS from Non simple branch point")
+    printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
     return (before = rootsNFm, after = rootsNFp)
 end
 
