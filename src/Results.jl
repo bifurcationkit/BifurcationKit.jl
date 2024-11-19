@@ -142,18 +142,17 @@ end
 
 function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
     br = deepcopy(br0)
-    k_step = k .+ br.step[1] .- 1    # Convert to step
 
     if ~isnothing(br.branch)
         @reset br.branch = br.branch[k]
     end
 
     if ~isnothing(br.eig)
-        @reset br.eig = [pt for pt in br.eig if pt.step in k_step]
+        @reset br.eig = [pt for pt in br.eig if pt.step in br.branch.step]
     end
 
     if ~isnothing(br.sol)
-        @reset br.sol = [pt for pt in br.sol if pt.step in k_step]
+        @reset br.sol = [pt for pt in br.sol if pt.step in br.branch.step]
     end
 
     if ~isnothing(br.specialpoint)
