@@ -131,8 +131,14 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.
 """
 setparam(br::AbstractBranchResult, p0) = setparam(br.prob, p0)
-Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvecs = haseigenvector(br) ? br.eig[k].eigenvecs : nothing)
 Base.lastindex(br::ContResult) = length(br)
+
+function Base.getindex(br::ContResult, k::Int)
+    idx = isnothing(br.eig) ? nothing : findfirst(x -> x.step == br.branch[k].step, br.eig)
+    eigenvals = haseigenvalues(br) && !isnothing(idx) ? br.eig[idx].eigenvals : nothing
+    eigenvecs = haseigenvector(br) && !isnothing(idx) ? br.eig[idx].eigenvecs : nothing
+    return (; br.branch[k]..., eigenvals, eigenvecs)
+end
 
 function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
     br = deepcopy(br0)
