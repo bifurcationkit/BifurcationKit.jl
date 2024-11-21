@@ -987,7 +987,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
         elseif jacobianPO == :DenseAD
             jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
         elseif jacobianPO == :FullMatrixFreeAD
-            jac = (x, p) -> dx -> ForwardDiff.derivative(t->prob(x .+ t .* dx, p), 0)
+            jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->prob(x .+ t .* dx, p), 0), x, p)
         else
              jac = (x, p) -> FloquetWrapper(prob, x, p)
         end
