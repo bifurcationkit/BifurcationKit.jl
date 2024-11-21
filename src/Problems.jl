@@ -220,6 +220,9 @@ for (op, at) in (
                          inplace = false)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
+                if _get(parms, new_lens) isa Int
+                    @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
+                end
                 if inplace
                     F = _F
                 else
