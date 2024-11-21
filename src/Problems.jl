@@ -324,7 +324,7 @@ function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_ja
             return dF(pb, x, par, dx)
         else
             if has_adjoint(pb)
-                return jad(pb, x, par, dx)
+                return apply(jad(pb, x, par), dx)
             else
                 return apply(transpose(jacobian(pb, x, par)), dx)
             end
