@@ -10,7 +10,7 @@ end
 
 get_lens_symbol(lens) = :p
 get_lens_symbol(::PropertyLens{F}) where F = F
-get_lens_symbol(lens::ComposedOptic) = get_lens_symbol(lens.inner)
+get_lens_symbol(lens::ComposedOptic) = get_lens_symbol(lens.outer)
 get_lens_symbol(::IndexLens{Tuple{Int64}}) = :p
 
 function get_lens_symbol(lens1, lens2)
