@@ -913,10 +913,13 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
             kwargs...) where {T, Tf, vectype}
     jacobianPO = probPO.jacobian
     @assert jacobianPO in
-            (AutoDiffDense(), DenseAnalytical(), FullSparse()) "This jacobian $jacobianPO is not defined. Please chose another one."
+            (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace()) "This jacobian $jacobianPO is not defined. Please chose another one."
 
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> analytical_jacobian(probPO, x, p)
+    elseif jacobianPO isa DenseAnalyticalInplace
+        _J = analytical_jacobian(probPO, orbitguess, getparams(probPO))
+        jac = (x, p) -> analytical_jacobian!(_J, probPO, x, p)
     elseif jacobianPO isa FullSparse
         jac = (x, p) -> analytical_jacobian_sparse(probPO, x, p)
     elseif jacobianPO isa FullSparseInplace
@@ -976,10 +979,18 @@ newton(probPO::PeriodicOrbitOCollProblem,
 
 function build_jacobian(coll::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = coll.jacobian
-    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
+    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
 
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
+    elseif jacobianPO isa DenseAnalyticalInplace
+        floquet_wrap = FloquetWrapper(coll, analytical_jacobian(coll, orbitguess, par), orbitguess, par)
+        function jac(x, p)
+            analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
+            floquet_wrap.x .= x
+            floquet_wrap.par = p
+            floquet_wrap
+        end
     elseif jacobianPO isa FullSparse
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
     elseif jacobianPO isa FullSparseInplace

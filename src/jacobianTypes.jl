@@ -53,6 +53,12 @@ The jacobian is computed with an analytical formula works for dense matrices. Th
 struct DenseAnalytical <: AbstractJacobianMatrix end
 
 """
+The jacobian is computed with an analytical formula works for dense matrices.
+"""
+struct DenseAnalyticalInplace <: AbstractJacobianMatrix end
+
+
+"""
 Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula. Mainly used for Shooting.
 """
 struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
