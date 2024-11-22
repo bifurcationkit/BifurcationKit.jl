@@ -388,7 +388,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     ϵ = getdelta(prob)
     paramlens = getlens(iter)
     contparams = getcontparams(iter)
-    T = eltype(iter)
+    𝒯 = eltype(iter)
     θ = getθ(iter)
 
     z0 = getsolution(state)
@@ -415,13 +415,13 @@ function newton_palc(iter::AbstractContinuationIterable,
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
 
     dX = _copy(res_f)
-    dp = zero(T)
-    up = zero(T)
+    dp = zero(𝒯)
+    up = zero(𝒯)
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
     minus!(dFdp, res_f) # dFdp = dFdp - res_f
-    rmul!(dFdp, one(T) / ϵ)
+    rmul!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
     residuals = [res]
@@ -436,7 +436,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); rmul!(dFdp, one(T) / ϵ)
+        minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))

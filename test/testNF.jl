@@ -156,19 +156,19 @@ let
         @test norm(bp2d.nf.b2, Inf) < 3e-6
         @test norm(bp2d.nf.b1 - prob2d.params.α * 3.23 * I, Inf) < 1e-9
         @test norm(bp2d.nf.a, Inf) < 1e-6
+
+        # same but when the eigenvalues are not saved in the branch but computed on the fly instead
+        br_noev = BK.continuation( prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = false); normC = norminf)
+        bp2d = BK.get_normal_form(br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
+        @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -prob2d.params.α * 0.123) < 1e-15
+        @test abs(bp2d.nf.b3[1,1,2,2] / 2 - -prob2d.params.α * 0.234) < 1e-15
+        @test abs(bp2d.nf.b3[1,1,1,2] / 2 - -prob2d.params.α * 0.0)   < 1e-15
+        @test abs(bp2d.nf.b3[2,1,1,2] / 2 - -prob2d.params.α * 0.456) < 1e-15
+        @test norm(bp2d.nf.b2, Inf) < 3e-15
+        @test norm(bp2d.nf.b1 - prob2d.params.α * 3.23 * I, Inf) < 1e-9
+        @test norm(bp2d.nf.a, Inf) < 1e-15
     end
 end
-##############################
-# same but when the eigenvalues are not saved in the branch but computed on the fly instead
-br_noev = BK.continuation( prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = false); normC = norminf)
-bp2d = BK.get_normal_form(br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
-@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -prob2d.params.α * 0.123) < 1e-15
-@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -prob2d.params.α * 0.234) < 1e-15
-@test abs(bp2d.nf.b3[1,1,1,2] / 2 - -prob2d.params.α * 0.0)   < 1e-15
-@test abs(bp2d.nf.b3[2,1,1,2] / 2 - -prob2d.params.α * 0.456) < 1e-15
-@test norm(bp2d.nf.b2, Inf) < 3e-15
-@test norm(bp2d.nf.b1 - prob2d.params.α * 3.23 * I, Inf) < 1e-9
-@test norm(bp2d.nf.a, Inf) < 1e-15
 ####################################################################################################
 # vector field to test nearby secondary bifurcations
 FbpSecBif(u, p) = @. -u * (p + u * (2-5u)) * (p -.15 - u * (2+20u))
