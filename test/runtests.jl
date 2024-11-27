@@ -11,6 +11,10 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("test_linear.jl")
     end
 
+    @testset "Results" begin
+        include("test_results.jl")
+    end
+
     @testset "Newton" begin
         include("test_newton.jl")
     end

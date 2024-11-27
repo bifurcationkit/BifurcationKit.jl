@@ -131,8 +131,36 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.
 """
 setparam(br::AbstractBranchResult, p0) = setparam(br.prob, p0)
-Base.getindex(br::ContResult, k::Int) = (br.branch[k]..., eigenvals = haseigenvalues(br) ? br.eig[k].eigenvals : nothing, eigenvecs = haseigenvector(br) ? br.eig[k].eigenvecs : nothing)
 Base.lastindex(br::ContResult) = length(br)
+
+function Base.getindex(br::ContResult, k::Int)
+    idx = isnothing(br.eig) ? nothing : findfirst(x -> x.step == br.branch[k].step, br.eig)
+    eigenvals = haseigenvalues(br) && !isnothing(idx) ? br.eig[idx].eigenvals : nothing
+    eigenvecs = haseigenvector(br) && !isnothing(idx) ? br.eig[idx].eigenvecs : nothing
+    return (; br.branch[k]..., eigenvals, eigenvecs)
+end
+
+function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
+    br = deepcopy(br0)
+
+    if ~isnothing(br.branch)
+        @reset br.branch = br.branch[k]
+    end
+
+    if ~isnothing(br.eig)
+        @reset br.eig = [pt for pt in br.eig if pt.step in br.branch.step]
+    end
+
+    if ~isnothing(br.sol)
+        @reset br.sol = [pt for pt in br.sol if pt.step in br.branch.step]
+    end
+
+    if ~isnothing(br.specialpoint)
+        @reset br.specialpoint = [setproperties(pt; idx=pt.idx + 1 - k[1]) for pt in br.specialpoint if pt.idx in k]
+    end
+
+    return br
+end
 
 """
 $(SIGNATURES)
@@ -236,12 +264,12 @@ Function is used to initialize the composite type `ContResult` according to the 
 - `lens`: lens to specify the continuation parameter
 - `eiginfo`: eigen-elements (eigvals, eigvecs)
 """
- function _contresult(iter,
-                      state,
-                      printsol,
-                      br,
-                      x0,
-                      contParams::ContinuationPar{T, S, E}) where {T, S, E}
+function _contresult(iter,
+                     state,
+                     printsol,
+                     br,
+                     x0,
+                     contParams::ContinuationPar{T, S, E}) where {T, S, E}
     # example of bifurcation point
     bif0 = SpecialPoint(x0, state.τ, T, namedprintsol(printsol))
     # save full solution?
@@ -306,6 +334,8 @@ Base.lastindex(br::Branch) = lastindex(br.γ)
 # for example, it allows to use the plot recipe for ContResult as is
 Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
 Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
+Base.getindex(br::Branch, k::UnitRange{<:Integer}) = setproperties(br; γ = getindex(br.γ, k))
+
 ####################################################################################################
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing

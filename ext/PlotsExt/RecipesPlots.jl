@@ -28,7 +28,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
     end
 
     # display bifurcation points
-    bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)-1), contres.specialpoint)
+    bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres)), contres.specialpoint)
 
     if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
         if filterspecialpoints == true
