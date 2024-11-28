@@ -271,6 +271,16 @@ function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-
     end
 end
 ####################################################################################################
+function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, k...)
+    p = getproperty(br.branch, var)
+    data = mapreduce(x -> x.eigenvals, hcat, br.eig)
+    if with_param
+        series(p, real.(data); k...)
+    else
+        series(real.(data); k...)
+    end
+end
+####################################################################################################
 plotAllDCBranch(branches) = plot(branches...)
 
 function plot_DCont_branch(::BK_Makie, branches, nbrs::Int, nactive::Int, nstep::Int)
