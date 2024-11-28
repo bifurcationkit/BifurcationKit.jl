@@ -159,6 +159,10 @@ struct cbMaxNorm{T}
 end
 (cb::cbMaxNorm)(state; k...) = (return state.residual < cb.maxres)
 
+"""
+    cb = cbMaxNormAndΔp(maxres, δp)
+Create a callback used to reject residuals larger than `cb.maxres` or parameter step larger than `δp` in the Newton iterations. See docs for [`newton`](@ref).
+"""
 struct cbMaxNormAndΔp{T}
     maxres::T
     δp::T

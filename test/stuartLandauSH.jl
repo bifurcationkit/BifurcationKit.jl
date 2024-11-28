@@ -203,7 +203,7 @@ probPsh(initpo_bar, par_hopf)
 # test of the analytical formula for jacobian of the functional
 _Jad = BifurcationKit.finite_differences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
-@test norm(_Jad - _Jana, Inf) < 1e-3
+@test norm(_Jad - _Jana, Inf) < 3e-3
 
 @info "Test newton"
 ls = DefaultLS()

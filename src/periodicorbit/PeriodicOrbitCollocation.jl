@@ -856,7 +856,9 @@ end
 get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
 # same function as above but for coping with mesh adaptation
-@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x::NamedTuple{(:mesh, :sol, :_mesh, :ϕ ), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}, Vector{Tp}}}, p::Real) where Tp
+@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, 
+                x::NamedTuple{(:mesh, :sol, :_mesh, :ϕ ), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}, Vector{Tp}}}, 
+                p::Real) where Tp
     mesh = x.mesh
     u = x.sol
     T = getperiod(prob, u, p)
@@ -865,7 +867,14 @@ get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = get_periodic_o
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(prob::PeriodicOrbitOCollProblem, prob_vf, hopfpt, ζr::AbstractVector, orbitguess_a, period; orbit = t -> t, k...)
+function re_make(prob::PeriodicOrbitOCollProblem,
+                 prob_vf,
+                 hopfpt,
+                 ζr::AbstractVector,
+                 orbitguess_a,
+                 period; 
+                 orbit = t -> t,
+                 k...)
     M = length(orbitguess_a)
     N = length(ζr)
 
@@ -910,10 +919,10 @@ const DocStrjacobianPOColl = """
 """
 
 function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
-            orbitguess,
-            options::NewtonPar;
-            defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing,
-            kwargs...) where {T, Tf, vectype}
+                        orbitguess,
+                        options::NewtonPar;
+                        defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing,
+                        kwargs...) where {T, Tf, vectype}
     jacobianPO = probPO.jacobian
     @assert jacobianPO in
             (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace()) "This jacobian $jacobianPO is not defined. Please chose another one."
@@ -980,7 +989,10 @@ newton(probPO::PeriodicOrbitOCollProblem,
     _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
 
 
-function build_jacobian(coll::PeriodicOrbitOCollProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function build_jacobian(coll::PeriodicOrbitOCollProblem, 
+                        orbitguess, 
+                        par; 
+                        δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = coll.jacobian
     @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
 
@@ -1062,10 +1074,10 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
     probwp = WrapPOColl(probPO, jacPO, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     br = continuation(probwp, alg,
-                    contParams;
-                    kwargs...,
-                    kind = PeriodicOrbitCont(),
-                    finalise_solution = _finsol)
+                      contParams;
+                      kwargs...,
+                      kind = PeriodicOrbitCont(),
+                      finalise_solution = _finsol)
     return br
 end
 
@@ -1137,11 +1149,11 @@ References:
 [2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
 function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
-                    normE = norminf,
-                    verbosity::Bool = false,
-                    K = Inf,
-                    par = nothing,
-                    kw...) where Ty
+                        normE = norminf,
+                        verbosity::Bool = false,
+                        K = Inf,
+                        par = nothing,
+                        kw...) where Ty
     n, m, Ntst = size(coll) # recall that m = ncol
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function

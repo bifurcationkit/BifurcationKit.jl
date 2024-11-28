@@ -91,6 +91,7 @@ x0 = 0.01 * ones(N)
 
 # test continuation interface
 begin
+    prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)
     iter = ContIterable(prob, PALC(), opts)
     state = iterate(iter)
     BK.gettangent(state[1])
@@ -101,7 +102,7 @@ end
 ###############
 # basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
-opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40)
+opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40, nev = 1)
 _br0 = @time continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
 
 @test BK._hasstability(_br0) == false

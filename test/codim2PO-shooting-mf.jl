@@ -43,9 +43,9 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-@info "import AD"
+# @info "import AD"
 # import AbstractDifferentiation as AD
-@info "import Zygote"
+# @info "import Zygote"
 # using Zygote, SciMLSensitivity
 
 @info "generate shooting problem"
@@ -61,7 +61,7 @@ function flow(x0, prob0, tm, p = prob0.p)
     return sol[end]
 end
 
-@info "set AD"
+# @info "set AD"
 # @reset probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 
 @info "Newton"

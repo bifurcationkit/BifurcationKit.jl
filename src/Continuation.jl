@@ -95,6 +95,7 @@ setparam(it::ContIterable{Tkind, Tprob, Talg, T}, p0::T) where {Tkind, Tprob, Ta
 # getters
 @inline getlens(it::ContIterable) = getlens(it.prob)
 @inline getalg(it::ContIterable) = it.alg
+@inline getprob(it::ContIterable) = it.prob
 @inline callback(it::ContIterable) = it.callback_newton
 record_from_solution(it::ContIterable) = record_from_solution(it.prob)
 plot_solution(it::ContIterable) = plot_solution(it.prob)
