@@ -38,6 +38,8 @@ pred = predictor(bp, 0.1)
 ####################################################################################################
 # same but when the eigenvalues are not saved in the branch but computed on the fly
 br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
+@test BK.haseigenvector(br_noev) == false
+bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
 bp = BK.get_normal_form(br_noev, 1; verbose=false)
 nf = bp.nf
 @test norm(nf[1]) < 1e-10
@@ -53,6 +55,7 @@ br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_ste
 BK.eigenvals(br2, 1, true)
 BK._getfirstusertype(br2)
 @test length(br2) == 12
+get_normal_form(br2, 1)
 # plot(br,br2)
 
 br3 = continuation(br, 1, ContinuationPar(opts_br; ds = -0.01); verbosity = 0, usedeflation = true)
@@ -116,9 +119,9 @@ BK.propertynames(br2)
 # automatic bifurcation diagram (Pitchfork)
 bdiag = bifurcationdiagram(prob_pf, PALC(#=tangent=Bordered()=#), 2,
     setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = NewtonPar(opt_newton, verbose=false, tol = 1e-12), max_steps = 15);
-    plot = false, verbosity = 0, normC = norminf)
-
-# plot(bdiag)
+    plot = false, verbosediagram = true, normC = norminf)
+BK.getalg(bdiag)
+bdiag[1]
 ####################################################################################################
 function Fbp2d(x, p)
     return [ p.α * x[1] * (3.23 .* p.μ - 0.123 * x[1]^2 - 0.234 * x[2]^2),
@@ -127,13 +130,14 @@ function Fbp2d(x, p)
 end
 
 let
-    for α in (-1,1)
+    for α in (-1,1), saveev in (true, false)
         prob2d = BK.BifurcationProblem(Fbp2d, [0.01, 0.01, 0.01], (μ = -0.2, ν = 0., α = α), (@optic _.μ))
         prob2d.VF.J(rand(3), prob2d.params)
 
-        br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2);
+        br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = saveev);
             plot = false, verbosity = 0, normC = norminf)
         # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
+        bp2d = BK.get_normal_form(br, 1; verbose = true);
         bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
         show(bp2d)
 
@@ -266,6 +270,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p
 
 br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 
+hp = BK.get_normal_form(br, 1; detailed = false)
 hp = BK.get_normal_form(br, 1)
 
 nf = hp.nf

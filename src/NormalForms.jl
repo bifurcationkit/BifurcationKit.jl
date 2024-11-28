@@ -584,7 +584,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         for ii in 1:N
             out .= out .- dot(x, ζ★s[ii]) .* ζs[ii]
         end
-        out
+        return out
     end
 
     # vector eltype

@@ -112,7 +112,7 @@ Allows to alter the continuation parameters based on the bifurcation problem and
 function init(contparams::ContinuationPar{T,S,E}, 
                prob::AbstractBifurcationProblem, 
                alg::AbstractContinuationAlgorithm) where {T,S,E}
-    if E isa DefaultEig
+    if E <: DefaultEig
         n = length(getu0(prob))
         if n <= 50
             @reset contparams.nev = n

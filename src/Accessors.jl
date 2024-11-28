@@ -5,7 +5,7 @@ const AllOpticTypes = Union{PropertyLens, IndexLens, ComposedOptic, typeof(ident
 function _set(obj, optics::Tuple{<:AllOpticTypes, <:AllOpticTypes}, val::Tuple)
     obj2 = set(obj,  optics[1], val[1])
     obj2 = set(obj2, optics[2], val[2])
-    obj2
+    return obj2
 end
 
 get_lens_symbol(lens) = :p

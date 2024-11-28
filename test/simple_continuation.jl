@@ -11,6 +11,9 @@ F0_simple(x, p) = p[1] .* x
 F_simple(x, p; k = 2) = p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
 Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
+BK.get_lens_symbol(@optic _.a)
+BK.get_lens_symbol(@optic _.a.a)
+####################################################################################################
 # test creation of specific scalar product
 BK.DotTheta(dot)
 BK.DotTheta()
@@ -27,6 +30,8 @@ BK._append!(rand(2),nothing)
 BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2),1., :fold) |> BK.type
 BK._print_line(1, 1, (1,1))
 BK._print_line(1, nothing, (1,1))
+BK.converged(nothing)
+BK.in_bisection(nothing)
 ####################################################################################################
 # test branch kinds
 BK.FoldCont()
@@ -83,6 +88,17 @@ end
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
 ###############
+
+# test continuation interface
+begin
+    iter = ContIterable(prob, PALC(), opts)
+    state = iterate(iter)
+    BK.gettangent(state[1])
+    BK.get_previous_solution(state[1])
+    BK.getpreviousx(state[1])
+    BK.init(ContinuationPar(), prob, PALC())
+end
+###############
 # basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
 opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40)
@@ -111,6 +127,11 @@ br0 = @time continuation(prob,
                 verbosity = 1)
 ###############
 br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
+try
+    continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10), bla = 1)
+catch
+end
+
 BK._getfirstusertype(br0)
 BK.propertynames(br0)
 BK.compute_eigenvalues(opts)
@@ -329,6 +350,10 @@ brdc = continuation(prob, alg,
     ContinuationPar(opts, ds = -0.001, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 6), plot_every_step = 40, detect_bifurcation = 3);
     plot = false, verbosity = 0,
     callback_newton = BK.cbMaxNorm(1e3))
+
+BK._hasstability(brdc)
+BK.get_plot_vars(brdc, :p)
+show(brdc)
 
 # test that the saved points are true solutions
 for i in eachindex(brdc.branches)

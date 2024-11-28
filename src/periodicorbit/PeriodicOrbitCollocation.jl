@@ -305,6 +305,9 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     println(io, "├─ update section     : ", pb.update_section_every_step)
     println(io, "├─ jacobian           : ", pb.jacobian)
     println(io, "├─ mesh adaptation    : ", pb.meshadapt)
+    if pb.meshadapt
+        println(io, "├───── K              : ", pb.K)
+    end
     println(io, "└─ # unknowns without phase condition) : ", pb.N * (1 + m * Ntst))
 end
 

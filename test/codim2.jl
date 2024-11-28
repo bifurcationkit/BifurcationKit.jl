@@ -74,14 +74,13 @@ for eigen_start in (true, false)
     @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
     @test ~isnothing(sn_br.eig)
 
-
     # we test the jacobian and problem update
     par_sn = BK.setparam(br, sn_br.sol[end].x.p)
     par_sn = BK.set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
     _J = BK.jacobian(prob, sn_br.sol[end].x.u, par_sn)
     _eigvals, eigvec, = eigen(_J)
     ind = argmin(abs.(_eigvals))
-    @test _eigvals[ind] ≈ 0 atol=1e-10
+    @test _eigvals[ind] ≈ 0 atol = 1e-10
     ζ = eigvec[:, ind]
     @test sn_br.prob.prob.b ./ norm(sn_br.prob.prob.b) ≈ -ζ
 

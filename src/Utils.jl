@@ -157,7 +157,7 @@ function get_blocks(A::SparseMatrixCSC, N, M)
         m, l = div(I[k]-1, N), div(J[k]-1, N)
         push!(out[1+m, 1+l], k)
     end
-    out
+    return out
 end
 ####################################################################################################
 """
