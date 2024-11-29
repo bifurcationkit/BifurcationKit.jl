@@ -73,7 +73,7 @@ function filter_bifurcations(bifpt)
     res = [(type = :none, idx = 1, param = 1., printsol = bifpt[1].printsol, status = :guess)]
     ii = 1
     while ii <= length(bifpt) - 1
-        if (abs(bifpt[ii].idx - bifpt[ii+1].idx) <= 1) && bifpt[ii].type ∈ [:fold, :bp]
+        if (abs(bifpt[ii].idx - bifpt[ii+1].idx) <= 1) && bifpt[ii].type ∈ (:fold, :bp)
             if (bifpt[ii].type == :fold && bifpt[ii].type == :bp) ||
                 (bifpt[ii].type == :bp && bifpt[ii].type == :fold)
                 push!(res, (type = :fold, idx = bifpt[ii].idx, param = bifpt[ii].param, printsol = bifpt[ii].printsol, status = bifpt[ii].status) )

@@ -25,6 +25,10 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("test-cont-non-vector.jl")
     end
 
+    @testset "plot-utils" begin
+        include("plots-utils.jl")
+    end
+
     @testset "Normal forms" begin
         include("testNF.jl")
         include("testNF_maps.jl")
