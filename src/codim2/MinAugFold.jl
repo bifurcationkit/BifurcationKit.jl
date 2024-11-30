@@ -332,7 +332,8 @@ where the parameters are as above except that you have to pass the branch `br` f
     In order to trigger the detection, pass `detect_event = 1 or 2` in `options_cont`.
 """
 function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
-                           foldpointguess::BorderedArray{vectype, 𝒯}, par,
+                           foldpointguess::BorderedArray{vectype, 𝒯}, 
+                           par,
                            lens1::AllOpticTypes, lens2::AllOpticTypes,
                            eigenvec, eigenvec_ad,
                            options_cont::ContinuationPar ;
@@ -588,7 +589,7 @@ function continuation_fold(prob,
 end
 
 # structure to compute eigen-elements along branch of Fold points
-struct FoldEig{S, P} <: AbstractCodim2EigenSolver
+struct FoldEig{P, S} <: AbstractCodim2EigenSolver
     eigsolver::S
     prob::P
 end

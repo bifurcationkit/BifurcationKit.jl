@@ -644,7 +644,7 @@ function continuation_hopf(prob,
 end
 
 # structure to compute the eigenvalues along the Hopf branch
-struct HopfEig{S, P} <: AbstractCodim2EigenSolver
+struct HopfEig{P, S} <: AbstractCodim2EigenSolver
     eigsolver::S
     prob::P
 end
