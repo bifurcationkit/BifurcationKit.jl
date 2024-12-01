@@ -144,8 +144,8 @@ testEV(hp_codim2_test)
 ####################################################################################################
 @reset opts_br.newton_options.verbose = false
 sn_codim2 = nothing
-for _jac in (:autodiff, :minaug, :finiteDifferences)
-    @warn _jac
+for _jac in (:autodiff, :minaug, :finiteDifferences, :MinAugMatrixBased)
+    @error "" _jac
     # be careful here, Bordered predictor not good for Fold continuation
     sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
         normC = norminf,

@@ -378,8 +378,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
         linsolve_adjoint = linsolve_adjoint,
         linbdsolve_adjoint = bdlinsolver_adjoint,
-        usehessian = usehessian,
-        massmatrix = massmatrix)
+        usehessian,
+        massmatrix)
 
     # Jacobian for the Hopf problem
     if jacobian_ma == :autodiff

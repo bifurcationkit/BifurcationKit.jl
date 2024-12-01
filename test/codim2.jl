@@ -30,6 +30,7 @@ br = @time continuation(prob, alg, opts_br;
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################
+hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10), start_with_eigen = false)
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10), start_with_eigen = true)
 
 hpnf = get_normal_form(br, 5)
@@ -68,7 +69,11 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), 
 @test BK.converged(sn) && sn.itlineartot == 8
 
 for eigen_start in (true, false)
-    sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), start_with_eigen = eigen_start, update_minaug_every_step = 1, jacobian_ma = :minaug)
+    sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), 
+            bdlinsolver = MatrixBLS(), 
+            start_with_eigen = eigen_start, 
+            update_minaug_every_step = 1, 
+            jacobian_ma = :minaug)
     @test sn_br.kind isa BK.FoldCont
     @test sn_br.specialpoint[1].type == :bt
     @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5

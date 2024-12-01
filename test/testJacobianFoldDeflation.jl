@@ -157,8 +157,8 @@ res_exp = debugTmpForσ \ rhs
 opt_newton = NewtonPar(tol = 1e-8, verbose = false, eigsolver = EigKrylovKit())
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, p_max = 4.1, max_steps = 250, newton_options = opt_newton, detect_fold = true, detect_bifurcation = 1, nev = 15)
 
-br = continuation(BK.re_make(prob;record_from_solution = (x,p;k...)->norm(x,Inf64)), PALC(), opts_br0, plot = false, verbosity = 0)
+br = continuation(BK.re_make(prob;record_from_solution = (x,p;k...)->norm(x,Inf64)), PALC(), opts_br0)
 
 opts_br0 = ContinuationPar(dsmin = 0.01, dsmax = 0.15, ds= 0.01, p_max = 4.1, max_steps = 250, newton_options = NewtonPar(tol =1e-8), detect_fold = true, detect_bifurcation = 1, nev = 15)
 
-br = continuation(prob, PALC(), opts_br0,plot = false, verbosity = 0)
+br = continuation(prob, PALC(), opts_br0)

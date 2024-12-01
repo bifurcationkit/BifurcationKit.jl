@@ -69,7 +69,7 @@ Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 n = 10
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
+prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_ana,
         record_from_solution = (x, p; k...) -> norminf(x))
 
@@ -83,10 +83,10 @@ opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, p_max = 1.8, ne
 br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
 ###################################################################################################
 # Hopf continuation with automatic procedure
-outhopf = newton(br, 1; start_with_eigen = true)
+outhopf = newton(br, 1; start_with_eigen = false)
 outhopf = newton(br, 1; start_with_eigen = true)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 50, detect_bifurcation = 2)
-outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, plot = false, jacobian_ma = :minaug)
+outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -198,7 +198,7 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
-prob = BifurcationKit.BifurcationProblem(Fbru, sol0, par_bru, (@optic _.l);
+prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_sp,
         record_from_solution = (x, p; k...) -> norminf(x))
 
@@ -219,7 +219,7 @@ BK.get_time_diff(poTrap, orbitguess_f)
 
 # newton to find Periodic orbit
 _prob = BK.BifurcationProblem((x, p) -> poTrap(x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
-opt_po = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 150)
+opt_po = NewtonPar(tol = 1e-8, max_iterations = 150)
 outpo_f = @time BK.solve(_prob, Newton(), opt_po)
 @test BK.converged(outpo_f)
     # println("--> T = ", outpo_f[end])
@@ -240,7 +240,7 @@ floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, p_max = 2.3, max_steps = 3, newton_options = NewtonPar(verbose = false), detect_bifurcation = 1)
-br_pok2 = continuation((@set poTrap.jacobian = :BorderedLU), orbitguess_f, PALC(), opts_po_cont; plot = false, verbosity = 0)
+br_pok2 = continuation((@set poTrap.jacobian = :BorderedLU), orbitguess_f, PALC(), opts_po_cont)
 
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
@@ -257,14 +257,13 @@ for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
     # continuation
     br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
             copy(orbitguess_f), PALC(),
-            opts_po_cont; verbosity = 0,
-            plot = false, normC = norminf)
+            opts_po_cont; normC = norminf)
 end
 
 # test of Matrix free computation of Floquet exponents
 eil = EigKrylovKit(x₀ = rand(2n))
 ls = GMRESKrylovKit()
 ls = DefaultLS()
-opt_po = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 10, linsolver = ls, eigsolver = eil)
+opt_po = NewtonPar(tol = 1e-8, max_iterations = 10, linsolver = ls, eigsolver = eil)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, p_max = 3.0, max_steps = 3, newton_options = (@set opt_po.verbose = false), nev = 2, tol_stability = 1e-8, detect_bifurcation = 2)
-br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; normC = norminf, verbosity = 0)
+br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; normC = norminf)
