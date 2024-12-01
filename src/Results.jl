@@ -52,6 +52,7 @@ julia> br.param
 - `get_solx(br, k)` returns the k-th solution on the branch
 - `get_solp(br, k)` returns the parameter  value associated with k-th solution on the branch
 - `getparams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
+- `getparams(br, ind)` Parameters passed to continuation and used in the equation `F(x, par) = 0` for the ind-th continuation step.
 - `setparam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`
 - `getlens(br)` get the lens used for the computation of the branch
 - `continuation(br, ind)` performs automatic branch switching (aBS) from ind-th bifurcation point. Typically branching from equilibrium to equilibrium, or periodic orbit to periodic orbit.
@@ -102,6 +103,11 @@ Return the parameters of the bifurcation problem of the branch.
 function getparams(br::AbstractBranchResult) 
     getparams(br.prob)
 end
+
+function getparams(br::AbstractBranchResult, ind::Int)
+    setparam(br, get_solp(br, ind))
+end
+
 getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline getprob(br::AbstractBranchResult) = br.prob
 

@@ -179,7 +179,5 @@ br_po2 = BK.continuation(
     normC = norminf)
 
 branches = Any[br_po]
-
 push!(branches, br_po2)
-
-BK.plot(branches...)
+plot(branches...)

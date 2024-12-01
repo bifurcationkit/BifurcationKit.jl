@@ -11,7 +11,6 @@ function save_to_file(iter::AbstractContinuationIterable, sol, p, i::Int64, br::
     # this allows to save two branches forward/backward in case
     # bothside = true is passed to continuation
     fd = iter.contparams.ds >=0 ? "fw" : "bw"
-
     # create a group in the JLD format
     jldopen(filename*".jld2", "a+") do file
         if haskey(file, "sol-$fd-$i")
@@ -34,7 +33,6 @@ end
 function save_to_file(iter::AbstractContinuationIterable, br::ContResult)
     if iter.contparams.save_to_file == false; return nothing; end
     filename = iter.filename
-
     jldopen(filename*"-branch.jld2", "a+") do file
         if haskey(file, "branchfw")
             delete!(file, "branchfw")

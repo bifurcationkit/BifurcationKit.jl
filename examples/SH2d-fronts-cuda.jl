@@ -80,8 +80,8 @@ sol0 .*= 1.7
 
 function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-9)
     u, l, ν = J
-    udiag = l .+ 1 .+ 2ν .* u .- 3 .* u.^2 .- shift
-    res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs, rtol = rtol, maxiter = 6, ishermitian = true)
+    udiag = l .+ 1 .+ (2ν) .* u .- 3 .* u.^2 .- shift
+    res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs; rtol, maxiter = 6, ishermitian = true)
     return res, true, info.numops
 end
 
@@ -108,7 +108,7 @@ L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
 Leig = SHEigOp(L, 0.1) # for eigenvalues computation
 # Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
 
-par = (l = -0.1, ν = 1.3, L = L)
+par = (l = -0.15, ν = 1.3, L = L)
 
 @time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 

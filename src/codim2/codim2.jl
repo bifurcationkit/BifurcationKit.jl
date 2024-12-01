@@ -123,7 +123,7 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; updat
 end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
-    prob_ma = br.prob.prob
+    prob_ma = getprob(br).prob
     𝒯 = _getvectortype(br)
 
     bifpt = br.specialpoint[ind]
@@ -140,6 +140,15 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     lenses = get_lenses(br)
     parbif = _set(getparams(br), lenses, (p1, p2))
     return (x = x0, params = parbif)
+end
+
+function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
+    prob_ma = getprob(br).prob
+    lenses = get_lenses(br)
+    p1 = getp(br.sol[ind].x , prob_ma)[1]
+    p2 = br.sol[ind].p
+    lenses = get_lenses(br)
+    parbif = _set(getparams(br), lenses, (p1, p2))
 end
 ################################################################################
 """

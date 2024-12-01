@@ -58,7 +58,7 @@ args_po = (    record_from_solution = (x, p; k...) -> begin
     plot_solution = plotSolution,
     normC = norminf)
 
-opts_po_cont = ContinuationPar(opts_br, dsmax = 2., ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
+opts_po_cont = ContinuationPar(opts_br, dsmax = 1., ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
 max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 
 # @set! opts_po_cont.newton_options.verbose = false
@@ -69,38 +69,22 @@ max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 # using DifferentialEquations
 # prob_ode = ODEProblem(COm!, copy(z0), (0., 1000.), par_com; abstol = 1e-11, reltol = 1e-9)
 
-function callbackCO(state; fromNewton = false, kwargs...)
-    # check that the solution is not too far
-    δ0 = 1e-3
-    z0 = get(state, :z0, nothing)
-    p  = get(state, :p, nothing)
-    if state.residual > 1
-        @error "Reject Newton step, res too big!!"
-        return false
-    end
-    # abort of the δp is too large
-    if ~fromNewton && ~isnothing(z0)
-        # @show abs(p - z0.p)
-        return abs(p - z0.p) <= 2e-3
-    end
-    return true
-end
-
 brpo = @time continuation(br, 5, opts_po_cont,
-    PeriodicOrbitOCollProblem(60, 5 ; meshadapt = false, K = 1000, verbose_mesh_adapt = true);
+    PeriodicOrbitOCollProblem(80, 5 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
     # ShootingProblem(25, prob_ode, TaylorMethod(25); parallel = true; update_section_every_step = 1, jacobian = BK.AutoDiffDense());
     verbosity = 3, plot = true,
     normC = norminf,
-    # alg = PALC(tangent = Bordered()),
+    alg = PALC(tangent = Bordered()),
     # alg = PALC(),
     # alg = MoorePenrose(tangent=PALC(tangent = Bordered()), method = BK.direct),
     δp = 0.0005,
     linear_algo = COPBLS(),
-    callback_newton = callbackCO,
+    callback_newton = BK.cbMaxNormAndΔp(1., 1.5e-3),
+    bothside = true,
     args_po...
     )
 
-BK.plot(br, brpo, branchlabel = ["eq","max"])
+plot(br, brpo, branchlabel = ["eq","max"])
 xlims!((1.037, 1.055))
 scatter!(br)
 plot!(brpo.param, brpo.min, label = "min", xlims = (1.037, 1.055))
@@ -123,7 +107,6 @@ hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), Co
     normC = norminf,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    start_with_eigen = true,
     # record_from_solution = (u,p; kw...) -> (x = u.u[1] ),
     bothside = true,
     bdlinsolver = MatrixBLS())

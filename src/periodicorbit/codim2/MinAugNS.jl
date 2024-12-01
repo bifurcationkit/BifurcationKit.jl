@@ -394,7 +394,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
          # if the frequency is null, this is not a NS point, we halt the process
          stop_R1 = 1-cos(ω) <= ϵR1
          if stop_R1
-            @warn "[Codim 2 NS - Finalizer] The NS curve seems to be close to a R1 point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the R1 point is not detected, try lowering Newton tolerance or dsmax."
+            @warn "[Codim 2 NS - Finalizer]\n The NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at $(get_lenses(contResult)) = ($p1, $p2).\n If the R1 point is not detected, try lowering Newton tolerance or dsmax."
         end
 
         if pdjump

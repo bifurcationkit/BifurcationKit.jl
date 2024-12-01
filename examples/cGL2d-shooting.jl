@@ -1,5 +1,5 @@
 using Revise
-using ForwardDiff, DifferentialEquations
+using ForwardDiff, OrdinaryDiffEq
 using Plots
 # using GLMakie; Makie.inline!(true)
 using BifurcationKit, LinearAlgebra, SparseArrays, LoopVectorization
@@ -106,9 +106,7 @@ eigls = EigArpack(1.0, :LM)
 # eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 opts_br = ContinuationPar(dsmax = 0.02, ds = 0.01, p_max = 2., detect_bifurcation = 3, nev = 15, newton_options = (@set opt_newton.verbose = false), n_inversion = 6)
-
 br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
-
 plot(br)
 ####################################################################################################
 # Look for periodic orbits
@@ -118,7 +116,7 @@ prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; re
 prob = ODEProblem(Fcgl!, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
 ####################################################################################################
 # sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
-sol = @time DifferentialEquations.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
+sol = @time OrdinaryDiffEq.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
 # sol = @time solve(prob, LawsonEuler(krylov=true, m=50); abstol=1e-14, reltol=1e-14, dt = 0.1)
 # sol = @time solve(prob_sp, CNAB2(linsolve=LinSolveGMRES()); abstol=1e-14, reltol=1e-14, dt = 0.03)
 
