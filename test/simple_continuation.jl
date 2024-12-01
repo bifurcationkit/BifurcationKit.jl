@@ -103,8 +103,9 @@ end
 # basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
 opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40, nev = 1)
-_br0 = @time continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
+_br0 = @time BK.continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
 
+BK.type(_br0, 1) == :endpoint
 @test BK._hasstability(_br0) == false
 @test _br0.contparams == opts0
 @test _br0.contparams.save_sol_every_step == 0 && ~BK.hassolution(_br0)

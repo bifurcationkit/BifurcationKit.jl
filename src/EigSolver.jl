@@ -167,7 +167,7 @@ EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, k
 function (l::EigArnoldiMethod)(J, nev; kwargs...)
     if J isa AbstractMatrix
         if isnothing(l.sigma)
-            decomp, history = ArnoldiMethod.partialschur(J; nev = nev, which = l.which,
+            decomp, history = ArnoldiMethod.partialschur(J; nev, which = l.which,
                                                          l.kwargs...)
         else
             F = factorize(l.sigma * LinearAlgebra.I - J)

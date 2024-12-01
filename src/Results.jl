@@ -60,6 +60,7 @@ julia> br.param
 - `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 - `eigenvals(br, ind)` give the eigenvalues at continuation step `ind`
 - `eigenvalsfrombif(br, ind)` give the eigenvalues at bifurcation point index `ind`
+- `type(br, ind)` returns the type of the ind-th bifurcation point
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
     "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
@@ -110,6 +111,7 @@ end
 
 getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline getprob(br::AbstractBranchResult) = br.prob
+@inline type(br::AbstractBranchResult, ind) = type(br.specialpoint[ind])
 
 # check whether the eigenvalues are saved in the branch
 # this is a good test bifucause we always fill br.eig with a dummy vector :(

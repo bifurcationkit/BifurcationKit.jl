@@ -10,6 +10,9 @@ $(TYPEDEF)
 
 Structure to record special points on a curve. There are two types of special points that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
 
+## Associated methods
+- `BifurcationKit.type(::SpecialPoint)` returns the bifurcation type (`::Symbol`)
+
 $(TYPEDFIELDS)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
@@ -67,7 +70,7 @@ $(TYPEDFIELDS)
     status::Symbol = :guess
 
     "`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the special (bifurcation) point."
-    δ::Tuple{Int64, Int64} = (0,0)
+    δ::Tuple{Int64, Int64} = (0, 0)
 
     "Precision in the location of the special point"
     precision::T = -1
@@ -124,13 +127,13 @@ SpecialPoint(it::ContIterable,
 
 
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
-    if bp.type == :none ; return; end
+    if type(bp) == :none ; return; end
     @printf(io, "- #%3i, ", ii)
-    if bp.type == :endpoint
-        printstyled(io, @sprintf("%8s", bp.type); bold=true)
+    if type(bp) == :endpoint
+        printstyled(io, @sprintf("%8s", type(bp)); bold=true)
         @printf(io, " at %s ≈ %+4.8f,                                                                     step = %3i\n", p, bp.param, bp.step)
     else
-        printstyled(io, @sprintf("%8s", bp.type); bold=true, color=:blue)
+        printstyled(io, @sprintf("%8s", type(bp)); bold=true, color=:blue)
         @printf(io, " at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [", p, bp.param, bp.interval..., bp.precision)
         printstyled(io, @sprintf("%9s", bp.status); bold=true, color=(bp.status == :converged) ? :green : :red)
         @printf(io, "], δ = (%2i, %2i), step = %3i\n", bp.δ..., bp.step)
@@ -138,7 +141,7 @@ function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
 end
 
 function is_bifurcation(sp::SpecialPoint)
-    sp.type in (:bp, :fold, :hopf, :nd, :cusp, :gh, :bt, :zh, :hh, :ns, :pd,)
+    type(sp) in (:bp, :fold, :hopf, :nd, :cusp, :gh, :bt, :zh, :hh, :ns, :pd,)
 end
 ####################################################################################################
 # types for bifurcation point with 1d kernel for the jacobian
