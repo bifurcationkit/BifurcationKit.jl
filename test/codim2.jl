@@ -68,21 +68,24 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 8
 
-for eigen_start in (true, false)
+for eigen_start in (true, false), _jac in (:autodiff, :finiteDifferences, :MinAugMatrixBased, :minaug)
+    # @info "" eigen_start _jac
     sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), 
             bdlinsolver = MatrixBLS(), 
             start_with_eigen = eigen_start, 
-            update_minaug_every_step = 1, 
-            jacobian_ma = :minaug)
+            update_minaug_every_step = 1,
+            detect_codim2_bifurcation = 2,
+            jacobian_ma = _jac
+            )
     @test sn_br.kind isa BK.FoldCont
     @test sn_br.specialpoint[1].type == :bt
     @test sn_br.specialpoint[1].param ≈ 0.9716038596420551 rtol = 1e-5
     @test ~isnothing(sn_br.eig)
 
     # we test the jacobian and problem update
-    par_sn = BK.setparam(br, sn_br.sol[end].x.p)
+    par_sn = BK.setparam(br, BK.getp(sn_br.sol[end].x))
     par_sn = BK.set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
-    _J = BK.jacobian(prob, sn_br.sol[end].x.u, par_sn)
+    _J = BK.jacobian(prob, BK.getvec(sn_br.sol[end].x), par_sn)
     _eigvals, eigvec, = eigen(_J)
     ind = argmin(abs.(_eigvals))
     @test _eigvals[ind] ≈ 0 atol = 1e-10
@@ -135,13 +138,15 @@ hp = newton(br, 2;
 
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
-for eigen_start in (true, false)
+for eigen_start in (true, false), _jac in (:autodiff, :MinAugMatrixBased, :minaug)
+    # @info "" eigen_start _jac
     hp_br = continuation(br, 2, (@optic _.k), 
             ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), 
             start_with_eigen = eigen_start, 
             update_minaug_every_step = 1, 
             verbosity = 0, 
             detect_codim2_bifurcation = 2,
+            jacobian_ma = _jac,
             plot=false)
     @test hp_br.kind isa BK.HopfCont
     @test hp_br.specialpoint[1].type == :gh
