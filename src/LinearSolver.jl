@@ -1,4 +1,4 @@
-using IterativeSolvers, LinearAlgebra
+using IterativeSolvers, LinearAlgebra, Krylov
 import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
 norminf(x) = LinearAlgebra.norm(x, Inf)
 
@@ -62,6 +62,25 @@ function _axpy_op(J, v::AbstractArray, a₀, a₁)
     end
 end
 
+function _axpy_op!(o, J, v::AbstractArray, a₀, a₁)
+    apply!(o, J, v)
+    if a₀ == 0
+        if a₁ == 1
+            return o
+        else
+            o .*= a₁
+            return o
+        end
+    elseif a₀ == 1
+        if a₁ == 1
+            return o .+= v
+        else
+            return o .= v .+ a₁ .* o
+        end
+    else
+        return o .= a₀ .* v .+ a₁ .* o
+    end
+end
 ####################################################################################################
 # Solvers for default \ operator (backslash)
 ####################################################################################################
@@ -244,3 +263,88 @@ function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where
     info.converged == 0 && (@debug "KrylovKit.linsolve solver did not converge")
     return res, info.converged == 1, info.numops
 end
+####################################################################################################
+# Solvers for Krylov
+####################################################################################################
+"""
+$(TYPEDEF)
+
+Create a linear solver based on `Krylov.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+## Fields 
+$(TYPEDFIELDS)
+
+## Other methods
+
+Look at `KrylovLSInplace` for a method where the Krylov space is kept in memory
+"""
+mutable struct KrylovLS{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
+    "Can be Krylov.GmresSolver(m, n, memory, S) for example"
+    KrylovAlg::F
+    "Arguments passed to the linear solver"
+    kwargs::K
+    "Left preconditioner"
+    Pl::Tl
+    "Right preconditioner"
+    Pr::Tr
+end
+
+function KrylovLS(args...; KrylovAlg = Krylov.gmres,
+                    Pl = I, Pr = I,
+                    kwargs...)
+    return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
+end
+
+function (l::KrylovLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
+    J_map = v -> _axpy_op(J, v, a₀, a₁)
+    Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
+    sol, stats = l.KrylovAlg(Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    return sol, stats.solved, stats.niter
+end 
+
+"""
+$(TYPEDEF)
+
+Create an inplace linear solver based on `Krylov.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+The Krylov space is pre-allocated
+
+## Fields 
+$(TYPEDFIELDS)
+"""
+mutable struct KrylovLSInplace{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
+    "Can be Krylov.GmresSolver(m, n, memory, S) for example"
+    solver::F
+    "Arguments passed to the linear solver"
+    kwargs::K
+    "Left preconditioner"
+    Pl::Tl
+    "Right preconditioner"
+    Pr::Tr
+    "Is the linear mapping inplace"
+    is_inplace::Bool
+end
+
+function KrylovLSInplace(args...;
+                        n = 10,
+                        m = 10,
+                        memory = 20,
+                        S = Vector{Float64},
+                        KrylovAlg = Krylov.GmresSolver(m, n, memory, S),
+                        Pl = I, Pr = I,
+                        is_inplace = false,
+                        kwargs...)
+    return KrylovLSInplace(KrylovAlg, kwargs, Pl, Pr, is_inplace)
+end
+
+function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
+    if l.is_inplace
+        J_map = (o,v) -> _axpy_op!(o, J, v, a₀, a₁)
+        Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = true)
+    else
+        J_map = v -> _axpy_op(J, v, a₀, a₁)
+        Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
+    end
+    Krylov.solve!(l.solver, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    return solution(l.solver), issolved(l.solver), statistics(l.solver).niter
+end 

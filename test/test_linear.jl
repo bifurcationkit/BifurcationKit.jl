@@ -60,6 +60,7 @@ typeof(z_sim) == typeof(z_sim2)
 # test _axpy_op
 J0 = rand(100, 100)
 dx = rand(size(J0, 1))
+_o = dx = rand(size(J0, 1))
 a₀ = rand(ComplexF64)
 a₁ = -1.432
 BK._axpy(J0, 0, a₁)
@@ -68,6 +69,7 @@ out1 = BK._axpy_op(J0, dx, a₀, a₁)
 out2 = a₀ * dx + a₁ * J0 * dx
 @test out1 ≈ out2
 @test a₀ * I + a₁ * J0  ≈ BK._axpy(J0, a₀, a₁)
+BK._axpy_op!(_o, J0, dx, a₀, a₁)
 ####################################################################################################
 # test of MatrixFreeBLSmap
 map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)
@@ -120,7 +122,26 @@ let
 
     _sol, = ls(x->J0*x, rhs; a₀ = 0.1, a₁ = 0.9)
     @test _sol ≈ sol_explicit
+
+    ls = KrylovLS(rtol = 1e-16, Pl = I)
+    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    @test _sol ≈ sol_explicit
+
+    ls = KrylovLSInplace(rtol = 1e-16, Pl = I, m = 100, n = 100, verbose = 0 )
+    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    @test _sol ≈ sol_explicit
+
+    ls = KrylovLSInplace(rtol = 1e-16, Pl = I, m = 100, n = 100, verbose = 0, is_inplace = true )
+    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    @test _sol ≈ sol_explicit
 end
+
+J0 = rand(100,100) * 0.1 - I
+rhs = rand(100)
+ls = KrylovLSInplace(rtol = 1e-16, m = 100, n = 100, verbose = 2)
+_sol, = ls(J0, rhs; )
+sol_explicit = (J0) \ rhs
+@test _sol ≈ sol_explicit
 ####################################################################################################
 # test the bordered linear solvers
 let

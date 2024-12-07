@@ -176,8 +176,8 @@ end
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
 
-# apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)
-# apply!(y, f, x) = copyto!(y, f(x))
+apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)
+apply!(y, f, x) = f(y, x)
 
 # empty eigenvectors to save memory
 # _empty(a::AbstractVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
