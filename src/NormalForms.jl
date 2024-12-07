@@ -540,13 +540,12 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     indev = br.specialpoint[id_bif].ind_ev
     λs = rightEv[indev-N+1:indev]
     verbose && println("──> smallest eigenvalues at bifurcation = ", real.(λs))
-
     # and corresponding eigenvectors
     if isnothing(ζs) # do we have a basis for the kernel?
         if haseigenvector(br) == false # are the eigenvector saved in the branch?
             @info "No eigenvector recorded, computing them on the fly"
             # we recompute the eigen-elements if there were not saved during the computation of the branch
-            _λ, _ev, _ = options.eigsolver(L, length(rightEv))
+            _λ, _ev, _ = options.eigsolver(L, max(nev, length(rightEv)))
             verbose && (println("──> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
@@ -566,7 +565,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         ζ★s = copy.(ζs)
     else
         _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
-        ζ★s, λ★s = get_adjoint_basis(_Jt, conj.(λs), options.eigsolver; nev = nev, verbose = verbose)
+        ζ★s, λ★s = get_adjoint_basis(_Jt, conj.(λs), options.eigsolver; nev, verbose)
     end
     ζ★s = real.(ζ★s); λ★s = real.(λ★s)
     ζs = real.(ζs); λs = real.(λs)
@@ -593,7 +592,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of p
     dgidp = Vector{Tvec}(undef, N)
     δ = getdelta(prob)
-    R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- 
+           residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
     for ii in 1:N
         dgidp[ii] = dot(R01, ζ★s[ii])
     end
@@ -602,7 +602,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of x*p
     d2gidxjdpk = zeros(Tvec, N, N)
     for ii in 1:N, jj in 1:N
-        R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
+        R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- 
+               apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
         Ψ01, cv, it = ls(Linv, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
@@ -656,7 +657,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         end
     end
 
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a=dgidp, b1=d2gidxjdpk, b2=d2gidxjdxk, b3=d3gidxjdxkdxl), Symbol("$N-d"))
+    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a = dgidp, b1 = d2gidxjdpk, b2 = d2gidxjdxk, b3 = d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
 get_normal_form(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
@@ -787,6 +788,7 @@ Compute the Hopf normal form.
 
 # Optional arguments
 - `verbose` bool to print information
+- `L` jacobian
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem, 
                             pt::Hopf, 
@@ -867,6 +869,10 @@ Compute the Hopf normal form.
 # Optional arguments
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
+- `lens` parameter axis
+- `detailed = true` compute a simplified normal form or not
+- `Teigvec` vector type of the eigenvectors
+- `scaleζ = norm` norm to normalise the eigenvectors
 
 # Available method
 
@@ -1175,6 +1181,8 @@ Compute the Neimark-Sacker normal form.
 - `nev = 5` number of eigenvalues to compute to estimate the spectral projector
 - `verbose` bool to print information
 - `detailed = false` compute the coefficient a in the normal form
+- `Teigvec` vector type of the eigenvectors
+- `scaleζ = norm` norm to normalise the eigenvectors
 
 """
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,

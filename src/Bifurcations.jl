@@ -250,7 +250,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
                 ", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
                 "\n├─── bifurcation ∈ ", getinterval(interval...),
                 ", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
-                "\n├─── ", length(ct0)," Eigenvalues closest to ℜ=0:\n")
+                "\n├─── ", length(ct0)," Eigenvalues closest to ℜ = 0:\n")
             verbose && Base.display(sort(ct0[begin:min(5, length(ct0))], by = real))
         end
 

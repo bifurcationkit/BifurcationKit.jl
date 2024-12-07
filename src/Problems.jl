@@ -125,8 +125,14 @@ for (op, at) in (
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
 
             ## Constructors
-            - `BifurcationProblem(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
-            - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`.
+            - ``BifurcationProblem(F, u0, params, lens)`` all derivatives are computed using ForwardDiff.
+            - ``BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)`` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`. You can also pass
+                - `record_from_solution` see above
+                - `plot_solution` see above
+                - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need to provide an adjoint
+                - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x,p,dx1,dx2)`
+                - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x,p,dx1,dx2,dx3)`
+                - `save_solution` specify a way to solve solution which will be written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
