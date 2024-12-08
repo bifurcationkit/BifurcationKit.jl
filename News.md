@@ -3,6 +3,14 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.4.4]
+- change type parameters in AbstractCodim2EigenSolver
+- add Krylov.jl as possible linear solver
+
+## [0.4.3]
+- add jacobian option MinAugMatrixBased to Fold/Hopf continuation
+- remove reference to RecursiveVec
+
 ## [0.4.2]
 - change bordered linear solvers' interface
 - `record_from_solution` has been changed to the following definition
