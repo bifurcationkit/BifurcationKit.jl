@@ -26,6 +26,10 @@ const _field_jet = [(Symbol('R',i,j),i,j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     Rᵢⱼ(x,p) = 1/i!j! dⁱₓ dʲₚ F(x, p)
 
+    ## Note
+
+    For now, we ask the user to pass an out-of-place formulation of the functions.
+
     ## Fields
 
     $(TYPEDFIELDS)
@@ -296,10 +300,10 @@ for (op, at) in (
                 else
                     d3Fc = d3F
                 end
-                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution, update!)
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
 
                 VF = BifFunction(F, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
+                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution)
             end
         end
     end
