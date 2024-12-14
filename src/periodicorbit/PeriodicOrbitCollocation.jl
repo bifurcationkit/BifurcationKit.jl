@@ -1,6 +1,4 @@
 using FastGaussQuadrature: gausslegendre
-# using PreallocationTools: dualcache, get_tmp
-
 
 """
     cache = MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
@@ -60,10 +58,8 @@ end
 @inline get_mesh_coll(cache::MeshCollocationCache) = cache.σs
 get_max_time_step(cache::MeshCollocationCache) = maximum(diff(getmesh(cache)))
 @inline τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j]) # for σ ∈ [-1,1], τj ∈ [τs[j], τs[j+1]]
-# @inline τj(σ, τs, j) = τs[j] + (σ) * (τs[j+1] - τs[j]) # for σ ∈ [0,1], τj ∈ [τs[j], τs[j+1]]
 # get the sigma corresponding to τ in the interval (τs[j], τs[j+1])
 @inline σj(τ, τs, j) = (2*τ - τs[j] - τs[j + 1])/(τs[j + 1] - τs[j]) # for τ ∈ [τs[j], τs[j+1]], σj ∈ [-1, 1]
-# @inline σj(τ, τs, j) = (τ - τs[j])/(τs[j + 1] - τs[j]) # for τ ∈ [τs[j], τs[j+1]], σj ∈ [0, 1]
 
 function lagrange(i::Int, x, z)
     nz = length(z)

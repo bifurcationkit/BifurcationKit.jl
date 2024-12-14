@@ -110,7 +110,7 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem
             end
         end
     else
-        @assert false
+        @assert false "WIP! No parallel adjoint matrix-free shooting for curve of PD/NS"
         # call jacobian of the flow, jacobian-vector product
         solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
         for ii in 1:M

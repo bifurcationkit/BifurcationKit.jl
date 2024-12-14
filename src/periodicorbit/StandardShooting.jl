@@ -271,9 +271,9 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
         # we put the identity matrices
         ip1 = (ii == M) ? 1 : ii+1
         if M == 1
-            J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= -In
+            J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N] .+= (-1) .* In
         else
-            J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N]  .= -In
+            J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N]  .= (-1) .* In
         end
         # we fill the last column
         tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], par, sh.ds[ii] * T).u
