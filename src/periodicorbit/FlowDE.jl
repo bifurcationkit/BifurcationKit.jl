@@ -97,7 +97,7 @@ function dflowMonoSerial(x::AbstractVector, p, dx, tm, pb::ODEProblem, alg; k...
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = p)
     # the use of concrete_solve makes it compatible with Zygote
-    sol = SciMLBase.solve(_prob, alg, save_everystep = false; k...)[end]
+    sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...)[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
@@ -109,7 +109,7 @@ end
 
 # function used to compute the derivative of the flow, so pb encodes the variational equation
 # differential of the flow when a problem is passed for the Monodromy
-# default behaviour (the FD case is handled by dispatch)
+# default behavior (the FD case is handled by dispatch)
 function jvp(fl::FlowDE{T1}, x::AbstractArray, p, dx, tm;  kw...) where {T1 <: ODEProblem}
     dflowMonoSerial(x, p, dx, tm, fl.probMono, fl.algMono; fl.kwargsDE..., kw...)
 end
@@ -159,16 +159,16 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, p, tm; 
     _flow(x, p, tm, fl.prob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem,T2,Tjac,T3}
+function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
         return dflow_fdSerial(x, par, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
-        return dflowMonoSerial(x, p, dx, tm, fl.probMono, fl.algMono; fl.kwargsDE..., kw...)
+        return dflowMonoSerial(x, par, dx, tm, fl.probMono, fl.algMono; fl.kwargsDE..., kw...)
     end
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; kw...) where {T1 <: EnsembleProblem}
-    dflowMonoSerial(x, p, dx, tm, fl.probMono.prob, fl.algMono; fl.kwargsDE..., kw...)
+    dflowMonoSerial(x, par, dx, tm, fl.probMono.prob, fl.algMono; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, par, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
