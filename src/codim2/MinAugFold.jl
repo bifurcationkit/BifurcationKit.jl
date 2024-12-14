@@ -575,6 +575,28 @@ function continuation_fold(prob,
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
         rmul!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
+    else
+        # we use a minimally augmented formulation to set the initial vectors
+        a = ζ
+        b = ζad
+        𝒯 = typeof(p)
+        L = jacobian(prob, foldpointguess.u, parbif)
+        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), 0*a, one(𝒯))
+        ~cv && @debug "Bordered linear solver for J did not converge."
+
+        @debug "EIGENVECTORS" cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L, newb), Inf)
+
+        L★ = ~has_adjoint(prob) ? transpose(L) : jad(prob, bifpt.x, parbif)
+        n = length(a)
+        @debug "" typeof(L★)
+        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), 0*a, one(𝒯))
+        ~cv && @debug "Bordered linear solver for J' did not converge."
+
+        @debug "EIGENVECTORS" cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L★, newa), Inf)
+
+        ζad = newa; rmul!(ζad, 1 / normC(ζad))
+        ζ   = newb; rmul!(ζ,   1 / normC(ζ))
+        rmul!(ζad, 1 / dot(ζ, ζad))
     end
 
     return continuation_fold(prob, alg,
