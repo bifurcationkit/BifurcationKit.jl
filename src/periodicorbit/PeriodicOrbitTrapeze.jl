@@ -376,7 +376,7 @@ function jacobian_potrap_block(pb::PeriodicOrbitTrapProblem, u0::AbstractVector,
     cylic_potrap_block!(pb, u0, par, Aγ)
 
     In = spdiagm( 0 => ones(N))
-    Aγ[Block(M, 1)] = -γ * In
+    Aγ[Block(M, 1)] = (-γ) * In
     Aγ[Block(M, M)] = In
     return Aγ
 end
@@ -535,7 +535,7 @@ end
 
         @. Jn = In -  tmpJ * (h/2)
         # setblock!(Jc, Jn, ii, ii)
-        J0.nzval[indx[ii,ii]] .= Jn.nzval
+        J0.nzval[indx[ii, ii]] .= Jn.nzval
     end
 
     # setblock!(Aγ, -γ * In, M, 1)

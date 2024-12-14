@@ -282,6 +282,9 @@ for (op, at) in (
                     iip = _isinplace(_F)
                     F = iip ? (x, p) -> _F(similar(x), x, p) : _F
                 end
+
+                Finp = nothing
+
                 J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
                 jvp = isnothing(jvp) ?
                       (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF

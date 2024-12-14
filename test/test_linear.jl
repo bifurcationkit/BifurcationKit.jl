@@ -60,7 +60,7 @@ typeof(z_sim) == typeof(z_sim2)
 # test _axpy_op
 J0 = rand(100, 100)
 dx = rand(size(J0, 1))
-_o = dx = rand(size(J0, 1))
+_o = rand(ComplexF64, size(J0, 1))
 a₀ = rand(ComplexF64)
 a₁ = -1.432
 BK._axpy(J0, 0, a₁)

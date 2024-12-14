@@ -66,7 +66,7 @@ $(TYPEDFIELDS)
     "Continuation step at which the special occurs"
     step::Int64 = 0
 
-    "`status ∈ {:converged, :guess, :guessL}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point. If `status == :guess`, the bissection algorithm failed to meet the requirements given in `::ContinuationPar`. Same for `status == :guessL` but the bissection algorithm stopped on the left of the bifurcation point."
+    "`status ∈ {:converged, :guess, :guessL}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point. If `status == :guess`, the bisection algorithm failed to meet the requirements given in `::ContinuationPar`. Same for `status == :guessL` but the bisection algorithm stopped on the left of the bifurcation point."
     status::Symbol = :guess
 
     "`δ = (δr, δi)` where δr indicates the change in the number of unstable eigenvalues and δi indicates the change in the number of unstable eigenvalues with nonzero imaginary part. `abs(δr)` is thus an estimate of the dimension of the kernel of the Jacobian at the special (bifurcation) point."
