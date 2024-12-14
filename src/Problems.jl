@@ -11,12 +11,36 @@ isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
 save_solution_default(x, p) = x
 
+const _type_jet = [Symbol("T",i,j) for i=0:3, j=1:7 if i+i<7] |> vec
+const _field_jet = [(Symbol('R',i,j),i,j) for i=0:3, j=1:7 if i+i<7] |> vec 
+
+@eval begin
+    """
+    $(TYPEDEF)
+
+    Structure to hold the jet of a vector field. It saves the different functions `Rᵢⱼ` which correspond to the following (i+j) linear form 
+
+    Rᵢⱼ(x,p)(dx₁, ⋅⋅⋅, dxᵢ, dp₁, ⋅⋅⋅, dpⱼ)
+
+    More precisely
+
+    Rᵢⱼ(x,p) = 1/i!j! dⁱₓ dʲₚ F(x, p)
+
+    ## Fields
+
+    $(TYPEDFIELDS)
+    """
+    @with_kw_noshow struct Jet{$(_type_jet...)}
+        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
+    end
+end
+
 """
 Determine if the vector field is of the form `f!(out,z,p)`.
 """
 function _isinplace(f)
     m = minimum(numargs(f))
-    @assert 1 < m < 4 "You have too many/few arguments in your vector field F. It should be of the form `F(x, p)` or `F!(x, p)`."
+    @assert 1 < m < 4 "You have too many/few arguments in your vector field F. It should be of the form `F(x,p)` or `F!(x,p)`."
     return m == 3
 end
 
@@ -33,11 +57,14 @@ $(TYPEDFIELDS)
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
 - `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x,p,dx)`
+- `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other Jets.
 - etc
 """
-struct BifFunction{Tf, Tdf, Tdfad, Tj, Tjad, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ} <: AbstractBifurcationFunction
+struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ, Tjet} <: AbstractBifurcationFunction
     "Vector field. Function of type out-of-place `result = f(x, p)` or inplace `f(result, x, p)`. For type stability, the types of `x` and `result` should match"
     F::Tf
+    "Same as F but inplace with signature F!(result, x, p)"
+    F!::TFinp
     "Differential of `F` with respect to `x`, signature `dF(x,p,dx)`"
     dF::Tdf
     "Adjoint of the Differential of `F` with respect to `x`, signature `dFad(x,p,dx)`"
@@ -49,6 +76,8 @@ struct BifFunction{Tf, Tdf, Tdfad, Tj, Tjad, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ
     J::Tj
     "jacobian adjoint, it should be implemented in an efficient manner. For matrix-free methods, `transpose` is not readily available and the user must provide a dedicated method. In the case of sparse based jacobian, `Jᵗ` should not be passed as it is computed internally more efficiently, i.e. it avoids recomputing the jacobian as it would be if you pass `Jᵗ = (x, p) -> transpose(dF(x, p))`."
     Jᵗ::Tjad
+    "Inplace jacobian"
+    J!::TJinp
     "Second Differential of `F` with respect to `x`, signature `d2F(x,p,dx1,dx2)`"
     d2F::Td2f
     "Third Differential of `F` with respect to `x`, signature `d3F(x,p,dx1,dx2,dx3)`"
@@ -61,13 +90,17 @@ struct BifFunction{Tf, Tdf, Tdfad, Tj, Tjad, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ
     isSymmetric::Tsym
     "used internally to compute derivatives (with finite differences), for example for normal form computation and codim 2 continuation."
     δ::Tδ
-    "optionally sets whether the function is inplace or not"
+    "optionally sets whether the function is inplace or not. You can use `in_bisection(state)` to inquire whether the current state is in bisection mode."
     inplace::Bool
+    "jet of the vector field"
+    jet::Tjet
 end
 
 # getters
 residual(pb::BifFunction, x, p) = pb.F(x, p)
+residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p);o)
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
+jacobian!(pb::BifFunction, J, x, p) = pb.J!(J, x, p)
 jad(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
 dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
@@ -81,6 +114,15 @@ has_adjoint(pb::BifFunction) = ~isnothing(pb.Jᵗ)
 has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.dFad)
 isinplace(pb::BifFunction) = pb.inplace
 getdelta(pb::BifFunction) = pb.δ
+
+# getters for the jet
+for Rij in _field_jet
+    @eval begin
+        $(Rij[1])(pb::Jet, args...; kwargs...) = pb.$(Rij[1])(args...; kwargs...)
+        @inline $(Rij[1])(pb::BifFunction, args...; kwargs...) = $(Rij[1])(pb.jet, args...; kwargs...)
+        @inline $(Rij[1])(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij[1])(pb.VF, args...; kwargs...)
+    end
+end
 
 record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
@@ -126,7 +168,7 @@ for (op, at) in (
 
             ## Constructors
             - ``BifurcationProblem(F, u0, params, lens)`` all derivatives are computed using ForwardDiff.
-            - ``BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)`` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finiteDifferences`. You can also pass
+            - ``BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)`` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
                 - `plot_solution` see above
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need to provide an adjoint
@@ -223,7 +265,8 @@ for (op, at) in (
                          plot_solution = plot_default,
                          delta = convert(eltype(u0), 1e-8),
                          save_solution = save_solution_default,
-                         inplace = false)
+                         inplace = false,
+                         kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
                 if _get(parms, new_lens) isa Int
@@ -239,22 +282,24 @@ for (op, at) in (
                 jvp = isnothing(jvp) ?
                       (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
                 d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> F(x .+ t .* dx1, p), zero(eltype(dx1)))
+
                 if isnothing(d2F)
                     d2F = (x, p, dx1, dx2) -> ForwardDiff.derivative(t -> d1Fad(x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
                     d2Fc = (x, p, dx1, dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x, p, _dx1, _dx2))(dx1, dx2)
                 else
                     d2Fc = d2F
                 end
+
                 if isnothing(d3F)
                     d3F = (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
                     d3Fc = (x, p, dx1, dx2, dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x, p, _dx1, _dx2, _dx3))(dx1, dx2, dx3)
                 else
                     d3Fc = d3F
                 end
+                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution, update!)
+                d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
 
-                d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), 0.0) : d3F
-                VF = BifFunction(F, jvp, vjp, J, Jᵗ, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace)
-                return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
+                VF = BifFunction(F, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
             end
         end
     end
@@ -278,7 +323,9 @@ plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
 isinplace(pb::AbstractAllJetBifProblem) = isinplace(pb.VF)
 is_symmetric(pb::AbstractAllJetBifProblem) = is_symmetric(pb.VF)
 residual(pb::AbstractAllJetBifProblem, x, p) = residual(pb.VF, x, p)
+residual!(pb::AbstractAllJetBifProblem, o, x, p) = residual!(pb.VF, o, x, p)
 jacobian(pb::AbstractAllJetBifProblem, x, p) = jacobian(pb.VF, x, p)
+jacobian!(pb::AbstractAllJetBifProblem, J, x, p) = jacobian!(pb.VF, J, x, p)
 jad(pb::AbstractAllJetBifProblem, x, p) = jad(pb.VF, x, p)
 dF(pb::AbstractAllJetBifProblem, x, p, dx) = dF(pb.VF, x, p, dx)
 d2F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)

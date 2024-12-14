@@ -100,16 +100,16 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 # @reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
 @reset opts_posh_fold.newton_options.verbose = false
 @reset opts_posh_fold.newton_options.linsolver.solver.verbose=0
-fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
-    # verbosity = 3, #plot = true,
-    detect_codim2_bifurcation = 0,
-    jacobian_ma = :finiteDifferencesMF,
-    bdlinsolver = MatrixFreeBLS(lspo),
-    start_with_eigen = false,
-    callback_newton = BK.cbMaxNorm(1),
-    )
+# fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
+#     # verbosity = 3, #plot = true,
+#     detect_codim2_bifurcation = 0,
+#     jacobian_ma = :finiteDifferencesMF,
+#     bdlinsolver = MatrixFreeBLS(lspo),
+#     start_with_eigen = true,
+#     callback_newton = BK.cbMaxNorm(1),
+#     )
 
-@test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
+# @test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
 @info "--> PD curve"

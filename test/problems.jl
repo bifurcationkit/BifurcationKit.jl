@@ -2,10 +2,13 @@
 using Test, BifurcationKit
 const BK = BifurcationKit
 
-prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]))
+prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]), R11=(x,p,dx,dp) -> dx .* dp)
 
 BK.residual(prob, prob.u0, prob.params)
 BK.jacobian(prob, prob.u0, prob.params)
+prob.VF.jet.R11(prob.u0, prob.params, 1,1)
+BK.R11(prob.VF.jet, prob.u0, prob.params, 1,1)
+BK.R11(prob, prob.u0, prob.params, 1,1)
 
 prob = BifurcationProblem((o,x,p)-> o.=x, rand(2), rand(2), (@optic _[1]); inplace = true)
 ######################################################################
