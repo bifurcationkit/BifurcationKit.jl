@@ -359,7 +359,6 @@ end
 function Jc(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
     M, N = size(pb)
     T = extract_period_fdtrap(pb, u0)
-
     out  = similar(du)
     outc = reshape(out, N, M-1)
     tmp  = similar(view(outc, :, 1))

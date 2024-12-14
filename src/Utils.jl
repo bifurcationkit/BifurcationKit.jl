@@ -20,6 +20,10 @@ function print_ev(eigenvals, color = :black)
     end
 end
 ####################################################################################################
+# iterated derivatives
+∂(f) = x -> ForwardDiff.derivative(f, x)
+∂(f, n::Int) = n == 0 ? f : ∂(∂(f), n-1)
+####################################################################################################
 function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
     if lastRow
         lastRow && println("└─────────────┴──────────────────────┴────────────────┘")

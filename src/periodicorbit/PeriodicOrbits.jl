@@ -244,7 +244,10 @@ end
 
 ####################################################################################################
 # Continuation for shooting problems
-function build_jacobian(probPO::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function build_jacobian(probPO::AbstractShootingProblem, 
+                        orbitguess, 
+                        par;
+                        δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
     @assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
     if jacobianPO isa AutoDiffDenseAnalytical
@@ -385,12 +388,12 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 
     cb = get(kwargs, :callback_newton, cb_default)
 
-    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev = nev, verbose = verbose)
+    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
-    Ty = typeof(ds)
-    pred = predictor(hopfpt, ds; verbose = verbose, ampfactor = Ty(ampfactor))
+    𝒯 = typeof(ds)
+    pred = predictor(hopfpt, ds; verbose, ampfactor = 𝒯(ampfactor))
 
     # we compute a phase so that the constraint equation
     # < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
@@ -445,14 +448,14 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
         end
 
         # TODO should only update guess here, cf Poincaré
-        probPO0, orbitzeroamp = re_make(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, Tfactor * abs(2pi / pred.ω))
+        probPO0, orbitzeroamp = re_make(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, 𝒯(Tfactor * abs(2pi / pred.ω)))
         sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
 
         # find the bifurcated branch using deflation
         if ~(probPO isa PoincareShootingProblem)
-            deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [sol0.u]; autodiff = true)
+            deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(𝒯), [sol0.u]; autodiff = true)
         else
-            deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, 1.0, [sol0.u]; autodiff = true)
+            deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, one(𝒯), [sol0.u]; autodiff = true)
         end
 
         verbose && println("\n──▶ Compute point on bifurcated branch...")

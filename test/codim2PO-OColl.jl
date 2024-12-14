@@ -109,7 +109,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     )
 
 # compute NS normal form using Poincare return map     
-get_normal_form(brpo_ns, 1)
+get_normal_form(brpo_ns, 1; prm = true)
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = false)
 

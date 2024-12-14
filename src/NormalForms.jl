@@ -906,16 +906,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     parbif = set(getparams(br), lens, p)
     L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
 
-    if ~detailed
-        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
-                        ω,
-                        parbif, lens,
-                        missing, missing,
-                        (a = missing, b = missing),
-                        :Missing
-                    )
-    end
-
     # right eigenvector
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -948,16 +938,29 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                  ),
         :SuperCritical
     )
+
+    if ~detailed
+        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+                ω,
+                parbif, lens,
+                ζ, ζ★,
+                (a = missing, 
+                b = missing
+                        ),
+                :SuperCritical
+            )
+    end
+
     return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L)
 end
 
 """
 $(SIGNATURES)
 
-This function provides prediction for the periodic orbits branching off the Hopf bifurcation point.
+This function provides prediction for the periodic orbits branching off the Hopf bifurcation point. If the hopf normal form does not contain the `a,b` coefficients, then a guess if formed with the eigenvector and `ampfactor`. In case it does, a second order predictor is computed.
 
 # Arguments
-- `bp::Hopf` the bifurcation point
+- `bp::Hopf` bifurcation point
 - `ds` at with distance relative to the bifurcation point do you want the prediction. Can be negative. Basically the new parameter is `p = bp.p + ds`.
 
 # Optional arguments
@@ -978,26 +981,39 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
 
     # get the normal form
     nf = hp.nf
-    a = nf.a
-    b = nf.b
+    if ~ismissing(nf.a) && ~ismissing(nf.b)
+        a = nf.a
+        b = nf.b
 
-    # we need to find the type, supercritical or subcritical
-    dsfactor = real(a) * real(b) < 0 ? 1 : -1
-    dsnew::𝒯 = abs(ds) * dsfactor
-    pnew::𝒯 = hp.p + dsnew
+        # we need to find the type, supercritical or subcritical
+        dsfactor = real(a) * real(b) < 0 ? 1 : -1
+        dsnew::𝒯 = abs(ds) * dsfactor
+        pnew::𝒯 = hp.p + dsnew
 
-    # we solve a * ds + b * amp^2 = 0
-    amp::𝒯 = ampfactor * sqrt(-dsnew * real(a) / real(b))
+        # we solve a * ds + b * amp^2 = 0
+        amp::𝒯 = ampfactor * sqrt(-dsnew * real(a) / real(b))
 
-    # correction to Hopf Frequency
-    ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+        # correction to Hopf Frequency
+        ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+        Ψ001 = nf.Ψ001
+        Ψ110 = nf.Ψ110
+        Ψ200 = nf.Ψ200
+    else
+        amp = ampfactor
+        ω = hp.ω
+        pnew = hp.p + ds
+        Ψ001 = 0
+        Ψ110 = 0
+        Ψ200 = 0
+        dsfactor = 1
+    end
     A(t) = amp * exp(complex(0, t))
 
     return (orbit = t -> hp.x0 .+ 
                     2 .* real.(hp.ζ .* A(t)) .+
-                    ds .* nf.Ψ001 .+
-                    abs2(A(t)) .* real.(nf.Ψ110) .+
-                    2 .* real.(A(t)^2 .* nf.Ψ200) ,
+                    ds .* Ψ001 .+
+                    abs2(A(t)) .* real.(Ψ110) .+
+                    2 .* real.(A(t)^2 .* Ψ200) ,
             amp = 2amp,
             ω = ω,
             period = abs(2pi/ω),

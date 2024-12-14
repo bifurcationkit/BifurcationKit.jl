@@ -327,7 +327,7 @@ end
         if dim == 1
             last_row_𝐅𝐬[end-1, rg] .= F.factors[pinv[end-δn], :]
         else
-            # TODO!! We must improve this !!
+            # TODO!! We must improve this !! All allocations happens here
             last_row_𝐅𝐬[:, rg] .= F.L[pinv[end-δn:end], :]
             # last_row_𝐅𝐬[:, rg] .= F.factors[pinv[end-δn:end], :]
         end
@@ -339,7 +339,7 @@ end
         Jcop[end-δn:end, rg] .= J[end-δn:end, rg]
         mul!(Jcop[end-δn:end, rg], 
             last_row_𝐅𝐬[end-δn:end, rg], 
-            Jcop[rg, rg], -1,1)
+            Jcop[rg, rg], -1, 1)
 
         # ldiv!(Jcop[rg, end-δn:end] , Lₜ, F.P[1:end-1-δn,1:end-1-δn] * J[rg, end-δn:end])
         ldiv!(Jcop[rg, end-δn:end], 
@@ -517,7 +517,7 @@ end
                 rg = i+1:nⱼ
                 rg = Iterators.flatten((i+1:st+2n, nⱼ-δn:nⱼ))
                 for l in rg
-                    ρ = J[l,i+n] * invpivot
+                    ρ = J[l, i+n] * invpivot
                     rhs[l] -= rhs[i] * ρ
                     # rg = 1:nⱼ
                     rgₖ = Iterators.flatten((1:n, st+1+n:st+3n, nⱼ-δn:nⱼ))
@@ -583,7 +583,6 @@ function (ls::COPLS)(Jc, rhs)
     return res, true, 1
 end
 
-
 function _fast_copy_bordered!(x, y)
     for (xcol, ycol) ∈ zip(eachcol(x), eachcol(y))
         @views xcol[1:end - 1] .= ycol
@@ -597,13 +596,13 @@ end
 # │   ξu * dz.u'   ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (ls::COPBLS)(_Jc, dR,
-                    dzu, dzp::T, 
-                    R::AbstractVecOrMat, n::T,
-                    ξu::T = T(1), ξp::T = T(1);
+                    dzu, dzp::𝒯, 
+                    R::AbstractVecOrMat, n::𝒯,
+                    ξu::𝒯 = one(𝒯), ξp::𝒯 = one(𝒯);
                     shift::Ts = nothing, 
                     Mass::Tm = LinearAlgebra.I,
                     dotp = nothing,
-                    applyξu! = nothing)  where {T <: Number, Ts, Tm}
+                    applyξu! = nothing)  where {𝒯 <: Number, Ts, Tm}
     Jc = _get_matrix(_Jc) # to handle FloquetWrapper
     if isnothing(shift)
         A = Jc

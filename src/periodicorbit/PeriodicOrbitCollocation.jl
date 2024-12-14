@@ -169,10 +169,10 @@ Here are some useful methods you can apply to `pb`
 # Orbit guess
 You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
 
+Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
+
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
-
-Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
@@ -1099,11 +1099,7 @@ end
 ####################################################################################################
 # mesh adaptation method
 
-# iterated derivatives
-∂(f) = x -> ForwardDiff.derivative(f, x)
-∂(f, n::Int) = n == 0 ? f : ∂(∂(f), n-1)
-
-function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
+@views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
     n, m, Ntst = size(sol.pb)
     xc = get_time_slices(sol.pb, sol.x)
 
@@ -1141,12 +1137,12 @@ References:
 
 [2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
 """
-function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
+function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯};
                         normE = norminf,
                         verbosity::Bool = false,
                         K = Inf,
                         par = nothing,
-                        kw...) where Ty
+                        kw...) where 𝒯
     n, m, Ntst = size(coll) # recall that m = ncol
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function
@@ -1167,14 +1163,13 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
         @error "[Mesh-adaptation]. The mesh is non monotonic! Please report the error to the website of BifurcationKit.jl"
         return (success = false, newτsT = τsT, ϕ = τsT)
     end
-    sk = zeros(Ty, Ntst)
+    sk = zeros(𝒯, Ntst)
     sk[1] = 2normE(vm[1]) / (τsT[2] - τsT[1])
     for i in 2:Ntst-1
         sk[i] = normE(vm[i])   / (τsT[i+1] - τsT[i-1]) +
                 normE(vm[i+1]) / (τsT[i+2] - τsT[i])
     end
     sk[Ntst] = 2normE(vm[end]) / (τsT[end] - τsT[end-2])
-
     ############
     # monitor function
     ϕ = sk.^(1/m)
@@ -1188,13 +1183,12 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
     # these intermediate values are useful because the integral is piecewise linear
     # and equipartition is analytical
     # there are ntst values for the integrals, one for (0, mesh[2]), (mesh[2], mesh[3])...
-    θs = zeros(Ty, Ntst); θs[1] = ϕ[1] * (τsT[2] - τsT[1])
+    θs = zeros(𝒯, Ntst); θs[1] = ϕ[1] * (τsT[2] - τsT[1])
     for i = 2:Ntst
         θs[i] = θs[i-1] + ϕ[i] * (τsT[i+1] - τsT[i])
     end
     θs = vcat(0, θs)
     θ = θs[end]
-
     ############
     # compute new mesh from equipartition
     newτsT = zero(τsT); newτsT[end] = 1
@@ -1223,11 +1217,9 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{Ty};
         "\n   └─── θ             = ", θ,
         "\n")
     end
-
     ############
     # modify meshes
     update_mesh!(coll, newmesh)
-
     ############
     # update solution
     newsol = generate_solution(coll, sol, period)
