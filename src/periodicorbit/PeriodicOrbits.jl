@@ -364,6 +364,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `use_normal_form = true` compute the normal form to get the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the eigenvector. This can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - all `kwargs` from [`continuation`](@ref)
 
@@ -380,6 +381,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
                     δp = nothing,
                     ampfactor = 1,
                     usedeflation = false,
+                    use_normal_form = true,
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     kwargs...)
     # compute the normal form of the branch point
@@ -388,7 +390,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
 
     cb = get(kwargs, :callback_newton, cb_default)
 
-    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose)
+    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose, detailed = use_normal_form)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
