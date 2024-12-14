@@ -848,13 +848,10 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
     return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
 
-# simplified function to extract periodic orbit
-get_periodic_orbit(prob::PeriodicOrbitOCollProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
-
 # same function as above but for coping with mesh adaptation
 @views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, 
-                x::NamedTuple{(:mesh, :sol, :_mesh, :ϕ ), Tuple{Vector{Tp}, Vector{Tp}, Vector{Tp}, Vector{Tp}}}, 
-                p::Real) where Tp
+                x::Tx, 
+                p) where { Tx <: POSolutionAndState}
     mesh = x.mesh
     u = x.sol
     T = getperiod(prob, u, p)
