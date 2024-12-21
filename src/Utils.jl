@@ -84,25 +84,6 @@ function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
     Nf = length(F(x))
     J = zeros(eltype(x), Nf, N)
-    finite_differences!(F, J, x; δ)
-    return J
-end
-
-function finite_differences(F, x::AbstractVector, p; δ = 1e-9)
-    N = length(x)
-    Nf = length(F(x, p))
-    J = zeros(eltype(x), Nf, N)
-    finite_differences!(F, J, x, p; δ = δ)
-    return J
-end
-
-"""
-$(SIGNATURES)
-
-Compute a Jacobian by Finite Differences, update J. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
-"""
-function finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
-    f = F(x)
     x1 = copy(x)
     @inbounds for i in eachindex(x)
         x1[i] += δ
@@ -115,15 +96,19 @@ function finite_differences!(F, J, x::AbstractVector; δ = 1e-9)
     return J
 end
 
-function finite_differences!(F, J, x::AbstractVector, p; δ = 1e-9)
-    f = F(x,p)
+"""
+$(SIGNATURES)
+
+Same as finite_differences but with inplace `F`
+"""
+@views function finite_differences!(F, J, x::AbstractVector; δ = 1e-9, tmp = copy(x))
     x1 = copy(x)
     @inbounds for i in eachindex(x)
         x1[i] += δ
-        J[:, i] .= F(x1,p)
+        F(J[:, i], x1)
         x1[i] -= 2δ
-        J[:, i] .-= F(x1,p)
-        J[:, i] ./= 2δ
+        F(tmp, x1)
+        J[:, i] .= @. (J[:, i] - tmp) / (2δ)
         x1[i] += δ
     end
     return J

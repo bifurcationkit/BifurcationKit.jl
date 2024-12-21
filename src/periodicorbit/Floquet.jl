@@ -420,7 +420,7 @@ end
     vals = values[indvalid]
     # these are the Floquet multipliers
     μ = @. Complex(1 / (1 + vals))
-    vp0 = minimum(abs∘log, μ)
+    vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
         @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
     end
@@ -455,7 +455,7 @@ end
     _eig_floquet_col(J, n, m, Ntst, nev)
 end
 
-function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
+@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
     nbcoll = n * m
     N = n
     In = LinearAlgebra.I(N)
@@ -478,7 +478,7 @@ function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
 
     Jcop = copy(J)
     Jcop[end-N:end-1,end-N:end-1] .= In
-    Jcop[end-N:end-1,1:N] .= -In
+    Jcop[end-N:end-1,1:N] .= (-1) .* In
     Jcop[end, end] = J[end,end]
     Lₜ = LowerTriangular(copy(blockⱼ))
     for 𝐢 in 1:Ntst
@@ -532,7 +532,7 @@ function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
     # give indications on the precision on the Floquet coefficients
     vp0 = minimum(abs, σ)
     if vp0 > 1e-9
-        @warn "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
+        @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
     end
     return σ, Complex.(vecs[I, :]), true, 1
 end

@@ -31,4 +31,4 @@ BK.re_make(prob, J = (x,p)->zeros(2,2), Jᵗ = (x,p)->zeros(2,2), d2F=(x,p,dx1,d
 ######################################################################
 # test finite differences
 BK.finite_differences(identity, zeros(2))
-BK.finite_differences((x,p)->x, zeros(2), nothing)
+BK.finite_differences!((o,x)->o.=x, zeros(2, 2), zeros(2))

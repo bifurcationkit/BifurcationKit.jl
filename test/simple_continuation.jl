@@ -130,7 +130,7 @@ br0 = @time continuation(prob,
 ###############
 br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
 try
-    continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10), bla = 1)
+    continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10))
 catch
 end
 
