@@ -276,14 +276,13 @@ for (op, at) in (
                 if _get(parms, new_lens) isa Int
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
-                if inplace
-                    F = _F
+                if inplace || _isinplace(_F)
+                    F = (x, p) -> _F(similar(x), x, p)
+                    Finp = _F
                 else
-                    iip = _isinplace(_F)
-                    F = iip ? (x, p) -> _F(similar(x), x, p) : _F
+                    F = _F
+                    Finp = (o, x, p) -> o .= _F(x, p)
                 end
-
-                Finp = nothing
 
                 J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
                 jvp = isnothing(jvp) ?

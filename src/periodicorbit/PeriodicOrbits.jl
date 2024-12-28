@@ -45,7 +45,7 @@ isinplace(pb::AbstractPOFDProblem) = isinplace(pb.prob_vf)
 
 function applyF(pb, dest, x, p)
     if isinplace(pb)
-        pb.prob_vf.VF.F(dest, x, p)
+        residual!(pb.prob_vf, dest, x, p)
     else
         dest .= residual(pb.prob_vf, x, p)
     end

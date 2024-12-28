@@ -1033,6 +1033,8 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     plot_solution = nothing,
                     kwargs...)
 
+    jacPO = build_jacobian(coll, orbitguess, getparams(coll); δ)
+    _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
     if linear_algo isa COPBLS
         linear_algo = COPBLS(coll)
         Nbls = length(coll) + 2
@@ -1046,7 +1048,6 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
     end
-    jacPO = build_jacobian(coll, orbitguess, getparams(coll); δ = δ)
     options = _contParams.newton_options
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 
