@@ -36,14 +36,14 @@ struct MeshCollocationCache{𝒯}
     "Values of the coarse mesh, call τj. This can be adapted."
     τs::Vector{𝒯}
     "Values of collocation points, call σj. These are fixed."
-    σs::LinRange{𝒯}
+    σs::Vector{𝒯}
     "Full mesh containing both the coarse mesh and the collocation points."
     full_mesh::Vector{𝒯}
 end
 
 function MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
     τs = LinRange{𝒯}( 0, 1, Ntst + 1) |> collect
-    σs = LinRange{𝒯}(-1, 1, m + 1)
+    σs = LinRange{𝒯}(-1, 1, m + 1) |> collect
     L, ∂L, zg, wg = compute_legendre_matrices(σs)
     cache = MeshCollocationCache{𝒯}(Ntst, m, L, ∂L, zg, wg, τs, σs, zeros(𝒯, 1 + m * Ntst))
     # save the mesh where we removed redundant timing
@@ -57,7 +57,8 @@ end
 @inline getmesh(cache::MeshCollocationCache) = cache.τs
 @inline get_mesh_coll(cache::MeshCollocationCache) = cache.σs
 get_max_time_step(cache::MeshCollocationCache) = maximum(diff(getmesh(cache)))
-@inline τj(σ, τs, j) = τs[j] + (1 + σ)/2 * (τs[j+1] - τs[j]) # for σ ∈ [-1,1], τj ∈ [τs[j], τs[j+1]]
+_τj(σ, τⱼ₊₁, τⱼ) = τⱼ + (1 + σ)/2 * (τⱼ₊₁ - τⱼ) # for σ ∈ [-1,1], τj ∈ [τⱼ, τs[j+1]]
+@inline τj(σ, τs, j) = _τj(σ, τs[j+1], τs[j])
 # get the sigma corresponding to τ in the interval (τs[j], τs[j+1])
 @inline σj(τ, τs, j) = (2*τ - τs[j] - τs[j + 1])/(τs[j + 1] - τs[j]) # for τ ∈ [τs[j], τs[j+1]], σj ∈ [-1, 1]
 
@@ -95,15 +96,15 @@ $(SIGNATURES)
 
 Return all the times at which the problem is evaluated.
 """
-function get_times(cache::MeshCollocationCache{𝒯}) where 𝒯
+@views function get_times(cache::MeshCollocationCache{𝒯}) where 𝒯
     m, Ntst = size(cache)
     tsvec = zeros(𝒯, m * Ntst + 1)
     τs = cache.τs
     σs = cache.σs
     ind = 2
-    for j in 1:Ntst
+    @inbounds for j in 1:Ntst
         for l in 2:m+1
-            @inbounds t = τj(σs[l], τs, j)
+            t = _τj(σs[l], τs[j+1], τs[j])
             tsvec[ind] = t
             ind +=1
         end
@@ -418,10 +419,8 @@ $(SIGNATURES)
 
     rg = UnitRange(1, m+1)
     @inbounds for j in 1:Ntst
-        uj .= uc[:, rg]
-        vj .= vc[:, rg]
-        mul!(guj, uj, L)
-        mul!(gvj, vj, L)
+        mul!(guj, uc[:, rg], L)
+        mul!(gvj, vc[:, rg], L)
         @inbounds for l in 1:m
             phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
         end
@@ -485,10 +484,8 @@ end
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
-        uj .= uc[:, rg] # uj : n x m+1
-        vj .= vc[:, rg]
-        mul!(puj, uj, L) # puj : n x m
-        mul!(pvj, vj, ∂L)
+        mul!(puj, uc[:, rg], L) # puj : n x m
+        mul!(pvj, vc[:, rg], ∂L)
         @inbounds for l in 1:m
             phase += dot(puj[:, l], pvj[:, l]) * ω[l]
         end
@@ -515,15 +512,13 @@ end
     # temporaries to reduce allocations
     pj  = get_tmp(pb.cache.gj, u)  #zeros(𝒯, n, m)
     ∂pj = get_tmp(pb.cache.∂gj, u) #zeros(𝒯, n, m)
-    uj  = get_tmp(pb.cache.uj, u)  #zeros(𝒯, n, m+1)
     # out is of size (n, m⋅Ntst + 1)
     mesh = getmesh(pb)
     # range for locating time slices
     rg = axes(out, 2)[UnitRange(1, m+1)]
     for j in 1:Ntst
-        uj .= u[:, rg]    # size (n, m+1)
-        mul!( pj, uj, L)  # size (n, m)
-        mul!(∂pj, uj, ∂L) # size (n, m)
+        mul!( pj, u[:, rg], L)  # size (n, m)
+        mul!(∂pj, u[:, rg], ∂L) # size (n, m)
         # compute the collocation residual
         for l in Base.OneTo(m)
             # !!! out[:, end] serves as buffer for now !!!
@@ -974,13 +969,13 @@ newton(probPO::PeriodicOrbitOCollProblem,
 
 This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-newton(probPO::PeriodicOrbitOCollProblem,
+function newton(probPO::PeriodicOrbitOCollProblem,
                 orbitguess,
                 defOp::DeflationOperator,
                 options::NewtonPar;
-                kwargs...) =
+                kwargs...)
     _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
-
+end
 
 function build_jacobian(coll::PeriodicOrbitOCollProblem, 
                         orbitguess, 
@@ -1023,7 +1018,7 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 # Keywords arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
-function continuation(probPO::PeriodicOrbitOCollProblem,
+function continuation(coll::PeriodicOrbitOCollProblem,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar,
@@ -1034,19 +1029,20 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
                     plot_solution = nothing,
                     kwargs...)
 
-    jacPO = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
     if linear_algo isa COPBLS
-        linear_algo = COPBLS(probPO)
-        Npo = length(probPO) + 2
+        linear_algo = COPBLS(coll)
+        Nbls = length(coll) + 2
+        floquet_wrap = jacPO(orbitguess, getparams(coll))
         linear_algo = COPBLS(
                         cache = linear_algo.cache,
                         solver = FloquetWrapperLS(linear_algo.solver),
-                        J = similar(jacPO(orbitguess, getparams(probPO)).jacpb, Npo, Npo), 
+                        J = similar(_Jcoll, Nbls, Nbls), 
                         )
         linear_algo.J .= 0
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
     end
+    jacPO = build_jacobian(coll, orbitguess, getparams(coll); δ = δ)
     options = _contParams.newton_options
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 
@@ -1058,13 +1054,13 @@ function continuation(probPO::PeriodicOrbitOCollProblem,
     end
 
     # change the user provided finalise function by passing prob in its parameters
-    _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
+    _finsol = modify_po_finalise(coll, kwargs, coll.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO.prob_vf), getlens(probPO.prob_vf))
-    _plotsol = modify_po_plot(probPO, _kwargs)
+    _recordsol = modify_po_record(coll, _kwargs, getparams(coll.prob_vf), getlens(coll.prob_vf))
+    _plotsol = modify_po_plot(coll, _kwargs)
 
-    probwp = WrapPOColl(probPO, jacPO, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    probwp = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, _recordsol)
 
     br = continuation(probwp, alg,
                       contParams;

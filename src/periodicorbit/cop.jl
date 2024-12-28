@@ -570,7 +570,7 @@ end
         else
             throw("Case not handled")
         end
-        mul!(rhs_tmp, Jext[(1:n) .+ st ,1:n], x₀, -1, 1)
+        mul!(rhs_tmp, Jext[(1:n) .+ st, 1:n], x₀, -1, 1)
         mul!(rhs_tmp, Jext[(1:n) .+ st, (1:n) .+ st .+ 2n], sol_ext[(1:n) .+ st .+ 2n], -1, 1)
         ldiv!(sol_ext[(1:n) .+ st .+ n], UpperTriangular(Jext[(1:n) .+ st, (1:n) .+ st .+ n]), rhs_tmp)
         st -= n

@@ -131,9 +131,9 @@ function modify_po_record(probPO, kwargs, par, lens)
             return _recordsol = (x, p; k...) -> begin
                 period = getperiod(probPO, x, set(par, lens, p))
                 sol = get_periodic_orbit(probPO, x, set(par, lens, p))
-                max = @views maximum(sol[1,:])
+                _min, _max = @views extrema(sol[1,:])
                 min = @views minimum(sol[1,:])
-                return (max = max, min = min, amplitude = max - min, period = period)
+                return (max = _max, min = _min, amplitude = _max - _min, period = period)
             end
         else
             return _recordsol = (x, p; k...) -> (period = getperiod(probPO, x, set(par, lens, p)),)

@@ -123,6 +123,10 @@ $(TYPEDEF)
 
 Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell to the eigensolver that it should use the monodromy matrix instead of the jacobian.
 
+## methods
+- `_get_matrix(::FloquetWrapper)`
+- `apply(shjac::FloquetWrapper, dx)`
+
 $(TYPEDFIELDS)
 """
 mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
