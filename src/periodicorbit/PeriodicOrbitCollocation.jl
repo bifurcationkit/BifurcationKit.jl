@@ -631,7 +631,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                                         (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) .* In
             end
             # add derivative w.r.t. the period
-            J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
+            J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-dt)
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
