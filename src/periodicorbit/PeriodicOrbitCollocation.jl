@@ -474,7 +474,7 @@ end
 @views function _phase_condition(pb::PeriodicOrbitOCollProblem,
                                     uc,
                                     (L, ∂L),
-                                    (puj, uj, pvj, vj),
+                                    (puj, _, pvj, vj),
                                     period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
@@ -541,10 +541,14 @@ end
     out[:, end] .= u[:, end] .- u[:, 1]
 end
 
-@views function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
+function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
+    residual!(prob, zero(u), u, pars)
+end
+
+function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
     uc = get_time_slices(prob, u)
     T = getperiod(prob, u, nothing)
-    result = zero(u)
+    # result = zero(u)
     resultc = get_time_slices(prob, result)
     Ls = get_Ls(prob.mesh_cache)
     functional_coll!(prob, resultc, uc, T, Ls, pars)
@@ -611,10 +615,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        uj .= uc[:, rg]
-        mul!(pj, uj, L) # pj ≈ (L * uj')'
-        α = period * (mesh[j+1] - mesh[j]) / 2
-        mul!(ϕj, ϕc[:, rg], ∂L)
+        dt = (mesh[j+1]-mesh[j]) / 2
+        α = period * dt
+        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         # put the jacobian of the vector field
         for l in 1:m
             if _transpose == false
@@ -624,8 +627,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             end
 
             for l2 in 1:m+1
-                J[rgNx .+ (l-1)*n, rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0 .+ ρI .* In) .+
-                                                        (ρD * ∂L[l2, l]) .* In
+                @inbounds J[rgNx .+ (l-1)*n, rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0) .+
+                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) .* In
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
@@ -640,7 +643,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     for j = 1:Ntst
         for k₁ = 1:m+1
             for k₂ = 1:m+1
-                J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
+                # J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
+                axpby!(Ω[k₁, k₂], ϕc[:, (j-1)*m + k₂], 1, J[end, rg])
             end
             if k₁ < m + 1
                 rg = rg .+ n
@@ -708,9 +712,9 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        uj .= uc[:, rg]
-        mul!(pj, uj, L) # pj ≈ (L * uj')'
-        α = period * (mesh[j+1]-mesh[j]) / 2
+        dt = (mesh[j+1]-mesh[j]) / 2
+        α = period * dt
+        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
@@ -725,7 +729,7 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
                                                          ρD * (∂L[l2, l] .* In)
             end
             # add derivative w.r.t. the period
-            J[Block(l + (j-1)*m, n_blocks)] = reshape(residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2), n, 1)
+            J[Block(l + (j-1)*m, n_blocks)] = reshape(residual(coll.prob_vf, pj[:,l], pars) .* (-dt), n, 1)
         end
         rg = rg .+ m
     end

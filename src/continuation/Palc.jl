@@ -413,8 +413,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     x_pred = _copy(x)
 
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
-
-    dX = _copy(res_f)
     dp = zero(𝒯)
     up = zero(𝒯)
 
