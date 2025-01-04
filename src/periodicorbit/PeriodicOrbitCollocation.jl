@@ -121,11 +121,12 @@ end
 cache to remove allocations from PeriodicOrbitOCollProblem
 """
 struct POCollCache{T}
-    gj::T
-    gi::T
-    ∂gj::T
-    uj::T
-    vj::T
+    gj::DiffCache{Matrix{T}, Vector{T}}
+    gi::DiffCache{Matrix{T}, Vector{T}}
+    ∂gj::DiffCache{Matrix{T}, Vector{T}}
+    uj::DiffCache{Matrix{T}, Vector{T}}
+    vj::DiffCache{Matrix{T}, Vector{T}}
+    tmp::DiffCache{Vector{T}, Vector{T}}
 end
 
 function POCollCache(𝒯::Type, n::Int, m::Int)
@@ -134,7 +135,8 @@ function POCollCache(𝒯::Type, n::Int, m::Int)
     ∂gj = DiffCache(zeros(𝒯, n, m))
     uj  = DiffCache(zeros(𝒯, n, m+1))
     vj  = DiffCache(zeros(𝒯, n, m+1))
-    return POCollCache(gj, gi, ∂gj, uj, vj)
+    tmp = DiffCache(zeros(𝒯, n))
+    return POCollCache(gj, gi, ∂gj, uj, vj, tmp)
 end
 ####################################################################################################
 
@@ -287,9 +289,6 @@ update_mesh!(pb::PeriodicOrbitOCollProblem, mesh) = update_mesh!(pb.mesh_cache, 
 @inline isinplace(pb::PeriodicOrbitOCollProblem) = isinplace(pb.prob_vf)
 @inline is_symmetric(pb::PeriodicOrbitOCollProblem) = is_symmetric(pb.prob_vf)
 @inline getdelta(pb::PeriodicOrbitOCollProblem) = getdelta(pb.prob_vf)
-
-@inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
-@inline has_adjoint(::WrapPOColl) = false #c'est dans problems.jl
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     N, m, Ntst = size(pb)

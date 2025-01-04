@@ -10,10 +10,14 @@ Ntst = 80
 m = 4
 N = 3
 #####################################################
-const _al = I + 10. .*rand(N,N)
+const _al = I + 10. .* rand(N, N)
 # prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> I(N))
 prob_ana = BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
-prob_col = PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+prob_col = PeriodicOrbitOCollProblem(Ntst, m; 
+                                    prob_vf = prob_ana, 
+                                    N = N, 
+                                    ϕ = rand(N*( 1 + m * Ntst)), 
+                                    xπ = rand(N*( 1 + m * Ntst)))
 _ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 #####################################################
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);

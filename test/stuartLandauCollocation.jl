@@ -224,7 +224,7 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = ra
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 prob_col(_ci, par_sl);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
-D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000186 seconds (461 allocations: 164.859 KiB)
+D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
 @test norminf(Jcofd - D) < 1e-15
 
 # same but with linear vector field
@@ -249,7 +249,9 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = r
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
 Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
+Jco_bk = @time BK.jacobian_poocoll_block(prob_col, _ci, par_sl);
 @test norminf(Jcofd - Jco) < 1e-14
+@test norminf(Jcofd - Jco_bk) < 1e-14
 BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
 # test for the case of sparse arrays
 # jacobian using BlockArray

@@ -1,6 +1,6 @@
 abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 
-# the following stuctures, say `struct BDLS <: AbstractBorderedLinearSolver;...;end` 
+# the following stucture, say `struct BDLS <: AbstractBorderedLinearSolver;...;end` 
 # rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing, dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
