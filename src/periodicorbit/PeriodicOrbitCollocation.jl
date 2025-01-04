@@ -512,17 +512,17 @@ end
     # temporaries to reduce allocations
     pj  = get_tmp(pb.cache.gj, u)  #zeros(𝒯, n, m)
     ∂pj = get_tmp(pb.cache.∂gj, u) #zeros(𝒯, n, m)
+    tmp = get_tmp(pb.cache.tmp, u)
     mesh = getmesh(pb)
     # range for locating time slices
     rg = axes(out, 2)[UnitRange(1, m+1)]
-    for j in 1:Ntst
+    @inbounds for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         mul!( pj, u[:, rg], L)  # size (n, m)
         mul!(∂pj, u[:, rg], ∂L) # size (n, m)
         # compute the collocation residual
         for l in Base.OneTo(m)
-            # !!! out[:, end] serves as buffer for now !!!
-            _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * (mesh[j+1] - mesh[j]) / 2, out[:, end])
+            _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
         rg = rg .+ m
@@ -623,12 +623,12 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             if _transpose == false
                 J0 .= jacobian(VF, pj[:,l], pars)
             else
-                J0 .= transpose(jacobian(VF, pj[:,l], pars))
+                J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end
 
             for l2 in 1:m+1
-                @inbounds J[rgNx .+ (l-1)*n, rgNy .+ (l2-1)*n ] .= (-α * L[l2, l]) .* (ρF .* J0) .+
-                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) .* In
+                J[_rgX, rgNy .+ (l2-1)*n ] .= @. (-α * L[l2, l] * ρF) * J0 +
+                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-dt)
@@ -797,7 +797,8 @@ end
     for j in 1:Ntst
         uj .= uc[:, rg]
         mul!(pj, uj, L) # pj ≈ (L * uj')'
-        α = period * (mesh[j+1]-mesh[j]) / 2
+        dt = (mesh[j+1]-mesh[j]) / 2
+        α = period * dt
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
@@ -812,7 +813,7 @@ end
                 J.nzval[indx[ l + (j-1) * m ,l2 + (j-1)*m] ] .= sparse(tmpJ).nzval
             end
             # add derivative w.r.t. the period
-            J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-(mesh[j+1]-mesh[j]) / 2)
+            J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-dt)
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -887,9 +888,13 @@ function re_make(coll::PeriodicOrbitOCollProblem,
     return probPO, orbitguess
 end
 
+##########################
+# problem wrappers
 residual(prob::WrapPOColl, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
+@inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
+@inline has_adjoint(::WrapPOColl) = false #c'est dans problems.jl
 
 # for recording the solution in a branch
 function save_solution(wrap::WrapPOColl, x, pars)
