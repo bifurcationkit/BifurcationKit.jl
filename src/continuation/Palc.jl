@@ -414,9 +414,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     # record the damping parameter
     α0 = α
 
-    # n = length(u)
-    # N = θ⋅dot(x - z0.u, τ0.u) / n + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
-    # N(u, _p) = arc_length_eq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
     N(u, _p) = arc_length_eq(dotθ, u, z0.u, _p - z0.p, τ0.u, τ0.p, θ, ds)
     normAC(resf, resn) = max(normN(resf), abs(resn))
 

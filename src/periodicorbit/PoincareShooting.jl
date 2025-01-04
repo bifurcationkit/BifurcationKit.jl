@@ -18,7 +18,7 @@ This composite type implements the Poincaré Shooting method to locate periodic 
 - `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 
 ## Jacobian
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 
 ## Simplified constructors
 - The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points

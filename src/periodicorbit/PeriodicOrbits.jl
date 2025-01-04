@@ -123,10 +123,11 @@ $(TYPEDEF)
 
 Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell to the eigensolver that it should use the monodromy matrix instead of the jacobian.
 
-## methods
+## Methods
 - `_get_matrix(::FloquetWrapper)`
 - `apply(shjac::FloquetWrapper, dx)`
 
+## Fields
 $(TYPEDFIELDS)
 """
 mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
@@ -146,6 +147,17 @@ _get_matrix(pb::FloquetWrapper) = pb.jacpb
 apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
 
 # specific linear solver to dispatch
+"""
+$(TYPEDEF)
+
+Define a structure to interface the linear solver with the type `FloquetWrapper`.
+
+## Methods
+- `LinearAlgebra.hcat(::FloquetWrapper, dR)`
+
+## Fields
+$(TYPEDFIELDS)
+"""
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
     solver::T # the use of field `solver` is good for BLS
 end
@@ -158,7 +170,7 @@ FloquetWrapperLS(ls::FloquetWrapperLS) = ls
 # this is to use of MatrixBLS
 LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
 ####################################################################################################
-const DocStrjacobianPOSh = """
+const DocStringJacobianPOSh = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `[AutoDiffMF(), MatrixFree(), AutodiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()]`. This is used to select a way of inverting the jacobian dG
     - For `MatrixFree()`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
     - For `AutoDiffMF()`, we use Automatic Differentiation (AD) to compute the (matrix-free) derivative of `x -> prob(x, p)` using a directional derivative. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
@@ -172,7 +184,7 @@ residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOSh) = false
 
-function _build_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
+function _generate_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = prob.jacobian
     if jacobianPO isa AutoDiffDenseAnalytical
         _J = prob(Val(:JacobianMatrix), orbitguess, par)
@@ -206,7 +218,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 """
 function newton(prob::AbstractShootingProblem,
                 orbitguess,
@@ -214,7 +226,7 @@ function newton(prob::AbstractShootingProblem,
                 lens::Union{AllOpticTypes, Nothing} = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
-    jac = _build_jacobian(prob, orbitguess, getparams(prob); δ = δ)
+    jac = _generate_jacobian(prob, orbitguess, getparams(prob); δ = δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     return solve(probw, Newton(), options; kwargs...)
 end
@@ -229,7 +241,7 @@ This is the deflated Newton-Krylov Solver for computing a periodic orbit using a
 Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
 
 # Optional argument
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 
 # Output:
 - solution::NonLinearSolution, see [`NonLinearSolution`](@ref)
@@ -241,14 +253,14 @@ function newton(prob::AbstractShootingProblem,
                 lens::Union{AllOpticTypes, Nothing} = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
-    jac = _build_jacobian(prob, orbitguess, getparams(prob))
+    jac = _generate_jacobian(prob, orbitguess, getparams(prob))
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     return solve(probw, defOp, options; kwargs...)
 end
 
 ####################################################################################################
 # Continuation for shooting problems
-function build_jacobian(probPO::AbstractShootingProblem, 
+function generate_jacobian(probPO::AbstractShootingProblem, 
                         orbitguess, 
                         par;
                         δ = convert(eltype(orbitguess), 1e-8))
@@ -281,7 +293,7 @@ Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingPro
 
 # Optional arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 """
 function continuation(probPO::AbstractShootingProblem,
                         orbitguess,
@@ -296,7 +308,7 @@ function continuation(probPO::AbstractShootingProblem,
     jacobianPO = probPO.jacobian
     @assert ~isnothing(getlens(probPO)) "You need to provide a lens for your periodic orbit problem."
 
-    jac = build_jacobian(probPO, orbitguess, getparams(probPO); δ = δ)
+    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ)
 
     if compute_eigenelements(contParams)
         contParams = @set contParams.newton_options.eigsolver = eigsolver
@@ -304,7 +316,7 @@ function continuation(probPO::AbstractShootingProblem,
 
     # change the user provided functions by passing probPO in its parameters
     _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
-    # this is to remove this part from the arguments passed to continuation
+    # remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))
     _plotsol   = modify_po_plot(probPO, _kwargs)
@@ -336,7 +348,7 @@ Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProbl
 
 # Optional argument
 - `linear_algo::AbstractBorderedLinearSolver`
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 
 """
 function continuation(prob::AbstractPeriodicOrbitProblem,

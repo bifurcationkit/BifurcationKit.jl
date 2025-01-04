@@ -250,6 +250,7 @@ for (op, at) in (
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+            residual!(pb::$op, o, x, p) = residual!(pb.prob, o, x, p)
         end
     end
 
@@ -285,6 +286,8 @@ for (op, at) in (
                 end
 
                 J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
+                J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
+
                 jvp = isnothing(jvp) ?
                       (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
                 d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> F(x .+ t .* dx1, p), zero(eltype(dx1)))

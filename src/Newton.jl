@@ -97,7 +97,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 
         # x = x - J \ fx
         x = minus!(x, u) # we use this form instead of just `minus!(x,u)` to deal
-        # with out-of-place functionals
+        # with out-of-place functional
 
         fx = residual(prob, x, p0)
         res = normN(fx)
@@ -118,7 +118,7 @@ end
 """
         solve(prob::AbstractBifurcationProblem, ::Newton, options::NewtonPar; normN = norm, callback = (;x, fx, J, residual, step, itlinear, options, x0, residuals; kwargs...) -> true, kwargs...)
 
-This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers (LS)](@ref) for more informations.
+This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` written `J(x, p0)` and initial guess `x0`. It is important to set the linear solver `options.linsolver` properly depending on your problem. This linear solver is used to solve ``J(x, p_0)u = -F(x, p_0)`` in the Newton step. You can for example use `linsolver = DefaultLS()` which is the operator backslash: it works well for Sparse / Dense matrices. See [Linear solvers (LS)](@ref) for more information.
 
 # Arguments
 - `prob` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
@@ -126,7 +126,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
 
 # Optional Arguments
 - `normN = norm` specifies a norm for the convergence criteria
-- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cb_default((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditionner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
+- `callback` function passed by the user which is called at the end of each iteration. The default one is the following `cb_default((x, fx, J, residual, step, itlinear, options, x0, residuals); k...) = true`. Can be used to update a preconditioner for example. You can use for example `cbMaxNorm` to limit the residuals norms. If yo  want to specify your own, the arguments passed to the callback are as follows
     - `x` current solution
     - `fx` current residual
     - `J` current jacobian

@@ -106,7 +106,7 @@ Return all the times at which the problem is evaluated.
         for l in 2:m+1
             t = _τj(σs[l], τs[j+1], τs[j])
             tsvec[ind] = t
-            ind +=1
+            ind += 1
         end
     end
     return tsvec
@@ -486,7 +486,7 @@ end
     @inbounds for j in 1:Ntst
         mul!(puj, uc[:, rg], L) # puj : n x m
         mul!(pvj, vc[:, rg], ∂L)
-        @inbounds for l in 1:m
+        @inbounds for l in Base.OneTo(m)
             phase += dot(puj[:, l], pvj[:, l]) * ω[l]
         end
         rg = rg .+ m
@@ -496,7 +496,7 @@ end
 
 function _POO_coll_scheme!(coll::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, tmp)
     applyF(coll, tmp, u, par)
-    dest .= @. ∂u - h * tmp
+    @. dest = ∂u - h * tmp
 end
 
 # functional for collocation problem
@@ -505,6 +505,7 @@ end
                                     u::AbstractMatrix{𝒯}, 
                                     period, 
                                     (L, ∂L), pars) where 𝒯
+    # out is of size (n, m⋅Ntst + 1)
     n, ntimes = size(u)
     m = pb.mesh_cache.degree
     Ntst = pb.mesh_cache.Ntst
@@ -512,11 +513,11 @@ end
     # temporaries to reduce allocations
     pj  = get_tmp(pb.cache.gj, u)  #zeros(𝒯, n, m)
     ∂pj = get_tmp(pb.cache.∂gj, u) #zeros(𝒯, n, m)
-    # out is of size (n, m⋅Ntst + 1)
     mesh = getmesh(pb)
     # range for locating time slices
     rg = axes(out, 2)[UnitRange(1, m+1)]
     for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
         mul!( pj, u[:, rg], L)  # size (n, m)
         mul!(∂pj, u[:, rg], ∂L) # size (n, m)
         # compute the collocation residual
@@ -530,7 +531,7 @@ end
     out
 end
 
-@views function functional_coll!(pb::PeriodicOrbitOCollProblem, 
+function functional_coll!(pb::PeriodicOrbitOCollProblem, 
                                 out::AbstractMatrix, 
                                 u::AbstractMatrix, 
                                 period, 
@@ -538,7 +539,7 @@ end
                                 pars)
     functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
-    out[:, end] .= u[:, end] .- u[:, 1]
+    @views @. out[:, end] = u[:, end] - u[:, 1]
 end
 
 function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
@@ -595,7 +596,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
-    ϕc = get_time_slices(coll.ϕ, size(coll)...)
+    ϕc = get_time_slices(coll.ϕ, n, m, Ntst)
     pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
     ϕj = get_tmp(coll.cache.gj, u) # zeros(𝒯, n, m)
     uj = get_tmp(coll.cache.uj, u) # zeros(𝒯, n, m+1)
@@ -615,7 +616,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        dt = (mesh[j+1]-mesh[j]) / 2
+        dt = (mesh[j+1] - mesh[j]) / 2
         α = period * dt
         mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         # put the jacobian of the vector field
@@ -712,7 +713,7 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        dt = (mesh[j+1]-mesh[j]) / 2
+        dt = (mesh[j+1] - mesh[j]) / 2
         α = period * dt
         mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         mul!(ϕj, ϕc[:, rg], ∂L)
@@ -848,18 +849,18 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 end
 
 # same function as above but for coping with mesh adaptation
-@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, 
+@views function get_periodic_orbit(coll::PeriodicOrbitOCollProblem, 
                 x::Tx, 
                 p) where { Tx <: POSolutionAndState}
     mesh = x.mesh
     u = x.sol
-    T = getperiod(prob, u, p)
-    uc = get_time_slices(prob, u)
+    T = getperiod(coll, u, p)
+    uc = get_time_slices(coll, u)
     return SolPeriodicOrbit(t = mesh .* T, u = uc)
 end
 
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(prob::PeriodicOrbitOCollProblem,
+function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
                  hopfpt,
                  ζr::AbstractVector,
@@ -870,11 +871,11 @@ function re_make(prob::PeriodicOrbitOCollProblem,
     M = length(orbitguess_a)
     N = length(ζr)
 
-    _, m, Ntst = size(prob)
-    nunknows = N * (1 + m * Ntst)
+    _, m, Ntst = size(coll)
+    n_unknows = N * (1 + m * Ntst)
 
     # update the problem
-    probPO = setproperties(prob, N = N, prob_vf = prob_vf, ϕ = zeros(nunknows), xπ = zeros(nunknows), cache = POCollCache(eltype(prob), N, m))
+    probPO = setproperties(coll, N = N, prob_vf = prob_vf, ϕ = zeros(n_unknows), xπ = zeros(n_unknows), cache = POCollCache(eltype(coll), N, m))
 
     probPO.xπ .= 0
 
@@ -904,7 +905,7 @@ function save_solution(wrap::WrapPOColl, x, pars)
     end
 end
 ####################################################################################################
-const DocStrjacobianPOColl = """
+const DocStringJacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
@@ -961,7 +962,7 @@ Similar to [`newton`](@ref) except that `prob` is a [`PeriodicOrbitOCollProblem`
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
-$DocStrjacobianPOColl
+$DocStringJacobianPOColl
 """
 newton(probPO::PeriodicOrbitOCollProblem,
             orbitguess,
@@ -1086,15 +1087,15 @@ function getmaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
 end
 
 # this function updates the section during the continuation run
-@views function updatesection!(prob::PeriodicOrbitOCollProblem, 
+@views function updatesection!(coll::PeriodicOrbitOCollProblem, 
                                 x::AbstractVector, 
                                 par)
     @debug "Update section Collocation"
     # update the reference point
-    prob.xπ .= 0
+    coll.xπ .= 0
 
     # update the "normals"
-    prob.ϕ .= x[eachindex(prob.ϕ)]
+    coll.ϕ .= x[eachindex(coll.ϕ)]
     return true
 end
 ####################################################################################################

@@ -1,6 +1,8 @@
 """
 $(TYPEDEF)
 
+Cache for the linear solver condensation of parameters.
+
 ## Fields
 
 $(TYPEDFIELDS)
@@ -12,17 +14,24 @@ COPCACHE(coll::PeriodicOrbitOCollProblem, δn = 0)
 ```
 """
 struct COPCACHE{dim, 𝒯, TL, TU, Tp}
+    "cache of size (N x m + 1 + dim, N x m)"
     blockⱼ::Matrix{𝒯}
+    "cache of size (N x m + 1 + dim, N)"
     blockₙ::Matrix{𝒯}
+    "cache of size (N x m + 1 + dim, N)"
     blockₙ₂::Matrix{𝒯}
+    "Lower triangular matrix of size N x m"
     Lₜ::TL
+    "Upper triangular matrix of size N x m"
     Uₜ::TU
     last_row_𝐅𝐬⁻¹_analytical::Matrix{𝒯}
     last_row_𝐅𝐬::Matrix{𝒯}
+    "cache to hold the factorized form of the matrix collocation matrix J"
     Jcoll::Matrix{𝒯}
+    "cache to hold the linear operator for the external variables"
     Jext::Matrix{𝒯}
+    "collocation problem. It is needed to save it because linear solver requires it."
     coll::Tp
-    p::Vector{Vector{Int}}
 
     function COPCACHE(coll::PeriodicOrbitOCollProblem, dim = 0; 𝒯 = eltype(coll))
         N, m, Ntst = size(coll)
@@ -30,22 +39,19 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
         nbcoll = n * m
         Npo = length(coll) + 1
 
-        blockⱼ = zeros(𝒯, nbcoll+1+dim, nbcoll)
-        blockₙ = zeros(𝒯, nbcoll, n)
-        blockₙ₂ = copy(blockₙ)
+        blockⱼ  = zeros(𝒯, nbcoll + 1 + dim, nbcoll)
+        blockₙ  = zeros(𝒯, nbcoll, n)
+        blockₙ₂ = zeros(𝒯, nbcoll, n)
 
         Lₜ = LowerTriangular(zeros(𝒯, nbcoll, nbcoll))
         Uₜ = UpperTriangular(zeros(𝒯, nbcoll, nbcoll))
 
-        Jcoll_tmp = zeros(𝒯, Npo+dim, Npo+dim)
-        Jext_tmp= zeros(𝒯, Ntst*N+N+1+dim, Ntst*N+N+1+dim)
+        Jcoll_tmp = zeros(𝒯, Npo + dim, Npo + dim)
+        Jext_tmp  = zeros(𝒯, Ntst * N  + N + 1 + dim, Ntst * N  + N + 1 + dim)
 
         nⱼ = size(Jcoll_tmp, 1)
         last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, dim + 1, nⱼ) # last row of 𝐅𝐬⁻¹
         last_row_𝐅𝐬 = zeros(𝒯, dim + 1, nⱼ)              # last row of 𝐅𝐬
-
-        # vector to hold the permutations
-        p = [collect(1:Ntst) for _ = 1:Ntst]
 
         new{dim, 𝒯, typeof(Lₜ), typeof(Uₜ), typeof(coll)}(blockⱼ,
                                                     blockₙ,
@@ -57,11 +63,29 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
                                                     Jcoll_tmp,
                                                     Jext_tmp,
                                                     coll,
-                                                    p)
+                                                    )
     end
 end
 _getdim(::COPCACHE{dim}) where {dim} = dim
 
+"""
+$TYPEDEF
+
+Linear solver based on the condensation of parameters.
+
+## Fields
+
+$TYPEDFIELDS
+
+## Constructors
+
+- `COPBLS()`
+- `COPBLS(coll::PeriodicOrbitOCollProblem; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
+
+## Related
+
+See `solve_cop`.
+"""
 struct COPLS{dim, 𝒯, TL, TU, Tp} <: AbstractDirectLinearSolver
     cache::COPCACHE{dim, 𝒯, TL, TU, Tp}
 end
@@ -69,7 +93,7 @@ end
 """
 $TYPEDEF
 
-Bordered linear solver based on the condensation of parameters. `dim` in the struct definition is the size of the border counting the phase condition. It is thus `dim=1` for COPLS and `dim=2` for the case of arclength continuation of periodic orbits as there are two constraints: the phase and the arclength.
+Bordered linear solver based on the condensation of parameters. `dim` in the struct definition is the size of the border counting the phase condition. It is thus `dim = 1` for COPLS and `dim = 2` for the case of arclength continuation of periodic orbits as there are two constraints: the phase and the arclength.
 
 ## Fields
 
@@ -214,7 +238,7 @@ Solve the linear system associated with the collocation problem for computing pe
         sol_ext = F \ rhs_ext
     end
 
-    return _solve_for_internal_vars(coll, Jcond, rhs, sol_ext, Val(dim))
+    return _solve_for_internal_variables(coll, Jcond, rhs, sol_ext, Val(dim))
 end
 
 @views function condensation_of_parameters!(cop_cache::COPCACHE{dim}, 
@@ -244,7 +268,7 @@ end
 
     Jcop[end, :] .= 0
     Jcop[:, end] .= 0
-    Jcop[end, end] = J[end,end]
+    Jcop[end, end] = J[end, end]
 
     # put periodic boundary condition
     Jcop[end-N-δn:end-1-δn, end-N-δn:end-1-δn] .= In
@@ -320,10 +344,10 @@ end
         # when δn = 0, we have blockₙ[1:nbcoll, 1:N] .= J[rg, rN][p_free,:]
         blockₙ[1:nbcoll, 1:N] .= J[rg[p[1:nbcoll]], rN]
         ldiv!(blockₙ₂, Lₜ, blockₙ)
-        Jcop[rg, rN] .= blockₙ₂
+        copyto!(Jcop[rg, rN], blockₙ₂)
 
         # last_row_𝐅𝐬[:, rg] .= F.L[pinv[end-δn:end], :] #!!! Allocates a lot !!!
-        last_row_𝐅𝐬[end, rg] .= F.factors[pinv[end], :]
+        copyto!(last_row_𝐅𝐬[end, rg], F.factors[pinv[end], :])
         if dim == 1
             last_row_𝐅𝐬[end-1, rg] .= F.factors[pinv[end-δn], :]
         else
@@ -418,7 +442,7 @@ end
     return rhs_ext
 end
 
-@views function _solve_for_internal_vars(coll::PeriodicOrbitOCollProblem,
+@views function _solve_for_internal_variables(coll::PeriodicOrbitOCollProblem,
                                          Jcond,
                                          rhs::Vector{𝒯}, 
                                          sol_ext, 
@@ -427,7 +451,7 @@ end
     nbcoll = N * m
 
     # solver for the internal unknowns
-    ΔT = sol_ext[end-δn]
+    ΔT = sol_ext[end - δn]
     Δp = sol_ext[end]
 
     r2 = N+1:(m)*N
@@ -453,7 +477,7 @@ end
         elseif δn == 1
             rhs_tmp .= @. rhs[rsol] -  ΔT * Jcond[r1, end-1] - Δp * Jcond[r1, end] 
         elseif δn == 2
-            rhs_tmp .= @. rhs[rsol] - Δp * Jcond[r1, end] - sol_ext[end-1] * Jcond[r1, end-1] - sol_ext[end-2] * Jcond[r1, end-2]
+            rhs_tmp .= @. rhs[rsol] -  Δp * Jcond[r1, end] - sol_ext[end-1] * Jcond[r1, end-1] - sol_ext[end-2] * Jcond[r1, end-2]
         else
             throw("This version of the current function is not yet implemented. δn = $δn")
         end
@@ -471,7 +495,7 @@ end
         rsol = rsol .+ nbcoll
         rN = rN .+ N
     end
-    sol_cop[end-δn:end] .= sol_ext[end-δn:end]
+    sol_cop[end - δn:end] .= sol_ext[end - δn:end]
     return sol_cop
 end
 
@@ -507,12 +531,12 @@ end
                     rg = Iterators.flatten((1:n, st+1+n:st+3n, nⱼ-δn:nⱼ))
                     # swap rows
                     for j in rg
-                        J[i,j], J[iₚ,j] = J[iₚ,j], J[i,j]
+                        J[i, j], J[iₚ, j] = J[iₚ, j], J[i, j]
                     end
                     rhs[i], rhs[iₚ] = rhs[iₚ], rhs[i]
                 end
 
-                invpivot = inv(J[i,i+n])
+                invpivot = inv(J[i, i+n])
 
                 rg = i+1:nⱼ
                 rg = Iterators.flatten((i+1:st+2n, nⱼ-δn:nⱼ))
@@ -522,7 +546,7 @@ end
                     # rg = 1:nⱼ
                     rgₖ = Iterators.flatten((1:n, st+1+n:st+3n, nⱼ-δn:nⱼ))
                     for jₖ in rgₖ
-                        J[l, jₖ] -= J[i,jₖ] .* ρ
+                        J[l, jₖ] -= J[i, jₖ] * ρ
                     end
                 end
             else
@@ -539,7 +563,7 @@ end
                                                 n::Int,
                                                 Ntst::Int,
                                                 ::Val{δn}) where {𝒯, δn}
-    Jext_gauss = hcat(Jext[end-2n-δn:end,1:n], Jext[end-2n-δn:end,end-n-δn:end])
+    Jext_gauss = hcat(Jext[end-2n-δn:end,1:n], Jext[end-2n-δn:end, end-n-δn:end])
     rhs_ext_gauss = rhs_ext[end-2n-δn:end]
     sol_ext_gauss = Jext_gauss \ rhs_ext_gauss
 
@@ -596,13 +620,13 @@ end
 # │   ξu * dz.u'   ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (ls::COPBLS)(_Jc, dR,
-                    dzu, dzp::𝒯, 
-                    R::AbstractVecOrMat, n::𝒯,
-                    ξu::𝒯 = one(𝒯), ξp::𝒯 = one(𝒯);
-                    shift::Ts = nothing, 
-                    Mass::Tm = LinearAlgebra.I,
-                    dotp = nothing,
-                    applyξu! = nothing)  where {𝒯 <: Number, Ts, Tm}
+                      dzu, dzp::𝒯, 
+                      R::AbstractVecOrMat, n::𝒯,
+                      ξu::𝒯 = one(𝒯), ξp::𝒯 = one(𝒯);
+                      shift::Ts = nothing, 
+                      Mass::Tm = LinearAlgebra.I,
+                      dotp = nothing,
+                      applyξu! = nothing)  where {𝒯 <: Number, Ts, Tm}
     Jc = _get_matrix(_Jc) # to handle FloquetWrapper
     if isnothing(shift)
         A = Jc
@@ -617,9 +641,9 @@ function (ls::COPBLS)(_Jc, dR,
     # hence the following situation
     _fast_copy_bordered!(ls.J, A)
 
-    ls.J[1:end-1,end] .= dR
-    ls.J[end,1:end-1] .= conj.(dzu .* ξu)
-    ls.J[end,end] = dzp * ξp
+    ls.J[1:end-1, end] .= dR
+    ls.J[end, 1:end-1] .= conj.(dzu .* ξu)
+    ls.J[end, end] = dzp * ξp
 
     # apply a linear operator to ξu
     if isnothing(applyξu!) == false

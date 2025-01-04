@@ -45,7 +45,7 @@ You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note
 Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
 
 ## Jacobian
-$DocStrjacobianPOSh
+$DocStringJacobianPOSh
 
 ## Simplified constructors
 - The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points:
