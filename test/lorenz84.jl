@@ -221,7 +221,7 @@ for _jac in (:autodiff, :minaug, :finiteDifferences, :MinAugMatrixBased)
     @test bpbt_2.nfsupp.H0002 ≈ [-0.34426541029040103, 0.7403628764888541, 0.5020796040084594, 0.7211107457956355] rtol = 1e-3 rtol = 1e-3
     @test bpbt_2.nfsupp.H1001 ≈ [0.8609019479520158, 0.3666091456682787, 0.09272126477464948, -1.1252591151814477] rtol = 1e-3
     @test bpbt_2.nfsupp.H2000 ≈ [-1.1430891994241816, 0.5090981254844374, 0.4300904962638521, -0.4240003230561569] rtol = 1e-3
- # test branch switching from BT points
+    # test branch switching from BT points
     hp_codim2_2 = continuation(sn_codim2, 1, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, p_max = 15.) ;
         normC = norminf,
         detect_codim2_bifurcation = 2,

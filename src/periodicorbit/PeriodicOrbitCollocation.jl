@@ -620,6 +620,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         # put the jacobian of the vector field
         for l in 1:m
+            _rgX = rgNx .+ (l-1)*n
             if _transpose == false
                 J0 .= jacobian(VF, pj[:,l], pars)
             else
@@ -986,7 +987,7 @@ function newton(probPO::PeriodicOrbitOCollProblem,
     _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
 end
 
-function build_jacobian(coll::PeriodicOrbitOCollProblem, 
+function generate_jacobian(coll::PeriodicOrbitOCollProblem, 
                         orbitguess, 
                         par; 
                         δ = convert(eltype(orbitguess), 1e-8))
@@ -1038,7 +1039,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     plot_solution = nothing,
                     kwargs...)
 
-    jacPO = build_jacobian(coll, orbitguess, getparams(coll); δ)
+    jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
     _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
     if linear_algo isa COPBLS
         linear_algo = COPBLS(coll)
