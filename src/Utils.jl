@@ -22,7 +22,7 @@ end
 ####################################################################################################
 # iterated derivatives
 ∂(f) = x -> ForwardDiff.derivative(f, x)
-∂(f, n::Int) = n == 0 ? f : ∂(∂(f), n-1)
+∂(f, ::Val{n}) where {n} = n == 0 ? f : ∂(∂(f), Val(n-1))
 ####################################################################################################
 function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
     if lastRow

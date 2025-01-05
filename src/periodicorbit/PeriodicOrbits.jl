@@ -596,7 +596,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # perform continuation
     pbnew = set_params_po(pbnew, setparam(br, newp))
 
-    pbnew(orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
+    residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten just below!

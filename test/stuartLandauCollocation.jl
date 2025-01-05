@@ -51,7 +51,7 @@ _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
 _ci = BK.generate_solution(prob_col, _orbit, 1.)
 BK.get_periodic_orbit(prob_col, _ci, par_sl)
 BK.getmaximum(prob_col, _ci, par_sl)
-@test BK.∂(sin, 2)(0.) == 0
+@test BK.∂(sin, Val(2))(0.) == 0
 prob_col(_ci, par_sl) #|> scatter
 BK.get_time_slices(prob_col, _ci)
 

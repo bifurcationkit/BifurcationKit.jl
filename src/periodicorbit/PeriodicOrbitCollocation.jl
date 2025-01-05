@@ -1156,7 +1156,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     # sol is the piecewise polynomial approximation of y.
     # However, sol is of degree m, hence ∂(sol, m+1) = 0
     # we thus estimate yᵐ⁺¹ using ∂(sol, m)
-    dmsol = ∂(sol, m)
+    dmsol = ∂(sol, Val(m))
     # we find the values of vm := ∂m(x) at the mid points
     τsT = getmesh(coll) .* period
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]

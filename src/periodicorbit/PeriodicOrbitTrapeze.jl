@@ -304,6 +304,7 @@ function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
 end
 
 (pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par) = potrap_functional!(pb, similar(u), u, par)
+residual(pb::PeriodicOrbitTrapProblem, u::AbstractVector, par) = pb(u, par)
 (pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par, du) = potrap_functional_jac!(pb, similar(du), u, par, du)
 
 ####################################################################################################
@@ -436,7 +437,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
     AγBlock = jacobian_potrap_block(pb, u0, par; γ = γ)
 
     # we now set up the last line / column
-    @views ∂TGpo = (pb(vcat(u0[begin:end-1], T + δ), par) .- pb(u0, par)) ./ δ
+    @views ∂TGpo = (residual(pb, vcat(u0[begin:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
 
     # this is "bad" for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
@@ -493,7 +494,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
             # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
 
         # we now set up the last line / column
-        ∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
+        ∂TGpo = (residual(pb,vcat(u0[1:end-1], T + δ), par) .- residual(pb,u0, par)) ./ δ
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
@@ -547,7 +548,7 @@ end
 
     if updateborder
         # we now set up the last line / column
-        ∂TGpo = (pb(vcat(u0[1:end-1], T + δ), par) .- pb(u0, par)) ./ δ
+        ∂TGpo = (residual(pb, vcat(u0[1:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
@@ -776,7 +777,7 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltyp
     T = extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE CE vcat!
-    @views J.∂TGpo .= (J.Aγ.prob(vcat(u0[begin:end-1], T + δ), par) .- J.Aγ.prob(u0, par)) ./ δ
+    @views J.∂TGpo .= (residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- residual(J.Aγ.prob, u0, par)) ./ δ
 
     J.Aγ(u0, par) # update Aγ
 
@@ -848,10 +849,10 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
             _J =  probPO(Val(:JacFullSparse), orbitguess, getparams(probPO.prob_vf)) |> Array
             jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
         elseif jacobianPO == :DenseAD
-            jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
+            jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
         elseif jacobianPO == :FullMatrixFreeAD
-            jac = (x, p) -> dx -> ForwardDiff.derivative(t -> probPO(x .+ t .* dx, p), 0)
-        else
+            jac = (x, p) -> dx -> ForwardDiff.derivative(t -> residual(probPO, x .+ t .* dx, p), 0)
+        else 
              jac = (x, p) -> ( dx -> probPO(x, p, dx))
         end
 
@@ -984,9 +985,9 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf)) |> Array
             jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
         elseif jacobianPO == :DenseAD
-            jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> prob(z, p), x), x, p)
+            jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> residual(prob, z, p), x), x, p)
         elseif jacobianPO == :FullMatrixFreeAD
-            jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->prob(x .+ t .* dx, p), 0), x, p)
+            jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->residual(prob, x .+ t .* dx, p), 0), x, p)
         else
              jac = (x, p) -> FloquetWrapper(prob, x, p)
         end
