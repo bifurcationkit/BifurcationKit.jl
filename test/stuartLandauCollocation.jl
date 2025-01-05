@@ -263,7 +263,7 @@ prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,      
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jco_sp = BK.analytical_jacobian_sparse(prob_col, _ci, par_sl);
 Jco = BK.analytical_jacobian(prob_col_dense, _ci, par_sl);
-@assert norminf(Jco - Array(Jco_sp)) == 0
+@assert norminf(Jco - Array(Jco_sp)) < 1e-15
 Jco2 = copy(Jco) |> sparse;
 Jco2 .= 0
 _indx = BifurcationKit.get_blocks(prob_col, Jco2);

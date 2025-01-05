@@ -344,12 +344,12 @@ function Jc(pb::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVect
 
     h = T * get_time_step(pb, 1)
     @views potrap_scheme!(pb, outc[:, 1], u0c[:, 1], u0c[:, M-1],
-                                         duc[:, 1], duc[:, M-1], par, h/2, tmp, true; applyf = false)
+                                          duc[:, 1], duc[:, M-1], par, h/2, tmp, true; applyf = false)
 
     for ii in 2:M-1
         h = T * get_time_step(pb, ii)
         @views potrap_scheme!(pb, outc[:, ii], u0c[:, ii], u0c[:, ii-1],
-                                              duc[:, ii], duc[:, ii-1], par, h/2, tmp, true; applyf = false)
+                                               duc[:, ii], duc[:, ii-1], par, h/2, tmp, true; applyf = false)
     end
 
     # we also return a Vector version of outc

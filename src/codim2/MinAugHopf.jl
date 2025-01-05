@@ -199,6 +199,7 @@ end
 @inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
 @inline getdelta(hopfpb::HopfMAProblem) = getdelta(hopfpb.prob)
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
+residual!(hopfpb::HopfMAProblem, out, x, p) = (copyto!(out, hopfpb.prob(x, p)); out)
 save_solution(::HopfMAProblem, x ,p) = x
 
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)

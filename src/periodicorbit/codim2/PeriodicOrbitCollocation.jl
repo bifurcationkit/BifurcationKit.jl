@@ -46,19 +46,23 @@ function continuation(br::AbstractResult{Tkind, Tprob},
         return continuation_coll_fold(br,
                                     ind_bif,
                                     lens2,
-                                    _options_cont; compute_eigen_elements,
+                                    _options_cont; 
+                                    compute_eigen_elements,
+                                    update_minaug_every_step,
                                     kwargs... )
     elseif biftype == :pd
         return continuation_coll_pd(br,
                                     ind_bif,
                                     lens2,
                                     _options_cont; compute_eigen_elements,
+                                    update_minaug_every_step,
                                     kwargs... )
     elseif biftype == :ns
         return continuation_coll_ns(br,
                                     ind_bif,
                                     lens2,
                                     _options_cont; compute_eigen_elements,
+                                    update_minaug_every_step,
                                     kwargs... )
     else
         throw("We continue only Fold / PD / NS points of periodic orbits. Please report this error on the website.")

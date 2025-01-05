@@ -289,6 +289,12 @@ end
 
 # out of place version
 (sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
+
+function residual!(pb::ShootingProblem, out, x, p)
+    copyto!(out, pb(x, p))
+    out
+end
+residual(pb::ShootingProblem, x, p) = pb(x, p)
 ####################################################################################################
 
 function _get_extremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))

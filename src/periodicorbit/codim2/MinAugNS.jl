@@ -260,6 +260,7 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; de
 end
 ###################################################################################################
 residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
+residual!(nspb::NSMAProblem, out, x, p) = (copyto!(out, nspb.prob(x, p)); out)
 @inline getdelta(nspb::NSMAProblem) = getdelta(nspb.prob)
 save_solution(::NSMAProblem, x ,p) = x
 

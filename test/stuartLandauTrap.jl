@@ -54,15 +54,18 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
 for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :FullMatrixFreeAD, :BorderedMatrixFree))
-    @show jacobianPO, ind
-    _ls = ind > 5 ? lsit : lsdef
+    _ls = ind > 6 ? lsit : lsdef
+    @info jacobianPO, ind, _ls
     outpo_f = newton((@set poTrap.jacobian = jacobianPO),
         orbitguess_f, (@set optn_po.linsolver = _ls);
         normN = norminf)
     @test BK.converged(outpo_f)
 
-    br_po = continuation((@set poTrap.jacobian = jacobianPO), outpo_f.u,
-        PALC(),    (@set opts_po_cont.newton_options.linsolver = _ls);
+    br_po = continuation(
+        (@set poTrap.jacobian = jacobianPO), 
+        outpo_f.u,
+        PALC(),
+        (@set opts_po_cont.newton_options.linsolver = _ls);
         verbosity = 0, plot = false,
         linear_algo = BorderingBLS(solver = _ls, check_precision = false),
         record_from_solution = (u, p; k...) -> BK.getamplitude(poTrap, u, par_hopf; ratio = 1), normC = norminf)
@@ -76,7 +79,7 @@ let
 
     # computation of the Jacobian at out_pof
     _J1 = poTrap(Val(:JacFullSparse), outpo_f.u, par_hopf)
-    _Jfd = ForwardDiff.jacobian(z-> poTrap(z,par_hopf), outpo_f.u)
+    _Jfd = ForwardDiff.jacobian(z-> BK.residual(poTrap, z, par_hopf), outpo_f.u)
 
     # test of the jacobian against automatic differentiation
     @test norm(_Jfd - Array(_J1), Inf) < 1e-7

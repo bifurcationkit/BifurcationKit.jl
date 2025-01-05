@@ -282,7 +282,7 @@ for (op, at) in (
                     Finp = _F
                 else
                     F = _F
-                    Finp = (o, x, p) -> o .= _F(x, p)
+                    Finp = (o, x, p) -> copyto!(o, _F(x, p))
                 end
 
                 J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J

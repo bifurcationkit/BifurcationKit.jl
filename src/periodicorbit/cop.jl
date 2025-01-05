@@ -189,22 +189,18 @@ Solve the linear system associated with the collocation problem for computing pe
     𝒯 = eltype(coll)
     In = I(N)
 
-    if _DEBUG
-        P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
-        Jtmp = zeros(𝒯, nbcoll + δn + 1, nbcoll)
-    end
-
     rhs = condensation_of_parameters!(cop_cache, coll, J, In, rhs0)
     Jcond = cop_cache.Jcoll
 
     if _DEBUG
+        P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
+        Jtmp = zeros(𝒯, nbcoll + δn + 1, nbcoll)
         Fₚ = lu(P); Jcond = Fₚ \ J; rhs = Fₚ \ rhs0
     end
 
     # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
     # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
-    @unpack last_row_𝐅𝐬⁻¹_analytical,
-            last_row_𝐅𝐬 = cop_cache
+    @unpack last_row_𝐅𝐬⁻¹_analytical = cop_cache
 
     if dim == 0 
         d = dot(last_row_𝐅𝐬⁻¹_analytical, 
@@ -213,29 +209,31 @@ Solve the linear system associated with the collocation problem for computing pe
         rhs[end] = dot(last_row_𝐅𝐬⁻¹_analytical, 
                 rhs0[eachindex(last_row_𝐅𝐬⁻¹_analytical)]) +
                 rhs0[end]
+        Jcond[end-δn:end, end-δn:end] .= d
     else
-        d = last_row_𝐅𝐬⁻¹_analytical * 
-            J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end] .+ 
-            J[end-δn:end, end-δn:end]
+        # d = last_row_𝐅𝐬⁻¹_analytical * 
+        #     J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end] .+ 
+        #     J[end-δn:end, end-δn:end]
+        # Jcond[end-δn:end, end-δn:end] .= d
+
+        Jcond[end-δn:end, end-δn:end] .= J[end-δn:end, end-δn:end]
+        mul!(Jcond[end-δn:end, end-δn:end], last_row_𝐅𝐬⁻¹_analytical, J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end], true, true)
+        
         rhs[end-δn:end] .= last_row_𝐅𝐬⁻¹_analytical *
             rhs0[axes(last_row_𝐅𝐬⁻¹_analytical, 2)] .+
             rhs0[end-δn:end]
     end
-    Jcond[end-δn:end, end-δn:end] .= d
-
-    # plot(heatmap(abs.(abs.(inv(P))) .> 1e-5; yflip = true, title = "invP"), 
-        # heatmap(abs.(Jcond - Jcop) .> 1e-5; yflip = true, title = "δJ")) |> display
 
     # we build the linear system for the external variables in Jext and rhs_ext
     rhs_ext = build_external_system!(Jext, Jcond, rhs, In, Ntst, nbcoll, Npo, δn, N, m)
 
-    if !_USELU
+    if _USELU
+        F = lu(Jext)
+        sol_ext = F \ rhs_ext
+    else
         # gaussian elimination plus backward substitution to invert Jext
         _gaussian_elimination_external_pivoted!(Jext, rhs_ext, N, Ntst, δn)
         sol_ext = _backward_substitution_pivoted(Jext, rhs_ext, N, Ntst, Val(dim))
-    else
-        F = lu(Jext)
-        sol_ext = F \ rhs_ext
     end
 
     return _solve_for_internal_variables(coll, Jcond, rhs, sol_ext, Val(dim))
@@ -256,7 +254,7 @@ end
     # δn = 0 for newton
     # δn = 1 for palc
     @assert δn >= 0
-    @assert δn == dim
+    @assert δn == dim "δn = $δn == dim = $dim"
 
     𝒯 = eltype(coll)
 
@@ -402,27 +400,21 @@ end
                                        δn::Int,
                                        N::Int,
                                        m::Int) where {𝒯}
-    Aᵢ = Matrix{𝒯}(undef, N, N)
-    Bᵢ = Matrix{𝒯}(undef, N, N)
-
     r1 = 1:N
     r2 = N*(m-1)+1:(m*N)
     rN = 1:N
 
     # building the external variables
     fill!(Jext, 0)
-    Jext[end-δn-N:end-δn-1,end-δn-N:end-δn-1] .= In
-    Jext[end-δn-N:end-δn-1,1:N] .= (-1) .* In
-    Jext[end-δn:end, end-δn:end] = Jcond[end-δn:end, end-δn:end]
+    Jext[end-δn-N:end-δn-1, end-δn-N:end-δn-1] .= In
+    Jext[end-δn-N:end-δn-1, 1:N] .= (-1) .* In
+    Jext[end-δn:end, end-δn:end] .= Jcond[end-δn:end, end-δn:end]
     rhs_ext = zeros(𝒯, size(Jext, 1))
 
     # we solve for the external unknowns
     for _ in 1:Ntst
-        Aᵢ .= Jcond[r2, r1]
-        Bᵢ .= Jcond[r2, r1 .+ nbcoll]
-
-        Jext[rN, rN] .= Aᵢ
-        Jext[rN, rN .+ N] .= Bᵢ
+        Jext[rN, rN] .= Jcond[r2, r1]
+        Jext[rN, rN .+ N] .= Jcond[r2, r1 .+ nbcoll]
 
         Jext[rN, end-δn:end] .= Jcond[r2, Npo:(Npo+δn)]
 

@@ -155,7 +155,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if biftype == :bp || biftype == :fold
-        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, kwargs... )
+        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     elseif biftype == :pd
         return continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     elseif biftype == :ns

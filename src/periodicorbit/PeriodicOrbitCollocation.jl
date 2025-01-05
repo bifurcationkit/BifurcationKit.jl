@@ -304,7 +304,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     if pb.meshadapt
         println(io, "├───── K              : ", pb.K)
     end
-    println(io, "└─ # unknowns without phase condition) : ", pb.N * (1 + m * Ntst))
+    println(io, "└─ # unknowns (without phase condition) : ", pb.N * (1 + m * Ntst))
 end
 
 function get_matrix_phase_condition(coll::PeriodicOrbitOCollProblem)
@@ -629,7 +629,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 
             for l2 in 1:m+1
                 J[_rgX, rgNy .+ (l2-1)*n ] .= @. (-α * L[l2, l] * ρF) * J0 +
-                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
+                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-dt)
@@ -645,15 +645,13 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         for k₁ = 1:m+1
             for k₂ = 1:m+1
                 # J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
-                axpby!(Ω[k₁, k₂], ϕc[:, (j-1)*m + k₂], 1, J[end, rg])
+                axpby!(Ω[k₁, k₂] / period, ϕc[:, (j-1)*m + k₂], 1, J[end, rg])
             end
             if k₁ < m + 1
                 rg = rg .+ n
             end
         end
     end
-    J[end, 1:end-1] ./= period
-
     vj = get_tmp(coll.cache.vj, u)
     phase = _phase_condition(coll, uc, (L, ∂L), (pj, uj, ϕj, vj), period)
     J[end, end] = -phase / period

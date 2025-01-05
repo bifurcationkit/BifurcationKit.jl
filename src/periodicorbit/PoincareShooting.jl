@@ -290,6 +290,11 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
     return out_bar
 end
 
+function residual!(pb::PoincareShootingProblem, out, x, p)
+    copyto!(out, pb(x, p))
+    out
+end
+
 """
 This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x),x) where t(x) is the return time of x to the section.
 """

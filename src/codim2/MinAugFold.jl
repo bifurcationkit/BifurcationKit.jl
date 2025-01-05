@@ -184,6 +184,7 @@ end
 @inline getdelta(foldpb::FoldMAProblem) = getdelta(foldpb.prob)
 @inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
+residual!(foldpb::FoldMAProblem, out, x, p) = (copyto!(out, foldpb.prob(x, p)); out)
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
 save_solution(::FoldMAProblem, x, p) = x
 
