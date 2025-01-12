@@ -142,9 +142,9 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; fromcodim2 = true, k...)
     end
 
-    coll_fold = BifurcationProblem((x, p) -> coll(x, p), bifpt, getparams(br), getlens(br);
+    coll_fold = BifurcationProblem((x, p) -> residual(coll, x, p), bifpt, getparams(br), getlens(br);
                 J = getprob(br).jacobian,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> coll(z, p), x, dx1, dx2),
+                d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(coll, z, p), x, dx1, dx2),
                 plot_solution = plotsol
                 )
 

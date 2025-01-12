@@ -180,7 +180,7 @@ Note that you can generate this guess from a function using `generate_solution` 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
 
-- `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
+- `residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, vectype, Tmass, Tmcache <: MeshCollocationCache, Tcache} <: AbstractPODiffProblem
     # Function F(x, par)
@@ -541,14 +541,15 @@ function functional_coll!(pb::PeriodicOrbitOCollProblem,
     @views @. out[:, end] = u[:, end] - u[:, 1]
 end
 
-function (prob::PeriodicOrbitOCollProblem)(u::AbstractVector, pars)
-    residual!(prob, zero(u), u, pars)
+function residual(prob::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
+    out = zero(u)
+    residual!(prob, out, u, pars)
+    out
 end
 
 function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
     uc = get_time_slices(prob, u)
     T = getperiod(prob, u, nothing)
-    # result = zero(u)
     resultc = get_time_slices(prob, result)
     Ls = get_Ls(prob.mesh_cache)
     functional_coll!(prob, resultc, uc, T, Ls, pars)
@@ -578,7 +579,7 @@ $(SIGNATURES)
 
 Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
 
-ρD * D - T*(ρF * F + ρI * I)
+ρD * D - T * (ρF * F + ρI * I)
 
 """
 @views function analytical_jacobian!(J,
@@ -676,7 +677,8 @@ function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
     block_to_sparse(jacBlock)
 end
 
-function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
+@views function jacobian_poocoll_block!(J,
+                                coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
                                 pars;
                                 _transpose::Bool = false,
@@ -684,20 +686,19 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
                                 ρF = one(𝒯),
                                 ρI = zero(𝒯)) where {𝒯}
     n, m, Ntst = size(coll)
-    # allocate the jacobian matrix
-    blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
-    n_blocks = length(blocks)
-    J = BlockArray(spzeros(length(u), length(u)), blocks,  blocks)
+    n_blocks = size(J.blocks, 1)
     # temporaries
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     Ω = get_matrix_phase_condition(coll)
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
-    ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    pj = zeros(𝒯, n, m)
-    ϕj = zeros(𝒯, n, m)
-    uj = zeros(𝒯, n, m+1)
+    ϕc = get_time_slices(coll.ϕ, n, m, Ntst)
+    pj = get_tmp(coll.cache.gi, u)   # zeros(𝒯, n, m)
+    tmp = get_tmp(coll.cache.tmp, u) # zeros(𝒯, n, m)
+    ϕj = get_tmp(coll.cache.gj, u)   # zeros(𝒯, n, m)
+    uj = get_tmp(coll.cache.uj, u)   # zeros(𝒯, n, m+1)
+
     In = I(n)
     J0 = jacobian(coll.prob_vf, u[1:n], pars)
 
@@ -707,8 +708,6 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
 
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
-    rgNx = UnitRange(1, n)
-    rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
@@ -889,11 +888,11 @@ end
 
 ##########################
 # problem wrappers
-residual(prob::WrapPOColl, x, p) = prob.prob(x, p)
+residual(prob::WrapPOColl, x, p) = residual(prob.prob, x, p)
 jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
 @inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
-@inline has_adjoint(::WrapPOColl) = false #c'est dans problems.jl
+@inline has_adjoint(::WrapPOColl) = false # it is in problems.jl
 
 # for recording the solution in a branch
 function save_solution(wrap::WrapPOColl, x, pars)
@@ -988,7 +987,9 @@ end
 function generate_jacobian(coll::PeriodicOrbitOCollProblem, 
                         orbitguess, 
                         par; 
-                        δ = convert(eltype(orbitguess), 1e-8))
+                        δ = convert(eltype(orbitguess), 1e-8),
+                        Jcoll_matrix = nothing
+                        )
     jacobianPO = coll.jacobian
     @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
 
@@ -1010,7 +1011,7 @@ function generate_jacobian(coll::PeriodicOrbitOCollProblem,
         jac = (x, p) -> FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
     else
         _J = zeros(eltype(coll), length(orbitguess), length(orbitguess))
-        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian!(_J, z -> coll(z, p), x), x, p)
+        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian!(_J, z -> residual(coll, z, p), x), x, p)
     end
 end
 
@@ -1213,7 +1214,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     if verbosity
         h = maximum(diff(newmesh))
         printstyled(color = :magenta, 
-          "   ┌─ Mesh adaptation, hi = time steps",
+          "   ┌─ Mesh adaptation, new mesh hi = time steps",
         "\n   ├─── min(hi)       = ", minimum(diff(newmesh)),
         "\n   ├─── h = max(hi)   = ", h,
         "\n   ├─── K = max(h/hi) = ", maximum(h ./ diff(newmesh)),

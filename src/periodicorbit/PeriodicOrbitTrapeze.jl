@@ -230,7 +230,7 @@ potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool 
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
-function potrap_functional!(pb::AbstractPOFDProblem, out, u, par)
+function residual!(pb::AbstractPOFDProblem, out, u, par)
         M, N = size(pb)
         T = extract_period_fdtrap(pb, u)
 
@@ -303,8 +303,8 @@ function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
     end
 end
 
-(pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par) = potrap_functional!(pb, similar(u), u, par)
-residual(pb::PeriodicOrbitTrapProblem, u::AbstractVector, par) = pb(u, par)
+
+residual(pb::PeriodicOrbitTrapProblem, u::AbstractVector, par) = residual!(pb, similar(u), u, par)
 (pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par, du) = potrap_functional_jac!(pb, similar(du), u, par, du)
 
 ####################################################################################################
@@ -816,7 +816,8 @@ end
 
 ##########################
 # problem wrappers
-residual(prob::WrapPOTrap, x, p) = prob.prob(x, p)
+residual(prob::WrapPOTrap, x, p) = residual(prob.prob, x, p)
+residual!(prob::WrapPOTrap, args...) = residual!(prob.prob, args...)
 jacobian(prob::WrapPOTrap, x, p) = prob.jacobian(x, p)
 @inline save_solution(::WrapPOTrap, x, p) = x
 get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(prob.prob, u, p)
@@ -1121,11 +1122,12 @@ Generate a periodic orbit problem from a solution.
 - returns a `PeriodicOrbitTrapProblem` and an initial guess.
 """
 function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
-                            bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution,
+                            bifprob::AbstractBifurcationProblem, 
+                            sol::AbstractTimeseriesSolution,
                             tspan::Tuple; 
                             optimal_period::Bool = true,
                             ktrap...)
-    u0 = sol(0)
+    u0 = sol(tspan[1])
     @assert u0 isa AbstractVector
     N = length(u0)
 
@@ -1142,7 +1144,7 @@ function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
     # find best period candidate
     if optimal_period
         _times = LinRange(period * 0.8, period * 1.2, M)
-        period = _times[argmin(norm(sol(t) - sol(0)) for t in _times)]
+        period = _times[argmin(norm(sol(tspan[1] + t) - sol(tspan[1])) for t in _times)]
     end
 
     ci = generate_solution(probtrap, t -> sol(tspan[1] + t * period / (2pi)), period)

@@ -246,7 +246,7 @@ end
 function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, Teigvals}
     x = getx(state)
     p = getp(state)
-    pt = record_from_solution(it)(x, p; iter = it, state = state)
+    pt = record_from_solution(it)(x, p; iter = it, state)
     stable = Teigvals!=Nothing ? is_stable(state) : nothing
     return mergefromuser(pt, 
                         (param = p,
@@ -305,7 +305,7 @@ function ContResult(it::AbstractContinuationIterable,
                     state::AbstractContinuationState)
     x0 = _copy(getx(state))
     p0 = getp(state)
-    pt = record_from_solution(it)(x0, p0; iter = it, state = state)
+    pt = record_from_solution(it)(x0, p0; iter = it, state)
     return _contresult(it, state,
                         pt,
                         get_state_summary(it, state), 
@@ -375,8 +375,8 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && (print("\n──▶ convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
     verbose && println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
     return iterate_from_two_points(it, sol₀.u, p₀, 
-                                    sol₁.u, p₀ + ds / η; 
-                                    _verbosity)
+                                       sol₁.u, p₀ + ds / η; 
+                                       _verbosity)
 end
 
 # same as previous function but when two (initial guesses) points are provided

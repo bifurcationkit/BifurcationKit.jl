@@ -443,7 +443,8 @@ function generate_ci_problem(shooting::ShootingProblem,
                             alg_mono = sol.alg,
                             use_bordered_array = false, 
                             ksh...)
-    u0 = sol(0)
+    t0 = sol.t[begin]
+    u0 = sol(t0)
     M = shooting.M
 
     # points for the sections
