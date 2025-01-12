@@ -100,12 +100,15 @@ function plot_periodic_shooting(x, M; kwargs...)
     plot_periodic_shooting!(x, M; kwargs...)
 end
 ####################################################################################################
-function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, k...)
+function plot_eigenvals(br::AbstractResult, with_param = true; plot_imag = false, var = :param, k...)
     p = getproperty(br.branch, var)
     data = mapreduce(x -> x.eigenvals, hcat, br.eig)
+    
+    values_to_plot = plot_imag ? imag.(data') : real.(data')
+    
     if with_param
-        plot(p, real.(data'); k...)
+        plot(p, values_to_plot; k...)
     else
-        plot(real.(data'); k...)
+        plot(values_to_plot; k...)
     end
 end
