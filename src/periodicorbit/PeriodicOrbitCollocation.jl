@@ -623,7 +623,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         for l in 1:m
             _rgX = rgNx .+ (l-1)*n
             if _transpose == false
-                J0 .= jacobian(VF, pj[:,l], pars)
+                J0 .= jacobian(VF, pj[:, l], pars)
             else
                 J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end
@@ -1022,8 +1022,8 @@ function generate_jacobian(coll::PeriodicOrbitOCollProblem,
         indx = get_blocks(coll, _J)
         jac = (x, p) -> FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
     else
-        _J = zeros(eltype(coll), length(orbitguess), length(orbitguess))
-        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian!(_J, z -> residual(coll, z, p), x), x, p)
+        # if you use jacobian!, it has issues with DDEBifurcationKit
+        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian(z -> residual(coll, z, p), x), x, p)
     end
 end
 
@@ -1040,19 +1040,18 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
 function continuation(coll::PeriodicOrbitOCollProblem,
-                    orbitguess,
-                    alg::AbstractContinuationAlgorithm,
-                    _contParams::ContinuationPar,
-                    linear_algo::AbstractBorderedLinearSolver;
-                    δ = convert(eltype(orbitguess), 1e-8),
-                    eigsolver = FloquetColl(),
-                    record_from_solution = nothing,
-                    plot_solution = nothing,
-                    kwargs...)
-
+                      orbitguess,
+                      alg::AbstractContinuationAlgorithm,
+                      _contParams::ContinuationPar,
+                      linear_algo::AbstractBorderedLinearSolver;
+                      δ = convert(eltype(orbitguess), 1e-8),
+                      eigsolver = FloquetColl(),
+                      record_from_solution = nothing,
+                      plot_solution = nothing,
+                      kwargs...)
     jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
-    _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
     if linear_algo isa COPBLS
+        _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
         linear_algo = COPBLS(coll)
         Nbls = length(coll) + 2
         floquet_wrap = jacPO(orbitguess, getparams(coll))
