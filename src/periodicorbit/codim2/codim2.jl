@@ -291,7 +291,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> probPO(z, p), x, dx1, dx2),
+                d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(probPO, z, p), x, dx1, dx2),
                 record_from_solution = _recordsol,
                 plot_solution = _plotsol,
                 )

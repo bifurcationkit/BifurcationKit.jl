@@ -204,7 +204,7 @@ prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
 
 poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n    )
 
-jac_PO_fd = BK.finite_differences(x -> poTrap(x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
+jac_PO_fd = BK.finite_differences(x -> BK.residual(poTrap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
 # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
@@ -218,7 +218,7 @@ BK.get_time_diff(poTrap, orbitguess_f)
 # BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
-_prob = BK.BifurcationProblem((x, p) -> poTrap(x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
+_prob = BK.BifurcationProblem((x, p) -> BK.residual(poTrap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
 opt_po = NewtonPar(tol = 1e-8, max_iterations = 150)
 outpo_f = @time BK.solve(_prob, Newton(), opt_po)
 @test BK.converged(outpo_f)

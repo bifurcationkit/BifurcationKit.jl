@@ -677,6 +677,18 @@ function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
     block_to_sparse(jacBlock)
 end
 
+function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
+                                u::AbstractVector,
+                                pars;
+                                kwargs...) 
+    n, m, Ntst = size(coll)
+    blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
+    n_blocks = length(blocks)
+    J = BlockArray(zeros(length(u), length(u)), blocks,  blocks)
+    jacobian_poocoll_block!(J, coll, u, pars; kwargs...)
+    return J
+end
+
 @views function jacobian_poocoll_block!(J,
                                 coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
@@ -933,7 +945,7 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
         _J = analytical_jacobian_sparse(probPO, orbitguess, par)
         jac = (x, p) -> analytical_jacobian!(_J, probPO, x, p)
     else
-        jac = (x, p) -> ForwardDiff.jacobian(z -> probPO(z, p), x)
+        jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
     end
 
     if options.linsolver isa COPLS

@@ -20,7 +20,7 @@ prob_col = PeriodicOrbitOCollProblem(Ntst, m;
                                     xπ = rand(N*( 1 + m * Ntst)))
 _ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 #####################################################
-Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jcofd = ForwardDiff.jacobian(z->BK.residual(prob_col,z, par_sl), _ci);
 Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
 
 _rhs = rand(size(Jco, 1))

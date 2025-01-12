@@ -52,7 +52,7 @@ _ci = BK.generate_solution(prob_col, _orbit, 1.)
 BK.get_periodic_orbit(prob_col, _ci, par_sl)
 BK.getmaximum(prob_col, _ci, par_sl)
 @test BK.∂(sin, Val(2))(0.) == 0
-prob_col(_ci, par_sl) #|> scatter
+BK.residual(prob_col, _ci, par_sl) #|> scatter
 BK.get_time_slices(prob_col, _ci)
 
 # interpolate solution
@@ -156,13 +156,13 @@ prob_col.ϕ[2] = 1 #phase condition
 
 _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
 _ci = BK.generate_solution(prob_col, _orbit, 2pi)
-prob_col(_ci, par_sl)
-@test prob_col(_ci, par_sl)[1:end-1] |> norminf < 1e-7
+BK.residual(prob_col, _ci, par_sl)
+@test BK.residual(prob_col, _ci, par_sl)[1:end-1] |> norminf < 1e-7
 
 prob_coll_ip = @set prob_col.prob_vf = probsl_ip
 
-@time prob_col(_ci, par_sl);
-@time prob_coll_ip(_ci, par_sl);
+@time BK.residual(prob_col, _ci, par_sl);
+@time BK.residual(prob_coll_ip, _ci, par_sl);
 
 # test precision of generated solution
 _sol = BK.get_periodic_orbit(prob_col, _ci, nothing)
@@ -222,8 +222,8 @@ nullvf(x,p) = zero(x)
 prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-prob_col(_ci, par_sl);
-Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+BK.residual(prob_col,_ci, par_sl);
+Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
 D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
 @test norminf(Jcofd - D) < 1e-15
 
@@ -236,7 +236,7 @@ idvf(x,p) = _al*x
 prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-Jcofd = ForwardDiff.jacobian(z -> prob_col(z, par_sl), _ci);
+Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
 Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
 @test norminf(Jcofd - Jco) < 1e-15
 
@@ -247,7 +247,7 @@ Ntst = 3
 m = 2
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-Jcofd = ForwardDiff.jacobian(z->prob_col(z, par_sl), _ci);
+Jcofd = ForwardDiff.jacobian(z->BK.residual(prob_col, z, par_sl), _ci);
 Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
 Jco_bk = @time BK.jacobian_poocoll_block(prob_col, _ci, par_sl);
 @test norminf(Jcofd - Jco) < 1e-14

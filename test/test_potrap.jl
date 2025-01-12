@@ -31,9 +31,9 @@ pbi = PeriodicOrbitTrapProblem(
 @test BK.isinplace(pb) == false
 # BK.POTrapFunctional(pb, res, orbitguess_f)
 # BK.POTrapFunctional(pbi, res, orbitguess_f)
-res = pb(orbitguess_f, par)
-resg = pbg(orbitguess_f, par)
-resi = pbi(orbitguess_f, par)
+res = BK.residual(pb, orbitguess_f, par)
+resg = BK.residual(pbg, orbitguess_f, par)
+resi = BK.residual(pbi, orbitguess_f, par)
 @test res == resi
 @test res == resg
 
@@ -43,7 +43,7 @@ resi = pbi(orbitguess_f, par, orbitguess_f)
 @test res == resi
 @test res == resg
 
-BK.potrap_functional!(pbi, resi, orbitguess_f, par)
+BK.residual!(pbi, resi, orbitguess_f, par)
 BK.potrap_functional_jac!(pbi, resi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 
@@ -147,7 +147,7 @@ function _dfunctional(poPb, u0, p, du)
 end
 
 
-res = pb(orbitguess_f, par)
+res = BK.residual(pb, orbitguess_f, par)
 _res = _functional(pb, orbitguess_f, par)
 @test res ≈ _res
 
@@ -158,7 +158,7 @@ _res = _dfunctional(pb, orbitguess_f, par, _du)
 
 # with mass matrix
 pbmass = @set pb.massmatrix = spdiagm( 0 => rand(pb.N))
-res = pbmass(orbitguess_f, par)
+res = BK.residual(pbmass, orbitguess_f, par)
 _res = _functional(pbmass, orbitguess_f, par)
 @test res ≈ _res
 
@@ -177,7 +177,7 @@ pbsp = PeriodicOrbitTrapProblem(
             10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
-Jfd = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
+Jfd = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp,x, par), orbitguess_f) )
 Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
@@ -199,7 +199,7 @@ Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 
 # we update the section
 BK.updatesection!(pbsp, rand(2n*10+1), par)
-Jfd2 = sparse( ForwardDiff.jacobian(x -> pbsp(x, par), orbitguess_f) )
+Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp, x, par), orbitguess_f) )
 Jan2 = pbsp(Val(:JacFullSparse), orbitguess_f, par)
 @test Jan2 != Jan
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
@@ -211,7 +211,7 @@ Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
 ##########################
 #### idem with mass matrix
 pbsp_mass = @set pbsp.massmatrix = massmatrix = spdiagm( 0 => rand(pbsp.N))
-Jfd = sparse( ForwardDiff.jacobian(x -> pbsp_mass(x, par), orbitguess_f) )
+Jfd = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp_mass, x, par), orbitguess_f) )
 Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
@@ -229,11 +229,11 @@ pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
 @test norm(Jan2 - Jan, Inf) < 1e-6
 
 Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
-@test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
+@test norm(Jfd[1:size(Jan,1), 1:size(Jan,1)] - Jan, Inf) < 1e-6
 
 # we update the section
 BK.updatesection!(pbsp_mass, rand(2n*10+1), par)
-Jfd2 = sparse( ForwardDiff.jacobian(x -> pbsp_mass(x, par), orbitguess_f) )
+Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp_mass, x, par), orbitguess_f) )
 Jan2 = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
 @test Jan2 != Jan
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
@@ -315,5 +315,5 @@ BK.get_periodic_orbit(pbspti, orbitguess_f, par)
 
 @test pbspti.xπ ≈ pbsp.xπ
 @test pbspti.ϕ ≈ pbsp.ϕ
-pbspti(orbitguess_f, par)
-@test pbsp(orbitguess_f, par) ≈ pbspti(orbitguess_f, par)
+BK.residual(pbspti, orbitguess_f, par)
+@test BK.residual(pbsp, orbitguess_f, par) ≈ BK.residual(pbspti, orbitguess_f, par)
