@@ -1,4 +1,4 @@
-using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, solve, VectorContinuousCallback, ContinuousCallback
+using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, VectorContinuousCallback, ContinuousCallback
 const ODEType = Union{ODEProblem, DAEProblem}
 
 function get_vector_field(prob::Union{ODEProblem, DAEProblem})
