@@ -993,14 +993,31 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
                     override = false)
     pb = nf.prob
     M, N = size(pb)
+    # we update the problem by doubling M
+    if pb.mesh isa TimeMesh{Int64}
+        # we double the mesh size
+        pbnew = @set pb.mesh.ds = 2M
+    else
+        oldmesh = get_times(pb)
+        new_mesh = vcat(old_mesh[begin:end-1] /2, old_mesh ./2 .+ 1/2)
+        pbnew = @set pb.mesh.ds = new_mesh
+    end
+    @reset pbnew.M = 2M
+
     orbitguess0c = get_time_slices(pb, nf.po)
     ζc = reshape(nf.ζ, N, M)
     orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
     orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
-    orbitguess = vec(orbitguess_c[:,1:2:end])
+    orbitguess = vec(orbitguess_c)
     # we append twice the period
     orbitguess = vcat(orbitguess, 2nf.T)
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pb, ampfactor)
+    # we updat the phase condition
+    @reset pbnew.xπ = orbitguess[begin:end-1]
+    @reset pbnew.ϕ = circshift(orbitguess[begin:end-1], length(orbitguess))
+    # we need to duplicate the po as well in case deflation is used
+    po0 = get_time_slices(pb, nf.po)
+    po = vcat(vec(hcat(po0, po0)), nf.T) 
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po)
 end
 
 function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem},
@@ -1009,7 +1026,7 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem},
                     override = false)
     orbitguess = copy(nf.po)
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 
 function predictor(nf::NeimarkSackerPO,
@@ -1017,7 +1034,7 @@ function predictor(nf::NeimarkSackerPO,
                     ampfactor;
                     override = false)
     orbitguess = copy(nf.po)
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, 
@@ -1068,8 +1085,11 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     # we append the doubled period
     orbitguess = vcat(orbitguess, 2nf.T * time_factor)
 
+    # we double po in case of use of deflated newton
+    po = vcat(orbitguess0[begin:end-N], orbitguess0, nf.T)
+
     # no need to change pbnew.cache
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor, po)
 end
 ####################################################################################################
 """
@@ -1097,7 +1117,10 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
     @reset pbnew.ds = _duplicate(pbnew.ds) ./ 2
     orbitguess[end] *= 2
     updatesection!(pbnew, orbitguess, setparam(pbnew, pnew))
-    return (;orbitguess, pnew, prob = pbnew, ampfactor, δp)
+
+    po = copy(nf.po)[begin:end-1]
+    po = vcat(po, copy(nf.po)[begin:end-1], nf.po[end])
+    return (;orbitguess, pnew, prob = pbnew, ampfactor, δp, po)
 end
 
 """
@@ -1112,7 +1135,7 @@ function predictor(nf::BranchPointPO{ <: ShootingProblem },
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess[eachindex(ζs)] .+= ampfactor .* ζs
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 ####################################################################################################
 function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, 
@@ -1126,8 +1149,8 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem },
     @reset pbnew.M = pbnew.section.M
     orbitguess = copy(nf.po) .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
-
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor)
+    po = vcat(nf.po, nf.po)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po)
 end
 
 function predictor(nf::BranchPointPO{ <: PoincareShootingProblem},
@@ -1137,5 +1160,5 @@ function predictor(nf::BranchPointPO{ <: PoincareShootingProblem},
     ζs = nf.ζ
     orbitguess = copy(nf.po)
     orbitguess .+= ampfactor .* ζs
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end

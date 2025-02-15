@@ -580,12 +580,11 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         optn = _contParams.newton_options
         # find point on the first branch
         pbnew = set_params_po(pbnew, setparam(br, newp))
-        sol0 = newton(pbnew, bifpt.x, optn; kwargs...)
+        sol0 = newton(pbnew, pred.po, optn; kwargs...)
         @assert converged(sol0) "The first guess did not converge"
 
         # find the bifurcated branch using deflation
-        @assert pbnew isa AbstractPOFDProblem || pbnew isa ShootingProblem "Deflated newton is not available for your problem. Try Trapezoid / collocation method or ShootingProblem"
-        deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
+        deflationOp = DeflationOperator(2, (x, y) -> dot(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)

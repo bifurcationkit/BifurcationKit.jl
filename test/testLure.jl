@@ -116,8 +116,15 @@ for meshadapt in (false, true)
     predictor(pd, 0.1, 1)
     pd = get_normal_form(br_po, 1; verbose = false, prm = false)
     predictor(pd, 0.1, 1)
-    # @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-3 # reference value computed with ApproxFun
+    @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-3 # reference value computed with ApproxFun
     # @test pd.nf.nf.a  ≈ 0.020989802220981707 rtol=1e-3 # reference value computed with ApproxFun
+
+    # aBS from PD
+    continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 5, ds = 0.01, dsmax = 0.01, plot_every_step = 10);
+    ampfactor = .2, δp = -0.005,
+    usedeflation = true,
+    )
+
 end
 ####################################################################################################
 using OrdinaryDiffEq
@@ -166,7 +173,7 @@ end
 # aBS from PD
 br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 5, ds = 0.01, plot_every_step = 1, save_sol_every_step = 1);
     # verbosity = 0, plot = false,
-    usedeflation = false,
+    usedeflation = true,
     ampfactor = .1, δp = -0.005,
     record_from_solution = recordPO,
     normC = norminf,
