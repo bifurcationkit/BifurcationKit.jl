@@ -181,6 +181,7 @@ Note that you can generate this guess from a function using `generate_solution` 
  A functional, hereby called `G`, encodes this problem. The following methods are available
 
 - `residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `residual!(pb, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, vectype, Tmass, Tmcache <: MeshCollocationCache, Tcache} <: AbstractPODiffProblem
     # Function F(x, par)
@@ -474,7 +475,7 @@ end
 @views function _phase_condition(pb::PeriodicOrbitOCollProblem,
                                     uc,
                                     (L, ∂L),
-                                    (puj, _, pvj, vj),
+                                    (pu, _, pϕ, _),
                                     period)
     𝒯 = eltype(uc)
     phase = zero(𝒯)
@@ -484,10 +485,10 @@ end
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
-        mul!(puj, uc[:, rg], L) # puj : n x m
-        mul!(pvj, ϕc[:, rg], ∂L)
+        mul!(pu, uc[:, rg], L) # pu : n x m
+        mul!(pϕ, ϕc[:, rg], ∂L)
         @inbounds for l in Base.OneTo(m)
-            phase += dot(puj[:, l], pvj[:, l]) * ω[l]
+            phase += dot(pu[:, l], pϕ[:, l]) * ω[l]
         end
         rg = rg .+ m
     end
@@ -495,7 +496,7 @@ end
 end
 
 function _POO_coll_scheme!(coll::PeriodicOrbitOCollProblem, dest, ∂u, u, par, h, tmp)
-    applyF(coll, tmp, u, par)
+    residual!(coll.prob_vf, tmp, u, par)
     @. dest = ∂u - h * tmp
 end
 
@@ -592,6 +593,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                     ρF = one(𝒯),
                                     ρI = zero(𝒯)) where {𝒯}
     n, m, Ntst = size(coll)
+    nJ = length(coll) + 1
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     Ω = get_matrix_phase_condition(coll)
     mesh = getmesh(coll)
@@ -608,8 +610,8 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     VF = coll.prob_vf
 
     # put boundary condition
-    J[end-n:end-1, end-n:end-1] .= In
-    J[end-n:end-1, 1:n] .= (-1) .* In
+    J[nJ-n:nJ-1, nJ-n:nJ-1] .= In
+    J[nJ-n:nJ-1, 1:n] .= (-1) .* In
 
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
@@ -634,7 +636,9 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                                  (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
-            J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-dt)
+            # J[rgNx .+ (l-1)*n, end] .= residual(VF, pj[:,l], pars) .* (-dt)
+            residual!(VF, J[_rgX, nJ], pj[:, l], pars)
+            J[_rgX, nJ] .*= (-dt)
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -647,7 +651,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         for k₁ = 1:m+1
             for k₂ = 1:m+1
                 # J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
-                axpby!(Ω[k₁, k₂] / period, ϕc[:, (j-1)*m + k₂], 1, J[end, rg])
+                axpby!(Ω[k₁, k₂] / period, ϕc[:, (j-1)*m + k₂], 1, J[nJ, rg])
             end
             if k₁ < m + 1
                 rg = rg .+ n
@@ -656,7 +660,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     end
     vj = get_tmp(coll.cache.vj, u)
     phase = _phase_condition(coll, uc, (L, ∂L), (pj, uj, ϕj, vj), period)
-    J[end, end] = -phase / period
+    J[nJ, nJ] = -phase / period
     return J
 end
 
