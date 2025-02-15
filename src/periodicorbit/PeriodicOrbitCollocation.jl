@@ -358,7 +358,8 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             sol_ode::AbstractTimeseriesSolution,
                             period;
                             optimal_period::Bool = true)
-    u0 = sol_ode(0)
+    t0 = sol_ode.t[begin]
+    u0 = sol_ode(t0)
     @assert u0 isa AbstractVector
     N = length(u0)
 
@@ -378,10 +379,10 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     # find best period candidate
     if optimal_period
         _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
-        period = _times[argmin(norm(sol_ode(t) - sol_ode(0)) for t in _times)]
+        period = _times[argmin(norm(sol_ode(t + t0) - sol_ode(t0)) for t in _times)]
     end
 
-    ci = generate_solution(pbcoll, t -> sol_ode(t), period)
+    ci = generate_solution(pbcoll, t -> sol_ode(t0 + t), period)
     pbcoll.ϕ .= @view ci[begin:end-1]
 
     return pbcoll, ci
@@ -479,12 +480,12 @@ end
     phase = zero(𝒯)
     n, m, Ntst = size(pb)
     ω = pb.mesh_cache.gauss_weight
-    vc = get_time_slices(pb.ϕ, size(pb)...)
+    ϕc = get_time_slices(pb.ϕ, size(pb)...)
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
         mul!(puj, uc[:, rg], L) # puj : n x m
-        mul!(pvj, vc[:, rg], ∂L)
+        mul!(pvj, ϕc[:, rg], ∂L)
         @inbounds for l in Base.OneTo(m)
             phase += dot(puj[:, l], pvj[:, l]) * ω[l]
         end
@@ -623,7 +624,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         for l in 1:m
             _rgX = rgNx .+ (l-1)*n
             if _transpose == false
-                J0 .= jacobian(VF, pj[:, l], pars)
+                jacobian!(VF, J0, pj[:, l], pars)
             else
                 J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end
