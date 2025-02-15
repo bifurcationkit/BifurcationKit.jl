@@ -25,7 +25,7 @@ test_newton(ones(10) .+ rand(10) * 0.1)
 # test types for newton
 # test type
 for T in (Float64, Float32, Float16)
-    sol = test_newton(T.(ones(10) .+ rand(10) * 0.1)).u
+    sol = test_newton(T.(ones(10) .+ rand(10) .* 0.1)).u
     @test eltype(sol) == T
 end
 ####################################################################################################

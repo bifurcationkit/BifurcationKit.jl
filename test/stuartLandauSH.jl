@@ -103,8 +103,6 @@ outpo = newton(_pb, initpo, optn; normN = norminf)
 @test outpo.prob.prob.jacobian isa BK.AutoDiffDense
 
 BK.getperiod(_pb, outpo.u, par_hopf)
-BK.getamplitude(_pb, outpo.u, par_hopf)
-BK.getmaximum(_pb, outpo.u, par_hopf)
 BK.get_periodic_orbit(_pb, outpo.u, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, p_max = 4.0, max_steps = 5, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-7), tol_stability = 1e-5)
@@ -215,8 +213,6 @@ ls = DefaultLS()
 
 
 BK.getperiod(probPsh, outpo.u, par_hopf)
-BK.getamplitude(probPsh, outpo.u, par_hopf)
-BK.getmaximum(probPsh, outpo.u, par_hopf)
 BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
 
 probPsh = PoincareShootingProblem(prob, Rodas4(),

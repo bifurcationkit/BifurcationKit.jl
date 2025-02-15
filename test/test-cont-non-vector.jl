@@ -22,7 +22,7 @@ end
 
 opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
 prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
-        record_from_solution = (x, p;k...) -> x[1],
+        record_from_solution = (x, p; k...) -> x[1],
         J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         Jᵗ = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
         d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
@@ -36,8 +36,6 @@ br0 = continuation(prob, PALC(), opts_br0)
 @test br0.param[end] == -1
 
 solfold = newton(br0, 2)
-    # flag && printstyled(color=:red, "--> We found a Fold Point at α = ",outfold.p, ", from ", br0.specialpoint[2].param, "\n")
-
 @test BK.converged(solfold)
 ####################################################################################################
 # Here is a more involved example

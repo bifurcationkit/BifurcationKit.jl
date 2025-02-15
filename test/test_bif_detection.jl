@@ -71,7 +71,7 @@ x0 = zeros(size(par.L, 1))
 optc = ContinuationPar(p_min = -1., p_max = 10., ds = 0.1, max_steps = 150, detect_bifurcation = 2, save_eigenvectors = false)
 prob = BK.BifurcationProblem(Ftb, x0, par, (@optic _.λ); J = Jtb)
 alg = PALC()
-br1 = continuation(prob, alg, optc; verbosity = 0)
+br1 = continuation(prob, alg, optc)
 testBranch(br1)
 
 br1r = BK._reverse(br1)
@@ -92,12 +92,12 @@ dimBif2 = [abs(bp.δ[1]) for bp in br2.specialpoint if bp.type != :endpoint]
 
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
-br3 = continuation(prob, alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 8, tol_bisection_eigenvalue = 1e-7); verbosity = 0)
+br3 = continuation(prob, alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 10.3, n_inversion = 8, tol_bisection_eigenvalue = 1e-7))
 testBranch(br3)
 
 # case where bisection "fails". Test whether the bifurcation point belongs to the specified interval
 # in this case, we test if coming from above, and having no inversion, still leads to correct result
-br4 = continuation((@set prob.params.λ = 0.95), alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 1.95, n_inversion = 8, ds = 0.7, dsmax = 1.5, max_bisection_steps = 1); verbosity = 0)
+br4 = continuation((@set prob.params.λ = 0.95), alg, ContinuationPar(optc; detect_bifurcation = 3, p_max = 1.95, n_inversion = 8, ds = 0.7, dsmax = 1.5, max_bisection_steps = 1))
 testBranch(br4)
 ####################################################################################################
 # this example is to test failures in Newton and how it affects the bifurcation points labels
@@ -107,7 +107,7 @@ Jac_m = (x, p; k = 2) -> diagm(0 => p .- x.^k)
 opts = ContinuationPar(dsmax = 0.1, dsmin = 1e-5, ds = 0.001, max_steps = 130, p_min = -3., p_max = 0.1, newton_options = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 4), detect_bifurcation=3, n_inversion=4)
 
 prob4 = BK.BifurcationProblem(F, zeros(1), -0.1, (@optic _); J = Jac_m, record_from_solution = (x,p;k...)->x[1])
-br4 = continuation(prob4, alg, opts; verbosity = 0, plot=false)
+br4 = continuation(prob4, alg, opts)
 testBranch(br4)
 ####################################################################################################
 function Ftb(X, p)
@@ -124,8 +124,7 @@ par = (p1 = -3., p2=-3., k=3)
 opts = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 135, p_min = -3., p_max = 4.0, newton_options = NewtonPar(max_iterations = 5), detect_bifurcation = 3, n_inversion = 6, dsmin_bisection = 1e-9, max_bisection_steps = 15, nev = 2)
 
 prob = BK.BifurcationProblem(Ftb, -2ones(2), par, (@optic _.p1); record_from_solution = (x,p;k...)->x[1])
-br = continuation(prob, alg, (@set opts.detect_bifurcation = 3);
-    plot = false, verbosity = 0,)
+br = continuation(prob, alg, (@set opts.detect_bifurcation = 3))
     show(br)
 testBranch(br)
 

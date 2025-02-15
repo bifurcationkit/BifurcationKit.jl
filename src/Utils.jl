@@ -7,6 +7,21 @@ struct BK_NoPlot <: AbstractPlotBackend end
 struct BK_Plots <: AbstractPlotBackend end
 struct BK_Makie <: AbstractPlotBackend end
 
+"""
+Internal function to select the keys out of nt that are valid for the continuation function below.
+Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
+"""
+function _keep_opts_cont(nt) 
+    return NamedTuple{filter(in((:kind,
+                            :filename,
+                            :plot,
+                            :normC,
+                            :finalise_solution,
+                            :callback_newton,
+                            :event,
+                            :verbosity,
+                            :bothside)), keys(nt))}(nt)
+end
 ####################################################################################################
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]

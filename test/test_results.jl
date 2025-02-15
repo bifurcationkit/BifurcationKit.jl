@@ -3,10 +3,10 @@ const BK = BifurcationKit
 
 # Simple Test problem (Pitchfork bifurcation) to generate a ContResult and a Branch object
 function f(u, p)
-    return p.r .* u - u .^ 3
+    return @. p.r * u - u^3
 end
-p = (r=-1.0,)
-u0 = [0.0]
+p = (r = -1.0,)
+u0 = zeros(1)
 prob = BK.BifurcationProblem(f, u0, p, (@optic _.r))
 
 @testset "ContResult" begin

@@ -1,24 +1,3 @@
-"""
-$(SIGNATURES)
-
-Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
-"""
-function getamplitude(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-    _max = _get_extremum(prob, x, p; ratio = ratio)
-    _min = _get_extremum(prob, x, p; ratio = ratio, op = (min, minimum))
-    return maximum(_max .- _min)
-end
-
-"""
-$(SIGNATURES)
-
-Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = ratio * n`, the call returns the amplitude over `x[1:n]`.
-"""
-function getmaximum(prob::AbstractShootingProblem, x::AbstractVector, p; ratio = 1)
-    mx = _get_extremum(prob, x, p; ratio = ratio)
-    return maximum(mx)
-end
-####################################################################################################
 # Standard Shooting functional
 """
     pb = ShootingProblem(flow::Flow, ds, section; parallel = false)

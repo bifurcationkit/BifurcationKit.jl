@@ -10,8 +10,8 @@ BK._print_line(1,nothing,1)
 # test VectorInterface
 # x0 = rand(5)
 # y0 = rand(5)
-# x0b = BorderedArray(x0[1:end-1], x0[end])
-# y0b = BorderedArray(y0[1:end-1], y0[end])
+# x0b = BorderedArray(x0[begin:end-1], x0[end])
+# y0b = BorderedArray(y0[begin:end-1], y0[end])
 
 # @test BK.zerovector(x0b) |> norm == 0
 # out = BK.add(y0b,x0b,1.1,-0.1)
@@ -77,7 +77,7 @@ x_bd = BorderedArray(rand(100), rand())
 x_bd_v = vcat(copy(x_bd.u), x_bd.p)
 o1 = map_bls(x_bd)
 o2 = map_bls(x_bd_v)
-@test o1.u ≈ o2[1:end-1]
+@test o1.u ≈ o2[begin:end-1]
 @test o1.p ≈ o2[end]
 ####################################################################################################
 let
@@ -113,14 +113,14 @@ let
     _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
     @test _sol ≈ sol_explicit
 
-    _sol, = ls(x->J0*x, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(x -> J0 * x, rhs; a₀ = 0.1, a₁ = 0.9)
     @test _sol ≈ sol_explicit
 
     ls = GMRESKrylovKit(rtol = 1e-16)
     _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
     @test _sol ≈ sol_explicit
 
-    _sol, = ls(x->J0*x, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(x -> J0 * x, rhs; a₀ = 0.1, a₁ = 0.9)
     @test _sol ≈ sol_explicit
 
     ls = KrylovLS(rtol = 1e-16, Pl = I)
@@ -149,39 +149,39 @@ let
     rhs = rand(5)
     sol_explicit = (J0 + 0.2spdiagm(0 => vcat(ones(4),0))) \ rhs
 
-    args_bls = (J0[1:end-1,1:end-1], J0[1:end-1,end], J0[end,1:end-1], J0[end,end], rhs[1:end-1], rhs[end])
+    args_bls = (J0[begin:end-1,1:end-1], J0[begin:end-1,end], J0[end,1:end-1], J0[end,end], rhs[begin:end-1], rhs[end])
 
     linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd1u
+    @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
     ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(rhs)-1)
     linBdsolver = BK.BorderingBLS(ls)
     sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     ls = GMRESKrylovKit(dim = length(rhs) - 1, rtol = 1e-11)
     linBdsolver = BK.BorderingBLS(ls)
     sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     linBdsolver = BK.MatrixBLS(ls)
     sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p
 
     BK.MatrixFreeBLS(nothing)
     linBdsolver = BK.MatrixFreeBLS(ls, true)
     sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
     sol_bd4u, sol_bd4p, _, _ = linBdsolver(args_bls...; shift = 0.2)
-    @test sol_explicit[1:end-1] ≈ sol_bd4u
+    @test sol_explicit[begin:end-1] ≈ sol_bd4u
     @test sol_explicit[end] ≈ sol_bd4p
 
     # test the bordered linear solvers as used in newtonPALC
@@ -203,9 +203,9 @@ let
     J0 = rand(100,100) * 0.2 - I
     rhs = rand(100)
     m = 3
-    J = J0[1:end-m, 1:end-m]
+    J = J0[begin:end-m, 1:end-m]
     c = J0[end-m+1:end, end-m+1:end]
-    a = Tuple(J0[1:end-m, k] for k in size(J0,1)-m+1:size(J0,1))
+    a = Tuple(J0[begin:end-m, k] for k in size(J0,1)-m+1:size(J0,1))
     b = Tuple(J0[k, 1:end-m] for k in size(J0,1)-m+1:size(J0,1))
     @assert J0 ≈ vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
 
@@ -215,15 +215,15 @@ let
     ls = DefaultLS()
 
     linBdsolver = BK.MatrixBLS(ls)
-    sol_bd1u, sol_bd1p, _, _ = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
-    @test sol_explicit[1:end-m] ≈ sol_bd1u
+    sol_bd1u, sol_bd1p, _, _ = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[begin:end-m], rhs[end-m+1:end])
+    @test sol_explicit[begin:end-m] ≈ sol_bd1u
     @test sol_explicit[end-m+1:end] ≈ sol_bd1p
 
     for ls in (DefaultLS(), GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
         linBdsolver = BK.BorderingBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, J, a, b, c, rhs[begin:end-m], rhs[end-m+1:end])
         @assert success
-        @test sol_explicit[1:end-m] ≈ sol_bd2u
+        @test sol_explicit[begin:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
     end
 
@@ -231,29 +231,29 @@ let
     Jmf = x -> J * x
     for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J,1)))
         linBdsolver = BK.BorderingBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[begin:end-m], rhs[end-m+1:end])
         @assert success
-        @test sol_explicit[1:end-m] ≈ sol_bd2u
+        @test sol_explicit[begin:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
     end
 
     # test MatrixFreeBLSmap evaluation
     blsmap = BK.MatrixFreeBLSmap(Jmf, a, b, c, nothing, dot)
-    rhs_bd = BorderedArray(rhs[1:end-m], rhs[end-m+1:end])
+    rhs_bd = BorderedArray(rhs[begin:end-m], rhs[end-m+1:end])
     lhs = J0 * rhs
     lhs2 = blsmap(rhs_bd)
-    @test lhs[1:end-m] ≈ lhs2.u
+    @test lhs[begin:end-m] ≈ lhs2.u
     @test lhs[end-m+1:end] ≈ lhs2.p
     lhs2 = blsmap(rhs)
-    @test lhs[1:end-m] ≈ lhs2[1:end-m]
+    @test lhs[begin:end-m] ≈ lhs2[begin:end-m]
     @test lhs[end-m+1:end] ≈ lhs2[end-m+1:end]
 
     # test MatrixFreeBLS
     for ls in (GMRESKrylovKit(), GMRESIterativeSolvers(reltol = 1e-11, N = size(J0,1)))
         linBdsolver = BK.MatrixFreeBLS(ls)
-        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[1:end-m], rhs[end-m+1:end])
+        sol_bd2u, sol_bd2p, success, it = BK.solve_bls_block(linBdsolver, Jmf, a, b, c, rhs[begin:end-m], rhs[end-m+1:end])
         @assert success
-        @test sol_explicit[1:end-m] ≈ sol_bd2u
+        @test sol_explicit[begin:end-m] ≈ sol_bd2u
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
     end
 end
@@ -281,8 +281,8 @@ let
     sol_explicit = J0 \ rhs
 
     # extract the border
-    J11 = J0[1:end-1,1:end-1]
-    J12 = J0[1:end-1,end]
+    J11 = J0[begin:end-1,1:end-1]
+    J12 = J0[begin:end-1,end]
     J21 = J0[end,1:end-1] |> conj
     J22 = J0[end,end]
 
@@ -291,62 +291,62 @@ let
     J0_b = hcat(J11, J12); J0_b = vcat(J0_b, hcat(J21' , J22))
         @test norm(J0_b - J0) ≈ 0
 
-    args_bls = (J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    args_bls_shift = (J, J12, J21, J22, rhs[1:end-1], rhs[end])
+    args_bls = (J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    args_bls_shift = (J, J12, J21, J22, rhs[begin:end-1], rhs[end])
 
     linBdsolver = BK.MatrixBLS()
         sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(args_bls...)
-        @test sol_explicit[1:end-1] ≈ sol_bd3u
+        @test sol_explicit[begin:end-1] ≈ sol_bd3u
         @test sol_explicit[end] ≈ sol_bd3p
 
     linBdsolver = BK.MatrixBLS()
         sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(args_bls_shift..., shift = -λ)
-        @test sol_explicit[1:end-1] ≈ sol_bd3u
+        @test sol_explicit[begin:end-1] ≈ sol_bd3u
         @test sol_explicit[end] ≈ sol_bd3p
 
     # without the shift the first block is singular
     linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls...)
-    @test sol_explicit[1:end-1] ≈ sol_bd1u
+    @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
     sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
-    @test sol_explicit[1:end-1] ≈ sol_bd1u
+    @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
     ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(rhs)-1)
     linBdsolver = BK.BorderingBLS(ls)
     sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls...)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     ls = GMRESKrylovKit(dim = length(rhs) - 1, rtol = 1e-11)
     linBdsolver = BK.BorderingBLS(ls)
     sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls...)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(x->J*x, J12, J21, J22, rhs[1:end-1], rhs[end]; shift = -λ)
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(x->J*x, J12, J21, J22, rhs[begin:end-1], rhs[end]; shift = -λ)
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     BK.MatrixFreeBLS(nothing)
     linBdsolver = BK.MatrixFreeBLS(ls)
     sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls...)
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
     sol_bd4u, sol_bd4p, _, _ = linBdsolver(args_bls...)
-    @test sol_explicit[1:end-1] ≈ sol_bd4u
+    @test sol_explicit[begin:end-1] ≈ sol_bd4u
     @test sol_explicit[end] ≈ sol_bd4p
 
     # test the bordered linear solvers as used in newtonPALC
@@ -374,8 +374,8 @@ let
     sol_explicit = J0 \ rhs
 
     # extract the border
-    J11 = real.(J0[1:end-1,1:end-1])
-    J12 = J0[1:end-1,end]
+    J11 = real.(J0[begin:end-1,1:end-1])
+    J12 = J0[begin:end-1,end]
     J21 = J0[end,1:end-1] |> conj
     J22 = J0[end,end]
 
@@ -385,36 +385,36 @@ let
         @test norm(J0_b - J0) ≈ 0
 
     linBdsolver = BK.MatrixBLS()
-    sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p
 
     linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
-    sol_bd1u, sol_bd1p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd1u
+    sol_bd1u, sol_bd1p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
     ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(rhs)-1)
     linBdsolver = BK.BorderingBLS(ls)
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     ls = GMRESKrylovKit(dim = length(rhs) - 1, rtol = 1e-11)
     linBdsolver = BK.BorderingBLS(ls)
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd2u
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     BK.MatrixFreeBLS(nothing)
     linBdsolver = BK.MatrixFreeBLS(ls)
-    sol_bd3u, sol_bd3p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd3u
+    sol_bd3u, sol_bd3p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
-    sol_bd4u, sol_bd4p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end])
-    @test sol_explicit[1:end-1] ≈ sol_bd4u rtol = 1e-6
+    sol_bd4u, sol_bd4p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    @test sol_explicit[begin:end-1] ≈ sol_bd4u rtol = 1e-6
     @test sol_explicit[end] ≈ sol_bd4p rtol = 1e-6
 
     # test the bordered linear solvers as used in newtonPALC
@@ -422,10 +422,10 @@ let
     xip = rand()
 
     linBdsolver = BK.BorderingBLS(DefaultLS())
-    sol_bd1u, sol_bd1p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end], xiu, xip)
+    sol_bd1u, sol_bd1p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end], xiu, xip)
 
     linBdsolver = BK.MatrixFreeBLS(ls)
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[1:end-1], rhs[end], xiu, xip)
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(J11, J12, J21, J22, rhs[begin:end-1], rhs[end], xiu, xip)
 
     @test sol_bd1u ≈ sol_bd2u
     @test sol_bd1p ≈ sol_bd2p

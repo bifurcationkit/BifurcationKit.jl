@@ -7,7 +7,7 @@ BK.get_color(:bp_nimp)
 #############################
 F0_simple(x, p) = p[1] .* x
 opts = ContinuationPar(p_min = -3.)
-prob = BK.BifurcationProblem(F0_simple, zeros(1), -1.5, (@optic _))
+prob = BK.BifurcationProblem(F0_simple, zeros(1), -1.5)
 br = continuation(prob, PALC(), opts)
 
 BK.get_axis_labels(1,1,br)

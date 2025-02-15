@@ -274,7 +274,7 @@ end
     M, N = size(poPb)
 
     # period of the cycle
-    T = extract_period_fdtrap(poPb, u0)
+    T = getperiod(poPb, u0)
 
     # time step
     h =  T * get_time_step(poPb, 1)
@@ -310,7 +310,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
     M, N = size(poPb)
 
     # period of the cycle
-    T = extract_period_fdtrap(poPb, u0)
+    T = getperiod(poPb, u0)
 
     # time step
     h =  T * get_time_step(poPb, 1)
@@ -351,7 +351,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
     M, N = size(poPb)
 
     # period of the cycle
-    T = extract_period_fdtrap(poPb, u0)
+    T = getperiod(poPb, u0)
 
     # time step
     h =  T * get_time_step(poPb, 1)

@@ -109,7 +109,13 @@ struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
     "Place to store some personal data"
     data::Td
 
-    function ContinuousEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing, tol::T = 0; finaliser::TF = default_finalise_event!, data::Td = nothing) where {N,T,TF,Td}
+    function ContinuousEvent(nb::Int,
+                            fct,
+                            cev::Bool,
+                            labels = nothing, 
+                            tol::T = 0; 
+                            finaliser::TF = default_finalise_event!, 
+                            data::Td = nothing) where {T,TF,Td}
         @assert nb > 0 "You need to return at least one callback"
         condition = convert_to_tuple_eve ∘ fct
         new{typeof(condition), typeof(labels), T, TF, Td}(nb, condition, cev, labels, tol, finaliser, data)
@@ -152,7 +158,12 @@ struct DiscreteEvent{Tcb, Tl, Tf, Td} <: AbstractDiscreteEvent
     "Place to store some personal data"
     data::Td
 
-    function DiscreteEvent(nb::Int, fct, cev::Bool, labels::Union{Nothing, NTuple{N, String}} = nothing; finaliser::TF = default_finalise_event!, data::Td = nothing) where {N, TF, Td}
+    function DiscreteEvent(nb::Int,
+                            fct,
+                            cev::Bool,
+                            labels = nothing; 
+                            finaliser::TF = default_finalise_event!, 
+                            data::Td = nothing) where {TF, Td}
         @assert nb > 0 "You need to return at least one callback"
         condition = convert_to_tuple_eve ∘ fct
         new{typeof(condition), typeof(labels), TF, Td}(nb, condition, cev, labels, finaliser, data)

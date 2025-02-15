@@ -27,12 +27,12 @@ opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_
 @reset opts_br.newton_options.verbose = true
 
 ################################################################################
-using DifferentialEquations
+using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
 alg = Rodas5()
-sol = DifferentialEquations.solve(prob_de, alg)
+sol = OrdinaryDiffEq.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
-sol = DifferentialEquations.solve(prob_de, Rodas5())
+sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 
 plot(sol)
 ################################################################################
@@ -81,7 +81,7 @@ opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true
 @reset opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probtrap, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
-    argspo...
+    argspo...,
     )
 
 pt = get_normal_form(brpo_fold, 1)
@@ -160,7 +160,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     verbosity = 3, plot = true,
     argspo...
     )
-pt = get_normal_form(brpo_pd, 1, prm = false)
+pd = get_normal_form(brpo_pd, 1, prm = false)
 #########
 # pd branch switching
 brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,

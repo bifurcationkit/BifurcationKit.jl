@@ -8,7 +8,7 @@ const BK = BifurcationKit
 N = 1
 
 F0_simple(x, p) = p[1] .* x
-F_simple(x, p; k = 2) = p[1] .* x .+ x.^(k+1)/(k+1) .+ 0.01
+F_simple(x, p; k = 2) = @. p[1] * x + x^(k+1)/(k+1) + 0.01
 Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
 BK.get_lens_symbol(@optic _.a)
@@ -27,9 +27,9 @@ BK._reverse!(nothing)
 BK._append!(rand(2),rand(2))
 BK._append!(rand(2),nothing)
 
-BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2),1., :fold) |> BK.type
-BK._print_line(1, 1, (1,1))
-BK._print_line(1, nothing, (1,1))
+BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2), 1., :fold) |> BK.type
+BK._print_line(1, 1, (1, 1))
+BK._print_line(1, nothing, (1, 1))
 BK.converged(nothing)
 BK.in_bisection(nothing)
 ####################################################################################################
@@ -43,7 +43,7 @@ BK.FoldPeriodicOrbitCont()
 BK.PDPeriodicOrbitCont()
 BK.NSPeriodicOrbitCont()
 ####################################################################################################
-BK.SpecialPoint(param=0., interval=(0.,0.),x=zeros(2),norm=0.,τ=BorderedArray(rand(20),2.),precision=0.1) |> BK.type
+BK.SpecialPoint(param=0., interval=(0.,0.), x=zeros(2), norm=0., τ=BorderedArray(rand(20),2.), precision=0.1) |> BK.type
 ####################################################################################################
 # test continuation algorithm
 BK.empty(Natural())
@@ -88,7 +88,6 @@ end
 opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
 x0 = 0.01 * ones(N)
 ###############
-
 # test continuation interface
 begin
     prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)

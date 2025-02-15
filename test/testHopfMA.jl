@@ -153,11 +153,11 @@ outhopf = BK.solve(pbgopfperso, Newton(), NewtonPar(verbose = false, linsolver =
 
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
-    n = div(length(x),2)
+    n = div(length(x), 2)
     out = similar(du1)
     @views out[1:n] .= 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
-                2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
-                2 .* x[1:n] .* du2[1:n] .* du1[1:n]
+                       2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
+                       2 .* x[1:n] .* du2[1:n] .* du1[1:n]
     @inbounds for ii=1:n
         out[ii+n] = -out[ii]
     end
@@ -190,7 +190,7 @@ phase = []; scalphase = []
 vec_hopf = geteigenvector(opt_newton.eigsolver, br.eig[br.specialpoint[ind_hopf].idx][2], br.specialpoint[ind_hopf].ind_ev-1)
 for ii=1:M
     t = (ii-1)/(M-1)
-    orbitguess[:, ii] .= real.(hopfpt.u + 26*0.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .252)))
+    orbitguess[:, ii] .= real.(hopfpt.u + 26 * 0.1 * vec_hopf * exp(-2pi * complex(0, 1) * (t - .252)))
 end
 
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
@@ -199,10 +199,9 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 
 prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
-        J = Jbru_sp,
-        record_from_solution = (x, p; k...) -> norminf(x))
+        J = Jbru_sp)
 
-poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n    )
+poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n)
 
 jac_PO_fd = BK.finite_differences(x -> BK.residual(poTrap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -213,7 +212,6 @@ jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf +
 
 # test various jacobians and methods
 jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
-BK.get_time_diff(poTrap, orbitguess_f)
 # BK.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
 # BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
@@ -243,7 +241,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, p_max = 
 br_pok2 = continuation((@set poTrap.jacobian = :BorderedLU), orbitguess_f, PALC(), opts_po_cont)
 
 # test of simple calls to newton / continuation
-deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [zero(orbitguess_f)])
+deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
 # opt_po = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, p_max = 3.0, max_steps = 3, newton_options = (@set opt_po.verbose = false), nev = 2, tol_stability = 1e-8, detect_bifurcation = 1)
 for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]

@@ -83,7 +83,6 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
     verbosity = 0, plot = false,
     ampfactor = .2, δp = -0.005,
     usedeflation = true,
-    record_from_solution = (x, p; k...) -> (xtt=reshape(x[1:end-1],3,Mt); return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = x[end])),
     normC = norminf
     )
 
@@ -100,7 +99,6 @@ for meshadapt in (false, true)
         ampfactor = 1., δp = 0.01,
         record_from_solution = recordPO,
         plot_solution = plotPO,
-        # verbosity = 2,    plot = true,
         normC = norminf)
 
     # test normal forms

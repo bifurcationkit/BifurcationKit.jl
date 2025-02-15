@@ -7,7 +7,7 @@ end
 
 TimeMesh(M::Int64) = TimeMesh{Int64}(M)
 
-@inline canAdapt(ms::TimeMesh{Ti}) where Ti = !(Ti == Int64)
+@inline can_adapt(ms::TimeMesh{Ti}) where Ti = !(Ti == Int64)
 Base.length(ms::TimeMesh{Ti}) where Ti = length(ms.ds)
 Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 
@@ -82,7 +82,7 @@ Note that you can generate this guess from a function solution using `generate_s
 $DocStrjacobianPOTrap
 
 !!! note "GPU call"
-    For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
+    For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
 @with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
     # problem which contains the vector field F(x, par)
@@ -142,26 +142,39 @@ setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
     end
 end
 
+"""
+$(SIGNATURES)
+
+Compute the period of the periodic orbit associated to `x`.
+"""
+@inline getperiod(prob::PeriodicOrbitTrapProblem, x, p) = _extract_period_fdtrap(prob, x)
+
 # for a dummy constructor, useful for specifying the "algorithm" to look for periodic orbits,
 # just call PeriodicOrbitTrapProblem()
 
-function PeriodicOrbitTrapProblem(prob, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector}
+function PeriodicOrbitTrapProblem(prob,
+                                    ϕ::vectype,
+                                    xπ::vectype,
+                                    m::Union{Int, AbstractVector}, 
+                                    ls::AbstractLinearSolver = DefaultLS(); 
+                                    ongpu = false, 
+                                    massmatrix = nothing) where {vectype}
     _length = ϕ isa AbstractVector ? length(ϕ) : 0
     M = m isa Number ? m : length(m) + 1
 
-    return PeriodicOrbitTrapProblem(prob_vf = prob, ϕ = ϕ, xπ = xπ, M = M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu = ongpu, massmatrix = massmatrix)
+    return PeriodicOrbitTrapProblem(;prob_vf = prob, ϕ, xπ, M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
 end
 
 function PeriodicOrbitTrapProblem(prob_vf,
                                     ϕ::vectype,
                                     xπ::vectype,
-                                    m::Union{Int, vecmesh},
+                                    m::Union{Int, AbstractVector},
                                     N::Int,
                                     ls::AbstractLinearSolver = DefaultLS();
                                     ongpu = false,
                                     massmatrix = nothing,
                                     update_section_every_step::Int = 0,
-                                    jacobian::Symbol = :Dense) where {vectype, vecmesh <: AbstractVector}
+                                    jacobian::Symbol = :Dense) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
     prob = PeriodicOrbitTrapProblem(prob_vf = prob_vf,
@@ -187,15 +200,15 @@ end
 # PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, massmatrix = massmatrix)
 
 PeriodicOrbitTrapProblem(prob_vf,
-                        m::Union{Int, vecmesh},
+                        m::Union{Int, AbstractVector},
                         N::Int,
                         ls::AbstractLinearSolver = DefaultLS();
                         ongpu = false,
                         adaptmesh = false,
-                        massmatrix = nothing) where {vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
+                        massmatrix = nothing) = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
 
 # these functions extract the last component of the periodic orbit guess
-@inline extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
+@inline _extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
 get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
@@ -232,7 +245,7 @@ This function implements the functional for finding periodic orbits based on fin
 """
 function residual!(pb::AbstractPOFDProblem, out, u, par)
         M, N = size(pb)
-        T = extract_period_fdtrap(pb, u)
+        T = _extract_period_fdtrap(pb, u)
 
         uc = get_time_slices(pb, u)
         outc = get_time_slices(pb, out)
@@ -268,8 +281,8 @@ Matrix free expression of the Jacobian of the problem for computing periodic obi
 """
 function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
     M, N = size(pb)
-    T  = extract_period_fdtrap(pb, u)
-    dT = extract_period_fdtrap(pb, du)
+    T  = _extract_period_fdtrap(pb, u)
+    dT = _extract_period_fdtrap(pb, du)
 
     uc = get_time_slices(pb, u)
     outc = get_time_slices(pb, out)
@@ -316,7 +329,7 @@ function Aγ!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::A
     # u0 of size N * M + 1
     # du of size N * M
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
     u0c = get_time_slices(pb, u0)
 
     # compute the cyclic part
@@ -359,7 +372,7 @@ end
 
 function Jc(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
     out  = similar(du)
     outc = reshape(out, N, M-1)
     tmp  = similar(view(outc, :, 1))
@@ -388,7 +401,7 @@ This function populates Jc with the cyclic matrix using the different Jacobians
 function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, Jc::BlockArray)
     # extraction of various constants
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
 
     In = get_mass_matrix(pb)
 
@@ -433,7 +446,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9))
     # extraction of various constants
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
     AγBlock = jacobian_potrap_block(pb, u0, par; γ = γ)
 
     # we now set up the last line / column
@@ -454,7 +467,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 """
 @views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9)) where Tj
         M, N = size(pb)
-        T = extract_period_fdtrap(pb, u0)
+        T = _extract_period_fdtrap(pb, u0)
 
         In = get_mass_matrix(pb, ~(Tj <: SparseMatrixCSC))
 
@@ -506,7 +519,7 @@ end
 
 @views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder = true)
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
 
     In = get_mass_matrix(pb)
 
@@ -572,7 +585,7 @@ end
 function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(pb)
-    T = extract_period_fdtrap(pb, u0)
+    T = _extract_period_fdtrap(pb, u0)
 
     A_diagBlock = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 
@@ -611,53 +624,12 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 end
 get_periodic_orbit(prob::AbstractPOFDProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
-"""
-$(SIGNATURES)
-
-Compute the period of the periodic orbit associated to `x`.
-"""
-@inline getperiod(prob::PeriodicOrbitTrapProblem, x, p) = extract_period_fdtrap(prob, x)
-
-"""
-$(SIGNATURES)
-
-Compute `norm(du/dt)`
-"""
-@views function get_time_diff(pb::PeriodicOrbitTrapProblem, u)
-    M, N = size(pb)
-    T = extract_period_fdtrap(pb, u)
-    uc = reshape(u[begin:end-1], N, M)
-    return [norm(uc[:,ii+1].-uc[:,ii]) * T/M for ii in 1:M-1]
-end
-
-"""
-$(SIGNATURES)
-
-Compute the amplitude of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
-"""
-@views function getamplitude(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
-    n = div(length(x)-1, ratio)
-    _max = maximum(x[1:n])
-    _min = minimum(x[1:n])
-    return maximum(_max .- _min)
-end
-
-"""
-$(SIGNATURES)
-
-Compute the maximum of the periodic orbit associated to `x`. The keyword argument `ratio = 1` is used as follows. If `length(x) = 1 + ratio * n`, the call returns the amplitude over `x[1:n]`.
-"""
-@views function getmaximum(prob::PeriodicOrbitTrapProblem, x::AbstractVector, p; ratio = 1)
-    n = div(length(x)-1, ratio)
-    return maximum(x[1:n])
-end
-
 # this function updates the section during the continuation run
 @views function updatesection!(prob::PeriodicOrbitTrapProblem, x, par)
     @debug "Update section TRAP"
     M, N = size(prob)
     xc = get_time_slices(prob, x)
-    T = extract_period_fdtrap(prob, x)
+    T = _extract_period_fdtrap(prob, x)
 
     # update the reference point
     prob.xπ .= x[begin:end-1]
@@ -774,7 +746,7 @@ end
 
 # this function is called whenever the jacobian of G has to be updated
 function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltype(u0), 1e-9))
-    T = extract_period_fdtrap(J.Aγ.prob, u0)
+    T = _extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE CE vcat!
     @views J.∂TGpo .= (residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- residual(J.Aγ.prob, u0, par)) ./ δ
@@ -829,10 +801,10 @@ has_adjoint(::WrapPOTrap) = false
 function _newton_trap(probPO::PeriodicOrbitTrapProblem,
                 orbitguess,
                 options::NewtonPar;
-                defOp::Union{Nothing, DeflationOperator{T, Tf, vectype}} = nothing,
-                kwargs...) where {T, Tf, vectype}
+                defOp::Union{Nothing, DeflationOperator} = nothing,
+                kwargs...)
     # this hack is for the test to work with CUDA
-    @assert sum(extract_period_fdtrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
+    @assert sum(_extract_period_fdtrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = probPO.jacobian
     @assert jacobianPO in (:Dense, :DenseAD, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please choose another one."
     M, N = size(probPO)
@@ -954,7 +926,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             plot_solution = nothing,
             kwargs...)
     # this hack is for the test to work with CUDA
-    @assert sum(extract_period_fdtrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
+    @assert sum(_extract_period_fdtrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = prob.jacobian
     @assert jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please chose another one."
 
@@ -1071,7 +1043,7 @@ function continuation(prob::PeriodicOrbitTrapProblem,
                     linear_algo = nothing,
                     kwargs...)
     _linear_algo = isnothing(linear_algo) ?  BorderingBLS(solver = _contParams.newton_options.linsolver, check_precision = false) : linear_algo
-    return continuation_potrap(prob, orbitguess, alg, _contParams, _linear_algo; record_from_solution = record_from_solution, kwargs...)
+    return continuation_potrap(prob, orbitguess, alg, _contParams, _linear_algo; record_from_solution, kwargs...)
 end
 
 ####################################################################################################

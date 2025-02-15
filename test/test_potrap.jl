@@ -308,8 +308,6 @@ pbspti = PeriodicOrbitTrapProblem(
 
 BK.get_mesh_size(pbspti)
 orbitguess_f = rand(2n*10+1)
-BK.getamplitude(pbspti, orbitguess_f, par)
-BK.getmaximum(pbspti, orbitguess_f, par)
 BK.getperiod(pbspti, orbitguess_f, par)
 BK.get_periodic_orbit(pbspti, orbitguess_f, par)
 

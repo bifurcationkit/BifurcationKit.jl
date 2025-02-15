@@ -29,7 +29,7 @@ The current focus is on large scale nonlinear problems and multiple hardwares. H
 > Despite this focus, the package can easily handle low dimensional problems and specific optimizations are regularly added.
 
 
-## Support and citation
+## 📚 Support and citation
 If you use `BifurcationKit.jl` in your work, we ask that you cite the following paper. Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future. It is referenced on HAL-Inria as follows:
 
 ```
@@ -47,7 +47,7 @@ If you use `BifurcationKit.jl` in your work, we ask that you cite the following 
 }
 ```
 
-## Installation
+## 📦 Installation
 
 This package requires Julia >= v1.3.0
 

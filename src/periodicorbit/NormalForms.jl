@@ -115,7 +115,7 @@ function period_doubling_normal_form(pbwrap,
     ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ))
     ζs = reduce(vcat, ζ_a)
 
-    # normal form for Poincaré map
+    # basic normal form structure, it is empty for now, just a wrapper for the eigenvectors
     nf = PeriodDoubling(nothing, nothing, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
     PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
@@ -276,7 +276,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
                                 lens = getlens(pbwrap),
                                 detailed = true,
                                 kwargs_nf...)
-    # based on the article
+    # function based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis https://doi.org/10.1137/040611306.
     # on page 1243
     # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
@@ -992,9 +992,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
                     ampfactor;
                     override = false)
     pb = nf.prob
-
     M, N = size(pb)
-    orbitguess0 = nf.po[begin:end-1]
     orbitguess0c = get_time_slices(pb, nf.po)
     ζc = reshape(nf.ζ, N, M)
     orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
@@ -1032,7 +1030,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     # we update the problem by doubling Ntst
     # we need to keep the mesh for adaptation
     old_mesh = getmesh(pbnew)
-    new_mesh = vcat(old_mesh[begin:end-1] /2, old_mesh ./2 .+ 1/2)
+    new_mesh = vcat(old_mesh[begin:end-1]/2, old_mesh ./2 .+ 1/2)
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
     update_mesh!(pbnew, new_mesh)
 
@@ -1062,7 +1060,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     end
 
     orbitguess_c = orbitguess0 .+ ampfactor .* nf.ζ
-    orbitguess = vcat(orbitguess_c[1:end-N], orbitguess0 .- ampfactor .* nf.ζ)
+    orbitguess = vcat(orbitguess_c[begin:end-N], orbitguess0 .- ampfactor .* nf.ζ)
 
     pbnew.xπ .= orbitguess
     pbnew.ϕ .= circshift(orbitguess, length(orbitguess) ÷ 1)

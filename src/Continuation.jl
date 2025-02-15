@@ -4,7 +4,7 @@ import Base: iterate
 """
 $(TYPEDEF)
 
-Define a continuation iterator. This allows for example to do
+Define a continuation iterator. This allows for example to do:
 
 ```
 iter = ContIterable(prob, alg, opts; kwargs...)
@@ -16,7 +16,7 @@ end
 More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 
 # Useful functions
-- `setparam(iter, p)` set parameter with lens `iter.prob.lens` to `p`
+- `setparam(iter, p::Real)` set parameter with lens `iter.prob.lens` to `p`
 - `is_event_active(iter)` whether the event detection is active
 - `compute_eigenelements(iter)` whether to compute eigen elements
 - `save_eigenvectors(iter)` whether to save eigen vectors
@@ -36,22 +36,6 @@ Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, 
     callback_newton::TcallbackN
     verbosity::UInt8 = 2
     filename::String
-end
-
-"""
-Internal function to select the keys out of nt that are valid for the continuation function below.
-Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
-"""
-function _keep_opts_cont(nt) 
-    return NamedTuple{filter(in((:kind,
-                            :filename,
-                            :plot,
-                            :normC,
-                            :finalise_solution,
-                            :callback_newton,
-                            :event,
-                            :verbosity,
-                            :bothside)), keys(nt))}(nt)
 end
 
 # constructor
@@ -119,7 +103,7 @@ clamp_predp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contparam
 """
 $(TYPEDEF)
 
-Structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
+Mutable structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
 
 !!! danger
     If you mutate these fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
@@ -411,7 +395,7 @@ function iterate_from_two_points(it::ContIterable,
 
     # update stability
     if compute_eigenelements(it)
-        @unpack n_unstable, n_imag = is_stable(getcontparams(it), eigvals)
+        (;n_unstable, n_imag) = is_stable(getcontparams(it), eigvals)
         update_stability!(state, n_unstable, n_imag, cveig)
     end
 
@@ -426,7 +410,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
     verbosity = min(it.verbosity, _verbosity)
     verbose = verbosity > 0; verbose1 = verbosity > 1
 
-    @unpack step, ds = state
+    (;step, ds) = state
 
     if verbose
         printstyled("━"^55*"\nContinuation step $step \n", bold = true);
@@ -434,7 +418,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
         @printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clamp_predp(state.z_pred.p, it))
     end
 
-    # in PALC, z_pred contains the previous solution
+    # for PALC, z_pred contains the previous solution
     corrector!(state, it; iterationC = step, z0 = state.z)
 
     if converged(state)
@@ -454,8 +438,7 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
         verbose && printstyled("Newton correction failed\n", color = :red)
     end
 
-    # step size control
-    # we update the parameter ds stored in state
+    # step size control, updates the parameter ds stored in state
     step_size_control!(state, it)
 
     # predictor: state.z_pred. The following method only mutates z_pred and τ
@@ -510,12 +493,12 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             end
 
             if is_event_active(it)
-                # check if an event occurred between the 2 continuation steps
-                eveDetected = update_event!(it, state)
+                # check if an event occurred between the last 2 continuation steps
+                event_detected = update_event!(it, state)
                 verbose1 && printstyled(color = :blue, "──▶ Event values: ", state.eventValue[2], "\n"*" "^14*"──▶ ", state.eventValue[1],"\n")
-                eveDetected && (verbose && printstyled(color=:red, "──▶ Event detected before p = ", getp(state), "\n"))
+                event_detected && (verbose && printstyled(color=:red, "──▶ Event detected before p = ", getp(state), "\n"))
                 # save the event if detected and / or use bisection to locate it precisely
-                if eveDetected
+                if event_detected
                     _T = eltype(it); status = :guess; interval_event = (_T(0),_T(0))
                     if contparams.detect_event > 1
                         status, interval_event = locate_event!(it.event, it, state, it.verbosity > 2)
