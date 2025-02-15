@@ -173,7 +173,7 @@ end
 # aBS from PD
 br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 5, ds = 0.01, plot_every_step = 1, save_sol_every_step = 1);
     # verbosity = 0, plot = false,
-    usedeflation = true,
+    # usedeflation = true,
     ampfactor = .1, δp = -0.005,
     record_from_solution = recordPO,
     normC = norminf,
