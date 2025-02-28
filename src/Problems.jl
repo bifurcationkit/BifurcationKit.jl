@@ -171,8 +171,8 @@ for (op, at) in (
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
 
             ## Constructors
-            - ``BifurcationProblem(F, u0, params, lens)`` all derivatives are computed using ForwardDiff.
-            - ``BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)`` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
+            - `BifurcationProblem(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
+            - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
                 - `plot_solution` see above
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need to provide an adjoint

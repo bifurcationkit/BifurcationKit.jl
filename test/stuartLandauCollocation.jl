@@ -258,12 +258,12 @@ BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
 const _asp = sparse(I(N) + 0.1 .*sprand(N,N,0.1))
 prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
 prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
-prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N = N, ϕ = copy(prob_col_dense.ϕ), xπ = copy(prob_col_dense.xπ))
+prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(prob_col_dense.ϕ), xπ = copy(prob_col_dense.xπ))
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jco_sp = BK.analytical_jacobian_sparse(prob_col, _ci, par_sl);
 Jco = BK.analytical_jacobian(prob_col_dense, _ci, par_sl);
-@assert norminf(Jco - Array(Jco_sp)) < 1e-15
+@test norminf(Jco - Array(Jco_sp)) < 1e-15
 Jco2 = copy(Jco) |> sparse;
 Jco2 .= 0
 _indx = BifurcationKit.get_blocks(prob_col, Jco2);

@@ -383,9 +383,9 @@ This is a simplified version of [1].
 
 ## Example
 
-You can create such solver like this (here `n=2`):
+You can create such solver like this (here `n = 2`):
 
-    eigfloquet = BifurcationKit.FloquetCollGEV(DefaultEig(), (30*4+1)*2, 2))
+    eigfloquet = BifurcationKit.FloquetCollGEV(DefaultEig(), (30 * 4 + 1) * 2, 2))
 
 ## References
 [1] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
@@ -393,10 +393,10 @@ You can create such solver like this (here `n=2`):
 struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     eigsolver::E
     B::Tb
-    function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int)
+    function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
         eigls2 = check_floquet_options(eigls)
         # build the mass matrix
-        B = zeros(ntot, ntot)
+        B = array_zeros(ntot, ntot)
         B[end-n+1:end, end-n+1:end] .= I(n)
         return new{typeof(eigls2), typeof(B)}(eigls2, B)
     end
@@ -422,7 +422,7 @@ end
     μ = @. Complex(1 / (1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetCollGEV`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetCollGEV`"
     end
     return log.(μ), Complex.(vecs[indvalid, :]), true, 1
 end

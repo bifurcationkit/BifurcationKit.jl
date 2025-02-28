@@ -303,8 +303,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
-    _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
-    local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
+    _rand(n, r = 2) = r .* (rand(n) .- 1/2)         # centered uniform random variables
+    local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     # we first compute the floquet eigenvector for μ = -1
     # we use an extended linear system for this
@@ -354,8 +354,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
     # convention notation. We use the ₛ to indicates time slices which
     # are of size (N, Ntxt⋅m + 1)
-    v₁ₛ  = get_time_slices(coll, vcat(v₁ ,1))
-    v₁★ₛ = get_time_slices(coll, vcat(v₁★,1))
+    v₁ₛ  = get_time_slices(coll, vcat(v₁ , 1))
+    v₁★ₛ = get_time_slices(coll, vcat(v₁★, 1))
 
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1/2
     @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
@@ -371,10 +371,10 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     Bₛ   = copy(u₀ₛ)
     Cₛ   = copy(u₀ₛ)
     for i = 1:size(u₀ₛ, 2)
-      Fu₀ₛ[:,i] .= F(u₀ₛ[:,i], par)
-        Aₛ[:,i] .= A(u₀ₛ[:,i], par, v₁ₛ[:,i])
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i])
-        Cₛ[:,i] .= C(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i], v₁ₛ[:,i])
+      Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
+        Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
+        Cₛ[:, i] .= C(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i], v₁ₛ[:, i])
     end
 
     # computation of ψ★, recall the BC ψ★(0) = ψ★(1)
@@ -398,7 +398,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     ψ₁★ = Jψ \ rhs
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
     ψ₁★ ./= 2∫( ψ₁★ₛ, Fu₀ₛ)
-    @assert ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
+    @assert  ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
 
     # computation of a₁
     a₁ = ∫(ψ₁★ₛ, Bₛ)
@@ -453,7 +453,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # computation of a₀₁
     ∂Fu₀ₛ = copy(u₀ₛ)
     for i = 1:size(u₀ₛ, 2)
-        ∂Fu₀ₛ[:,i] .= dₚF(u₀ₛ[:,i], par)
+        ∂Fu₀ₛ[:, i] .= dₚF(u₀ₛ[:, i], par)
     end
     a₀₁ = 2∫(ψ₁★ₛ, ∂Fu₀ₛ)
 
@@ -461,7 +461,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     #                     ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
     rhsₛ = copy(u₀ₛ)
     for i = 1:size(u₀ₛ, 2)
-        rhsₛ[:,i] .= ∂Fu₀ₛ[:,i] .- a₀₁ .* Fu₀ₛ[:,i]
+        rhsₛ[:, i] .= ∂Fu₀ₛ[:, i] .- a₀₁ .* Fu₀ₛ[:, i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
@@ -480,7 +480,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # hence:
     #                   c11 = < w★, B(t,h01,w) + F11*w + c11*w - a01*wdot >
     for i = 1:size(u₀ₛ, 2)
-        rhsₛ[:,i] .= B(u₀ₛ[:,i], par, v₁★ₛ[:,i], h₀₁ₛ[:,i]) .+ F11(u₀ₛ[:,i], par, v₁★ₛ[:,i])
+        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ F11(u₀ₛ[:, i], par, v₁★ₛ[:, i])
     end
 
     c₁₁ = ∫(v₁★ₛ, rhsₛ) - a₀₁ * ∫(v₁★ₛ, Aₛ)
@@ -716,7 +716,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     _plot(x; k...) = (_sol = get_periodic_orbit(coll, x, 1);display(plot(_sol.t, _sol.u'; k...)))
     _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
-    local ∫(u,v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
+    local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     #########
     # compute v1
@@ -724,7 +724,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # we use an extended linear system for this
      # J = D  -  T*A(t) + iθ/T
     θ = abs(ns.ω)
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-θ/T), 𝒯 = ComplexF64)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = ComplexF64)
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
@@ -744,7 +744,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     v₁ ./= sqrt(∫(vr, vr))
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
 
-                if _NRMDEBUG;v₁ₛ .*= (0.4621019901257435 - 0.2724360760150998im)/v₁ₛ[1,1];end
+                if _NRMDEBUG; v₁ₛ .*= (0.4621019901257435 - 0.2724360760150998im)/v₁ₛ[1,1]; end
                 # re-scale the eigenvector
                 v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
                 v₁ = vec(v₁ₛ)
@@ -753,8 +753,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     #########
     # compute ϕ1star
-    # Jϕ = D  +  T*At(t)
     Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = true, ρF = -1)
+    # Jϕ = D  +  T * Aᵗ(t)
     Jϕ[end-N:end-1, 1:N] .= -I(N)
     Jϕ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -777,8 +777,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     Bₛ   = copy(v₁ₛ)
     Cₛ   = copy(v₁ₛ)
     for i = 1:size(u₀ₛ, 2)
-      Fu₀ₛ[:,i] .= F(u₀ₛ[:,i], par)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+      Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
 
     #########
@@ -809,7 +809,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # left / right Floquet eigenvectors
     vr = J  \ rhs
     v₁★  = @view vr[1:end-1]
-    v₁★ₛ = get_time_slices(coll, vcat(v₁★,1))
+    v₁★ₛ = get_time_slices(coll, vcat(v₁★, 1))
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
                 if _NRMDEBUG; v₁★ₛ .*= (-1.0388609772214439 - 4.170067699081798im)/v₁★ₛ[1,1];end
                 # re-scale the eigenvector
@@ -823,7 +823,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # solution of (D-T A(t) + 2iθ   )h = B(v1, v1)
     # written     (D-T(A(t) - 2iθ/T))h = B
     for i = 1:size(u₀ₛ, 2)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], v₁ₛ[:,i])
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
     end
     rhs = vcat(vec(Bₛ), 0)
     J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = ComplexF64)
@@ -843,7 +843,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # compute h11
     # solution of (D-TA(t))h = B - a₁F
     for i = 1:size(u₀ₛ, 2)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
     rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
     rhs = vcat(vec(rhsₛ), 0)
@@ -872,8 +872,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # compute d
     # d = <v1★, C(v,v,v)  +  2B(h11, v)  +  B(h20, cv)  +  C(v,v,cv)>/2 + ...
     for i = 1:size(u₀ₛ, 2)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, h₁₁ₛ[:,i], v₁ₛ[:,i])
-        Cₛ[:,i] .= C(u₀ₛ[:,i], par,  v₁ₛ[:,i], v₁ₛ[:,i], conj(v₁ₛ[:,i]))
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₁₁ₛ[:, i], v₁ₛ[:, i])
+        Cₛ[:, i] .= C(u₀ₛ[:, i], par,  v₁ₛ[:, i], v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
                 # _plot(real(vcat(vec(Bₛ),1)),label="B")
 
@@ -882,8 +882,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                 @debug "B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
 
     for i = 1:size(u₀ₛ, 2)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, h₂₀ₛ[:,i], conj(v₁ₛ[:,i]))
-        Aₛ[:,i] .= A(u₀ₛ[:,i], par, v₁ₛ[:,i])
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₂₀ₛ[:, i], conj(v₁ₛ[:, i]))
+        Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
     end
                 @debug "B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
     d +=  ∫( v₁★ₛ, Bₛ )
