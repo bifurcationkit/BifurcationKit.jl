@@ -59,7 +59,7 @@ To install the bleeding edge version, please run
 
 `] add BifurcationKit#master`
 
-## Plugins
+## 🧩 Plugins
 
 Most plugins are located in the organization [bifurcationkit](https://github.com/bifurcationkit):
 

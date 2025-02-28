@@ -96,7 +96,6 @@ for meshadapt in (false, true)
         br, 2, opts_po_cont,
         PeriodicOrbitOCollProblem(40, 4; meshadapt, K = 200);
         alg = PALC(),
-        ampfactor = 1., δp = 0.01,
         record_from_solution = recordPO,
         plot_solution = plotPO,
         normC = norminf)

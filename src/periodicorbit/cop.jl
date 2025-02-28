@@ -532,9 +532,10 @@ end
 
                 rg = i+1:nⱼ
                 rg = Iterators.flatten((i+1:st+2n, nⱼ-δn:nⱼ))
+                rhsi = rhs[i]
                 for l in rg
                     ρ = J[l, i+n] * invpivot
-                    rhs[l] -= rhs[i] * ρ
+                    rhs[l] -= rhsi * ρ
                     # rg = 1:nⱼ
                     rgₖ = Iterators.flatten((1:n, st+1+n:st+3n, nⱼ-δn:nⱼ))
                     for jₖ in rgₖ

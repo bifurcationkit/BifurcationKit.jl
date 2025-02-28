@@ -327,7 +327,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
     out_a = [copy(out)]
     # push!(out_a, copy(out))
 
-    for ii in 2:M-1
+    for ii in 2:M
         h =  T * get_time_step(poPb, ii)
         @views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
         # res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
@@ -335,7 +335,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
         out .= res
         push!(out_a, copy(out))
     end
-    push!(out_a, copy(ζ))
+    # push!(out_a, copy(ζ))
 
     return out_a
 end
