@@ -910,7 +910,8 @@ function re_make(coll::PeriodicOrbitOCollProblem,
     probPO = setproperties(coll; N, prob_vf, 
                 ϕ = zeros(n_unknows), 
                 xπ = zeros(n_unknows), 
-                cache = POCollCache(eltype(coll), N, m)
+                ∂ϕ = zeros(N, Ntst * m),
+                cache = POCollCache(eltype(coll), Ntst, N, m)
                 )
 
     ϕ0 = generate_solution(probPO, t -> orbit(2pi*t/period + pi), period)

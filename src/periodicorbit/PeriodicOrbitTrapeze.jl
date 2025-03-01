@@ -183,17 +183,17 @@ function PeriodicOrbitTrapProblem(prob_vf,
                                     jacobian::Symbol = :Dense) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-    prob = PeriodicOrbitTrapProblem(prob_vf = prob_vf,
+    prob = PeriodicOrbitTrapProblem(;prob_vf,
                                     ϕ = similar(ϕ, N*M),
                                     xπ = similar(xπ, N*M),
-                                    M = M,
+                                    M,
                                     mesh = TimeMesh(m),
-                                    N = N,
+                                    N,
                                     linsolver = ls,
-                                    ongpu = ongpu,
-                                    massmatrix = massmatrix,
-                                    update_section_every_step = update_section_every_step,
-                                    jacobian = jacobian)
+                                    ongpu,
+                                    massmatrix,
+                                    update_section_every_step,
+                                    jacobian)
 
     prob.xπ .= 0
     prob.ϕ .= 0
@@ -215,7 +215,14 @@ PeriodicOrbitTrapProblem(prob_vf,
 
 
 # do not type h::Number because this will annoy CUDA
-function potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h, tmp, linear::Bool = true; applyf::Bool = true)
+function potrap_scheme!(pb::AbstractPOFDProblem, 
+                        dest, 
+                        u1, u2, 
+                        du1, du2, 
+                        par, h, 
+                        tmp, 
+                        linear::Bool = true; 
+                        applyf::Bool = true)
     # this function implements the basic implicit scheme used for the time integration
     # because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call
     # basically tmp is F(u2)
@@ -223,7 +230,7 @@ function potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h,
         dest .= tmp
         if applyf
             # tmp <- pb.F(u1, par)
-            applyF(pb, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
+            residual!(pb.prob_vf, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
         else
             applyJ(pb, tmp, u1, par, du1)
         end
@@ -235,7 +242,7 @@ function potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h,
     else
         dest .-= h .* tmp
         # tmp <- pb.F(u1, par)
-        applyF(pb, tmp, u1, par)
+        residual!(pb.prob_vf, tmp, u1, par)
         dest .-= h .* tmp
     end
 end
@@ -246,7 +253,7 @@ This function implements the functional for finding periodic orbits based on fin
 """
 function residual!(pb::AbstractPOFDProblem, out, u, par)
         M, N = size(pb)
-        T = _extract_period_fdtrap(pb, u)
+        T = getperiod(pb, u, nothing)
 
         uc = get_time_slices(pb, u)
         outc = get_time_slices(pb, out)
@@ -296,7 +303,7 @@ function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
     tmp = @view outc[:, M]
 
     # we now compute the partial derivative w.r.t. the period T
-    @views applyF(pb, tmp, uc[:, M-1], par)
+    @views residual!(pb.prob_vf, tmp, uc[:, M-1], par)
 
     h = dT * get_time_step(pb, 1)
     @views potrap_scheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, tmp, false)
