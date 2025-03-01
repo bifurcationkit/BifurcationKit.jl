@@ -190,6 +190,7 @@ Note that you can generate this guess from a function using `generate_solution` 
     # variables to define a Section for the phase constraint equation
     ϕ::vectype = nothing
     xπ::vectype = nothing
+    ∂ϕ::∂vectype = nothing # we store the derivative of ϕ, no need to recompute it each time.
 
     # dimension of the problem in case of an AbstractVector
     N::Int = 0
