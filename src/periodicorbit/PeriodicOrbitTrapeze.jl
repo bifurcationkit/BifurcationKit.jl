@@ -118,10 +118,10 @@ end
 function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
     println(io, "┌─ Trapezoid functional for periodic orbits")
     println(io, "├─ time slices    : ", pb.M)
-    println(io, "├─ dimension      : ", pb.N)
+    println(io, "├─ dimension      : ", get_state_dim(pb))
     println(io, "├─ jacobian       : ", pb.jacobian)
     println(io, "├─ update section : ", pb.update_section_every_step)
-    println(io, "├─ # unknowns without phase condition) : ", pb.M * pb.N)
+    println(io, "├─ # unknowns without phase condition) : ", pb.M * get_state_dim(pb))
     println(io, "└─ inplace        : ", isinplace(pb))
 end
 
@@ -133,6 +133,7 @@ get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline getlens(pb::PeriodicOrbitTrapProblem) = getlens(pb.prob_vf)
 @inline getdelta(pb::PeriodicOrbitTrapProblem) = getdelta(pb.prob_vf)
 setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
+@inline get_state_dim(pb::PeriodicOrbitTrapProblem) = pb.N
 # type unstable!
 @inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
     if returnArray == false
@@ -141,6 +142,11 @@ setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
         return hasmassmatrix(pb) ? pb.massmatrix : LinearAlgebra.I(pb.N)
     end
 end
+# these functions extract the last component of the periodic orbit guess
+@inline _extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
+# these functions extract the time slices components
+get_time_slices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
+get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
 
 """
 $(SIGNATURES)
@@ -207,11 +213,6 @@ PeriodicOrbitTrapProblem(prob_vf,
                         adaptmesh = false,
                         massmatrix = nothing) = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
 
-# these functions extract the last component of the periodic orbit guess
-@inline _extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
-# these functions extract the time slices components
-get_time_slices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
-get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
 
 # do not type h::Number because this will annoy CUDA
 function potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, du1, du2, par, h, tmp, linear::Bool = true; applyf::Bool = true)
@@ -662,10 +663,10 @@ end
 end
 
 @with_kw struct AγOperatorSparseInplace{Tjc, Tjcf, Tind, Tpb} <: AbstractPOTrapAγOperator
-    Jc::Tjc    =  nothing        # cyclic matrix
+    Jc::Tjc    =  nothing     # cyclic matrix
     Jcfact::Tjcf = nothing    # factorisation of Jc
-    indx::Tind = nothing    # indices associated to the sparsity of Jc
-    prob::Tpb = nothing        # PO functional
+    indx::Tind = nothing      # indices associated to the sparsity of Jc
+    prob::Tpb = nothing       # PO functional
 end
 
 # functions to update the cyclic matrix
