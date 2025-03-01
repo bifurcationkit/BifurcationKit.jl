@@ -41,6 +41,7 @@ struct SHEigOp{Tsh <: SHLinearOp, Tσ} <: BK.AbstractEigenSolver
     sh::Tsh
     σ::Tσ
 end
+BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
 
 function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
     # AF is a type, it could be CuArray{TY} to run the following on GPU
@@ -78,7 +79,7 @@ sol0 = sol0 .- 0.25
 sol0 .*= 1.7
 # heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-9)
+function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-8)
     u, l, ν = J
     udiag = l .+ 1 .+ (2ν) .* u .- 3 .* u.^2 .- shift
     res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs; rtol, maxiter = 6, ishermitian = true)
