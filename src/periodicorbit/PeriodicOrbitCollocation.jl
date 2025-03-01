@@ -377,6 +377,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     u0 = sol_ode(t0)
     @assert u0 isa AbstractVector
     N = length(u0)
+    𝒯 = eltype(u0)
 
     n, m, Ntst = size(pb)
     n_unknowns = N * (1 + m * Ntst)
@@ -1063,7 +1064,6 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
 function continuation(coll::PeriodicOrbitOCollProblem,
-    jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar,
@@ -1073,6 +1073,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     record_from_solution = nothing,
                     plot_solution = nothing,
                     kwargs...)
+    jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
     if linear_algo isa COPBLS
         _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
         linear_algo = COPBLS(coll)
