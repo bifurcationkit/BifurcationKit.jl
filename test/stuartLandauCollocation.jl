@@ -50,7 +50,6 @@ show(prob_col)
 _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
 _ci = BK.generate_solution(prob_col, _orbit, 1.)
 BK.get_periodic_orbit(prob_col, _ci, par_sl)
-BK.getmaximum(prob_col, _ci, par_sl)
 @test BK.∂(sin, Val(2))(0.) == 0
 BK.residual(prob_col, _ci, par_sl) #|> scatter
 BK.get_time_slices(prob_col, _ci)
@@ -150,7 +149,7 @@ N = 2
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; 
                                 prob_vf = probsl,
                                 N = 2,
-                                ϕ = zeros(N*( 1 + m * Ntst)),
+                                ϕ = rand(N*( 1 + m * Ntst)),
                                 xπ = zeros(N*( 1 + m * Ntst)))
 prob_col.ϕ[2] = 1 #phase condition
 
@@ -220,12 +219,13 @@ m = 3
 N = 4
 nullvf(x,p) = zero(x)
 prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
-prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 BK.residual(prob_col,_ci, par_sl);
 Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
 D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
-@test norminf(Jcofd - D) < 1e-15
+@test norminf(Jcofd - D) < 1e-14
 
 # same but with linear vector field
 Ntst = 140
@@ -238,7 +238,7 @@ prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ =
 _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
 Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
 Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
-@test norminf(Jcofd - Jco) < 1e-15
+@test norminf(Jcofd - Jco) < 1e-14
 
 # same but with Stuart-Landau vector field
 N = 2

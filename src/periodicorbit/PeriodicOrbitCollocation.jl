@@ -127,16 +127,22 @@ struct POCollCache{T}
     uj::DiffCache{Matrix{T}, Vector{T}}
     vj::DiffCache{Matrix{T}, Vector{T}}
     tmp::DiffCache{Vector{T}, Vector{T}}
+    ∇phase::Vector{T}
+    In::Matrix{Bool}
 end
 
-function POCollCache(𝒯::Type, n::Int, m::Int)
+function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
+    # in case save_mem = true, we do not allocate the identity matrix
+    # indeed think about n = 100_000
     gj  = DiffCache(zeros(𝒯, n, m))
     gi  = DiffCache(zeros(𝒯, n, m))
     ∂gj = DiffCache(zeros(𝒯, n, m))
     uj  = DiffCache(zeros(𝒯, n, m+1))
     vj  = DiffCache(zeros(𝒯, n, m+1))
     tmp = DiffCache(zeros(𝒯, n))
-    return POCollCache(gj, gi, ∂gj, uj, vj, tmp)
+    ∇phase = zeros(𝒯, n * (1 + m * Ntst))
+    In = Array(I(save_mem ? 1 : n))
+    return POCollCache(gj, gi, ∂gj, uj, vj, tmp, ∇phase, In)
 end
 ####################################################################################################
 
@@ -156,6 +162,7 @@ This composite type implements an orthogonal collocation (at Gauss points) metho
 - `meshadapt::Bool = false` whether to use mesh adaptation
 - `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
 - `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps.
+- `cache_In = true` caches `Array(I(n))` for computing dense functional jacobian. Should be passed as false for large scale problems.
 
 ## Methods
 
@@ -228,11 +235,17 @@ end
 function PeriodicOrbitOCollProblem(Ntst::Int, 
                                     m::Int,
                                     𝒯 = Float64;
+                                    cache_In = false,
                                     kwargs...)
     N = get(kwargs, :N, 1)
-    PeriodicOrbitOCollProblem(; mesh_cache = MeshCollocationCache(Ntst, m, 𝒯),
-                                    cache = POCollCache(𝒯, N, m),
+    coll = PeriodicOrbitOCollProblem(; mesh_cache = MeshCollocationCache(Ntst, m, 𝒯),
+                                    cache = POCollCache(𝒯, Ntst, N, m, cache_In),
                                     kwargs...)
+    if ~isnothing(coll.ϕ)
+        coll = set_collocation_size(coll,  Ntst, m)
+        updatesection!(coll, coll.ϕ, nothing)
+    end
+    coll
 end
 
 """
@@ -290,6 +303,7 @@ update_mesh!(pb::PeriodicOrbitOCollProblem, mesh) = update_mesh!(pb.mesh_cache, 
 @inline isinplace(pb::PeriodicOrbitOCollProblem) = isinplace(pb.prob_vf)
 @inline is_symmetric(pb::PeriodicOrbitOCollProblem) = is_symmetric(pb.prob_vf)
 @inline getdelta(pb::PeriodicOrbitOCollProblem) = getdelta(pb.prob_vf)
+@inline get_state_dim(pb::PeriodicOrbitOCollProblem) = pb.N
 
 function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     N, m, Ntst = size(pb)
@@ -603,7 +617,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
     ϕj = get_tmp(coll.cache.gj, u) # zeros(𝒯, n, m)
     uj = get_tmp(coll.cache.uj, u) # zeros(𝒯, n, m+1)
-    In = I(n)
+    In = coll.cache.In # this helps greatly the for loop for J0 below
     J0 = zeros(𝒯, n, n)
 
     # vector field
@@ -899,7 +913,7 @@ function re_make(coll::PeriodicOrbitOCollProblem,
                 )
 
     ϕ0 = generate_solution(probPO, t -> orbit(2pi*t/period + pi), period)
-    probPO.ϕ .= @view ϕ0[begin:end-1]
+    updatesection!(probPO, ϕ0, nothing)
 
     # append period at the end of the initial guess
     orbitguess = generate_solution(probPO, t -> orbit(2pi*t/period), period)
@@ -1049,16 +1063,16 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 """
 function continuation(coll::PeriodicOrbitOCollProblem,
-                      orbitguess,
-                      alg::AbstractContinuationAlgorithm,
-                      _contParams::ContinuationPar,
-                      linear_algo::AbstractBorderedLinearSolver;
-                      δ = convert(eltype(orbitguess), 1e-8),
-                      eigsolver = FloquetColl(),
-                      record_from_solution = nothing,
-                      plot_solution = nothing,
-                      kwargs...)
     jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
+                    orbitguess,
+                    alg::AbstractContinuationAlgorithm,
+                    _contParams::ContinuationPar,
+                    linear_algo::AbstractBorderedLinearSolver;
+                    δ = convert(eltype(orbitguess), 1e-8),
+                    eigsolver = FloquetColl(),
+                    record_from_solution = nothing,
+                    plot_solution = nothing,
+                    kwargs...)
     if linear_algo isa COPBLS
         _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
         linear_algo = COPBLS(coll)
@@ -1098,16 +1112,6 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                       kind = PeriodicOrbitCont(),
                       finalise_solution = _finsol)
     return br
-end
-
-"""
-$(SIGNATURES)
-
-Compute the maximum of the periodic orbit associated to `x`.
-"""
-function getmaximum(prob::PeriodicOrbitOCollProblem, x::AbstractVector, p)
-    sol = get_periodic_orbit(prob, x, p).u
-    return maximum(sol)
 end
 
 # this function updates the section during the continuation run
