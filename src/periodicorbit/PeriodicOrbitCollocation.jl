@@ -815,8 +815,11 @@ end
     uj = zeros(𝒯, n, m+1)
     In = sparse(I(n))
     J0 = jacobian(coll.prob_vf, uc[1:n], pars)
-    tmpJ = copy(J0)
+    tmpJ = copy(J0 + In)
     @assert J0 isa AbstractSparseMatrix
+
+    # vector field
+    VF = coll.prob_vf
 
     # put boundary condition
     J.nzval[indx[1 + m * Ntst, 1 + m * Ntst]] = In.nzval

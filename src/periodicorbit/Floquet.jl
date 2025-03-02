@@ -372,6 +372,7 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 end
 ####################################################################################################
 """
+
 Computation of Floquet coefficients for the orthogonal collocation method. The method is based on a formulation through a generalised eigenvalue problem (GEV). Relatively slow but quite precise.
 
 This is a simplified version of [1].
@@ -380,6 +381,7 @@ This is a simplified version of [1].
 - `eigls` an eigensolver
 - `ntot` total number of unknowns (without counting the period), ie `length(::PeriodicOrbitOCollProblem)`
 - `n` space dimension
+- `array_zeros` useful for sparse matrices
 
 ## Example
 
@@ -402,6 +404,8 @@ struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     end
     FloquetCollGEV(eigls::FloquetCollGEV) = eigls
 end
+
+geteigenvector(eigsolve::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eigsolver, vecs, n)
 
 @views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     prob = JacColl.pb

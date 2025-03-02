@@ -8,7 +8,7 @@ abstract type AbstractMFEigenSolver <: AbstractIterativeEigenSolver end
 abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # the following function returns the n-th eigenvectors computed by an eigen solver. This function is necessary given the different return types each eigensolver has
-geteigenvector(eigsolve::ES, vecs, n::Union{Int, Array{Int64,1}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
+geteigenvector(eigsolve::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
 
 getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
@@ -21,15 +21,15 @@ The struct `Default` is used to  provide the backslash operator to our Package
     which::T = real # how do we sort the computed eigenvalues
 end
 
-function (l::DefaultEig)(J, nev; kwargs...)
-    # I put Array so we can call it on small sparse matrices
-    F = eigen(Array(J))
     I = sortperm(F.values; by = l.which, rev = true)
     nev2 = min(nev, length(I))
     # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
     return Complex.(F.values[I[begin:nev2]]), Complex.(F.vectors[:, I[begin:nev2]]), true, 1
 end
 
+function (l::DefaultEig)(J, nev; kwargs...)
+    # we convert to Array so we can call it on small sparse matrices
+    F = eigen(Array(J))
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
@@ -58,7 +58,7 @@ EigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, rea
 
 function (l::EigArpack)(J, nev; kwargs...)
     if J isa AbstractMatrix
-        λ, ϕ, ncv = Arpack.eigs(J; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
+        λ, ϕ, ncv = Arpack.eigs(J; nev, which = l.which, sigma = l.sigma, l.kwargs...)
     else
         if !(:v0 in keys(l.kwargs))
             error("The v0 argument must be provided in EigArpack for the matrix-free case")
@@ -66,7 +66,7 @@ function (l::EigArpack)(J, nev; kwargs...)
         N = length(l.kwargs[:v0])
         T = eltype(l.kwargs[:v0])
         Jmap = LinearMap{T}(J, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev = nev, which = l.which, sigma = l.sigma,
+        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = l.which, sigma = l.sigma,
                                  l.kwargs...)
     end
     Ind = sortperm(λ; by = l.by, rev = true)
@@ -131,7 +131,9 @@ function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     return vals, vec, info.converged > 0, info.numops
 end
 
-geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, Array{Int64,1}}) where {T, vectype} = vecs[n]
+geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
+
+
 ####################################################################################################
 # Solvers for ArnoldiMethod
 ####################################################################################################

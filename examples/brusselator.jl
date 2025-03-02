@@ -99,7 +99,7 @@ prob = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         record_from_solution = (x, p; k...) -> x[div(n,2)])
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), max_steps = 1060, n_inversion = 6, tol_bisection_eigenvalue = 1e-20, max_bisection_steps = 30)
+opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls), max_steps = 1060, n_inversion = 6, max_bisection_steps = 30)
 
 br = @time continuation(
     prob, PALC(),
@@ -133,16 +133,16 @@ plot(br_hopf)
 ####################################################################################################
 # automatic branch switching from Hopf point
 opt_po = NewtonPar(tol = 1e-10, verbose = true, max_iterations = 15)
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, ds = 0.01, p_max = 2.2, max_steps = 200, newton_options = opt_po, save_sol_every_step = 2,
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, p_max = 2.2, max_steps = 200, newton_options = opt_po,
     plot_every_step = 1, nev = 11, tol_stability = 1e-6,
-    detect_bifurcation = 3, dsmin_bisection = 1e-6, max_bisection_steps = 15, n_inversion = 4)
+    detect_bifurcation = 3, max_bisection_steps = 15, n_inversion = 4)
 
-probFD = PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace)
+probPO = PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace)
 br_po = continuation(
     # arguments for branch switching
     br, 1,
     # arguments for continuation
-    opts_po_cont, probFD;
+    opts_po_cont, probPO;
     ########
     linear_algo = BorderingBLS(solver = DefaultLS(), check_precision = false),
     ########

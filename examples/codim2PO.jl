@@ -70,7 +70,7 @@ argspo = (record_from_solution = recordFromSolution,
 probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, update_section_every_step = 0), prob, sol, 2.)
 
 plot(sol)
-probtrap(ci, prob.params) |> plot
+BK.residual(probtrap, ci, prob.params) |> plot
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 
@@ -140,7 +140,7 @@ plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 2.; optimal_period = false)
 
 plot(sol)
-probcoll(ci, prob.params) |> plot
+BK.residual(probcoll, ci, prob.params) |> plot
 
 solpo = BK.newton(probcoll, ci, NewtonPar(verbose = true));
 

@@ -50,7 +50,7 @@ args_po = (	record_from_solution = (x, p; k...) -> begin
     normC = norminf
     )
 
-br_potrap = continuation(br, 5, opts_po_cont,
+br_potrap = @time continuation(br, 5, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 150);
     verbosity = 2, plot = true,
     args_po...,
@@ -76,7 +76,7 @@ br_pocoll = @time continuation(
     end,
     )
 
-plot(br, br_pocoll, markersize = 3)
+plot(br, br_pocoll, markersize = 3, xlims = (-2.5, 0))
 ####################################################################################################
 # idem with Standard shooting
 using DifferentialEquations
