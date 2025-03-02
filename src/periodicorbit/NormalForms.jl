@@ -32,13 +32,14 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             autodiff = false,
             detailed = true, # to get detailed normal form
             δ = getdelta(prob),
+            k...
             )
     bifpt = br.specialpoint[id_bif]
 
     @assert !(bifpt.type == :endpoint) "Don't select an end point!"
 
     # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
+    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ, k...)
 
     if bifpt.type == :pd
         return period_doubling_normal_form(prob, br, id_bif; prm, detailed, δ, kwargs_nf...)

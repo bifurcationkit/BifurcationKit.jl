@@ -854,7 +854,11 @@ end
     return SolPeriodicOrbit(t = mesh .* T, u = uc)
 end
 
-# function needed for automatic Branch switching from Hopf bifurcation point
+"""
+$(SIGNATURES)
+
+Function needed for automatic Branch switching from Hopf bifurcation point.
+"""
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
                  hopfpt,
@@ -863,7 +867,6 @@ function re_make(coll::PeriodicOrbitOCollProblem,
                  period; 
                  orbit = identity,
                  k...)
-    M = length(orbitguess_a)
     N = length(ζr)
 
     _, m, Ntst = size(coll)
