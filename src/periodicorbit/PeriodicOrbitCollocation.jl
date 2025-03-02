@@ -372,6 +372,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             bifprob::AbstractBifurcationProblem,
                             sol_ode::AbstractTimeseriesSolution,
                             period;
+                            cache_In = false,
                             optimal_period::Bool = true)
     t0 = sol_ode.t[begin]
     u0 = sol_ode(t0)
@@ -390,7 +391,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             prob_vf = prob_vf,
                             ϕ = zeros(n_unknowns),
                             xπ = zeros(n_unknowns),
-                            cache = POCollCache(eltype(pb), N, m))
+                            cache = POCollCache(eltype(pb), Ntst, N, m, cache_In))
     
     # find best period candidate
     if optimal_period
@@ -1028,7 +1029,7 @@ function generate_jacobian(coll::PeriodicOrbitOCollProblem,
                         Jcoll_matrix = nothing
                         )
     jacobianPO = coll.jacobian
-    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
+    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one among (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace())."
 
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
