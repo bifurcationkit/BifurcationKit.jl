@@ -257,6 +257,13 @@ for (op, at) in (
     # forward getters
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
         @eval begin
+            """
+            ($SIGNATURES)
+
+            Constructor for a bifurcation problem.
+            
+            ## Optional argument
+            """
             function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
                          vjp = nothing,

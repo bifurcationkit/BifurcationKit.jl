@@ -4,7 +4,7 @@ abstract type AbstractModulatedWaveShooting <: AbstractShootingProblem end
 """
 TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
 
-This composite type implements a functional for freezing symmetries in order, for example, to compute travelling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
+This composite type implements a functional for freezing symmetries in order, for example, to compute traveling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
 
                     ┌                   ┐
                     │ f(x, par) - s⋅∂⋅x │
@@ -105,13 +105,11 @@ end
 VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
 
 # vector field of the TW problem
-@views function (pb::TWProblem)(x::AbstractVector, pars)
+@views function residual!(pb::TWProblem, out, x::AbstractVector, pars)
     # number of constraints
     nc = pb.nc
     # number of unknowns
     N = length(x) - nc
-    # array containing the result
-    out = similar(x)
     u = x[1:N]
     outu = out[1:N]
     # get the speed
@@ -127,6 +125,8 @@ VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s
     end
     return out
 end
+
+residual(pb::TWProblem, x::AbstractVector, pars) = residual!(pb, similar(x), x, pars)
 
 # jacobian-free function
 @views function (pb::TWProblem)(x::AbstractVector, pars, dx::AbstractVector)
@@ -189,13 +189,13 @@ function modify_tw_record(probTW, kwargs, par, lens)
     end
 end
 ################################################################################
-residual(tw::WrapTW, x, p) = tw.prob(x, p)
 jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
+residual(tw::WrapTW, x, p) = residual(tw.prob, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 @inline getdelta(::WrapTW) = 1e-8
-dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> tw.prob(x .+ t .* dx1, p), 0.)
+dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0.)
 d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0.)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0.)
 
@@ -203,9 +203,9 @@ function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
     jacobian = prob.jacobian
     @assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
     if jacobian == :AutoDiff
-        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
+        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> residual(prob, z, p), x))
     elseif jacobian == :MatrixFreeAD
-        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
+        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> residual(prob, x .+ t .* dx, p), 0))
     elseif jacobian == :FullLU
         jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
     elseif jacobian == :FiniteDifferences
@@ -228,13 +228,13 @@ function continuation(prob::TWProblem,
     @assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
 
     if jacobian == :AutoDiff
-        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> prob(z, p), x))
+        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> residual(prob, z, p), x))
     elseif jacobian == :MatrixFreeAD
-        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> prob(x .+ t .* dx, p), 0))
+        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> residual(prob, x .+ t .* dx, p), 0))
     elseif jacobian == :FullLU
         jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
     elseif jacobian == :FiniteDifferences
-        jac = (x, p) -> finite_differences(z -> prob(z, p), x)
+        jac = (x, p) -> finite_differences(z -> residual(prob, z, p), x)
     elseif jacobian == :MatrixFree
         jac = (x, p) -> (dx ->  prob(x, p, dx))
     end

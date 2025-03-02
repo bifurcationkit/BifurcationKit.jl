@@ -187,7 +187,7 @@ Solve the linear system associated with the collocation problem for computing pe
     Jext = cop_cache.Jext
     @assert size(Jext, 1) == size(Jext, 2) == (Ntst+1)*N+1+δn "Error with matrix of external variables. Please report this issue on the website of BifurcationKit.\nδn = $δn\nsize(Jext) = $(size(Jext))\n(Ntst+1)*N+1+δn = $((Ntst+1)*N+1+δn)\n\n"
     𝒯 = eltype(coll)
-    In = I(N)
+    In = coll.cache.In
 
     rhs = condensation_of_parameters!(cop_cache, coll, J, In, rhs0)
     Jcond = cop_cache.Jcoll
@@ -330,7 +330,7 @@ end
         end
 
         # Lₜ = LowerTriangular(F.L) # zero allocation?
-        Lₜ.data .= F.factors[1:nbcoll, :]
+        Lₜ.data .= blockⱼ[1:nbcoll, :]
         Uₜ.data .= Lₜ.data
         for i in axes(Lₜ, 1); Lₜ[i, i] = one(𝒯); end
 
@@ -600,6 +600,7 @@ function (ls::COPLS)(Jc, rhs)
     return res, true, 1
 end
 
+# There is. See https://github.com/JuliaLang/julia/pull/56657, which might improve the performance considerably. Unfortunately this seemed to increase allocations in certain cases, and I haven't got to looking into these.
 function _fast_copy_bordered!(x, y)
     for (xcol, ycol) ∈ zip(eachcol(x), eachcol(y))
         @views xcol[1:end - 1] .= ycol

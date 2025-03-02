@@ -134,19 +134,19 @@ uold = copy(orbitguess2[1][1:2n])
 
 # we create a TW problem
 probTW = BK.TWProblem(prob, par_cgl.Db, copy(uold))
-probTW(vcat(uold,.1), par_cgl)
+BK.residual(probTW, vcat(uold,.1), par_cgl)
 show(probTW)
 
 # we test the sparse formulation of the problem jacobian
 _sol0 = rand(2n+1)
-_J1 = FD.jacobian(z->probTW(z, par_cgl), _sol0) |> sparse
+_J1 = FD.jacobian(z->BK.residual(probTW, z, par_cgl), _sol0) |> sparse
 _J0 = probTW(Val(:JacFullSparse), _sol0, par_cgl)
 @test _J1 ≈ _J0
 
 # we test the matrix-free formulation of the problem jacobian
 _sol0 = rand(2n+1)
 _dsol0 = rand(2n+1)
-_out1 = FD.derivative(t -> probTW(_sol0 .+ t .* _dsol0, par_cgl), 0)
+_out1 = FD.derivative(t -> BK.residual(probTW,_sol0 .+ t .* _dsol0, par_cgl), 0)
 _out0 = probTW(_sol0, par_cgl, _dsol0)
 @test _out0 ≈ _out1
 

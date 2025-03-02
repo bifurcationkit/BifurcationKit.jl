@@ -713,14 +713,13 @@ end
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
     pj = get_tmp(coll.cache.gi, u)   # zeros(𝒯, n, m)
-    tmp = get_tmp(coll.cache.tmp, u) # zeros(𝒯, n, m)
     phase = zero(𝒯)
-
-    In = I(n)
-    J0 = jacobian(coll.prob_vf, u[1:n], pars) # this works for sparse
 
     # vector field
     VF = coll.prob_vf
+
+    In = I(n)
+    J0 = jacobian(VF, u[1:n], pars) # this works for sparse
 
     # put boundary condition
     view(J, Block(1 + m * Ntst, 1 + m * Ntst)) .= In
@@ -745,8 +744,8 @@ end
             end
 
             for l2 in 1:m+1
-                @. J.blocks[l + (j-1)*m, l2 + (j-1)*m] = (-α * L[l2, l] * ρF) * J0 +
-                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
+                view(J, Block(l + (j-1)*m, l2 + (j-1)*m)) .= @. (-α * L[l2, l] * ρF) * J0 +
+                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
             residual!(VF, view(J, Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)

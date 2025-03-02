@@ -93,7 +93,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     A = du -> sh(J, du; shift = σ)[1]
 
     # we adapt the krylov dimension as function of the requested eigenvalue number
-    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, ishermitian = true, krylovdim = max(30, nev + 10))
+    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(50, nev + 10))
     @show 1 ./vals .+ σ
     return 1 ./vals .+ σ, vec, true, info.numops
 end

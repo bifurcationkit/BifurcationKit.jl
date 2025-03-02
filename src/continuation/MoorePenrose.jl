@@ -118,9 +118,9 @@ function corrector!(state::AbstractContinuationState,
 end
 
 function newton_moore_penrose(iter::AbstractContinuationIterable,
-                    state::AbstractContinuationState, dotθ;
-                    normN = norm,
-                    callback = cb_default, kwargs...)
+                              state::AbstractContinuationState, dotθ;
+                              normN = norm,
+                              callback = cb_default, kwargs...)
     prob = iter.prob
     par = getparams(prob)
     ϵ = getdelta(prob)

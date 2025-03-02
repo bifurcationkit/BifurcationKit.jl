@@ -99,7 +99,7 @@ prob = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         record_from_solution = (x, p; k...) -> x[div(n,2)])
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.03, dsmax = 0.05, ds = 0.03, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls), max_steps = 1060, n_inversion = 6, max_bisection_steps = 30)
+opts_br_eq = ContinuationPar(dsmin = 0.01, dsmax = 0.05, p_max = 1.9, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls), max_steps = 1060, n_inversion = 6, max_bisection_steps = 30)
 
 br = @time continuation(
     prob, PALC(),
@@ -137,7 +137,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, p_max = 2.2, max_ste
     plot_every_step = 1, nev = 11, tol_stability = 1e-6,
     detect_bifurcation = 3, max_bisection_steps = 15, n_inversion = 4)
 
-probPO = PeriodicOrbitTrapProblem(M = 51; jacobian = :BorderedSparseInplace)
+probPO = PeriodicOrbitTrapProblem(M = 51; N = 2n, jacobian = :BorderedSparseInplace)
 br_po = continuation(
     # arguments for branch switching
     br, 1,

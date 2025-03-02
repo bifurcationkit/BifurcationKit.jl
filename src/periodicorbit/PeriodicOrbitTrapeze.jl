@@ -238,7 +238,7 @@ function potrap_scheme!(pb::AbstractPOFDProblem,
         if hasmassmatrix(pb)
             dest .= pb.massmatrix * (du1 .- du2) .- h .* (dest .+ tmp)
         else
-            dest .= @. (du1 - du2) - h * (dest + tmp)
+            @. dest = (du1 - du2) - h * (dest + tmp)
         end
     else
         dest .-= h .* tmp
@@ -263,7 +263,6 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
         @views residual!(pb.prob_vf, outc[:, M], uc[:, M-1], par)
 
         h = T * get_time_step(pb, 1)
-        # https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major
         # fastest is to do out[:, i] = x
         @views potrap_scheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
 
