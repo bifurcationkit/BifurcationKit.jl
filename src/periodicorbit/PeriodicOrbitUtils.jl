@@ -36,19 +36,6 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M::Int, a
     return p_hopf, 2π/ωH, orbitguess, hopfpoint, vec_hopf
 end
 ####################################################################################################
-# Amplitude of the u component of the cycle
-amplitude(x::AbstractMatrix, n) = maximum(x[1:n, :]) - minimum(x[1:n, :])
-
-function amplitude(x::AbstractVector, n, M; ratio = 1)
-    xc = @views reshape(x[begin:end-1], ratio * n, M)
-    amplitude(xc, n)
-end
-
-function maximumPOTrap(x::AbstractVector, n, M; ratio = 1)
-    xc = @views reshape(x[begin:end-1], ratio * n, M)
-    maximum(x[1:n, :])
-end
-####################################################################################################
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
 end

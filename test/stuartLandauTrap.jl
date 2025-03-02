@@ -85,11 +85,6 @@ let
     @test norm(_Jfd - Array(_J1), Inf) < 1e-7
 end
 ####################################################################################################
-# test PeriodicUtils
-BK.amplitude(rand(10,10),3)
-BK.amplitude(rand(101), 4, 25)
-BK.maximumPOTrap(rand(101), 4, 25)
-####################################################################################################
 # tests for constructor of Floquet routines
 BK.check_floquet_options(EigArpack())
 BK.check_floquet_options(EigArnoldiMethod())
