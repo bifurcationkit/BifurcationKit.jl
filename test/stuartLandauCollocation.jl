@@ -256,7 +256,8 @@ Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
 Jco_bk = @time BK.jacobian_poocoll_block(prob_col, _ci, par_sl);
 @test norminf(Jcofd - Jco) < 1e-14
 @test norminf(Jcofd - Jco_bk) < 1e-14
-BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
+
+BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = Val(true), ρF = 1);
 # test for the case of sparse arrays
 # jacobian using BlockArray
 const _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))

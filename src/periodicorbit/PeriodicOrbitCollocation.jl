@@ -254,9 +254,12 @@ $(SIGNATURES)
 This function change the parameters `Ntst, m` for the collocation problem `pb` and return a new problem.
 """
 function set_collocation_size(pb::PeriodicOrbitOCollProblem, Ntst, m)
+    𝒯 = eltype(pb)
     pb2 = @set pb.mesh_cache = MeshCollocationCache(Ntst, m, eltype(pb))
     resize!(pb2.ϕ, length(pb2))
     resize!(pb2.xπ, length(pb2))
+    @reset pb2.∂ϕ = zeros(eltype(pb), pb.N, Ntst * m)
+    @reset pb2.cache.∇phase = zeros(𝒯, pb.N * (1 + m * Ntst))
     pb2
 end
 
@@ -322,21 +325,6 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
     println(io, "└─ # unknowns (without phase condition) : ", pb.N * (1 + m * Ntst))
 end
 
-function get_matrix_phase_condition(coll::PeriodicOrbitOCollProblem)
-    n, m, Ntst = size(coll)
-    L, ∂L = get_Ls(coll.mesh_cache)
-    ω = coll.mesh_cache.gauss_weight
-    Ω = zeros(eltype(coll), m+1, m+1)
-    for k₁ = 1:m+1
-        for k₂ = 1:m+1
-            for l = 1:m
-                Ω[k₁, k₂] += ω[l] * L[k₁, l] * ∂L[k₂, l]
-            end
-        end
-    end
-    Ω
-end
-
 """
 $(SIGNATURES)
 
@@ -386,11 +374,12 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     par = sol_ode.prob.p
     prob_vf = re_make(bifprob, params = par)
 
-    pbcoll = setproperties(pb,
-                            N = N,
-                            prob_vf = prob_vf,
-                            ϕ = zeros(n_unknowns),
-                            xπ = zeros(n_unknowns),
+    coll = setproperties(pb;
+                            N,
+                            prob_vf,
+                            ϕ = zeros(𝒯, n_unknowns),
+                            xπ = zeros(𝒯, n_unknowns),
+                            ∂ϕ = zeros(𝒯, N, Ntst * m),
                             cache = POCollCache(eltype(pb), Ntst, N, m, cache_In))
     
     # find best period candidate
@@ -399,10 +388,9 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
         period = _times[argmin(norm(sol_ode(t + t0) - sol_ode(t0)) for t in _times)]
     end
 
-    ci = generate_solution(pbcoll, t -> sol_ode(t0 + t), period)
-    pbcoll.ϕ .= @view ci[begin:end-1]
-
-    return pbcoll, ci
+    ci = generate_solution(coll, t -> sol_ode(t0 + t), period)
+    updatesection!(coll, ci, nothing)
+    return coll, ci
 end
 
 """
@@ -521,11 +509,14 @@ end
                                     out::AbstractMatrix, 
                                     u::AbstractMatrix{𝒯}, 
                                     period, 
-                                    (L, ∂L), pars) where 𝒯
+                                    (L, ∂L), 
+                                    pars;
+                                    compute_phase::Val{CP} = Val(true)) where {𝒯, CP}
     # out is of size (n, m⋅Ntst + 1)
     n, ntimes = size(u)
     m = pb.mesh_cache.degree
     Ntst = pb.mesh_cache.Ntst
+    ω = pb.mesh_cache.gauss_weight
     # we want slices at fixed times, hence pj[:, j] is the fastest
     # temporaries to reduce allocations
     pj  = get_tmp(pb.cache.gj, u)  #zeros(𝒯, n, m)
@@ -533,7 +524,9 @@ end
     tmp = get_tmp(pb.cache.tmp, u)
     mesh = getmesh(pb)
     # range for locating time slices
-    rg = axes(out, 2)[UnitRange(1, m+1)]
+    phase = zero(𝒯)
+    rg = axes(out, 2)[UnitRange(1, m+1)] #Base.OneTo(m+1) 
+    iₚ = 0
     @inbounds for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         mul!( pj, u[:, rg], L)  # size (n, m)
@@ -542,10 +535,16 @@ end
         for l in Base.OneTo(m)
             _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
+        if CP
+            @inbounds for l in Base.OneTo(m)
+                phase += dot(pj[:, l], pb.∂ϕ[:, iₚ + l]) * ω[l]
+            end
+            iₚ += m
+        end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
         rg = rg .+ m
     end
-    out
+    return phase / period
 end
 
 function functional_coll!(pb::PeriodicOrbitOCollProblem, 
@@ -554,9 +553,10 @@ function functional_coll!(pb::PeriodicOrbitOCollProblem,
                                 period, 
                                 (L, ∂L), 
                                 pars)
-    functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
+    phase = functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
     @views @. out[:, end] = u[:, end] - u[:, 1]
+    return phase
 end
 
 function residual(prob::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
@@ -570,9 +570,8 @@ function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, p
     T = getperiod(prob, u, nothing)
     resultc = get_time_slices(prob, result)
     Ls = get_Ls(prob.mesh_cache)
-    functional_coll!(prob, resultc, uc, T, Ls, pars)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt / T
-    result[end] = phase_condition(prob, uc, Ls, T)
+    result[end] = functional_coll!(prob, resultc, uc, T, Ls, pars)
     return result
 end
 
@@ -611,9 +610,10 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     n, m, Ntst = size(coll)
     nJ = length(coll) + 1
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
-    Ω = get_matrix_phase_condition(coll)
     mesh = getmesh(coll)
+    ω = coll.mesh_cache.gauss_weight
     period = getperiod(coll, u, nothing)
+    phase = zero(𝒯)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, n, m, Ntst)
     pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
@@ -654,28 +654,16 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             # add derivative w.r.t. the period
             residual!(VF, J[_rgX, nJ], pj[:, l], pars)
             J[_rgX, nJ] .*= (-dt)
+
+            phase += dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
         rgNy = rgNy .+ (m * n)
     end
 
-    rg = 1:n
-    J[end, 1:end-1] .= 0
-    for j = 1:Ntst
-        for k₁ = 1:m+1
-            for k₂ = 1:m+1
-                # J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
-                axpby!(Ω[k₁, k₂] / period, ϕc[:, (j-1)*m + k₂], 1, J[nJ, rg])
-            end
-            if k₁ < m + 1
-                rg = rg .+ n
-            end
-        end
-    end
-    vj = get_tmp(coll.cache.vj, u)
-    phase = _phase_condition(coll, uc, (L, ∂L), (pj, uj, ϕj, vj), period)
-    J[nJ, nJ] = -phase / period
+    J[end, 1:end-1] .= coll.cache.∇phase ./ period
+    J[nJ, nJ] = -phase / period^2
     return J
 end
 
@@ -722,9 +710,8 @@ end
                                 ρI = zero(𝒯)) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
     n_blocks = size(J.blocks, 1)
-    # temporaries
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
-    Ω = get_matrix_phase_condition(coll)
+    ω = coll.mesh_cache.gauss_weight
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
@@ -733,24 +720,28 @@ end
     tmp = get_tmp(coll.cache.tmp, u) # zeros(𝒯, n, m)
     ϕj = get_tmp(coll.cache.gj, u)   # zeros(𝒯, n, m)
     uj = get_tmp(coll.cache.uj, u)   # zeros(𝒯, n, m+1)
+    phase = zero(𝒯)
 
     In = I(n)
-    J0 = jacobian(coll.prob_vf, u[1:n], pars)
+    J0 = zeros(𝒯, n, n) 
+
     # vector field
     VF = coll.prob_vf
 
     # put boundary condition
-    J[Block(1 + m * Ntst, 1 + m * Ntst)] = In
-    J[Block(1 + m * Ntst, 1)] = -In
+    view(J, Block(1 + m * Ntst, 1 + m * Ntst)) .= In
+    view(J, Block(1 + m * Ntst, 1)) .= (-1) .* In
 
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
+    rgNx = UnitRange(1, n)
+    iₚ = 0
+    i∇ = 1
 
     for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         α = period * dt
         mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
-        mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
             if TransposeBool == false
@@ -760,31 +751,22 @@ end
             end
 
             for l2 in 1:m+1
-                J[Block( l + (j-1)*m ,l2 + (j-1)*m) ] = (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+
-                                                         ρD * (∂L[l2, l] .* In)
+                @. J.blocks[l + (j-1)*m, l2 + (j-1)*m] = (-α * L[l2, l] * ρF) * J0 +
+                                                        (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
-            J[Block(l + (j-1)*m, n_blocks)] = reshape(residual(coll.prob_vf, pj[:,l], pars) .* (-dt), n, 1)
+            residual!(VF, view(J, Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
+            view(J, Block(l + (j-1)*m, n_blocks)) .*= (-dt)
+
+            phase += dot(pj[:, l], coll.∂ϕ[:, iₚ + l]) * ω[l]
+            view(J, Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period
+            i∇ += 1; rgNx = rgNx .+ n
         end
+        iₚ += m
         rg = rg .+ m
     end
-
-    rg = 1
-    J[end, 1:end-1] .= 0
-    for j = 1:Ntst
-        for k₁ = 1:m+1
-            for k₂ = 1:m+1
-                J[Block(n_blocks, rg)] += reshape(Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂], 1, n)
-            end
-            if k₁ < m + 1
-                rg += 1
-            end
-        end
-    end
-    J[end, 1:end-1] ./= period
-
-    J[Block(n_blocks, n_blocks)] = reshape([-phase_condition(coll, uc, (L, ∂L), period) / period],1,1)
-
+    view(J, Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period # last bit
+    J.blocks[end, end][1] = -phase / period^2
     return J
 end
 
@@ -807,9 +789,10 @@ end
     # J = BlockArray(spzeros(length(u), length(u)), blocks,  blocks)
     # temporaries
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
-    Ω = get_matrix_phase_condition(coll)
+    ω = coll.mesh_cache.gauss_weight
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
+    phase = zero(𝒯)
     uc = get_time_slices(coll, u)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
     pj = zeros(𝒯, n, m)
@@ -848,29 +831,19 @@ end
 
             for l2 in 1:m+1
                 tmpJ .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+ ρD * (∂L[l2, l] .* In)
-                J.nzval[indx[ l + (j-1) * m ,l2 + (j-1)*m] ] .= sparse(tmpJ).nzval
+                J.nzval[indx[ l + (j-1) * m, l2 + (j-1)*m] ] .= (tmpJ).nzval
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-dt)
+
+            phase += dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
     end
 
-    rg = 1:n
-    J[end, 1:end-1] .= 0
-    for j = 1:Ntst
-        for k₁ = 1:m+1
-            for k₂ = 1:m+1
-                J[end, rg] .+= Ω[k₁, k₂] .* ϕc[:, (j-1)*m + k₂]
-            end
-            if k₁ < m + 1
-                rg = rg .+ n
-            end
-        end
-    end
-    J[end, 1:end-1] ./= period
-    J[end, end] = -phase_condition(coll, uc, (L, ∂L), period) / period
+    J[end, 1:end-1] .= coll.cache.∇phase ./ period
+    J[end, end] = -phase / period^2
     return J
 end
 
@@ -1132,6 +1105,37 @@ end
 
     # update the "normals"
     coll.ϕ .= x[eachindex(coll.ϕ)]
+
+    # update ∂ϕ
+    ϕ = coll.ϕ
+    L, ∂L = get_Ls(coll.mesh_cache)
+    n, m, Ntst = size(coll)
+    # uc = get_time_slices(coll, x)
+    ϕc = get_time_slices(coll.ϕ, size(coll)...)
+    pϕ = get_tmp(coll.cache.∂gj, ϕc) #zeros(𝒯, n, m)
+    rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
+    @inbounds for j in 1:Ntst
+        mul!(pϕ, ϕc[:, rg], ∂L)
+        coll.∂ϕ[:, (j-1)*m .+ (1:m)] .= pϕ
+        rg = rg .+ m
+    end
+
+    #update ∇phase
+    ω = coll.mesh_cache.gauss_weight
+    rg = 1:n
+    coll.cache.∇phase .= 0
+    for j = 1:Ntst
+        for k₁ = 1:m+1
+            for l = 1:m
+                coll.cache.∇phase[rg] .+= (L[k₁, l] * ω[l]) .* coll.∂ϕ[:, (j-1)*m + l]
+                # axpby!(Ω[k₁, k₂] / period, coll.∂ϕ[:, (j-1)*m + k₂], 1, J[end, rg])
+            end
+            if k₁ < m + 1
+                rg = rg .+ n
+            end
+        end
+    end
+    @debug "[coll] updatesection! done"
     return true
 end
 ####################################################################################################
