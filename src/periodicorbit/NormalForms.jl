@@ -335,7 +335,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
 
     #########
     # compute v1★
-    J★ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = true, ρF = -1)
+    J★ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
@@ -380,7 +380,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
-    Jψ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = true, ρF = -1)
+    Jψ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -I(N)
     Jψ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -752,8 +752,8 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     #########
     # compute ϕ1star
-    Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = true, ρF = -1)
     # Jϕ = D  +  T * Aᵗ(t)
+    Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = Val(true), ρF = -1)
     Jϕ[end-N:end-1, 1:N] .= -I(N)
     Jϕ[end-N:end-1, end-N:end-1] .= I(N)
     # build the extended linear problem
@@ -790,7 +790,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     #########
     # compute v1star
     # J = D  +  T*At(t) + iθ/T
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-θ/T), 𝒯 = ComplexF64, _transpose = true, ρF = -1)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = ComplexF64, _transpose = Val(true), ρF = -1)
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj)

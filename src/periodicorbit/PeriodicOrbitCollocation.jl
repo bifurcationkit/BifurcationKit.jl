@@ -604,10 +604,10 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                     coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector{𝒯},
                                     pars; 
-                                    _transpose::Bool = false,
+                                    _transpose::Val{TransposeBool} = Val(false),
                                     ρD = one(𝒯),
                                     ρF = one(𝒯),
-                                    ρI = zero(𝒯)) where {𝒯}
+                                    ρI = zero(𝒯)) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
     nJ = length(coll) + 1
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
@@ -641,7 +641,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         # put the jacobian of the vector field
         for l in 1:m
             _rgX = rgNx .+ (l-1)*n
-            if _transpose == false
+            if TransposeBool == false
                 jacobian!(VF, J0, pj[:, l], pars)
             else
                 J0 .= transpose(jacobian(VF, pj[:, l], pars))
@@ -716,10 +716,10 @@ end
                                 coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
                                 pars;
-                                _transpose::Bool = false,
+                                _transpose::Val{TransposeBool} = Val(false),
                                 ρD = one(𝒯),
                                 ρF = one(𝒯),
-                                ρI = zero(𝒯)) where {𝒯}
+                                ρI = zero(𝒯)) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
     n_blocks = size(J.blocks, 1)
     # temporaries
@@ -753,10 +753,10 @@ end
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
-            if ~_transpose
-                J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
+            if TransposeBool == false
+                @inbounds jacobian!(VF, J0, pj[:, l], pars)
             else
-                J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
+                J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end
 
             for l2 in 1:m+1
@@ -793,12 +793,12 @@ end
                                         u::AbstractVector{𝒯},
                                         pars,
                                         indx; 
-                                        _transpose::Bool = false,
+                                        _transpose::Val{TransposeBool} = Val(false),
                                         ρD = one(𝒯),
                                         ρF = one(𝒯),
                                         ρI = zero(𝒯),
                                         δ = convert(𝒯, 1e-9), 
-                                        updateborder = true) where {𝒯}
+                                        updateborder = true) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
     # allocate the jacobian matrix
     blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
@@ -840,8 +840,8 @@ end
         mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
-            if ~_transpose
-                J0 .= jacobian(coll.prob_vf, pj[:,l], pars)
+            if ~TransposeBool
+                @inbounds jacobian!(VF, J0, pj[:, l], pars)
             else
                 J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
             end
