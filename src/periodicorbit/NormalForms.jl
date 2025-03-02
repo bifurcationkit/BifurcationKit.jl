@@ -116,7 +116,7 @@ function period_doubling_normal_form(pbwrap,
     ζs = reduce(vcat, ζ_a)
 
     # basic normal form structure, it is empty for now, just a wrapper for the eigenvectors
-    nf = PeriodDoubling(nothing, nothing, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
+    nf = PeriodDoubling(bifpt.x, nothing, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
     PeriodDoublingPO(bifpt.x, period, real.(ζs), nothing, nf, pb, true)
 end
 
@@ -281,9 +281,8 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     # on page 1243
     # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
     # see also Witte, V. De, F. Della Rossa, W. Govaerts, and Yu. A. Kuznetsov. “Numerical Periodic Normalization for Codim 2 Bifurcations of Limit Cycles” SIAM Journal on Applied Dynamical Systems. https://doi.org/10.1137/120874904.
-
     coll = pbwrap.prob
-    N, m, Ntst = size(coll)
+    N = get_state_dim(coll)
     par = pd.params
     p₀ = _get(par, lens)
     T = getperiod(coll, pd.x0, par)

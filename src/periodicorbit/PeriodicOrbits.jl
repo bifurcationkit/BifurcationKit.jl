@@ -35,22 +35,10 @@ get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.p
 @inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
 @inline has_hessian(::WrapPOSh) = true
 
-# update a section with a problem, we do nothing by default
-updatesection!(prob::AbstractPeriodicOrbitProblem, x, par) = @warn "Not yet implemented!"
-
 Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
 on_gpu(pb::AbstractPOFDProblem) = pb.ongpu
 has_hessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
 isinplace(pb::AbstractPOFDProblem) = isinplace(pb.prob_vf)
-
-function applyF(pb, dest, x, p)
-    if isinplace(pb)
-        residual!(pb.prob_vf, dest, x, p)
-    else
-        dest .= residual(pb.prob_vf, x, p)
-    end
-    dest
-end
 
 function applyJ(pb, dest, x, p, dx)
     if isinplace(pb)
@@ -431,7 +419,7 @@ function continuation(br::AbstractBranchResult, ind_bif::Int,
             "\n├─ Method = \n", pbPO, "\n")
 
     if pred.amp > 0.1
-        @warn "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
+        @debug "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
     M = get_mesh_size(pbPO)

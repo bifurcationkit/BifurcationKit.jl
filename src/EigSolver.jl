@@ -217,10 +217,12 @@ end
 # GEV, useful for computation of Floquet exponents based on collocation
 function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
     if A isa AbstractMatrix
+        # Solve Ax = λBx using Shift-invert method 
+        # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
         σ = isnothing(l.sigma) ? 0 : l.sigma
         P = lu(A - σ * B)
         𝒯 = eltype(A)
-        L = LinearMap{𝒯}((y, x) -> ldiv!(y,P,B*x), size(A, 1), ismutating = true)
+        L = LinearMap{𝒯}((y, x) -> ldiv!(y, P, B * x), size(A, 1), ismutating = true)
         decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
                                                          l.kwargs...)
         vals, ϕ = partialeigen(decomp)

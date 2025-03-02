@@ -275,13 +275,15 @@ let
     for jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical(), BK.FullSparse()), use_nf in (true, false)
         useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
 
-        br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10, p_max = 0.8).newton_options.verbose = false),
-            PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
-            δp = 0.1,
-            use_normal_form = use_nf,
-            usedeflation = true,
-            eigsolver = useGEV ? BK.FloquetCollGEV(DefaultEig(),(20*5+1)*2,2) : BK.FloquetColl(),
-            )
+        for eig in (EigArnoldiMethod(;sigma=0.1), EigArpack(0.1), DefaultEig())
+            global br_po_gev = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step = 1, max_steps = 10, p_max = 0.8).newton_options.verbose = false),
+                PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);
+                δp = 0.1,
+                use_normal_form = use_nf,
+                usedeflation = true,
+                eigsolver = useGEV ? BK.FloquetCollGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
+                )
+        end
 
         br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
             PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO, update_section_every_step = 1);

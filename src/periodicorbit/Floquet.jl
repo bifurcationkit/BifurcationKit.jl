@@ -35,7 +35,7 @@ struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
     end
     FloquetQaD(eigls::AbstractFloquetSolver) = eigls
 end
-geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, Array{Int64,1}}) = geteigenvector(eig.eigsolver, vecs, n)
+geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
     if fl.eigsolver isa AbstractDirectEigenSolver
@@ -405,22 +405,21 @@ struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     FloquetCollGEV(eigls::FloquetCollGEV) = eigls
 end
 
-geteigenvector(eigsolve::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eigsolver, vecs, n)
+geteigenvector(fl::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(fl.eigsolver, vecs, n)
 
-@views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+@views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     prob = JacColl.pb
     _J = _get_matrix(JacColl)
-    n, m, Ntst = size(prob)
+    n = get_state_dim(prob)
     J = _J[1:end-1, 1:end-1]
     # case of v(0)
     J[end-n+1:end, 1:n] .= I(n)
     # case of v(1)
     J[end-n+1:end, end-n+1:end] .= -I(n)
     # solve generalized eigenvalue problem
-    values, vecs = eigen(J, fl.B)
+    values, vecs = gev(fl.eigsolver, J, fl.B, nev;)
     # remove infinite eigenvalues
-    ind = isinf.(values)
-    indvalid = ind .== false
+    indvalid = findall(x -> abs(x) < 1e9, values)
     vals = values[indvalid]
     # these are the Floquet multipliers
     μ = @. Complex(1 / (1 + vals))
@@ -428,7 +427,10 @@ geteigenvector(eigsolve::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int6
     if vp0 > 1e-8
         @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetCollGEV`"
     end
-    return log.(μ), Complex.(vecs[indvalid, :]), true, 1
+    Ind = sortperm(log.(μ); by = real, rev = true)
+    nev2 = min(nev, length(Ind))
+    Ind = Ind[begin:nev2]
+    return log.(μ[Ind]), geteigenvector(fl.eigsolver, vecs, indvalid[Ind]), true, 1
 end
 
 """

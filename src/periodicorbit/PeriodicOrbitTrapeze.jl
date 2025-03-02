@@ -121,7 +121,7 @@ function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
     println(io, "├─ dimension      : ", get_state_dim(pb))
     println(io, "├─ jacobian       : ", pb.jacobian)
     println(io, "├─ update section : ", pb.update_section_every_step)
-    println(io, "├─ # unknowns without phase condition) : ", pb.M * get_state_dim(pb))
+    println(io, "├─ # unknowns without phase condition : ", length(pb) - 1)
     println(io, "└─ inplace        : ", isinplace(pb))
 end
 
@@ -134,6 +134,7 @@ get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 @inline getdelta(pb::PeriodicOrbitTrapProblem) = getdelta(pb.prob_vf)
 setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
 @inline get_state_dim(pb::PeriodicOrbitTrapProblem) = pb.N
+@inline length(pb::PeriodicOrbitTrapProblem) = pb.M * get_state_dim(pb)
 # type unstable!
 @inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
     if returnArray == false
@@ -259,7 +260,7 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
         outc = get_time_slices(pb, out)
 
         # outc[:, M] plays the role of tmp until it is used just after the for-loop
-        @views applyF(pb, outc[:, M], uc[:, M-1], par)
+        @views residual!(pb.prob_vf, outc[:, M], uc[:, M-1], par)
 
         h = T * get_time_step(pb, 1)
         # https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-column-major
@@ -645,7 +646,7 @@ get_periodic_orbit(prob::AbstractPOFDProblem, x, p::Real) = get_periodic_orbit(p
     # update the normals
     for ii in 0:M-1
         # ii2 = (ii+1)<= M ? ii+1 : ii+1-M
-        applyF(prob, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], par)
+        residual!(prob.prob_vf, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], par)
         prob.ϕ[ii*N+1:ii*N+N] ./= M
     end
     return true
