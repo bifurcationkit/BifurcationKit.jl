@@ -411,7 +411,7 @@ geteigenvector(fl::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) =
     prob = JacColl.pb
     _J = _get_matrix(JacColl)
     n = get_state_dim(prob)
-    J = _J[1:end-1, 1:end-1]
+    J = copy(_J[1:end-1, 1:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)
     J[end-n+1:end, 1:n] .= I(n)
     # case of v(1)
