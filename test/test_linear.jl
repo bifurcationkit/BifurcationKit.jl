@@ -548,6 +548,7 @@ let
     outam = eil(J0, 20)
     outam = eil(Jmf, 20)
     geteigenvector(eil, outam[2], 2)
+    BK.gev(eil, J0, B, 10)
 end
 
 

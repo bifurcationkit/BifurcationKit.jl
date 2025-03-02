@@ -83,7 +83,6 @@ end
 # GEV, useful for computation of Floquet exponents based on collocation
 function gev(l::EigArpack, A, B, nev; kwargs...)
     if A isa AbstractMatrix
-        @error "" l.sigma l.which l.kwargs
         values, ϕ, ncv = @time "eigs" Arpack.eigs(A, B; nev, sigma = l.sigma, which = l.which, l.kwargs...)
     else
         throw("Not defined yet. Please open an issue or make a Pull Request")
@@ -170,7 +169,7 @@ struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractIterativeEigenSolve
     "Which eigen-element to extract LR(), LM(), ..."
     which::Tw
 
-    "how do we sort the computed eigenvalues, defaults to real"
+    "How do we sort the computed eigenvalues, defaults to real"
     by::Tby
 
     "Key words arguments passed to EigArpack"
@@ -191,16 +190,16 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
             F = factorize(l.sigma * LinearAlgebra.I - J)
             Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1);
                                         ismutating = true)
-            decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which,
+            decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                          l.kwargs...)
         end
     else
         N = length(l.x₀)
-        T = eltype(l.x₀)
+        𝒯 = eltype(l.x₀)
         isnothing(l.sigma) == false &&
         @warn "Shift-Invert strategy not implemented for maps"
-        Jmap = LinearMap{T}(J, N, N; ismutating = false)
-        decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, which = l.which,
+        Jmap = LinearMap{𝒯}(J, N, N; ismutating = false)
+        decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                      l.kwargs...)
     end
     λ, ϕ = partialeigen(decomp)
@@ -213,4 +212,21 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
     ncv < nev &&
         @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
     return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), history.converged, 1
+end
+
+# GEV, useful for computation of Floquet exponents based on collocation
+function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
+    if A isa AbstractMatrix
+        σ = isnothing(l.sigma) ? 0 : l.sigma
+        P = lu(A - σ * B)
+        𝒯 = eltype(A)
+        L = LinearMap{𝒯}((y, x) -> ldiv!(y,P,B*x), size(A, 1), ismutating = true)
+        decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
+                                                         l.kwargs...)
+        vals, ϕ = partialeigen(decomp)
+        values = @. 1/vals + σ
+    else
+        throw("Not defined yet. Please open an issue or make a Pull Request")
+    end
+    return Complex.(values), Complex.(ϕ)
 end
