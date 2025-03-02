@@ -21,15 +21,21 @@ The struct `Default` is used to  provide the backslash operator to our Package
     which::T = real # how do we sort the computed eigenvalues
 end
 
-    I = sortperm(F.values; by = l.which, rev = true)
-    nev2 = min(nev, length(I))
-    # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
-    return Complex.(F.values[I[begin:nev2]]), Complex.(F.vectors[:, I[begin:nev2]]), true, 1
-end
-
 function (l::DefaultEig)(J, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
     F = eigen(Array(J))
+    Ind = sortperm(F.values; by = l.which, rev = true)
+    nev2 = min(nev, length(Ind))
+    # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
+    return Complex.(F.values[Ind[begin:nev2]]), Complex.(F.vectors[:, Ind[begin:nev2]]), true, 1
+end
+
+function gev(l::DefaultEig, A, B, nev; kwargs...)
+    # we convert to Array so we can call it on small sparse matrices
+    F = eigen(Array(A), Array(B))
+    return Complex.(F.values), Complex.(F.vectors)
+end
+
 """
 $(TYPEDEF)
 $(TYPEDFIELDS)
@@ -70,9 +76,19 @@ function (l::EigArpack)(J, nev; kwargs...)
                                  l.kwargs...)
     end
     Ind = sortperm(λ; by = l.by, rev = true)
-    ncv < nev &&
-        @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
+    ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
     return λ[Ind], ϕ[:, Ind], true, 1
+end
+
+# GEV, useful for computation of Floquet exponents based on collocation
+function gev(l::EigArpack, A, B, nev; kwargs...)
+    if A isa AbstractMatrix
+        @error "" l.sigma l.which l.kwargs
+        values, ϕ, ncv = @time "eigs" Arpack.eigs(A, B; nev, sigma = l.sigma, which = l.which, l.kwargs...)
+    else
+        throw("Not defined yet. Please open an issue or make a Pull Request")
+    end
+    return values, ϕ
 end
 ####################################################################################################
 # Solvers for KrylovKit

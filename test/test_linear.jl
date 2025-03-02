@@ -520,7 +520,9 @@ let
     x0 = rand(100)
     J0 = I + sprand(100,100,0.1)
     Jmf = x -> J0 * x
+    B = sparse(I(length(x0)))
     out = Arpack.eigs(J0, nev = 20, which = :LR)
+    BK.gev(DefaultEig(), J0, B, 10)
 
     eil = BK.EigKrylovKit(tol = 1e-9)
     outkk = eil(J0, 20)
@@ -535,6 +537,7 @@ let
     @test out[1] ≈ outdefault[1]
     outdefault = eil(x ->J0*x, 20)
     @test out[1] ≈ outdefault[1]
+    BK.gev(eil, J0, B, 10)
 
     eil = BK.EigArnoldiMethod(;x₀ = x0)
     outam = eil(J0, 20)
