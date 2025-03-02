@@ -736,6 +736,8 @@ end
 
     In = I(n)
     J0 = jacobian(coll.prob_vf, u[1:n], pars)
+    # vector field
+    VF = coll.prob_vf
 
     # put boundary condition
     J[Block(1 + m * Ntst, 1 + m * Ntst)] = In

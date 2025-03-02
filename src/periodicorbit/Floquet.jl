@@ -485,7 +485,7 @@ end
     Jcop = copy(J)
     Jcop[end-N:end-1,end-N:end-1] .= In
     Jcop[end-N:end-1,1:N] .= (-1) .* In
-    Jcop[end, end] = J[end,end]
+    Jcop[end, end] = J[end, end]
     Lₜ = LowerTriangular(copy(blockⱼ))
     for 𝐢 in 1:Ntst
         blockⱼ .= J[rg, rg .+ N]
@@ -514,7 +514,7 @@ end
     # monodromy matrix
     M = Matrix{𝒯}(LinearAlgebra.I(n))
 
-    for _ in 1:Ntst
+    for 𝐢 in 1:Ntst
         Ai .= Jcop[r2, r1]
         Bi .= Jcop[r2, r1 .+ n * m]
         M .= (Bi \ Ai) * M
@@ -542,3 +542,104 @@ end
     end
     return σ, Complex.(vecs[I, :]), true, 1
 end
+
+@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
+    nbcoll = n * m
+    N = n
+    In = LinearAlgebra.I(N)
+
+    # condensation of parameters
+    # this removes the internal unknowns of each mesh interval
+    # this matrix is diagonal by blocks and each block is the L Matrix
+    # which makes the corresponding J block upper triangular
+    # the following matrix 𝐅𝐬 collects the LU factorizations by blocks
+    # recall that if F = lu(A) then
+    # F.L * F.U = F.P * A
+    # (F.P⁻¹ * F.L) * F.U = A
+    # hence 𝐅𝐬⁻¹ = (P⁻¹ * L)⁻¹ = L⁻¹ * P
+    
+    blockⱼ = zeros(𝒯, nbcoll, nbcoll)
+    blockₙ = zeros(𝒯, nbcoll, N)
+    blockₙ₂ = copy(blockₙ)
+    rg = 1:nbcoll
+    rN = 1:N
+
+    Jcop = copy(J)
+    Jcop[:, rN] .= 0
+    Jcop[end-N:end-1,end-N:end-1] .= In
+    Jcop[end-N:end-1,1:N] .= (-1) .* In
+    Jcop[end, end] = J[end, end]
+    Lₜ = LowerTriangular(copy(blockⱼ))
+
+    first_column_block = Matrix{𝒯}[]
+    upper_triangular = SparseMatrixCSC{𝒯, Int64}[]
+
+    for 𝐢 in 1:Ntst
+        # blockⱼ .= J[rg, rg .+ N]
+        F = lu(Array(J[rg, rg .+ N]))
+        p = F.p
+        # Lₜ = LowerTriangular(F.L) # zero allocation?
+        Lₜ = F.L
+        for i in axes(Lₜ, 1); Lₜ[i,i] = one(𝒯); end
+
+        # # we put the blocks in Jcop
+        # Jcop[rg, rg .+ N] .= UpperTriangular(F.factors)
+        push!(upper_triangular, F.U)
+
+        # # Jcop[rg, rN] .= F.L \ (F.P * J[rg, rN])
+        # blockₙ .= J[rg, rN][p,:]
+        # ldiv!(blockₙ₂, Lₜ, blockₙ)
+        # Jcop[rg, rN] .= blockₙ₂
+
+        blockₙ = J[rg, rN][p,:]
+        blockₙ₂ = Lₜ \ Array(blockₙ)
+        # Jcop[rg, rN] .= blockₙ₂
+        push!(first_column_block, blockₙ₂)
+
+        # @error "" size(blockₙ₂) size(F.U) typeof(F.U)
+
+
+        rg = rg .+ nbcoll
+        rN = rN .+ nbcoll
+    end
+
+    Ai = Matrix{𝒯}(undef, n, n)
+    Bi = Matrix{𝒯}(undef, n, n)
+    r1 = 1:n
+    r2 = n*(m-1)+1:(m*n)
+
+    # monodromy matrix
+    M = Matrix{𝒯}(LinearAlgebra.I(n))
+
+    for 𝐢 in 1:Ntst
+        Ai = first_column_block[𝐢][end-n+1:end, 1:n]#Jcop[r2, r1]
+        # Bi = Jcop[r2, r1 .+ n * m] #upper_triangular[𝐢][end-n+1:end, end-n+1:end]#
+        Bi = upper_triangular[𝐢][end-n+1:end, end-n+1:end]
+        # @error "" 𝐢 Ai Bi 
+        # @error "" first_column_block[𝐢]
+        M .= (Bi \ Array(Ai)) * M
+        r1  = r1 .+ m * n
+        r2  = r2 .+ m * n
+    end
+
+    # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
+    factor = iseven(Ntst) ? 1 : -1
+
+    # floquet multipliers
+    vals, vecs = eigen(M)
+
+    nev = min(n, nev)
+    logvals = @. log(Complex(factor * vals))
+    I = sortperm(logvals, by = real, rev = true)[1:nev]
+
+    # floquet exponents
+    σ = logvals[I]
+
+    # give indications on the precision on the Floquet coefficients
+    vp0 = minimum(abs, σ)
+    if vp0 > 1e-9
+        @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
+    end
+    return σ, Complex.(vecs[I, :]), true, 1
+end
+

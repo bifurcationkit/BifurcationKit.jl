@@ -1,4 +1,4 @@
-# using Revise, AbbreviatedStackTraces, Plots
+# using Revise#, Plots
 using Test
 using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
@@ -131,7 +131,6 @@ let
     end
 end
 
-
 prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
 _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
 _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
@@ -213,6 +212,11 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 newton(prob_col2, _ci, NewtonPar())
 newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
 ####################################################################################################
+## test Floquet computation for sparse eigenvalues
+Jw = @time (BK.jacobian(br_po.prob, br_po.sol[17].x, @set par_sl.r = br_po.sol[17].p))
+J = BK._get_matrix(Jw) |> copy
+@test  BK._eig_floquet_col((J),2,4,50,2)[1] ≈ BK._eig_floquet_col(sparse(J),2,4,50,2)[1] atol=1e-10
+####################################################################################################
 # test analytical jacobian
 Ntst = 10
 m = 3
@@ -231,7 +235,7 @@ D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000121 seconds (341 
 Ntst = 140
 m = 4
 N = 5
-const _al = I(N) + 0.1 .*rand(N,N)
+const _al = I(N) + 0.1 .* rand(N,N)
 idvf(x,p) = _al*x
 prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
 prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
@@ -255,7 +259,7 @@ Jco_bk = @time BK.jacobian_poocoll_block(prob_col, _ci, par_sl);
 BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = true, ρF = 1.);
 # test for the case of sparse arrays
 # jacobian using BlockArray
-const _asp = sparse(I(N) + 0.1 .*sprand(N,N,0.1))
+const _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
 prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
 prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
 prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
