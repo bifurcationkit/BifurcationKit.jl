@@ -174,8 +174,8 @@ ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
 @reset poTrapMF.prob_vf.VF.J = (x, p) ->  (dx -> dFcgl(x, p, dx))
 
-poTrap(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
-poTrapMF(orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
+BK.residual(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
+BK.residual(poTrapMF, orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 
 
 plot();BK.plot_periodic_potrap(orbitguess_f, M, Nx, Ny; ratio = 2);title!("")
@@ -207,8 +207,8 @@ ls(Jpo, rand(ls.N))
 opt_po = @set opt_newton.verbose = true
 @reset opt_po.linsolver = ls
 
-outpo_f = @time newton(poTrapMF, orbitguess_f, opt_po; normN = norminf)
-BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end], ", amplitude = ", BK.amplitude(outpo_f.u, Nx*Ny, M; ratio = 2),"\n")
+outpo_f = @time newton(poTrapMF, orbitguess_f, opt_po; normN = norminf);
+BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end])
 plot();BK.plot_periodic_potrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
@@ -218,8 +218,11 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max =
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
         plot = true,
-        # plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-        record_from_solution = (u, p; k...) -> BK.getamplitude(poTrapMF, u, par_cgl; ratio = 2),
+        plot_solution = (x, p;kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
+        record_from_solution = (u, p; k...) -> begin
+                solpo = BK.get_periodic_orbit(p.prob, u, nothing)
+                maximum(solpo.u)
+        end,
         normC = norminf)
 
 branches = Any[br_pok2]
@@ -316,24 +319,18 @@ poTrapMFi = PeriodicOrbitTrapProblem(
             M, 2n, ls0; jacobian = :FullMatrixFree)
 
 # ca ne devrait pas allouer!!!
-@time poTrapMFi(orbitguess_f, par_cgl, orbitguess_f);
 out_po = copy(orbitguess_f)
+@time BK.residual!(poTrapMFi, out_po, orbitguess_f, par_cgl);
 @time BK.potrap_functional_jac!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f)
-
 opt_po_inp = @set opt_po.linsolver = ls
-
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 
 
-@assert 1==0 "tester map inplace dans gmresIS et voir si allocate"
-@assert 1==0 "tester code_warntype dans potrap_functional_jac! st POTrapFunctional!"
-
-lsi = GMRESIterativeSolvers(verbose = false, N = length(orbitguess_f), reltol = 1e-3, restart = 40, maxiter = 50, Pl = Precilu, log=true, ismutating = true)
-lsi()
-
+lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
+opt_po_inp_kl = @set opt_po.linsolver = lsi
 outpo_f = @time newton(poTrapMFi, 
-                        orbitguess_f, 
-                        (@set opt_po.linsolver = lsi); 
+                        orbitguess_f,
+                        opt_po_inp_kl; 
                         normN = norminf, 
                         )
 

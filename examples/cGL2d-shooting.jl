@@ -59,7 +59,7 @@ end
 
 function dFcgl!(f, x, p, dx, t = 0)
     dNL!(f, x, p, dx)
-    mul!(f, p.Δ, dx,1,1)
+    mul!(f, p.Δ, dx, 1,1)
     f
 end
 dFcgl(x, p, dx) = dFcgl!(similar(dx), x, p, dx)

@@ -12,13 +12,22 @@ geteigenvector(eigsolve::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {
 
 getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
-# Solvers for default \ operator (backslash)
+# Default Solvers
 ####################################################################################################
 """
-The struct `Default` is used to  provide the backslash operator to our Package
+$(TYPEDEF)
+
+The struct `DefaultEig` is used to  provide the `eigen` operator to `BifurcationKit`.
+
+## Fields
+$(TYPEDFIELDS)
+
+## Constructors
+Just pass the above fields like `DefaultEig(;which=abs)`
 """
 @with_kw struct DefaultEig{T} <: AbstractDirectEigenSolver
-    which::T = real # how do we sort the computed eigenvalues
+    "How do we sort the computed eigenvalues."
+    which::T = real
 end
 
 function (l::DefaultEig)(J, nev; kwargs...)
@@ -38,13 +47,17 @@ end
 
 """
 $(TYPEDEF)
-$(TYPEDFIELDS)
 
-More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.
+Create an eigen solver based on [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl).
+
+## Fields
+$(TYPEDFIELDS)
 
 # Constructor
 
 `EigArpack(sigma = nothing, which = :LR; kwargs...)`
+
+More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.
 """
 struct EigArpack{T, Tby, Tw} <: AbstractIterativeEigenSolver
     "Shift for Shift-Invert method with `(J - sigma⋅I)"
@@ -94,7 +107,14 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
+
+Create an eigen solver based on `KrylovKit.jl`.
+
+## Fields
 $(TYPEDFIELDS)
+
+## Constructors
+Just pass the above fields like `EigKrylovKit(;dim=2)`
 """
 @with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
     "Krylov Dimension"
@@ -154,6 +174,8 @@ geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractV
 ####################################################################################################
 """
 $(TYPEDEF)
+
+## Fields
 $(TYPEDFIELDS)
 
 More information is available at [ArnoldiMethod.jl](https://github.com/haampie/ArnoldiMethod.jl). For example, you can pass the parameters `tol, mindim, maxdim, restarts`.

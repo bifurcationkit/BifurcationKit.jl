@@ -87,8 +87,9 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to provide the backslash operator. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+This struct is used to provide the backslash operator `\`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
+## Fields
 $(TYPEDFIELDS)
 """
 @with_kw struct DefaultLS <: AbstractDirectLinearSolver
@@ -118,9 +119,10 @@ end
 """
 $(TYPEDEF)
 
-Mainly for debugging!! This is defined as an iterative pseudo-inverse linear solver
-This struct is used to test Moore-Penrose continuation. Used to solve `J * x = rhs`.
+[Mainly for debugging] This solver is used to test Moore-Penrose continuation. 
+This is defined as an iterative pseudo-inverse linear solver. Used to solve `J * x = rhs`.
 
+## Fields
 $(TYPEDFIELDS)
 """
 @with_kw struct DefaultPILS <: AbstractIterativeLinearSolver
@@ -136,7 +138,10 @@ end
 ####################################################################################################
 """
 $(TYPEDEF)
-Linear solver based on gmres from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+## Fields
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractIterativeLinearSolver
@@ -201,8 +206,11 @@ end
 """
 $(TYPEDEF)
 
-Create a linear solver based on GMRES from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+## Fields
 $(TYPEDFIELDS)
+
 !!! tip "Different linear solvers"
     By tuning the options, you can select CG, GMRES... see [here](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve)
 """
@@ -269,7 +277,8 @@ end
 """
 $(TYPEDEF)
 
-Create a linear solver based on `Krylov.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create a linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+You have access to `cg, cr, gmres, symmlq, cg_lanczos, cg_lanczos_shift_seq`...
 
 ## Fields 
 $(TYPEDFIELDS)
@@ -279,7 +288,7 @@ $(TYPEDFIELDS)
 Look at `KrylovLSInplace` for a method where the Krylov space is kept in memory
 """
 mutable struct KrylovLS{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
-    "Can be Krylov.GmresSolver(m, n, memory, S) for example"
+    "Can be Krylov.GmresSolver(m, n, memory, S) for example. Default = `Krylov.gmres`"
     KrylovAlg::F
     "Arguments passed to the linear solver"
     kwargs::K
@@ -289,7 +298,8 @@ mutable struct KrylovLS{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
     Pr::Tr
 end
 
-function KrylovLS(args...; KrylovAlg = Krylov.gmres,
+function KrylovLS(args...; 
+                    KrylovAlg = Krylov.gmres,
                     Pl = I, Pr = I,
                     kwargs...)
     return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
@@ -305,9 +315,9 @@ end
 """
 $(TYPEDEF)
 
-Create an inplace linear solver based on `Krylov.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create an inplace linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
-The Krylov space is pre-allocated
+The Krylov space is pre-allocated. This is really great for GPU but also for CPU.
 
 ## Fields 
 $(TYPEDFIELDS)
