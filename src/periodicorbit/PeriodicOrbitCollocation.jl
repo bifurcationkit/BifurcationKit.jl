@@ -615,10 +615,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     period = getperiod(coll, u, nothing)
     phase = zero(𝒯)
     uc = get_time_slices(coll, u)
-    ϕc = get_time_slices(coll.ϕ, n, m, Ntst)
     pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
-    ϕj = get_tmp(coll.cache.gj, u) # zeros(𝒯, n, m)
-    uj = get_tmp(coll.cache.uj, u) # zeros(𝒯, n, m+1)
     In = coll.cache.In # this helps greatly the for loop for J0 below
     J0 = zeros(𝒯, n, n)
 
@@ -715,15 +712,12 @@ end
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
     uc = get_time_slices(coll, u)
-    ϕc = get_time_slices(coll.ϕ, n, m, Ntst)
     pj = get_tmp(coll.cache.gi, u)   # zeros(𝒯, n, m)
     tmp = get_tmp(coll.cache.tmp, u) # zeros(𝒯, n, m)
-    ϕj = get_tmp(coll.cache.gj, u)   # zeros(𝒯, n, m)
-    uj = get_tmp(coll.cache.uj, u)   # zeros(𝒯, n, m+1)
     phase = zero(𝒯)
 
     In = I(n)
-    J0 = zeros(𝒯, n, n) 
+    J0 = jacobian(coll.prob_vf, u[1:n], pars) # this works for sparse
 
     # vector field
     VF = coll.prob_vf
@@ -782,22 +776,15 @@ end
                                         δ = convert(𝒯, 1e-9), 
                                         updateborder = true) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
-    # allocate the jacobian matrix
-    blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
-    n_blocks = length(blocks)
-    @assert n_blocks == size(indx, 1)
-    # J = BlockArray(spzeros(length(u), length(u)), blocks,  blocks)
-    # temporaries
+    @assert size(indx, 1) == 1 + m * Ntst + 1
+
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     ω = coll.mesh_cache.gauss_weight
     mesh = getmesh(coll)
     period = getperiod(coll, u, nothing)
     phase = zero(𝒯)
     uc = get_time_slices(coll, u)
-    ϕc = get_time_slices(coll.ϕ, size(coll)...)
     pj = zeros(𝒯, n, m)
-    ϕj = zeros(𝒯, n, m)
-    uj = zeros(𝒯, n, m+1)
     In = sparse(I(n))
     J0 = jacobian(coll.prob_vf, uc[1:n], pars)
     tmpJ = copy(J0 + In)
@@ -816,11 +803,9 @@ end
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        uj .= uc[:, rg]
-        mul!(pj, uj, L) # pj ≈ (L * uj')'
+        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         dt = (mesh[j+1]-mesh[j]) / 2
         α = period * dt
-        mul!(ϕj, ϕc[:, rg], ∂L)
         # put the jacobian of the vector field
         for l in 1:m
             if ~TransposeBool
@@ -835,7 +820,6 @@ end
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-dt)
-
             phase += dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
