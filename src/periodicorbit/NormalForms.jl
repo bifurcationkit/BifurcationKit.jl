@@ -1080,7 +1080,8 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     orbitguess = vcat(orbitguess_c[begin:end-N], orbitguess0 .- ampfactor .* nf.ζ)
 
     pbnew.xπ .= orbitguess
-    pbnew.ϕ .= circshift(orbitguess, length(orbitguess) ÷ 1)
+    ϕ = circshift(orbitguess, length(orbitguess) ÷ 1)
+    updatesection!(pbnew, ϕ, nothing)
 
     # we append the doubled period
     orbitguess = vcat(orbitguess, 2nf.T * time_factor)
