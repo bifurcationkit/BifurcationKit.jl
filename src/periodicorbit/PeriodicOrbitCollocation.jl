@@ -190,7 +190,7 @@ Note that you can generate this guess from a function using `generate_solution` 
 - `residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
 - `residual!(pb, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 """
-@with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, vectype, ∂vectype, Tmass, Tmcache <: MeshCollocationCache, Tcache} <: AbstractPODiffProblem
+@with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractPODiffProblem
     # Function F(x, par)
     prob_vf::Tprob = nothing
 
@@ -215,10 +215,10 @@ Note that you can generate this guess from a function using `generate_solution` 
     jacobian::Tjac = DenseAnalytical()
 
     # collocation mesh cache
-    mesh_cache::Tmcache = nothing
+    mesh_cache::MeshCollocationCache{𝒯} = nothing
 
     # cache for allocation free computations
-    cache::Tcache = nothing
+    cache::POCollCache{𝒯} = nothing
 
     #################
     # mesh adaptation
@@ -275,7 +275,7 @@ The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProb
     return n * (1 + m * Ntst)
 end
 
-@inline Base.eltype(pb::PeriodicOrbitOCollProblem) = eltype(pb.mesh_cache)
+@inline Base.eltype(::PeriodicOrbitOCollProblem{Tp, Tj, T}) where {Tp, Tj, T} = T
 """
     L, ∂L = get_Ls(pb)
 
@@ -736,7 +736,7 @@ end
         # put the jacobian of the vector field
         for l in 1:m
             if TransposeBool == false
-                @inbounds jacobian!(VF, J0, pj[:, l], pars)
+                jacobian!(VF, J0, pj[:, l], pars) # TDODO All the allocations come from here, they disappear for J0=zeros(n,n), what is going on???
             else
                 J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end

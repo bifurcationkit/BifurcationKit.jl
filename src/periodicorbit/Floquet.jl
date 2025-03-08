@@ -523,28 +523,10 @@ end
         r2  = r2 .+ m * n
     end
 
-    # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
-    factor = iseven(Ntst) ? 1 : -1
-
-    # floquet multipliers
-    vals, vecs = eigen(M)
-
-    nev = min(n, nev)
-    logvals = @. log(Complex(factor * vals))
-    I = sortperm(logvals, by = real, rev = true)[1:nev]
-
-    # floquet exponents
-    σ = logvals[I]
-
-    # give indications on the precision on the Floquet coefficients
-    vp0 = minimum(abs, σ)
-    if vp0 > 1e-9
-        @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
-    end
-    return σ, Complex.(vecs[I, :]), true, 1
+    return _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
 end
 
-@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
+@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where 𝒯
     nbcoll = n * m
     N = n
     In = LinearAlgebra.I(N)
@@ -623,6 +605,10 @@ end
         r2  = r2 .+ m * n
     end
 
+    return _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
+end
+
+function _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
     # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
     factor = iseven(Ntst) ? 1 : -1
 
