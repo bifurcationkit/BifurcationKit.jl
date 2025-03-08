@@ -51,7 +51,7 @@ function MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
     return cache
 end
 
-@inline Base.eltype(cache::MeshCollocationCache{𝒯}) where 𝒯 = 𝒯
+@inline Base.eltype(::MeshCollocationCache{𝒯}) where 𝒯 = 𝒯
 @inline Base.size(cache::MeshCollocationCache) = (cache.degree, cache.Ntst)
 @inline get_Ls(cache::MeshCollocationCache) = (cache.lagrange_vals, cache.lagrange_∂)
 @inline getmesh(cache::MeshCollocationCache) = cache.τs
@@ -526,7 +526,6 @@ end
     # range for locating time slices
     phase = zero(𝒯)
     rg = axes(out, 2)[UnitRange(1, m+1)] #Base.OneTo(m+1) 
-    iₚ = 0
     @inbounds for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         mul!( pj, u[:, rg], L)  # size (n, m)
@@ -535,11 +534,10 @@ end
         for l in Base.OneTo(m)
             _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
-        if CP
+        if CP === true
             @inbounds for l in Base.OneTo(m)
-                phase += dot(pj[:, l], pb.∂ϕ[:, iₚ + l]) * ω[l]
+                phase += dot(pj[:, l], pb.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
-            iₚ += m
         end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
         rg = rg .+ m
@@ -582,7 +580,7 @@ Compute the identity matrix associated with the collocation problem.
 """
 function LinearAlgebra.I(coll::PeriodicOrbitOCollProblem, u, par)
     T = getperiod(coll, u, par)
-    N, _, _ = size(coll)
+    N = get_state_dim(coll)
     Icoll = analytical_jacobian(coll, u, par; ρD = 0, ρF = 0, ρI = -1/T)
     Icoll[:, end] .= 0
     Icoll[end, :] .= 0
@@ -1071,9 +1069,9 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     _recordsol = modify_po_record(coll, _kwargs, getparams(coll.prob_vf), getlens(coll.prob_vf))
     _plotsol = modify_po_plot(coll, _kwargs)
 
-    probwp = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, _recordsol)
+    wrap_coll = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, _recordsol)
 
-    br = continuation(probwp, alg,
+    br = continuation(wrap_coll, alg,
                       contParams;
                       kwargs...,
                       kind = PeriodicOrbitCont(),
@@ -1114,7 +1112,6 @@ end
         for k₁ = 1:m+1
             for l = 1:m
                 coll.cache.∇phase[rg] .+= (L[k₁, l] * ω[l]) .* coll.∂ϕ[:, (j-1)*m + l]
-                # axpby!(Ω[k₁, k₂] / period, coll.∂ϕ[:, (j-1)*m + k₂], 1, J[end, rg])
             end
             if k₁ < m + 1
                 rg = rg .+ n

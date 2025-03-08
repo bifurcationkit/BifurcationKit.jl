@@ -67,7 +67,7 @@ function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 end
 
 """
-Structure to encode the solution associated to a functional like `::PeriodicOrbitOCollProblem` or `::ShootingProblem`. In the particular case of `::PeriodicOrbitOCollProblem`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, one can call
+Structure to encode the solution associated to a functional like `::PeriodicOrbitOCollProblem` or `::ShootingProblem`. In the particular case of `::PeriodicOrbitOCollProblem`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
 
     sol = BifurcationKit.POSolution(prob_coll, x)
     sol(t)
@@ -377,17 +377,18 @@ A modified version of `prob` is passed to `plot_solution` and `finalise_solution
 !!! note "Linear solver"
     You have to be careful about the options `contParams.newton_options.linsolver`. In the case of Matrix-Free solver, you have to pass the right number of unknowns `N * M + 1`. Note that the options for the preconditioner are not accessible yet.
 """
-function continuation(br::AbstractBranchResult, ind_bif::Int,
-                    _contParams::ContinuationPar,
-                    pbPO::AbstractPeriodicOrbitProblem ;
-                    prob_vf = br.prob,
-                    alg = br.alg,
-                    δp = nothing,
-                    ampfactor = 1,
-                    usedeflation = false,
-                    use_normal_form = true,
-                    nev = length(eigenvalsfrombif(br, ind_bif)),
-                    kwargs...)
+function continuation(br::AbstractBranchResult, 
+                      ind_bif::Int,
+                      _contParams::ContinuationPar,
+                      pbPO::AbstractPeriodicOrbitProblem ;
+                      prob_vf = br.prob,
+                      alg = br.alg,
+                      δp = nothing,
+                      ampfactor = 1,
+                      usedeflation = false,
+                      use_normal_form = true,
+                      nev = length(eigenvalsfrombif(br, ind_bif)),
+                      kwargs...)
     # compute the normal form of the branch point
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))

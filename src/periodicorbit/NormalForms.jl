@@ -262,7 +262,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm || ~detailed
         # method based on Iooss method
-        return period_doubling_normal_form(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
+        return period_doubling_normal_form_iooss(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
     end
     # method based on Poincaré Return Map (PRM)
     # newton parameter
@@ -270,7 +270,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
     return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose, nev, kwargs_nf...)
 end
 
-function period_doubling_normal_form(pbwrap::WrapPOColl,
+function period_doubling_normal_form_iooss(pbwrap,
                                 pd::PeriodDoubling;
                                 nev = 3,
                                 verbose = false,

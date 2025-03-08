@@ -447,7 +447,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             if prm
                 pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
             else
-                pd = period_doubling_normal_form(pbwrap, pd0; verbose = false)
+                pd = period_doubling_normal_form_iooss(pbwrap, pd0; verbose = false)
                 prob_pd.GPD = pd.nf.nf.b3
             end
         end

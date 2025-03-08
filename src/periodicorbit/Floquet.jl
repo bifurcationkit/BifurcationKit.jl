@@ -1,4 +1,4 @@
-# This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behaviour which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
+# This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behavior which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
 function check_floquet_options(eigls::AbstractEigenSolver)
     if eigls isa DefaultEig
         return @set eigls.which = abs

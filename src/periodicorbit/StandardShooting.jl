@@ -1,4 +1,3 @@
-# Standard Shooting functional
 """
     pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
 

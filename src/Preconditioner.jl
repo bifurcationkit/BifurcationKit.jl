@@ -53,7 +53,7 @@ end
 
 Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is computed (Matrix-Free), using the package `ArnoldiMethod.jl`, from which a projection is built. See the package `ArnoldiMethod.jl` for how to pass the proper options.
 """
-function PrecPartialSchurArnoldiMethod(J, N, nev, which = LM(); tol = 1e-9, kwargs...)
+function PrecPartialSchurArnoldiMethod(J, N, nev, which = ArnoldiMethod.LM(); tol = 1e-9, kwargs...)
     if J isa AbstractMatrix
         decomp, history = ArnoldiMethod.partialschur(J; nev = nev, tol = tol, which = which, kwargs...)
     else

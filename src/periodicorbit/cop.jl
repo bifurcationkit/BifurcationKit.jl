@@ -176,7 +176,7 @@ Solve the linear system associated with the collocation problem for computing pe
     N, m, Ntst = size(coll)
     nbcoll = N * m
     # size of the periodic orbit problem counting the phase condition.
-    # We use this to tackle the case where size(J, 1) > Nₚₒ
+    # We use this to tackle the case where size(J, 1) > Npo
     Npo = length(coll) + 1
     nⱼ = size(J, 1)
     δn =  nⱼ - Npo # this allows to compute the border side
@@ -429,8 +429,6 @@ end
     end
     rhs_ext[rN] .= rhs[r1]
     rhs_ext[end-δn:end] .= rhs[end-δn:end]
-    # @error "" Jcond[end-3:end,end-2:end] Jext[end-2:end,end-3:end] maximum(abs, Jext[1:3,:]) maximum(abs, Jext)
-    # heatmap((abs.(Jext)), yflip = true, title = "Jext") |> display
     return rhs_ext
 end
 
@@ -505,8 +503,8 @@ end
 
     for nt = 1:Ntst-1
         for i = st+1:st+n
-            # find the pivot
 
+            # find the pivot
             iₚ = i
             Jmax = abs(J[i, i+n])
             for l = i:i+2n
@@ -533,12 +531,12 @@ end
                 rg = i+1:nⱼ
                 rg = Iterators.flatten((i+1:st+2n, nⱼ-δn:nⱼ))
                 rhsi = rhs[i]
-                for l in rg
+                @inbounds for l in rg
                     ρ = J[l, i+n] * invpivot
                     rhs[l] -= rhsi * ρ
                     # rg = 1:nⱼ
                     rgₖ = Iterators.flatten((1:n, st+1+n:st+3n, nⱼ-δn:nⱼ))
-                    for jₖ in rgₖ
+                    @inbounds for jₖ in rgₖ
                         J[l, jₖ] -= J[i, jₖ] * ρ
                     end
                 end
