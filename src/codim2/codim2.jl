@@ -214,7 +214,9 @@ Codimension 2 continuation of Fold / Hopf points. This function turns an initial
 - `options_cont = br.contparams` arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 # Optional arguments:
+- `linsolve_adjoint` solver for (J+iω)˟ ⋅sol = rhs or Jᵗ ⋅sol = rhs
 - `bdlinsolver` bordered linear solver for the constraint equation
+- `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)˟ or Jᵗ. Required in the linear solver for the Minimally Augmented Fold/Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
 - `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements
 - `detect_codim2_bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.

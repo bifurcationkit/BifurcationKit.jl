@@ -330,11 +330,11 @@ $(SIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`.
 """
-function generate_solution(pb::PeriodicOrbitOCollProblem, orbit, period)
+function generate_solution(pb::PeriodicOrbitOCollProblem{Tp, Tj, T}, orbit, period) where {Tp, Tj, T}
     n, _m, Ntst = size(pb)
     ts = get_times(pb)
     Nt = length(ts)
-    ci = zeros(eltype(pb), n, Nt)
+    ci = zeros(T, n, Nt)
     for (l, t) in pairs(ts)
         ci[:, l] .= orbit(t * period)
     end

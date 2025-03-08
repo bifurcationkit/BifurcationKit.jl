@@ -61,7 +61,7 @@ end
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
 function compute_eigenvalues(it::ContIterable, state, u0, par, nev = it.contparams.nev; kwargs...)
-    return it.contparams.newton_options.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state = state, kwargs...)
+    return it.contparams.newton_options.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state, kwargs...)
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
@@ -232,22 +232,28 @@ $(SIGNATURES)
 
 Function to detect continuation branches which loop on themselves.
 """
-function detect_loop(br::ContResult, x, p; rtol = 1e-3, verbose = true)
-    verbose && printstyled(color = :magenta, "\n    ┌─ Entry in detect_loop, rtol = $rtol\n")
-    N = length(br)
-    out = false
+function detect_loop(br::ContResult, x, p::T; rtol = 1e-3, verbose::Bool = true) where T
+    if verbose == false
+        return false
+    end
+    N::Int = length(br)
+    printstyled(color = :magenta, "\n    ┌─ Entry in detect_loop, rtol = $(convert(T, rtol))\n")
+    out::Bool = false
     for bp in br.specialpoint[1:end-1]
-        verbose && printstyled(color = :magenta, "    ├─ bp type = ",bp.type,", ||δx|| = ", norminf(minus(bp.x, x)),", |δp| = ",abs(bp.param - p)," \n")
-        if (norminf(minus(bp.x, x)) / norminf(x) < rtol) && isapprox(bp.param , p ; rtol = rtol)
+        printstyled(color = :magenta, "    ├─ bp type = ", Symbol(bp.type),
+                    ", ||δx|| = ", norminf(minus(bp.x, x))::T, 
+                    ", |δp| = ", abs(bp.param - p)::T,
+                    " \n")
+        if (norminf(minus(bp.x, x)) / norminf(x) < rtol) && isapprox(bp.param, p; rtol)
             out = true
-            verbose && printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
+            printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
             break
         end
     end
-    verbose && printstyled(color = :magenta, "    └─ Loop detected = $out\n")
+    printstyled(color = :magenta, "    └─ Loop detected = $out\n")
     return out
 end
-detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol = rtol, verbose = verbose)
+detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol, verbose)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
 ####################################################################################################
 """

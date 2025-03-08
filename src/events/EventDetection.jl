@@ -29,7 +29,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     @assert isnothing(_state.eventValue) == false "Empty event value, this should not be happening. Please open an issue."
 
     # type of scalars in iter
-    _T = eltype(iter)
+    𝒯 = eltype(iter)
 
     # we test if the current state is an event, ie satisfies the constraint
     # up to a given tolerance. Very important to detect BT
@@ -37,7 +37,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         return :converged, getinterval(getp(_state), getpreviousp(_state))
     end
 
-    if abs(_state.ds) < iter.contparams.dsmin; return :none, (_T(0), _T(0)); end
+    if abs(_state.ds) < iter.contparams.dsmin; return :none, (zero(𝒯), zero(𝒯)); end
 
     # get continuation parameters
     contParams = iter.contparams
@@ -77,10 +77,6 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     indinterval = interval[1] == getp(state) ? 1 : 2
 
     verbose && println("────> [Bisection] state.ds = ", state.ds)
-
-    # we put this to be able to reference it at the end of this function
-    # we don't know its type yet
-    eiginfo = nothing
 
     # we compute the number of changes in event indicator
     n_inversion = 0

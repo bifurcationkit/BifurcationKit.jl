@@ -65,7 +65,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
 end
 ####################################################################################################
 """
-Function for coarse detection of bifurcation points.
+Function for coarse identification of bifurcation points.
 """
 function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
     # this boolean ensures that edge cases are handled
@@ -146,15 +146,15 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     verbose && println("┌─── Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
 
     # type of scalars in iter
-    _T = eltype(iter)
+    𝒯 = eltype(iter)
 
     # number of unstable eigenvalues after, before the bifurcation point
     n2, n1 = _state.n_unstable
-    if n1 == -1 || n2 == -1 return :none, (_T(0), _T(0)) end
+    if n1 == -1 || n2 == -1 return :none, (zero(𝒯), zero(𝒯)) end
 
     contParams = iter.contparams
     
-    if abs(_state.ds) < contParams.dsmin; return :none, (_T(0), _T(0)); end
+    if abs(_state.ds) < contParams.dsmin; return :none, (zero(𝒯), zero(𝒯)); end
     verbose && println("├─── [Bisection] initial ds = ", _state.ds)
 
     # we create a new state for stepping through the continuation routine
@@ -188,10 +188,6 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     indinterval = interval[1] == getp(state) ? 1 : 2
 
     verbose && println("├─── [Bisection] state.ds = ", state.ds)
-
-    # we put this to be able to reference it at the end of this function
-    # we don't know its type yet
-    eiginfo = nothing
 
     # we compute the number of changes in n_unstable
     n_inversion = 0

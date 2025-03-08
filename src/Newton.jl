@@ -86,6 +86,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 
     verbose && print_nonlinear_step(step, res)
 
+
     # invoke callback before algo really starts
     compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
@@ -136,6 +137,8 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
     - `options` a copy of the argument `options` passed to `newton`
     - `residuals` the history of residuals
     - `kwargs` kwargs arguments, contain your initial guess `x0`
+    
+    They can be used as `callback = (state;k...) -> state.residual<1` for example.
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
 # Output:

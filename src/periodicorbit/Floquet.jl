@@ -437,7 +437,7 @@ end
 """
     eigfloquet = BifurcationKit.FloquetColl()
 
-Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2] in which we form the monodromy matrix with a product of `Ntst` matrices.
+Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3] in which we form the monodromy matrix with a product of `Ntst` matrices.
 
 This is much faster than `FloquetCollGEV` but less precise. The best version uses a Periodic Schur decomposition instead of the product of `Ntst` matrices. This is provided in the package `PeriodicSchurBifurcationKit.jl`.
 
@@ -445,6 +445,8 @@ This is much faster than `FloquetCollGEV` but less precise. The best version use
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
 
 [2] Lust, Kurt. «Improved Numerical Floquet Multipliers». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
+
+[3] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
 """
 struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     eigsolver::E

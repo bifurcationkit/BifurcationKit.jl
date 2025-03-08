@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Cache for the linear solver condensation of parameters.
+Cache for the linear solver based on condensation of parameters [1].
 
 ## Fields
 
@@ -12,6 +12,11 @@ $(TYPEDFIELDS)
 ```
 COPCACHE(coll::PeriodicOrbitOCollProblem, δn = 0)
 ```
+
+## Reference(s)
+
+[1] Govaerts, Willy, Yuri A. Kuznetsov, and Annick Dhooge. “Auto94p.” SIAM Journal on Scientific Computing 27, no. 1 (January 1, 2005): 231–52. https://doi.org/10.1137/030600746.
+
 """
 struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     "cache of size (N x m + 1 + dim, N x m)"
@@ -30,7 +35,7 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     Jcoll::Matrix{𝒯}
     "cache to hold the linear operator for the external variables"
     Jext::Matrix{𝒯}
-    "collocation problem. It is needed to save it because linear solver requires it."
+    "collocation problem. It is needed here because linear solver requires it."
     coll::Tp
 
     function COPCACHE(coll::PeriodicOrbitOCollProblem, dim = 0; 𝒯 = eltype(coll))
@@ -254,7 +259,7 @@ end
     # δn = 0 for newton
     # δn = 1 for palc
     @assert δn >= 0
-    @assert δn == dim "δn = $δn == dim = $dim"
+    @assert δn == dim "We found instead: δn = $δn == dim = $dim"
 
     𝒯 = eltype(coll)
 

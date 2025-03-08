@@ -296,10 +296,10 @@ $(SIGNATURES)
 
 This is the deflated version of the Krylov-Newton Solver for `F(x, p0) = 0`.
 
-We refer to the regular [`newton`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `newton`. See [`DeflationOperator`](@ref) for more information on `defOp`.
+We refer to the regular [`solve`](@ref) for more information. It penalises the roots saved in `defOp.roots`. The other arguments are as for `solve`. See [`DeflationOperator`](@ref) for more information on `defOp`.
 
 # Arguments
-Compared to [`newton`](@ref), the only different arguments are
+Compared to [`solve`](@ref), the only different arguments are
 - `defOp::DeflationOperator` deflation operator
 - `linsolver` linear solver used to invert the Jacobian of the deflated functional.
     - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.

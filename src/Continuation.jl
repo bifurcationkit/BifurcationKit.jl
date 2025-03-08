@@ -84,7 +84,7 @@ setparam(it::ContIterable{Tkind, Tprob, Talg, T}, p0::T) where {Tkind, Tprob, Ta
 record_from_solution(it::ContIterable) = record_from_solution(it.prob)
 plot_solution(it::ContIterable) = plot_solution(it.prob)
 
-get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
+@inline get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
 
 # get the linear solver for Continuation
 getlinsolver(iter::ContIterable) = getlinsolver(iter.alg)
@@ -344,9 +344,12 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
         display(sol₀.residuals)
         throw("Stopping continuation.")
     end
-    verbose && (print("\n──▶ convergence of initial guess = ");printstyled("OK\n\n", color=:green))
-    verbose && println("──▶ parameter = ", p₀, ", initial step")
-    verbose && printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
+    if verbose
+        print("\n──▶ convergence of initial guess = ")
+        printstyled("OK\n\n", color=:green)
+        println("──▶ parameter = ", p₀, ", initial step")
+        printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
+    end
 
     sol₁ = solve(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
                             Newton(),
@@ -356,8 +359,11 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
                             iterationC = 0,
                             p = p₀ + ds / η)
     @assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
-    verbose && (print("\n──▶ convergence of the initial guess = ");printstyled("OK\n\n", color=:green))
-    verbose && println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
+    if verbose
+        print("\n──▶ convergence of the initial guess = ")
+        printstyled("OK\n\n", color=:green)
+        println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
+    end
     return iterate_from_two_points(it, sol₀.u, p₀, 
                                        sol₁.u, p₀ + ds / η; 
                                        _verbosity)

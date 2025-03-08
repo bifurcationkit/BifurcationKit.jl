@@ -11,8 +11,8 @@ isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
 save_solution_default(x, p) = x
 
-const _type_jet = [Symbol("T",i,j) for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R',i,j),i,j) for i=0:3, j=1:7 if i+i<7] |> vec 
+const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
+const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
 
 @eval begin
     """
@@ -40,7 +40,7 @@ const _field_jet = [(Symbol('R',i,j),i,j) for i=0:3, j=1:7 if i+i<7] |> vec
 end
 
 """
-Determine if the vector field is of the form `f!(out,z,p)`.
+Determine if the vector field is of the form `f!(out, z, p)`.
 """
 function _isinplace(f)
     m = minimum(numargs(f))
@@ -175,10 +175,10 @@ for (op, at) in (
             - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
                 - `plot_solution` see above
-                - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need to provide an adjoint
+                - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need of providing an adjoint
                 - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x,p,dx1,dx2)`
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x,p,dx1,dx2,dx3)`
-                - `save_solution` specify a way to solve solution which will be written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
+                - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
@@ -190,7 +190,7 @@ for (op, at) in (
                 params::Tp
                 "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])`. For more information, we refer to `Accessors.jl`."
                 lens::Tl
-                "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; kwargs...)` for the Makie package(s)."
+                "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
                 "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
