@@ -6,9 +6,10 @@ function check_floquet_options(eigls::AbstractEigenSolver)
         return setproperties(eigls; which = :LM, by = abs)
     elseif eigls isa EigArnoldiMethod
         return setproperties(eigls; which = ArnoldiMethod.LM(), by = abs)
-    end
-    if eigls isa EigKrylovKit
+    elseif eigls isa EigKrylovKit
         return @set eigls.which = :LM
+    else
+        @warn "Eigen solver not recognized. The option for computing Floquet multipliers might be wrong. We did not manage to assert that the largest modulus eigenvalues are computed."
     end
     eigls
 end
