@@ -437,7 +437,9 @@ function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbos
         if compute_eigenelements(it)
             # this computes eigen-elements, store them in state and update the stability indices in state
             it_eigen = compute_eigenvalues!(it, state)
-            verbose1 && printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
+            if verbose1
+                printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
+            end
         end
         state.step += 1
     else
