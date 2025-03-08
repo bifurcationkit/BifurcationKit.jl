@@ -29,17 +29,7 @@ The current focus is on large scale nonlinear problems and multiple hardwares. H
 > Despite this focus, the package can easily handle low dimensional problems and specific optimizations are regularly added.
 
 ## 📚 Support and citation
-If you use `BifurcationKit.jl` in your work, we ask that you cite the following paper with [CITATION.bib](https://github.com/bifurcationkit/BifurcationKit.jl/blob/master/CITATION.bib). Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future. It is referenced on HAL-Inria as follows:
-
-<script>
-fetch('https://raw.githubusercontent.com/bifurcationkit/BifurcationKit.jl/master/CITATION.bib')
-  .then(response => response.text())
-  .then(text => {
-    document.getElementById('bibtex-content').textContent = text;
-  });
-</script>
-
-<pre id="bibtex-content">Loading...</pre>
+If you use `BifurcationKit.jl` in your work, we ask that you cite the following paper on [HAL-Inria](https://hal.archives-ouvertes.fr/hal-02902346) with *bibtex* entry [CITATION.bib](https://github.com/bifurcationkit/BifurcationKit.jl/blob/master/CITATION.bib). Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future.
 
 ## 📦 Installation
 
