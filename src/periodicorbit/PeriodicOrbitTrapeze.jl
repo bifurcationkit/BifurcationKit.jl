@@ -84,7 +84,7 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, Tmesh, Tmass} <: AbstractPOFDProblem
+@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass} <: AbstractPOFDProblem
     # problem which contains the vector field F(x, par)
     prob_vf::Tprob = nothing
 
@@ -94,7 +94,7 @@ $DocStrjacobianPOTrap
 
     # discretisation of the time interval
     M::Int = 0
-    mesh::Tmesh = TimeMesh(M)
+    mesh::TimeMesh{T} = TimeMesh(M)
 
     # dimension of the problem in case of an AbstractVector
     N::Int = 0
