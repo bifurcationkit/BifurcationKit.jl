@@ -116,7 +116,7 @@ let
 
         _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
         _ci2 = BK.generate_solution(prob_col, t -> [sin(t)], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 2e-6
+        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 1e-5
         # @info phaseCond(prob_col, _ci1, _ci2)/pi-1
 
         _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)

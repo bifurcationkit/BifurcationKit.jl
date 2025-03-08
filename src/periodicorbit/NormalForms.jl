@@ -744,7 +744,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     v₁ ./= sqrt(∫(vr, vr))
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
 
-                if _NRMDEBUG; v₁ₛ .*= (0.4621019901257435 - 0.2724360760150998im)/v₁ₛ[1,1]; end
+                if _NRMDEBUG; v₁ₛ .*= (-0.4238149014771724 - 0.32924318979676237im)/v₁ₛ[1,1]; end
                 # re-scale the eigenvector
                 v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
                 v₁ = vec(v₁ₛ)

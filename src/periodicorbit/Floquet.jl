@@ -446,11 +446,12 @@ This is much faster than `FloquetCollGEV` but less precise. The best version use
 
 [2] Lust, Kurt. «Improved Numerical Floquet Multipliers». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
 """
-struct FloquetColl{E <: AbstractEigenSolver} <: AbstractFloquetSolver
+struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     eigsolver::E
-    function FloquetColl(eigls::AbstractEigenSolver = DefaultEig())
+    cache::C
+    function FloquetColl(eigls::AbstractEigenSolver = DefaultEig(), cache = nothing)
         eigls2 = check_floquet_options(eigls)
-        return new{typeof(eigls2)}(eigls2)
+        return new{typeof(eigls2), typeof(cache)}(eigls2, cache)
     end
     FloquetColl(eigls::FloquetColl) = eigls
 end
@@ -462,7 +463,7 @@ end
     _eig_floquet_col(J, n, m, Ntst, nev)
 end
 
-@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev) where 𝒯
+@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where 𝒯
     nbcoll = n * m
     N = n
     In = LinearAlgebra.I(N)
