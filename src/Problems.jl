@@ -292,7 +292,9 @@ for (op, at) in (
                     Finp = (o, x, p) -> copyto!(o, _F(x, p))
                 end
 
-                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
+                backend = DI.AutoForwardDiff()
+                prep = DI.prepare_jacobian(F, backend, u0, DI.Constant(parms))
+                J = isnothing(J) ? (x, p) -> DI.jacobian(F, prep, backend, x, DI.Constant(p)) : J
                 J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
 
                 jvp = isnothing(jvp) ?
