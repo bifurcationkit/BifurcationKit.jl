@@ -278,43 +278,62 @@ for (op, at) in (
                          delta = convert(eltype(u0), 1e-8),
                          save_solution = save_solution_default,
                          inplace = false,
+                         ad_backend = DI.AutoForwardDiff(),
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
                 if _get(parms, new_lens) isa Int
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
-                if inplace || _isinplace(_F)
-                    F = (x, p) -> _F(similar(x), x, p)
-                    Finp = _F
+                Foop = if inplace || _isinplace(_F)
+                    (x, p) -> _F(similar(x), x, p)
+
                 else
-                    F = _F
-                    Finp = (o, x, p) -> copyto!(o, _F(x, p))
+                    _F
                 end
 
-                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
-                J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
+                Finp = if inplace || _isinplace(_F)
+                    _F
+                else
+                    (o, x, p) -> copyto!(o, _F(x, p))
+                end
 
-                jvp = isnothing(jvp) ?
-                      (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
-                d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> F(x .+ t .* dx1, p), zero(eltype(dx1)))
+                J = if isnothing(J) 
+                    (x, p) -> DI.jacobian(Foop, ad_backend, x, DI.Constant(p)) 
+                else
+                    J
+                end
+
+                J! = if isnothing(J!) && u0 isa AbstractArray
+                    prep = DI.prepare_jacobian(Foop, ad_backend, u0, DI.Constant(parms))
+                    (out, x, p) -> DI.jacobian!(Foop, out, ad_backend, x, DI.Constant(p)) 
+                else
+                    J!
+                end
+
+                jvp = if isnothing(jvp)
+                    # prep = DI.prepare_jacobian(Foop, ad_backend, u0, DI.Constant(parms))
+                    (x, p, dx) -> DI.pushforward(Foop, ad_backend, x, (dx,), DI.Constant(p))[1]
+                else
+                    dF
+                end
 
                 if isnothing(d2F)
-                    d2F = (x, p, dx1, dx2) -> ForwardDiff.derivative(t -> d1Fad(x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
+                    d2F = (x, p, dx1, dx2) -> DI.pushforward(jvp, ad_backend, x, (dx2,), DI.Constant(p), DI.Constant(dx1))[1]
                     d2Fc = (x, p, dx1, dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x, p, _dx1, _dx2))(dx1, dx2)
                 else
                     d2Fc = d2F
                 end
 
                 if isnothing(d3F)
-                    d3F = (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
+                    d3F = (x, p, dx1, dx2, dx3) -> DI.pushforward(d2F, ad_backend, x, (dx3,), DI.Constant(p), DI.Constant(dx1), DI.Constant(dx2))[1]
                     d3Fc = (x, p, dx1, dx2, dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x, p, _dx1, _dx2, _dx3))(dx1, dx2, dx3)
                 else
                     d3Fc = d3F
                 end
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
 
-                VF = BifFunction(F, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
+                VF = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
                 return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end

@@ -9,6 +9,8 @@ module BifurcationKit
     using DataStructures: CircularBuffer # used for Polynomial predictor
     using ForwardDiff
 
+    import DifferentiationInterface as DI
+
 
     include("Accessors.jl")
     include("Problems.jl")
