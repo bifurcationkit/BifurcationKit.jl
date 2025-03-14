@@ -69,10 +69,10 @@ struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td
     F::Tf
     "Same as F but inplace with signature F!(result, x, p)"
     F!::TFinp
-    "Differential of `F` with respect to `x`, signature `dF(x,p,dx)`"
-    dF::Tdf
-    "Adjoint of the Differential of `F` with respect to `x`, signature `dFad(x,p,dx)`"
-    dFad::Tdfad
+    "Jacobian-vector product or Differential of `F` with respect to `x`, signature `jvp(x,p,dx)`"
+    jvp::Tdf
+    "Vector-Jacobian product or Adjoint of the Differential of `F` with respect to `x`, signature `vjp(x,p,dx)`"
+    vjp::Tdfad
     "Jacobian of `F` at `(x, p)`. It can assume three forms.
         1. Either `J` is a function and `J(x, p)` returns a `::AbstractMatrix`. In this case, the default arguments of `contparams::ContinuationPar` will make `continuation` work.
         2. Or `J` is a function and `J(x, p)` returns a function taking one argument `dx` and returning `dr` of the same type as `dx`. In our notation, `dr = J * dx`. In this case, the default parameters of `contparams::ContinuationPar` will not work and you have to use a Matrix Free linear solver, for example `GMRESIterativeSolvers`,
@@ -106,8 +106,8 @@ residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p);o)
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
 jacobian!(pb::BifFunction, J, x, p) = pb.J!(J, x, p)
 jad(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
-dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
-dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
+jvp(pb::BifFunction, x, p, dx) = pb.jvp(x, p, dx)
+vjp(pb::BifFunction, x, p, dx) = pb.vjp(x, p, dx)
 d2F(pb::BifFunction, x, p, dx1, dx2) = pb.d2F(x, p, dx1, dx2)
 d2Fc(pb::BifFunction, x, p, dx1, dx2) = pb.d2Fc(x, p, dx1, dx2)
 d3F(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3F(x, p, dx1, dx2, dx3)
@@ -115,7 +115,7 @@ d3Fc(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3Fc(x, p, dx1, dx2, dx3)
 is_symmetric(pb::BifFunction) = pb.isSymmetric
 has_hessian(pb::BifFunction) = ~isnothing(pb.d2F)
 has_adjoint(pb::BifFunction) = ~isnothing(pb.Jᵗ)
-has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.dFad)
+has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.vjp)
 isinplace(pb::BifFunction) = pb.inplace
 getdelta(pb::BifFunction) = pb.δ
 
@@ -169,6 +169,10 @@ for (op, at) in (
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
+            - `jvp(prob, x, p, dx)`
+            - `vjp(prob, x, p, dx)`
+            - `d2F(prob, x, p, dx1, dx2)`
+            - `d3F(prob, x, p, dx1, dx2, dx3)`
 
             ## Constructors
             - `BifurcationProblem(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
@@ -307,7 +311,8 @@ for (op, at) in (
                 end
 
                 J! = if isnothing(J!) && u0 isa AbstractArray
-                    prep = DI.prepare_jacobian(Foop, ad_backend, u0, DI.Constant(parms))
+                    # prep = DI.prepare_jacobian(Foop, ad_backend, u0, DI.Constant(parms))
+                    # using prep errors when AD the PD functional with collocation, see test/codim2PO-OColl.jl
                     (out, x, p) -> DI.jacobian!(Foop, out, ad_backend, x, DI.Constant(p)) 
                 else
                     J!
@@ -364,7 +369,7 @@ residual!(pb::AbstractAllJetBifProblem, o, x, p) = residual!(pb.VF, o, x, p)
 jacobian(pb::AbstractAllJetBifProblem, x, p) = jacobian(pb.VF, x, p)
 jacobian!(pb::AbstractAllJetBifProblem, J, x, p) = jacobian!(pb.VF, J, x, p)
 jad(pb::AbstractAllJetBifProblem, x, p) = jad(pb.VF, x, p)
-dF(pb::AbstractAllJetBifProblem, x, p, dx) = dF(pb.VF, x, p, dx)
+jvp(pb::AbstractAllJetBifProblem, x, p, dx) = jvp(pb.VF, x, p, dx)
 d2F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)
 d2Fc(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2Fc(pb.VF, x, p, dx1, dx2)
 d3F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2, dx3) = d3F(pb.VF, x, p, dx1, dx2, dx3)
@@ -406,12 +411,11 @@ end
 
 function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)
     if is_symmetric(pb)
-        # return apply(pb.J(x, par), dx)
-        return dF(pb, x, par, dx)
+        return jvp(pb, x, par, dx)
     else
         if transpose_jac == false
-            # return apply(pb.J(x, par), dx)
-            return dF(pb, x, par, dx)
+            # do not transpose
+            return jvp(pb, x, par, dx)
         else
             if has_adjoint(pb)
                 return apply(jad(pb, x, par), dx)

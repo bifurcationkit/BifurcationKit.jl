@@ -478,6 +478,7 @@ function Fzh!(f, u, p)
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
+
 for _F in (Fzh!, Fzh)
     par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
     prob = BK.BifurcationProblem(_F, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))

@@ -69,7 +69,7 @@ lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, 
 # lspo = GMRESKrylovKit(rtol = 1e-10, atol = 1e-12, verbose = 0, dim = 20, maxiter = 1)
 eigpo = EigKrylovKit(x₀ = rand(4))
 optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
-solpo = newton(probsh, cish, optnpo)
+solpo = BK.newton(probsh, cish, optnpo)
 
 _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')

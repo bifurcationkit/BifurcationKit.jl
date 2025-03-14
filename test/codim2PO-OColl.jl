@@ -108,7 +108,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     argspo...,
     )
 
-# compute NS normal form using Poincare return map     
+# compute NS normal form using Poincare return map
 get_normal_form(brpo_ns, 1; prm = true)
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = false)
@@ -174,6 +174,7 @@ _p2 = pd_po_coll2.sol[end].p
 _param = BK.setparam(pd_po_coll2, _p1)
 _param = @set _param.ϵ = _p2
 
+# ERRORS NOW
 _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 # _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 

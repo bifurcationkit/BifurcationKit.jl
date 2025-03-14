@@ -25,8 +25,10 @@ BK._getvectortype(prob)
 # @inferred BK.jacobian(prob, prob.u0, prob.params)
 # @inferred BK.jacobian!(prob, zeros(2,2), prob.u0, prob.params)
 
+@be BK.jacobian!(prob, zeros(2,2), prob.u0, prob.params)
+
 BK.apply(BK.jacobian(prob, rand(2), set(prob.params, prob.lens, 0.)), rand(2))
-BK.dF(  prob, prob.u0, prob.params, rand(2))
+BK.jvp(  prob, prob.u0, prob.params, rand(2))
 BK.d2F( prob, prob.u0, prob.params, rand(2), rand(2))
 BK.d3F( prob, prob.u0, prob.params, rand(2), rand(2), rand(2))
 BK.d3Fc(prob, prob.u0, prob.params, rand(2), rand(2), rand(2))
@@ -38,7 +40,7 @@ ForwardDiff.derivative(z-> BK.apply(BK.jacobian(prob, prob.u0, set(prob.params, 
 DI.derivative(z-> BK.apply(BK.jacobian(prob, prob.u0, set(prob.params, prob.lens, z)), _dx), DI.AutoForwardDiff(), 0.)
 
 # strange, does not work
-# DI.derivative(z -> BK.dF(prob, prob.u0, set(prob.params, prob.lens, z), _dx), DI.AutoForwardDiff(), 0.)
+# DI.derivative(z -> BK.jvp(prob, prob.u0, set(prob.params, prob.lens, z), _dx), DI.AutoForwardDiff(), 0.)
 
 
 

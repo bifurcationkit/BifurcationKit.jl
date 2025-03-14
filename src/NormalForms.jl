@@ -130,7 +130,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
+        R11 = ForwardDiff.derivative(z -> jvp(prob, x0, set(parbif, lens, z), ζ), p)
     else
         R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
                apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
@@ -1322,7 +1322,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
+        R11 = ForwardDiff.derivative(z -> jvp(prob, x0, set(parbif, lens, z), ζ), p)
         # R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
     else
         R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 

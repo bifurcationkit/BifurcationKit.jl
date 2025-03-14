@@ -195,8 +195,8 @@ residual(tw::WrapTW, x, p) = residual(tw.prob, x, p)
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 @inline getdelta(::WrapTW) = 1e-8
-dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0.)
-d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0.)
+jvp(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0.)
+d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> jvp(tw, x .+ t .* dx2, p, dx1), 0.)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0.)
 
 function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
