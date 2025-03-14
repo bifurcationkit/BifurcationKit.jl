@@ -315,7 +315,7 @@ for (op, at) in (
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
 
                 VF = BifFunction(F, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
-                return $op(VF, u0, parms, lens, plot_solution, record_from_solution, save_solution)
+                return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end
     end
