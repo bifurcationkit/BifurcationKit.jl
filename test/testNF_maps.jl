@@ -32,8 +32,8 @@ for b in (0, 0.21), saveev in (true, false)
     bp = BK.BranchPointMap(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_bp.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
     show(bp)
 
-    nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true, autodiff = true)
     nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true)
+    nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true, autodiff = true)
     @test nf.nf.a ≈ 0 
     @test nf.nf.b1 ≈ pars_bp.a
     @test nf.nf.b2/2 ≈ pars_bp.b
@@ -85,7 +85,7 @@ pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -1.123 - 0.456im)
 prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))
 br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-prob = BK.BifurcationProblem(Fns, [0.0], pars_pd, (@optic _.μ))
+prob = BK.BifurcationProblem(Fns, [0.0, 0], pars_ns, (@optic _.μ))
 ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 
 nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
