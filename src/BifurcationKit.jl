@@ -8,6 +8,7 @@ module BifurcationKit
     using DocStringExtensions
     using DataStructures: CircularBuffer # used for Polynomial predictor
     using ForwardDiff
+    import DifferentiationInterface as DI
 
 
     include("Accessors.jl")

@@ -284,16 +284,22 @@ for (op, at) in (
                 if _get(parms, new_lens) isa Int
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
-                if inplace || _isinplace(_F)
-                    F = (x, p) -> _F(similar(x), x, p)
-                    Finp = _F
+                F = if inplace || _isinplace(_F)
+                    (x, p) -> _F(similar(x), x, p)
                 else
-                    F = _F
-                    Finp = (o, x, p) -> copyto!(o, _F(x, p))
+                    _F
                 end
 
-                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
-                J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
+                Finp = if inplace || _isinplace(_F)
+                    _F
+                else
+                    (o, x, p) -> copyto!(o, _F(x, p))
+                end
+
+                backend = DI.AutoForwardDiff()
+                prep = DI.prepare_jacobian(F, backend, u0, DI.Constant(parms))
+                J = isnothing(J) ? (x, p) -> DI.jacobian(F, prep, backend, x, DI.Constant(p)) : J
+                J! = isnothing(J!) ? (out, x, p) -> DI.jacobian!(F, out, prep, backend, x, DI.Constant(p)) : J!
 
                 jvp = isnothing(jvp) ?
                       (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
