@@ -298,7 +298,9 @@ for (op, at) in (
                     (o, x, p) -> copyto!(o, _F(x, p))
                 end
 
-                J = if isnothing(J) 
+                J = if isnothing(J)
+                    # this is a bit lazy here. 
+                    # If we use a prepare_jacobian, it will clash with AD of Fold continuation
                     (x, p) -> DI.jacobian(Foop, ad_backend, x, DI.Constant(p)) 
                 else
                     J
