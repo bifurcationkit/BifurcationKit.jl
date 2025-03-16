@@ -516,41 +516,54 @@ let
 end
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
+# test that the top eigenvalues are sorted by decrasing real part
+_test_sorted(x) = issorted(x, by = real, rev = true)
+
 let
     x0 = rand(100)
     J0 = I + sprand(100,100,0.1)
     Jmf = x -> J0 * x
+
+    @test _test_sorted(DefaultEig()(J0, 10)[1])
+
     B = sparse(I(length(x0)))
     out = Arpack.eigs(J0, nev = 20, which = :LR)
-    BK.gev(DefaultEig(), J0, B, 10)
+    resgev = BK.gev(DefaultEig(), J0, B, 10)
+    @test issorted(resgev[1], by = real)
 
     eil = BK.EigKrylovKit(tol = 1e-9)
     outkk = eil(J0, 20)
+    @test _test_sorted(outkk[1])
     geteigenvector(eil, outkk[2], 2)
 
     eil = BK.EigKrylovKit(tol = 1e-9, x₀ = x0)
     outkkmf = eil(Jmf, 20)
+    @test _test_sorted(outkkmf[1])
     geteigenvector(eil, outkkmf[2], 2)
 
     eil = BK.EigArpack(v0 = copy(x0))
     outdefault = eil(J0, 20)
+    @test _test_sorted(outdefault[1])
     @test out[1] ≈ outdefault[1]
     outdefault = eil(x ->J0*x, 20)
+    @test _test_sorted(outdefault[1])
     @test out[1] ≈ outdefault[1]
-    BK.gev(eil, J0, B, 10)
+    resgev = BK.gev(eil, J0, B, 10)
+    @test issorted(resgev[1], by = real, rev = true)
 
     eil = BK.EigArnoldiMethod(;x₀ = x0)
     outam = eil(J0, 20)
+    @test _test_sorted(outam[1])
     outam = eil(Jmf, 20)
+    @test _test_sorted(outam[1])
     geteigenvector(eil, outam[2], 2)
 
     eil = BK.EigArnoldiMethod(;x₀ = x0, sigma = 1.)
     outam = eil(J0, 20)
+    @test _test_sorted(outam[1])
     outam = eil(Jmf, 20)
+    @test _test_sorted(outam[1])
     geteigenvector(eil, outam[2], 2)
-    BK.gev(eil, J0, B, 10)
+    resgev = BK.gev(eil, J0, B, 10)
+    # @test issorted(resgev[1], by = real, rev = true)
 end
-
-
-
-

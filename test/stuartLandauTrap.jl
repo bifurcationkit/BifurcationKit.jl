@@ -49,7 +49,7 @@ orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in Lin
 push!(orbitguess_f, 2pi)
 
 optn_po = NewtonPar()
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 0)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 1)
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
@@ -68,9 +68,10 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
         (@set opts_po_cont.newton_options.linsolver = _ls);
         verbosity = 0, plot = false,
         linear_algo = BorderingBLS(solver = _ls, check_precision = false),
-        record_from_solution = (u, p; k...) -> BK.getperiod(poTrap, u, par_hopf), normC = norminf)
+        normC = norminf)
 
     BK.get_periodic_orbit(br_po, 1)
+    @test _test_sorted(BK.eigenvals(br_po, 1))
 end
 
 let

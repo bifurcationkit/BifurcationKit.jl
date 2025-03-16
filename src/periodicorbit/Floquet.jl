@@ -619,7 +619,7 @@ function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 
     nev = min(N, nev)
     logvals = @. log(Complex(factor * vals))
-    I = sortperm(logvals, by = real, rev = false)[1:nev]
+    I = sortperm(logvals, by = real, rev = true)[1:nev]
 
     # floquet exponents
     σ = logvals[I]

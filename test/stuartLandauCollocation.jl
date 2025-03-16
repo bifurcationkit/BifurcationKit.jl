@@ -288,6 +288,7 @@ let
                 usedeflation = true,
                 eigsolver = useGEV ? BK.FloquetCollGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
                 )
+            issorted(br_po_gev.eig[1].eigenvals, by = real)
         end
 
         br_po = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
@@ -296,6 +297,7 @@ let
             usedeflation = true,
             eigsolver = BK.FloquetColl(),
             )
+        issorted(br_po.eig[1].eigenvals, by = real)
 
         # test mesh adaptation
         br_po_adapt = continuation(br, 1, (@set ContinuationPar(optcontpo; ds = 0.01, save_sol_every_step=1, max_steps = 10, p_max=0.8).newton_options.verbose = false),
@@ -305,6 +307,7 @@ let
             usedeflation = true,
             eigsolver = BK.FloquetColl(),
             )
+        issorted(br_po_adapt.eig[1].eigenvals, by = real)
 
         # we test that the 2 methods give the same floquet exponents
         for i=1:length(br_po)-1
