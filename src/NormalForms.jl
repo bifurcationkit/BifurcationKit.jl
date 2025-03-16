@@ -490,7 +490,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
 
     if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
+        return hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :bt
@@ -822,7 +822,8 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         L = jacobian(prob, x0, parbif)
     end
 
-    # we use BilinearMap to be able to call on complex valued arrays
+    # we use ---Maps to be able to call on complex valued arrays
+    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1))
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
@@ -831,18 +832,17 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
     else
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-        residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
     if autodiff
-        av = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), real(ζ)), p) .+ im .* 
-                ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), imag(ζ)), p)
+        av = ForwardDiff.derivative(z -> R1(set(parbif, lens, z))(ζ), p)
     else
-        av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
-              dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
+        av = (R1(set(parbif, lens, p + δ))(ζ) .-
+              R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
     end
     av .+= 2 .* R2(ζ, Ψ001)
     a = dot(av, ζ★)
@@ -1137,6 +1137,7 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
                             pt::NeimarkSacker,
                             ls::AbstractLinearSolver;
+                            autodiff = false,
                             detailed = false,
                             verbose::Bool = false)
     δ = getdelta(prob)
@@ -1152,7 +1153,8 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # jacobian at the bifurcation point
     L = jacobian(prob, x0, parbif)
 
-    # we use BilinearMap to be able to call on complex valued arrays
+    # we use ---Maps to be able to call on complex valued arrays
+    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1))
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
@@ -1166,8 +1168,14 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
         # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
-        av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
-              dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
+        # av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
+            #   dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
+        if autodiff
+            av = ForwardDiff.derivative(z -> R1(set(parbif, lens, z))(ζ), p)
+        else
+            av = (R1(set(parbif, lens, p + δ))(ζ) .-
+                  R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
+        end
         av .+= 2 .* R2(ζ, Ψ001)
         a = dot(ζ★, av) * cis(-ω)
         verbose && println("──▶ a  = ", a)

@@ -370,6 +370,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `use_normal_form = true` compute the normal form to get the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the eigenvector. This can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
+- `autodiff_nf = true` use `autodiff` in `get_normal_form`?
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
@@ -387,6 +388,7 @@ function continuation(br::AbstractBranchResult,
                       ampfactor = 1,
                       usedeflation = false,
                       use_normal_form = true,
+                      autodiff_nf = true,
                       nev = length(eigenvalsfrombif(br, ind_bif)),
                       kwargs...)
     # compute the normal form of the branch point
@@ -395,7 +397,7 @@ function continuation(br::AbstractBranchResult,
 
     cb = get(kwargs, :callback_newton, cb_default)
 
-    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose, detailed = use_normal_form)
+    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose, detailed = use_normal_form, autodiff = autodiff_nf)
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp

@@ -189,7 +189,7 @@ function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1,
         Jmap = J isa AbstractArray ? J : LinearMap{T}(J, l.N, l.N; ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
-        Jmap = LinearMap{T}(J_map, length(rhs), length(rhs); ismutating = false)
+        Jmap = LinearMaps.LinearMap{T}(J_map, length(rhs), length(rhs); ismutating = false)
     end
     res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol,
                                  log = l.log, verbose = l.verbose, restart = l.restart,
@@ -307,7 +307,7 @@ end
 
 function (l::KrylovLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
     J_map = v -> _axpy_op(J, v, a₀, a₁)
-    Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
+    Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     sol, stats = l.KrylovAlg(Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
     return sol, stats.solved, stats.niter
 end 
@@ -350,10 +350,10 @@ end
 function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
     if l.is_inplace
         J_map = (o,v) -> _axpy_op!(o, J, v, a₀, a₁)
-        Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = true)
+        Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
-        Jmap = LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
+        Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     end
     Krylov.solve!(l.solver, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
     return solution(l.solver), issolved(l.solver), statistics(l.solver).niter

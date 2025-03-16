@@ -79,7 +79,7 @@ function Fns!(f, u, p, t)
 
     return f
 end
-Fns(x, p) = Fns!(similar(x), x, p, 0.)
+Fns(x, p) = Fns!(similar(x, promote_type(eltype(x), typeof(p.μ))), x, p, 0.)
 pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -1.123 - 0.456im)
 
 prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))

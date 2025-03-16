@@ -187,46 +187,6 @@ apply!(y, f, x) = f(y, x)
 # _empty(a::AbstractVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
 # _empty(a::AbstractMatrix{T}, ::Type{U}=T) where {T,U} = similar(a, (0,0))
 ####################################################################################################
-# the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
-# this is done so as to use AD (ForwardDiff.jl,...) to provide the differentials which only works on reals (usually).
-
-"""
-$(TYPEDEF)
-
-This structure wraps a bilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
-"""
-struct BilinearMap{Tm}
-    bl::Tm
-end
-
-function (R2::BilinearMap)(dx1, dx2)
-    dx1r = real.(dx1); dx2r = real.(dx2)
-    dx1i = imag.(dx1); dx2i = imag.(dx2)
-    return R2(dx1r, dx2r) .- R2(dx1i, dx2i) .+ im .* (R2(dx1r, dx2i) .+ R2(dx1i, dx2r))
-end
-(b::BilinearMap)(dx1::T, dx2::T) where {T <: AbstractArray{<: Real}} = b.bl(dx1, dx2)
-
-"""
-$(TYPEDEF)
-
-This structure wraps a trilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
-"""
-struct TrilinearMap{Tm}
-    tl::Tm
-end
-
-function (R3::TrilinearMap)(dx1, dx2, dx3)
-    dx1r = real.(dx1); dx2r = real.(dx2); dx3r = real.(dx3)
-    dx1i = imag.(dx1); dx2i = imag.(dx2); dx3i = imag.(dx3)
-    outr =  R3(dx1r, dx2r, dx3r) .- R3(dx1r, dx2i, dx3i) .-
-            R3(dx1i, dx2r, dx3i) .- R3(dx1i, dx2i, dx3r)
-    outi =  R3(dx1r, dx2r, dx3i) .+ R3(dx1r, dx2i, dx3r) .+
-            R3(dx1i, dx2r, dx3r) .- R3(dx1i, dx2i, dx3i)
-    return Complex.(outr, outi)
-end
-
-(b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
-####################################################################################################
 """
 $(SIGNATURES)
 

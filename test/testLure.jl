@@ -5,7 +5,7 @@ const BK = BifurcationKit
 
 recordFromSolution(x, p; k...) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
-function lur!(dz, u, p, t)
+function lur!(dz, u, p, t = 0)
     (; α, β) = p
     x, y, z = u
     dz[1] = y
@@ -14,10 +14,9 @@ function lur!(dz, u, p, t)
     dz
 end
 
-lur(z, p) = lur!(similar(z), z, p, 0)
 par_lur = (α = -1.0, β = 1.)
 z0 = zeros(3)
-prob = BifurcationProblem(lur, z0, par_lur, (@optic _.α); record_from_solution = recordFromSolution)
+prob = BifurcationProblem(lur!, z0, par_lur, (@optic _.α); record_from_solution = recordFromSolution)
 
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false
@@ -40,11 +39,8 @@ function recordPO(x, p; k...)
 	return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
-# newton parameters
-optn_po = NewtonPar(tol = 1e-8,  max_iterations = 25)
-
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-5., max_steps = 122, newton_options = (@set optn_po.tol = 1e-8), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step=1, n_inversion = 6)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-5., max_steps = 122, newton_options = NewtonPar(tol = 1e-8,  max_iterations = 25), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step=1, n_inversion = 6)
 
 Mt = 90 # number of time sections
 br_po = continuation(
@@ -88,7 +84,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
 # plot(br, br_po, br_po_pd, xlims=(0.0,1.5))
 ####################################################################################################
 # case of collocation
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-0.9, max_steps = 120, newton_options = (@set optn_po.tol = 1e-11), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step = 1, n_inversion = 8)
+opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-0.9, max_steps = 120, newton_options = NewtonPar(tol = 1e-11,  max_iterations = 25), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step = 1, n_inversion = 8)
 
 for meshadapt in (false, true)
     br_po = continuation(
@@ -129,10 +125,8 @@ using OrdinaryDiffEq
 
 probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-12, reltol = 1e-10)
 
-optn_po = NewtonPar(tol = 1e-12, max_iterations = 25)
-
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps = 122, newton_options = (@set optn_po.tol = 1e-12), tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10, n_inversion = 6, nev = 3)
+opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps = 122, newton_options = NewtonPar(tol = 1e-12, max_iterations = 25), tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10, n_inversion = 6, nev = 3)
 
 br_po = continuation(
     br, 2, opts_po_cont,

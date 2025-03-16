@@ -61,7 +61,7 @@ $(TYPEDFIELDS)
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
 - `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x,p,dx)`
-- `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other Jets.
+- `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other jet functions.
 - etc
 """
 struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ, Tjet} <: AbstractBifurcationFunction
@@ -438,3 +438,57 @@ function re_make(prob::AbstractBifurcationProblem;
 
     return prob2
 end
+####################################################################################################
+# the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
+# this is done so as to use AD (ForwardDiff.jl,...) to provide the differentials which only works on reals (usually).
+"""
+$(TYPEDEF)
+
+This structure wraps a linear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
+"""
+struct LinearMap{Tm}
+    bl::Tm
+end
+
+function (R1::LinearMap)(dx1)
+    dx1r = real.(dx1); dx1i = imag.(dx1)
+    return R1(dx1r) .+ im .* R1(dx1i)
+end
+(b::LinearMap)(dx1::T) where {T <: AbstractArray{<: Real}} = b.bl(dx1)
+
+"""
+$(TYPEDEF)
+
+This structure wraps a bilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
+"""
+struct BilinearMap{Tm}
+    bl::Tm
+end
+
+function (R2::BilinearMap)(dx1, dx2)
+    dx1r = real.(dx1); dx2r = real.(dx2)
+    dx1i = imag.(dx1); dx2i = imag.(dx2)
+    return R2(dx1r, dx2r) .- R2(dx1i, dx2i) .+ im .* (R2(dx1r, dx2i) .+ R2(dx1i, dx2r))
+end
+(b::BilinearMap)(dx1::T, dx2::T) where {T <: AbstractArray{<: Real}} = b.bl(dx1, dx2)
+
+"""
+$(TYPEDEF)
+
+This structure wraps a trilinear map to allow evaluation on Complex arguments. This is especially useful when these maps are produced by ForwardDiff.jl.
+"""
+struct TrilinearMap{Tm}
+    tl::Tm
+end
+
+function (R3::TrilinearMap)(dx1, dx2, dx3)
+    dx1r = real.(dx1); dx2r = real.(dx2); dx3r = real.(dx3)
+    dx1i = imag.(dx1); dx2i = imag.(dx2); dx3i = imag.(dx3)
+    outr =  R3(dx1r, dx2r, dx3r) .- R3(dx1r, dx2i, dx3i) .-
+            R3(dx1i, dx2r, dx3i) .- R3(dx1i, dx2i, dx3r)
+    outi =  R3(dx1r, dx2r, dx3i) .+ R3(dx1r, dx2i, dx3r) .+
+            R3(dx1i, dx2r, dx3r) .- R3(dx1i, dx2i, dx3i)
+    return Complex.(outr, outi)
+end
+
+(b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)

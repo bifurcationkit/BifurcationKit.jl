@@ -31,7 +31,7 @@ par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
 par_hopf = (@set par_sl.r = 0.1)
 u0 = [.001, .001]
 
-prob_vf = BifurcationKit.BifurcationProblem(Fsl, u0, par_hopf, (@optic _.r))
+prob_vf = BifurcationKit.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
 
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
@@ -120,7 +120,7 @@ _sol(0.1)
 # test automatic branch switching
 @info "Single Shooting aBS"
 _probsh = ShootingProblem(1, prob, KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r))
-br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0)
+br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0, autodiff_nf = false)
 
 @test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
 @test br_pok2.prob isa BK.WrapPOSh

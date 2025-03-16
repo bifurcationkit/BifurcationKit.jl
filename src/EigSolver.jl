@@ -84,7 +84,7 @@ function (l::EigArpack)(J, nev; kwargs...)
         end
         N = length(l.kwargs[:v0])
         T = eltype(l.kwargs[:v0])
-        Jmap = LinearMap{T}(J, N, N; ismutating = false)
+        Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
         λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = l.which, sigma = l.sigma,
                                  l.kwargs...)
     end
@@ -210,7 +210,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
                                                          l.kwargs...)
         else
             F = factorize(l.sigma * LinearAlgebra.I - J)
-            Jmap = LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1);
+            Jmap = LinearMaps.LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1);
                                         ismutating = true)
             decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                          l.kwargs...)
@@ -220,7 +220,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
         𝒯 = eltype(l.x₀)
         isnothing(l.sigma) == false &&
         @warn "Shift-Invert strategy not implemented for maps"
-        Jmap = LinearMap{𝒯}(J, N, N; ismutating = false)
+        Jmap = LinearMaps.LinearMap{𝒯}(J, N, N; ismutating = false)
         decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                      l.kwargs...)
     end
@@ -244,7 +244,7 @@ function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
         σ = isnothing(l.sigma) ? 0 : l.sigma
         P = lu(A - σ * B)
         𝒯 = eltype(A)
-        L = LinearMap{𝒯}((y, x) -> ldiv!(y, P, B * x), size(A, 1), ismutating = true)
+        L = LinearMaps.LinearMap{𝒯}((y, x) -> ldiv!(y, P, B * x), size(A, 1), ismutating = true)
         decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
                                                          l.kwargs...)
         vals, ϕ = partialeigen(decomp)
