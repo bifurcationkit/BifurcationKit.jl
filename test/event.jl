@@ -22,6 +22,8 @@ SetOfEvents(_eve)
 SetOfEvents(_eved)
 BK.split_events(_eve, _eved, nothing)
 BK.has_custom_labels(BK.BifEvent(1,1))
+BK.compute_eigenelements(BK.BifEvent(0,nothing))
+BK.has_custom_labels(BK.BifEvent(0,nothing))
 ####################################################################################################
 function testBranch(br)
     # test if stability works
@@ -82,15 +84,12 @@ testBranch(br0)
 opts = ContinuationPar(opts0; save_sol_every_step = 1, detect_bifurcation = 0, detect_event = 2)
 br = continuation(prob, PALC(), opts)
 
-# using PrettyTables
-# pretty_table(br.branch[1:40])
-
 # arguments for continuation
 args = (BK.re_make(prob; record_from_solution = (x,p; k...) -> x[1]), PALC(), opts)
 kwargs = (plot = false, verbosity = 0, linear_algo = MatrixBLS(),)
 
 br = continuation(args...; kwargs...,
-    verbosity = 0, # test printing
+    verbosity = 3, # test printing
     event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
 @test br.specialpoint[1].type == :userC
@@ -130,6 +129,9 @@ br = continuation(args...; kwargs...,
 @test length(br.specialpoint) == 5
 @test br.specialpoint[1].type == Symbol("fold")
 testBranch(br)
+
+@reset br.specialpoint[2].idx = br.specialpoint[1].idx+1
+BK.filter_bifurcations(br.specialpoint)
 ####################################################################################################
 # discrete events
 br = continuation(args...; kwargs...,

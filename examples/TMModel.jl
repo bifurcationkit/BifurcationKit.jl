@@ -18,12 +18,14 @@ end
 
 par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF = 1.5, τS = 0.007)
 z0 = [0.238616, 0.982747, 0.367876 ]
-prob = BifurcationProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]),)
 
-opts_br = ContinuationPar(p_min = -10.0, p_max = 1., dsmax = 0.1, n_inversion = 8, nev = 3)
-br = continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false, normC = norminf, bothside = true)
+prob = BifurcationProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
 
 plot(br, plotfold=false)
+opts_br = ContinuationPar(p_min = -10.0, p_max = 1., dsmax = 0.1, n_inversion = 8, nev = 3, detect_bifurcation = 3)
+br = @time continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false, normC = norminf, bothside = false)
+
+plot(br, plotfold = false)
 ####################################################################################################
 br_fold = BK.continuation(br, 2, (@optic _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
 plot(br_fold)
@@ -50,7 +52,7 @@ args_po = (	record_from_solution = (x, p; k...) -> begin
     normC = norminf
     )
 
-br_potrap = @time continuation(br, 5, opts_po_cont,
+br_potrap = @time continuation(br, 4, opts_po_cont,
     PeriodicOrbitTrapProblem(M = 150);
     verbosity = 2, plot = true,
     args_po...,
@@ -61,19 +63,15 @@ plot(br, br_potrap, markersize = 3)
 plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
 # branching to PO from Hopf using Collocation
-opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 80, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 100, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
 
 br_pocoll = @time continuation(
-    br, 5, opts_po_cont,
-    PeriodicOrbitOCollProblem(50, 5; meshadapt = true);
-    verbosity = 2,
-    plot = true,
+    br, 4, opts_po_cont,
+    PeriodicOrbitOCollProblem(50, 3; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
+    # verbosity = 3,
+    # plot = true,
     args_po...,
-    plot_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-        plot!(xtt.t, xtt[1,:]; label = "", marker =:d, markersize = 1.5, k...)
-        plot!(br; subplot = 1, putspecialptlegend = false)
-    end,
+    linear_algo = BK.COPBLS(),
     )
 
 plot(br, br_pocoll, markersize = 3, xlims = (-2.5, 0))

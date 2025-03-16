@@ -182,8 +182,12 @@ BK.GEigArpack(nothing, :LR)
 continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
 @reset opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
-@reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+@reset opt_cont_br.newton_options.eigsolver = EigArpack(sigma = 0.1, nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+@reset opt_cont_br.detect_bifurcation = 1
+try
+    continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 1)
+catch
+end
 @reset opt_cont_br.detect_bifurcation = 0
-continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 continuation((@set probTW.jacobian = :FiniteDifferences), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)

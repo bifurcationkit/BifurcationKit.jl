@@ -69,15 +69,15 @@ max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 # using DifferentialEquations
 # prob_ode = ODEProblem(COm!, copy(z0), (0., 1000.), par_com; abstol = 1e-11, reltol = 1e-9)
 
-brpo = @time continuation(br, 5, opts_po_cont,
-    PeriodicOrbitOCollProblem(80, 5 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
+brpo = @time continuation(br, 2, opts_po_cont,
+    PeriodicOrbitOCollProblem(50, 3 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
     # ShootingProblem(25, prob_ode, TaylorMethod(25); parallel = true; update_section_every_step = 1, jacobian = BK.AutoDiffDense());
-    verbosity = 3, plot = true,
+    # verbosity = 0, plot = true,
     normC = norminf,
     alg = PALC(tangent = Bordered()),
     # alg = PALC(),
     # alg = MoorePenrose(tangent=PALC(tangent = Bordered()), method = BK.direct),
-    δp = 0.0005,
+    δp = 0.00025,
     linear_algo = COPBLS(),
     callback_newton = BK.cbMaxNormAndΔp(1., 1.5e-3),
     bothside = true,
@@ -89,28 +89,26 @@ xlims!((1.037, 1.055))
 scatter!(br)
 plot!(brpo.param, brpo.min, label = "min", xlims = (1.037, 1.055))
 ####################################################################################################
-sn_codim2 = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, dsmin=1e-5, ds = -0.001, dsmax = 0.05, n_inversion = 6, detect_event = 2, detect_fold = false) ; plot = true,
-    verbosity = 3,
+sn_codim2 = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, ds = -0.001, n_inversion = 6) ; plot = true,
+    # verbosity = 3,
     normC = norminf,
     update_minaug_every_step = 1,
-    start_with_eigen = true,
-    # record_from_solution = (u,p; kw...) -> (x = u.u[1] ),
+    # start_with_eigen = false,
     bothside = true,
-    bdlinsolver = MatrixBLS()
     )
 
 plot(sn_codim2)#, real.(sn_codim2.BT), ylims = (-1,1), xlims=(0,2))
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
 
-hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, ds = -0.0001, dsmax = 0.08, dsmin = 1e-4, n_inversion = 6, detect_event = 2, detect_loop = true, max_steps = 50, detect_fold=false) ; plot = true,
-    verbosity = 0,
+hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, max_steps = 50) ; plot = true,
+    verbosity = 3,
     normC = norminf,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    # record_from_solution = (u,p; kw...) -> (x = u.u[1] ),
+    start_with_eigen = true,
     bothside = true,
     bdlinsolver = MatrixBLS())
 
-plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotcirclesbif = true)
-plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf",plotcirclesbif = true)
+plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
+plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
 plot!(br,xlims=(0.6,1.5))

@@ -465,7 +465,7 @@ end
     _eig_floquet_col(J, n, m, Ntst, nev)
 end
 
-@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where 𝒯
+@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where {𝒯}
     nbcoll = n * m
     N = n
     In = LinearAlgebra.I(N)

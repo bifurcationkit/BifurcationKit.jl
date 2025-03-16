@@ -17,6 +17,8 @@ br = continuation(prob, PALC(), opts_br; normC = norminf)
 # normal form computation
 bp = BK.get_normal_form(br, 1; verbose=false)
 @test BK.istranscritical(bp) == true
+@test BK.type(bp) == :Transcritical
+@test BK.type(nothing) == nothing
 
 prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
 bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
@@ -90,6 +92,7 @@ brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = normin
 
 bpp = BK.get_normal_form(brp, 1; verbose=true)
 show(bpp)
+@test BK.type(bpp) == :Pitchfork
 
 
 nf = bpp.nf
@@ -143,6 +146,7 @@ let
         bp2d = BK.get_normal_form(br, 1; verbose = true);
         bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]], autodiff);
         show(bp2d)
+        BK.type(bp2d)
 
         BK.nf(bp2d)
         length(bp2d)
@@ -225,6 +229,7 @@ br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds 
 # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.], [0, 0, 1.]])
 BK.nf(bp2d)
+BK.type(bp2d)
 
 @test bp2d.nf.a == zeros(3)
 @test bp2d.nf.b1 ≈ I(3)
@@ -276,6 +281,7 @@ for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
 
     hp = BK.get_normal_form(br, 1; detailed = false)
     hp = BK.get_normal_form(br, 1; autodiff)
+    BK.type(hp)
 
     nf = hp.nf
     BK.type(hp)
@@ -477,6 +483,7 @@ for _F in (Fzh!, Fzh)
     @test zh.nf.G200 ≈ par_zh.G200
     @test zh.nf.G110 ≈ par_zh.G110
     @test zh.nf.G011/2 ≈ par_zh.G011
+    BK.type(zh)
 
     pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
     pred.EigenVec(0.1)
@@ -519,6 +526,7 @@ for _F in (Fhh!, Fhh)
 
     @test br_codim2.specialpoint[1].type == :hh
     hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
+    BK.type(hh)
     # @test hh.nf.G2100 == par_hh.G2100
     # @test hh.nf.G0021 == par_hh.G0021
     # @test hh.nf.G1110 == par_hh.G1110
