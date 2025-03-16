@@ -132,8 +132,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if autodiff
         R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
     else
-        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
-               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
+               dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
     end
 
     b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
@@ -592,8 +592,13 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of p
     dgidp = Vector{Tvec}(undef, N)
     δ = getdelta(prob)
-    R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- 
-           residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    if autodiff
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
+    else
+        R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    end
+   
     for ii in 1:N
         dgidp[ii] = dot(R01, ζ★s[ii])
     end
@@ -602,8 +607,13 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     # coefficients of x*p
     d2gidxjdpk = zeros(Tvec, N, N)
     for ii in 1:N, jj in 1:N
-        R11 = (apply(jacobian(prob_vf, x0, set(parbif, lens, p + δ)), ζs[jj]) .- 
-               apply(jacobian(prob_vf, x0, set(parbif, lens, p - δ)), ζs[jj])) ./ (2δ)
+        if autodiff
+            R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
+        else
+            R11 = (dF(prob_vf, x0, set(parbif, lens, p + δ), ζs[jj]) .- 
+                   dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
+        end
+
         Ψ01, cv, it = ls(Linv, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
@@ -794,6 +804,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                             pt::Hopf, 
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
+                            autodiff = true,
                             L = nothing)
     δ = getdelta(prob)
     x0 = pt.x0
@@ -815,15 +826,24 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
-    # −LΨ001 = R01
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    # −LΨ001 = R01 #AD
+    if autodiff
+        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
+    else
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+        residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+    end
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
-    av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
-          apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    if autodiff
+        av = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), real(ζ)), p) .+ im .* 
+                ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), imag(ζ)), p)
+    else
+        av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
+              dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
+    end
     av .+= 2 .* R2(ζ, Ψ001)
     a = dot(av, ζ★)
 
@@ -887,6 +907,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                     lens = getlens(br),
                     Teigvec = _getvectortype(br),
                     detailed = true,
+                    autodiff = true,
                     scaleζ = norm)
     @assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
@@ -951,7 +972,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
             )
     end
 
-    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L)
+    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 
 """
@@ -1322,7 +1343,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z-> apply(jacobian(prob, x0, set(parbif, lens, z)), ζ), p)
+        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
+        # R11 = DI.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), prob.VF.ad_backend, p)
     else
         R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
                apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)

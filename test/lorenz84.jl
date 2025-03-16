@@ -3,6 +3,7 @@ using Test, ForwardDiff, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
+
 ####################################################################################################
 function Lor(u, p, t = 0)
     (;α,β,γ,δ,G,F,T) = p
