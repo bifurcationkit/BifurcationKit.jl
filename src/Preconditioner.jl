@@ -57,7 +57,7 @@ function PrecPartialSchurArnoldiMethod(J, N, nev, which = ArnoldiMethod.LM(); to
     if J isa AbstractMatrix
         decomp, history = ArnoldiMethod.partialschur(J; nev = nev, tol = tol, which = which, kwargs...)
     else
-        Jmap = LinearMap{Float64}(J, N, N ; ismutating = false)
+        Jmap = LinearMaps.LinearMap{Float64}(J, N, N ; ismutating = false)
         decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, tol = tol, which = which, kwargs...)
     end
     return PrecPartialSchur(decomp.R, decomp.Q, inv(decomp.R), decomp.eigenvalues)

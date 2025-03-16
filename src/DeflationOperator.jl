@@ -307,7 +307,6 @@ Compared to [`solve`](@ref), the only different arguments are
     - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
     - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
-# GROS PB DE AMBIGUITE LA SEULE SOLUTION EST DE FAIRE solve(prob, Newton(), opt)
 function solve(prob::AbstractBifurcationProblem,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, L, E},
