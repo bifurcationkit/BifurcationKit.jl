@@ -1166,8 +1166,8 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
         # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
-        av = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .-
-            apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
+              dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
         av .+= 2 .* R2(ζ, Ψ001)
         a = dot(ζ★, av) * cis(-ω)
         verbose && println("──▶ a  = ", a)
@@ -1230,6 +1230,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     lens = getlens(br),
                     Teigvec = _getvectortype(br),
                     detailed = true,
+                    autodiff = true,
                     scaleζ = norm)
 
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
@@ -1278,7 +1279,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         (a = zero(Complex{eltype(bifpt.x)}), b = zero(Complex{eltype(bifpt.x)}) ),
         :SuperCritical
     )
-    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed)
+    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed, autodiff)
 end
 ####################################################################################################
 """
@@ -1346,8 +1347,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
         R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
         # R11 = DI.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), prob.VF.ad_backend, p)
     else
-        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) - 
-               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+        R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
+               dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
     end
 
     b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)

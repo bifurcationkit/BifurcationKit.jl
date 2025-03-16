@@ -285,7 +285,8 @@ for (op, at) in (
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
                 if inplace || _isinplace(_F)
-                    F = (x, p) -> _F(similar(x), x, p)
+                    # this form is best for computing normal forms based on AD
+                    F = (x, p) -> _F(similar(x, promote_type(eltype(x), typeof(_get(p, new_lens)))), x, p)
                     Finp = _F
                 else
                     F = _F
