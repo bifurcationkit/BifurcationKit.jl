@@ -37,8 +37,14 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     Jext::Matrix{𝒯}
     "collocation problem. It is needed here because linear solver requires it."
     coll::Tp
+    "rhs of external problem"
+    rhs_ext::Vector{𝒯}
+    "solution of external problem"
+    sol_ext::Vector{𝒯}
 
-    function COPCACHE(coll::PeriodicOrbitOCollProblem, dim = 0; 𝒯 = eltype(coll))
+    function COPCACHE(coll::PeriodicOrbitOCollProblem, ::Val{dim0} = Val(0); 𝒯 = eltype(coll)) where {dim0}
+        @assert dim0 isa Int64 #ensure type stability
+        dim::Int = dim0
         N, m, Ntst = size(coll)
         n = N
         nbcoll = n * m
@@ -68,6 +74,8 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
                                                     Jcoll_tmp,
                                                     Jext_tmp,
                                                     coll,
+                                                    zeros(𝒯, size(Jext_tmp, 1)),
+                                                    zeros(𝒯, size(Jext_tmp, 1)),
                                                     )
     end
 end
@@ -122,7 +130,7 @@ struct COPBLS{dim, 𝒯, TL, TU, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
     J::Tj
 
     function COPBLS(coll = PeriodicOrbitOCollProblem(2, 2; N = 0);
-                    cache::COPCACHE{dim, 𝒯, TL, TU, Tp} = COPCACHE(coll, 1), 
+                    cache::COPCACHE{dim, 𝒯, TL, TU, Tp} = COPCACHE(coll, Val(1)), 
                     solver::Ts = nothing, 
                     J::Tj = nothing) where {dim, 𝒯, TL, TU, Tp, Ts, Tj}
         new{dim, 𝒯, TL, TU, Tp, Ts, Tj}(cache, solver, J)
@@ -130,8 +138,8 @@ struct COPBLS{dim, 𝒯, TL, TU, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
 end
 @inline _getdim(cop::COPBLS{dim}) where {dim} = _getdim(cop.cache)
 
-COPLS(coll::PeriodicOrbitOCollProblem) = COPLS(COPCACHE(coll, 0))
-COPBLS(coll::PeriodicOrbitOCollProblem) = COPBLS(; cache = COPCACHE(coll, 1))
+COPLS(coll::PeriodicOrbitOCollProblem) = COPLS(COPCACHE(coll, Val(0)))
+COPBLS(coll::PeriodicOrbitOCollProblem) = COPBLS(; cache = COPCACHE(coll, Val(1)))
 COPLS() = COPLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
 
 # inplace version of LinearAlgebra.ipiv2perm
@@ -175,8 +183,8 @@ Solve the linear system associated with the collocation problem for computing pe
                           J, 
                           rhs0, 
                           cop_cache::COPCACHE{dim}; 
-                          _DEBUG::Bool = false, 
-                          _USELU::Bool = false) where {dim}
+                          _DEBUG::Val{debug} = Val(false), 
+                          _USELU::Val{uselu} = Val(false)) where {dim, debug, uselu}
     @assert size(J, 1) == size(J, 2) == length(rhs0) "The right hand side does not have the right dimension or the jacobian is not square. \nsize(J) = $(size(J)) and \nlength(rhs0) = $(length(rhs0))\n"
     N, m, Ntst = size(coll)
     nbcoll = N * m
@@ -195,34 +203,34 @@ Solve the linear system associated with the collocation problem for computing pe
     In = coll.cache.In
 
     rhs = condensation_of_parameters!(cop_cache, coll, J, In, rhs0)
-    Jcond = cop_cache.Jcoll
+    Jcop = cop_cache.Jcoll
 
-    if _DEBUG
+    if debug === true
         P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
         Jtmp = zeros(𝒯, nbcoll + δn + 1, nbcoll)
-        Fₚ = lu(P); Jcond = Fₚ \ J; rhs = Fₚ \ rhs0
+        Fₚ = lu(P); Jcop = Fₚ \ J; rhs = Fₚ \ rhs0
     end
 
     # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
     # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
     @unpack last_row_𝐅𝐬⁻¹_analytical = cop_cache
 
-    if dim == 0 
+    if dim === 0 
         d = dot(last_row_𝐅𝐬⁻¹_analytical, 
                 J[eachindex(last_row_𝐅𝐬⁻¹_analytical), end]) +
                 J[end, end]
         rhs[end] = dot(last_row_𝐅𝐬⁻¹_analytical, 
                 rhs0[eachindex(last_row_𝐅𝐬⁻¹_analytical)]) +
                 rhs0[end]
-        Jcond[end-δn:end, end-δn:end] .= d
+        Jcop[end-δn:end, end-δn:end] .= d
     else
         # d = last_row_𝐅𝐬⁻¹_analytical * 
         #     J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end] .+ 
         #     J[end-δn:end, end-δn:end]
-        # Jcond[end-δn:end, end-δn:end] .= d
+        # Jcop[end-δn:end, end-δn:end] .= d
 
-        Jcond[end-δn:end, end-δn:end] .= J[end-δn:end, end-δn:end]
-        mul!(Jcond[end-δn:end, end-δn:end], last_row_𝐅𝐬⁻¹_analytical, J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end], true, true)
+        Jcop[end-δn:end, end-δn:end] .= J[end-δn:end, end-δn:end]
+        mul!(Jcop[end-δn:end, end-δn:end], last_row_𝐅𝐬⁻¹_analytical, J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end], true, true)
         
         rhs[end-δn:end] .= last_row_𝐅𝐬⁻¹_analytical *
             rhs0[axes(last_row_𝐅𝐬⁻¹_analytical, 2)] .+
@@ -230,18 +238,18 @@ Solve the linear system associated with the collocation problem for computing pe
     end
 
     # we build the linear system for the external variables in Jext and rhs_ext
-    rhs_ext = build_external_system!(Jext, Jcond, rhs, In, Ntst, nbcoll, Npo, δn, N, m)
+    rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, In, Ntst, nbcoll, Npo, δn, N, m)
 
-    if _USELU
+    if uselu
         F = lu(Jext)
         sol_ext = F \ rhs_ext
     else
         # gaussian elimination plus backward substitution to invert Jext
         _gaussian_elimination_external_pivoted!(Jext, rhs_ext, N, Ntst, δn)
-        sol_ext = _backward_substitution_pivoted(Jext, rhs_ext, N, Ntst, Val(dim))
+        sol_ext = _backward_substitution_pivoted(Jext, rhs_ext,cop_cache.sol_ext, N, Ntst, Val(dim))
     end
 
-    return _solve_for_internal_variables(coll, Jcond, rhs, sol_ext, Val(dim))
+    return _solve_for_internal_variables(coll, Jcop, rhs, sol_ext, Val(dim))
 end
 
 @views function condensation_of_parameters!(cop_cache::COPCACHE{dim}, 
@@ -398,6 +406,7 @@ end
 @views function build_external_system!(Jext::Matrix{𝒯},
                                        Jcond::Matrix{𝒯},
                                        rhs::Vector{𝒯},
+                                       rhs_ext::Vector{𝒯},
                                        In,
                                        Ntst::Int,
                                        nbcoll::Int,
@@ -414,7 +423,6 @@ end
     Jext[end-δn-N:end-δn-1, end-δn-N:end-δn-1] .= In
     Jext[end-δn-N:end-δn-1, 1:N] .= (-1) .* In
     Jext[end-δn:end, end-δn:end] .= Jcond[end-δn:end, end-δn:end]
-    rhs_ext = zeros(𝒯, size(Jext, 1))
 
     # we solve for the external unknowns
     for _ in 1:Ntst
@@ -556,6 +564,7 @@ end
 
 @views function _backward_substitution_pivoted(Jext::Matrix{𝒯},
                                                 rhs_ext,
+                                                sol_ext,
                                                 n::Int,
                                                 Ntst::Int,
                                                 ::Val{δn}) where {𝒯, δn}
@@ -631,6 +640,7 @@ function (ls::COPBLS)(_Jc, dR,
         A = Jc + shift * Mass
     end
     rhs = vcat(R, n)
+    coll = ls.cache.coll
 
     # we improve on the following situation.
     # ls.J[1:end-1,1:end-1] .= A 

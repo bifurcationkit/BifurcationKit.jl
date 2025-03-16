@@ -30,7 +30,7 @@ using BifurcationKit
 Jco_tmp = zero(Jco)
 Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
 cop_cache = BK.COPCACHE(prob_col)
-sol_cop = BK.solve_cop(prob_col, Jco, _rhs, cop_cache; _USELU = true);
+sol_cop = BK.solve_cop(prob_col, Jco, _rhs, cop_cache; _USELU = Val(true));
 @test sol_bs ≈ sol_cop
 
 # test case of a bordered system to test PALC like linear problem
@@ -38,6 +38,6 @@ _t1 = rand(size(Jco, 1)); _t2 = rand(size(Jco, 1)+1)'; _t1[end-N:end-1] .= 0
 Jco_bd = vcat(hcat(Jco, _t1),_t2) |> Array
 _rhs_bd = rand(size((Jco_bd), 1))
 sol_bs_bd = (Jco_bd) \ _rhs_bd;
-cop_cache_bd = BK.COPCACHE(prob_col, 1)
-sol_cop_bd = BK.solve_cop(prob_col, Jco_bd, _rhs_bd, cop_cache_bd; _USELU = false);
+cop_cache_bd = BK.COPCACHE(prob_col, Val(1))
+sol_cop_bd = BK.solve_cop(prob_col, Jco_bd, _rhs_bd, cop_cache_bd; _USELU = Val(false));
 @test sol_bs_bd ≈ sol_cop_bd
