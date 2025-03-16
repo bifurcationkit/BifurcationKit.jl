@@ -11,7 +11,7 @@ BK.R11(prob.VF.jet, prob.u0, prob.params, 1,1)
 BK.R11(prob, prob.u0, prob.params, 1,1)
 prob = BifurcationProblem((o,x,p)-> o .= x, rand(2), rand(2), (@optic _[1]); inplace = true)
 ######################################################################
-# test show of wraped problem
+# test show of wrapped problem
 prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]))
 BK.WrapPOTrap(prob, prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show
 BK.PDMAProblem((prob_vf = prob,), prob, prob.u0, prob.params, prob.lens, BK.plot_default, BK.plot_default) |> show    
