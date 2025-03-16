@@ -71,7 +71,7 @@ function (l::GEigArpack)(J, nev; kwargs...)
         end
         N = length(l.kwargs[:v0])
         T = eltype(l.kwargs[:v0])
-        Jmap = LinearMap{T}(J, N, N; ismutating = false)
+        Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
         λ, ϕ, ncv, = Arpack.eigs(Jmap, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
     end
     Ind = sortperm(λ, by = l.by, rev = true)

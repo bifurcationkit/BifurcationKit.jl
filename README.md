@@ -2,7 +2,7 @@
 
 | **Documentation** | **Build Status** | **Coverage** | **Version** |
 | :-: | :-: | :-: | :-: |
-| [![][docs-stable-img]][docs-stable-url] |  | [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![ver-img]][ver-url] |
+| [![][docs-stable-img]][docs-stable-url] | [![Build status](https://badge.buildkite.com/fc3fdd514333077cbb6600923ed0ef631a59de5226b197665f.svg)](https://buildkite.com/julialang/bifurcationkit-dot-jl) | [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![ver-img]][ver-url] |
 | [![][docs-dev-img]][docs-dev-url] | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) |  [![](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/BifurcationKit)](https://pkgs.genieframework.com?packages=BifurcationKit) | [![deps-img]][deps-url] |
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg

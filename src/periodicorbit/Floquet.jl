@@ -510,28 +510,27 @@ end
         rN = rN .+ nbcoll
     end
 
-    Ai = Matrix{𝒯}(undef, n, n)
-    Bi = Matrix{𝒯}(undef, n, n)
-    r1 = 1:n
-    r2 = n*(m-1)+1:(m*n)
+    Ai = Matrix{𝒯}(undef, N, N)
+    Bi = Matrix{𝒯}(undef, N, N)
+    r1 = 1:N
+    r2 = N*(m-1)+1:(m*N)
 
     # monodromy matrix
     M = Matrix{𝒯}(LinearAlgebra.I(n))
 
     for 𝐢 in 1:Ntst
         Ai .= Jcop[r2, r1]
-        Bi .= Jcop[r2, r1 .+ n * m]
+        Bi .= Jcop[r2, r1 .+ N * m]
         M .= (Bi \ Ai) * M
-        r1  = r1 .+ m * n
-        r2  = r2 .+ m * n
+        r1  = r1 .+ m * N
+        r2  = r2 .+ m * N
     end
 
-    return _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
+    return _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 end
 
-@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where 𝒯
-    nbcoll = n * m
-    N = n
+@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
+    nbcoll = N * m
     In = LinearAlgebra.I(N)
 
     # condensation of parameters
@@ -589,38 +588,38 @@ end
         rN = rN .+ nbcoll
     end
 
-    Ai = Matrix{𝒯}(undef, n, n)
-    Bi = Matrix{𝒯}(undef, n, n)
-    r1 = 1:n
-    r2 = n*(m-1)+1:(m*n)
+    Ai = Matrix{𝒯}(undef, N, N)
+    Bi = Matrix{𝒯}(undef, N, N)
+    r1 = 1:N
+    r2 = N*(m-1)+1:(m*N)
 
     # monodromy matrix
-    M = Matrix{𝒯}(LinearAlgebra.I(n))
+    M = Matrix{𝒯}(LinearAlgebra.I(N))
 
     for 𝐢 in 1:Ntst
-        Ai = first_column_block[𝐢][end-n+1:end, 1:n]#Jcop[r2, r1]
-        # Bi = Jcop[r2, r1 .+ n * m] #upper_triangular[𝐢][end-n+1:end, end-n+1:end]#
-        Bi = upper_triangular[𝐢][end-n+1:end, end-n+1:end]
+        Ai = first_column_block[𝐢][end-N+1:end, 1:N]#Jcop[r2, r1]
+        # Bi = Jcop[r2, r1 .+ N * m] #upper_triangular[𝐢][end-N+1:end, end-N+1:end]#
+        Bi = upper_triangular[𝐢][end-N+1:end, end-N+1:end]
         # @error "" 𝐢 Ai Bi 
         # @error "" first_column_block[𝐢]
         M .= (Bi \ Array(Ai)) * M
-        r1  = r1 .+ m * n
-        r2  = r2 .+ m * n
+        r1  = r1 .+ m * N
+        r2  = r2 .+ m * N
     end
 
-    return _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
+    return _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 end
 
-function _floquetcoll_from_reduced_problem(M, Ntst, n, nev)
+function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
     factor = iseven(Ntst) ? 1 : -1
 
     # floquet multipliers
     vals, vecs = eigen(M)
 
-    nev = min(n, nev)
+    nev = min(N, nev)
     logvals = @. log(Complex(factor * vals))
-    I = sortperm(logvals, by = real, rev = true)[1:nev]
+    I = sortperm(logvals, by = real, rev = false)[1:nev]
 
     # floquet exponents
     σ = logvals[I]

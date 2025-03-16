@@ -60,8 +60,8 @@ end
 
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
-function compute_eigenvalues(it::ContIterable, state, u0, par, nev = it.contparams.nev; kwargs...)
-    return it.contparams.newton_options.eigsolver(jacobian(it.prob, u0, par), nev; iter = it, state, kwargs...)
+function compute_eigenvalues(iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kwargs...)
+    return iter.contparams.newton_options.eigsolver(jacobian(iter.prob, u0, par), nev; iter, state, kwargs...)
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
