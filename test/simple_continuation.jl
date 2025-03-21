@@ -34,6 +34,7 @@ BK._print_line(1, 1, (1, 1))
 BK._print_line(1, nothing, (1, 1))
 BK.converged(nothing)
 BK.in_bisection(nothing)
+BK._empty(nothing)
 ####################################################################################################
 # test branch kinds
 BK.FoldCont()

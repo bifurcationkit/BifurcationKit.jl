@@ -23,6 +23,10 @@ function _keep_opts_cont(nt)
                             :bothside)), keys(nt))}(nt)
 end
 ####################################################################################################
+_empty(x) = empty(x)
+_empty(::Nothing) = nothing
+_empty(x::Matrix) = similar(x, 0, 0)
+####################################################################################################
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))

@@ -266,8 +266,9 @@ function save!(br::ContResult,
     # save eigen elements
     if compute_eigenelements(it)
         if mod(state.step, it.contparams.save_eig_every_step) == 0
+            eigvecs = it.contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
             push!(br.eig, (eigenvals = state.eigvals, 
-                            eigenvecs = state.eigvecs, 
+                            eigenvecs = eigvecs, 
                             converged = state.convergedEig, 
                             step = state.step))
         end

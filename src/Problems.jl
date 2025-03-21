@@ -192,7 +192,7 @@ for (op, at) in (
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
-                "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
+                "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
                 "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Signature `save_solution(x, p)`"
                 save_solution::Tgets
@@ -378,6 +378,8 @@ function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
     print(io, "\n" * prefix * "├─ Inplace:  ")
     printstyled(io, isinplace(prob), color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Dimension:  ")
+    printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")
     printstyled(io, is_symmetric(prob), color = :cyan, bold = true)
     print(io, "\n" * prefix * "└─ Parameter: ")

@@ -28,6 +28,7 @@ Base.:*(a::S, b::BorderedArray{vectype, T}) where {vectype, T, S <: Number} = Bo
 # a version of copy which cope with our requirements concerning the methods
 # available for
 _copy(b) = 1*b
+_copy(::Nothing) = nothing
 _copy(b::AbstractArray) = copy(b)
 Base.copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
 

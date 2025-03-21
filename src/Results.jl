@@ -281,20 +281,21 @@ function _contresult(iter,
                      printsol,
                      br,
                      x0,
-                     contParams::ContinuationPar{T, S, E}) where {T, S, E}
+                     contparams::ContinuationPar{T, S, E}) where {T, S, E}
     # example of bifurcation point
     bif0 = SpecialPoint(x0, state.τ, T, namedprintsol(printsol))
     # save full solution?
-    sol = contParams.save_sol_every_step > 0 ? [(x = x0, p = getparam(iter.prob), step = 0)] : [(x = empty(x0), p = getparam(iter.prob), step = 0)]
+    sol = contparams.save_sol_every_step > 0 ? [(x = x0, p = getparam(iter.prob), step = 0)] : [(x = empty(x0), p = getparam(iter.prob), step = 0)]
     n_unstable = n_imag = 0
     stability = true
-    _evvectors = (eigenvals = state.eigvals, eigenvecs = state.eigvecs, converged = true, step = 0)
+    eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
+    _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
     return ContResult(
                     branch = StructArray([br]),
                     specialpoint = Vector{typeof(bif0)}(undef, 0),
                     eig = compute_eigenelements(iter) ? [_evvectors] : empty([_evvectors]),
                     sol = sol,
-                    contparams = contParams,
+                    contparams = contparams,
                     alg = iter.alg,
                     kind = iter.kind,
                     prob = iter.prob)

@@ -1,4 +1,5 @@
 @enum MoorePenroseLS direct=1 pInv=2 iterative=3
+
 """
     Moore-Penrose predictor / corrector
 
@@ -128,15 +129,15 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     contparams = getcontparams(iter)
     𝒯 = eltype(iter)
 
-    @unpack method = iter.alg
+    (;method) = iter.alg
 
     z0 = getsolution(state)
     τ0 = state.τ
     z_pred = state.z_pred
     ds = state.ds
 
-    @unpack tol, max_iterations, verbose = contparams.newton_options
-    @unpack p_min, p_max = contparams
+    (;tol, max_iterations, verbose) = contparams.newton_options
+    (;p_min, p_max) = contparams
     linsolver = iter.alg.ls
 
     # initialise variables
@@ -188,7 +189,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             else
                 # dx = pinv(Array(Jb)) * res_f #seems to work better than the following
                 dx = LinearAlgebra.pinv(Array(Jb)) * res_f
-                flag = true;
+                flag = true
                 itlinear = 1
             end
             x .-= @view dx[begin:end-1]

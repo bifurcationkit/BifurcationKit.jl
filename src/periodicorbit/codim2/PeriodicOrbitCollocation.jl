@@ -17,7 +17,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     # put the PD boundary condition
     J = copy(_get_matrix(Jac))
     J[end-N:end-1, 1:N] .= I(N)
-    @set Jac.jacpb = J[1:end-1,1:end-1]
+    @set Jac.jacpb = J[1:end-1, 1:end-1]
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)

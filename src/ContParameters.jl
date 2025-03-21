@@ -77,7 +77,7 @@ Returns a variable containing parameters to affect the `continuation` algorithm 
     detect_bifurcation::Int64 = 3         # detect other bifurcation points?
     dsmin_bisection::T = 1e-16            # dsmin for the bisection algorithm when locating bifurcation points
     n_inversion::Int64 = 2                # number of sign inversions in bisection algorithm
-    max_bisection_steps::Int64 = 15       # maximum number of bisection steps
+    max_bisection_steps::Int64 = 25       # maximum number of bisection steps
     tol_bisection_eigenvalue::T = 1e-16   # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
     # handling event detection
