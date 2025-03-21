@@ -297,7 +297,7 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::𝒯) where 𝒯
         # coefficient x*p
         for jj in 1:N
             # coefficient x*p
-            out[ii] += p * nf.b1[ii , jj] * x[jj]
+            out[ii] += p * nf.b1[ii, jj] * x[jj]
             for kk in 1:N
                 # coefficients of x^2
                 factor = jj == kk ? 1/2 : 1
@@ -698,9 +698,9 @@ function predictor(bp::NdBranchPoint, δp::T;
 
     # find zeros of the normal on each side of the bifurcation point
     function _get_roots_nf(_ds)
-        deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
+        deflationOp = DeflationOperator(2, T(1), [zeros(T, n)]; autodiff = true)
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-                                    (rand(n) .- 0.5) .* 1.1, 
+                                    (rand(T, n) .- T(1/2)) .* T(1.1), 
                                     _ds)
         if ~isnothing(J)
             @reset prob.VF.J = J
@@ -714,7 +714,7 @@ function predictor(bp::NdBranchPoint, δp::T;
             else
                 failures += 1
             end
-            prob.u0 .= outdef1.u .+ 0.1 .* (rand(n) .- 0.5)
+            prob.u0 .= outdef1.u .+ T(1/10) .* (rand(T, n) .- T(1/2))
         end
         return deflationOp.roots
     end
@@ -1094,7 +1094,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     verbose && println("──▶ b₃ = ", b)
 
     nf = (a = a, b3 = b)
-    # the second iterate of the normal for is x → -x -2⋅b3⋅x³
+    # the second iterate of the normal for is x → -x -2⋅b₃⋅x³
     if real(b) > 0
         type = :SuperCritical
     elseif real(b) < 0
@@ -1103,7 +1103,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
         type = :Singular
     end
     verbose && printstyled(color = :red,"──▶ Period-doubling bifurcation point is: ", type, "\n")
-    return setproperties(pt, nf = nf, type = type)
+    return setproperties(pt; nf, type)
 end
 
 function predictor(pd::PeriodDoubling, δp ; verbose = false, ampfactor = 1 )

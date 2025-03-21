@@ -56,7 +56,8 @@ Automatic branch switching at branch points based on a computation of the normal
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
 - `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
-- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations.
+- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations. See also override below.
+- `override = false`. If `override==false`, the normal form is computed as well as its predictor and a guess is automatically formed. If `override==false`, the parameter value `p = p₀ + δp` and the guess `x = x₀ + ampfactor .* e` (where `e` is a vector of the kernel) are used as initial guess. This is useful in case automatic branch switching does not work.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
@@ -76,6 +77,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       alg = br.alg,
                       δp = nothing, 
                       ampfactor::Real = 1,
+                      override = false,
                       nev = options_cont.nev,
                       usedeflation::Bool = false,
                       verbosedeflation::Bool = false,
@@ -125,8 +127,15 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                             tol_fold)
 
     # compute predictor for a point on new branch
-    pred = predictor(bp, ds; verbose = verbose, ampfactor = Ty(ampfactor))
-    if isnothing(pred); return nothing; end
+    if override
+        pred = (;x0 = bp.x0, x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), p =  bp.p + δp)
+    else
+        pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
+    end
+    if isnothing(pred)
+        @warn "The predictor is nothing. Probably a Fold point. See\n $bp"
+        return nothing
+    end
 
     verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(bp), "\n────▶ newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, "\n")
 
@@ -149,7 +158,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
 
     # perform continuation
     kwargs_cont = _keep_opts_cont(values(kwargs))
-    branch = continuation(re_make(br.prob, plot_solution = plot_solution),
+    branch = continuation(re_make(br.prob; plot_solution),
                             bp.x0, bp.params, # first point on the branch
                             pred.x1, pred.p,  # second point on the branch
                             alg, getlens(br),
@@ -276,7 +285,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     normn = get(kwargs, :normC, norm)
 
     printstyled(color = :magenta, "──▶ Looking for solutions after the bifurcation point...\n")
-    defOpp = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
+    defOpp = DeflationOperator(2, one(eltype(bpnf.x0)), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
     optnDf = setproperties(optn; max_iterations = max_iter_deflation, verbose = verbosedeflation)
 
     for (ind, xsol) in pairs(rootsNFp)
@@ -291,7 +300,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     end
 
     printstyled(color = :magenta, "──▶ Looking for solutions before the bifurcation point...\n")
-    defOpm = DeflationOperator(2, 1.0, Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
+    defOpm = DeflationOperator(2, one(eltype(bpnf.x0)), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
     for (ind, xsol) in pairs(rootsNFm)
         probm = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p - ds))
@@ -322,20 +331,20 @@ function multicontinuation(br::AbstractBranchResult,
                                             bpnf,
                                             solfromRE,
                                             options_cont;
-                                            δp = δp,
-                                            verbosedeflation = verbosedeflation,
-                                            max_iter_deflation = max_iter_deflation,
-                                            lsdefop = lsdefop,
-                                            perturb_guess = perturb_guess,
+                                            δp,
+                                            verbosedeflation,
+                                            max_iter_deflation,
+                                            lsdefop,
+                                            perturb_guess,
                                             kwargs...)
 
     multicontinuation(br,
                     bpnf, defOpm, defOpp, options_cont;
-                    δp = δp,
-                    Teigvec = Teigvec,
-                    verbosedeflation = verbosedeflation,
-                    max_iter_deflation = max_iter_deflation,
-                    lsdefop = lsdefop,
+                    δp,
+                    Teigvec,
+                    verbosedeflation,
+                    max_iter_deflation,
+                    lsdefop,
                     kwargs...)
 end
 
