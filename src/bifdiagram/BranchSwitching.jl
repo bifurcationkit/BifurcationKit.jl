@@ -3,7 +3,7 @@ $(SIGNATURES)
 
 [Internal] This function is not meant to be called directly.
 
-This function is the analog of [`continuation`](@ref) when the first two points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with palc `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
+This function is the analog of [`continuation`](@ref) when the first two points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with pseudo arc length `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
 function continuation(prob::AbstractBifurcationProblem,
                         x0::Tv, par0,     # first point on the branch
@@ -18,7 +18,7 @@ function continuation(prob::AbstractBifurcationProblem,
     dsfactor = sign(p1 - _get(par0, lens))
     # create an iterable
     _contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
-    prob2 = re_make(prob; lens = lens, params = par0)
+    prob2 = re_make(prob; lens, params = par0)
     if ~bothside
         it = ContIterable(prob2, alg, _contParams; kwargs...)
         return continuation(it, x0, _get(par0, lens), x1, p1)
@@ -128,7 +128,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
 
     # compute predictor for a point on new branch
     if override
-        pred = (;x0 = bp.x0, x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), p =  bp.p + δp)
+        pred = (;x0 = bp.x0, x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), p =  bp.p + δp, amp = ampfactor)
     else
         pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
     end
@@ -137,7 +137,15 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
         return nothing
     end
 
-    verbose && printstyled(color = :green, "\n──▶ Start branch switching. \n──▶ Bifurcation type = ", type(bp), "\n────▶ newp = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, "\n")
+    verbose && printstyled(color = :green,  "\n──▶ Start branch switching. 
+                                             \n──▶ Bifurcation type = ", type(bp), 
+                                            "\n────▶ newp      = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, 
+                                            "\n────▶ amplitude = ", pred.amp,
+                                            "\n")
+
+    if pred.amp > 0.1
+        @debug "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
+    end
 
     if usedeflation
         verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
