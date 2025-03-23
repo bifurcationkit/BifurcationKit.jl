@@ -392,7 +392,7 @@ Bi-orthogonalise the two sets of vectors.
 """
 function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
-    # we could use projector P=A(A^{T}A)^{-1}A^{T}
+    # we could use projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     @assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
@@ -429,7 +429,7 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # test the bi-orthogonalization
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
-    @assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors. The left eigenvectors do not form a basis. You may want to increase `nev`, G = \n $(display(G))"
+    @assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))"
     return ζs, ζ★s
 end
 
@@ -521,7 +521,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     if ~(bifpt.x isa Teigvec)
-        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec). You can keep your choice by using the option `Teigvec` in `get_normal_form` to specify the type of the equilibrum."
+        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec).\nYou can keep your choice by using the option `Teigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
     x0 = convert(Teigvec, bifpt.x)
     p = bifpt.param
@@ -548,7 +548,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             _λ, _ev, _ = options.eigsolver(L, max(nev, length(rightEv)))
             verbose && (println("──> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
-                @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
+                @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
             ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
         else
