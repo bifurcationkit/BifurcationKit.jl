@@ -30,8 +30,8 @@ module PlotsExt
     include("RecipesPlots.jl")
     include("plot.jl")
 
-function __init__()
-    set_plot_backend!(BK_Plots())
-    return nothing
-end
+    function __init__()
+        set_plot_backend!(BK_Plots())
+        return nothing
+    end
 end

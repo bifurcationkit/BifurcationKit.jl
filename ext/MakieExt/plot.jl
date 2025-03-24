@@ -1,8 +1,8 @@
-using Makie: Point2f
+using Makie: Point2
 
 function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, vars = nothing, applytoY = identity, applytoX = identity)
     ind1, ind2 = get_plot_vars(contres, vars)
-    return ([Point2f(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
+    return ([Point2{Float32}(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
 function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
@@ -42,7 +42,8 @@ function plot!(ax1, contres::AbstractBranchResult;
                 linewidthstable = 3.0linewidthunstable,
                 plotcirclesbif = true,
                 branchlabel = nothing,
-                applytoY = identity, applytoX = identity)
+                applytoY = identity, 
+                applytoX = identity)
 
     # names for axis labels
     ind1, ind2 = get_plot_vars(contres, vars)
@@ -168,11 +169,10 @@ function plot(contres::AbstractBranchResult; kP...)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
 
     fig = Figure()
-    ax1 = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
+    ax = fig[1, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
 
-    plot!(ax1, contres; kP...)
-    display(fig)
-    fig, ax1
+    plot!(ax, contres; kP...)
+    fig, ax
 end
 
 plot(brdc::DCResult; kP...) = plot(brdc.branches...; kP...)
@@ -194,21 +194,6 @@ end
 
 ####################################################################################################
 # plotting function of the periodic orbits
-# function plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...)
-#     @assert ratio > 0 "You need at least one component"
-#     n = Nx*Ny
-#     outpo = reshape(x[begin:end-1], ratio * n, M)
-#     po = reshape(x[1:n,1], Nx, Ny)
-#     rg = 2:6:M
-#     for ii in rg
-#         po = hcat(po, reshape(outpo[1:n,ii], Nx, Ny))
-#     end
-#     heatmap!(po; color = :viridis, fill=true, xlabel = "space", ylabel = "space", kwargs...)
-#     for ii in 1:length(rg)
-#         plot!([ii*Ny, ii*Ny], [1, Nx]; color = :red, width = 3, label = "", kwargs...)
-#     end
-# end
-
 function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
@@ -224,17 +209,6 @@ function plot_periodic_potrap(outpof, n, M; ratio = 2)
         fig
     end
 end
-####################################################################################################
-# function plot_periodic_shooting!(x, M; kwargs...)
-#     N = div(length(x), M);    plot!(x; label = "", kwargs...)
-#     for ii in 1:M
-#         plot!([ii*N, ii*N], [minimum(x), maximum(x)] ;color = :red, label = "", kwargs...)
-#     end
-# end
-
-# function plot_periodic_shooting(x, M; kwargs...)
-#     plot();plot_periodic_shooting!(x, M; kwargs...)
-# end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
 function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
@@ -283,6 +257,13 @@ end
 ####################################################################################################
 plotAllDCBranch(branches) = plot(branches...)
 
-function plot_DCont_branch(::BK_Makie, branches, nbrs::Int, nactive::Int, nstep::Int)
-    plot(branches...)
+function plot_DCont_branch(::BK_Makie, 
+                            branches, 
+                            nbrs::Int, 
+                            nactive::Int, 
+                            nstep::Int)
+    f, ax = plot(branches...)
+    ax.title = "$nbrs branches, actives = $(nactive), step = $nstep"
+    display(f)
+    f, ax
 end

@@ -104,7 +104,7 @@ function updatebranch!(dcIter::DefContIterable,
                         current_param,
                         step)
     isactive(dcstate) == false &&  return false, 0
-    state = dcstate.state         # continuation state
+    state = dcstate.state          # continuation state
     it = dcIter.it                 # continuation iterator
     alg = dcIter.alg
     @unpack step, ds = state
@@ -238,30 +238,30 @@ function deflatedContinuation(dcIter::DefContIterable,
 
     dcstates, branches = get_states_contResults(dcIter, deflationOp.roots)
 
-    contIt = dcIter.it
+    cont_iter = dcIter.it
     alg = dcIter.alg
-    par = getparams(contIt.prob)
-    lens = getlens(contIt)
+    par = getparams(cont_iter.prob)
+    lens = getlens(cont_iter)
     current_param = _get(par, lens)
 
     # extract the newton options
     optnewton = contParams.newton_options
 
     # function to get new solutions based on Deflated Newton
-    function getNewSolution(_st::DCState, _p::Real, _idb)
+    function _DC_get_new_solution(_st::DCState, _p::Real, _idb)
         u0 = _copy(getx(_st)) # maybe we can remove this copy?
-        prob_df = re_make(contIt.prob;
+        prob_df = re_make(cont_iter.prob;
                             u0 = alg.perturb_solution(u0, _p, _idb),
                             params = set(par, lens, _p))
         soln = solve(prob_df, deflationOp,
                 setproperties(optnewton; max_iterations = alg.max_iter_defop);
-                normN = contIt.normC,
-                callback = contIt.callback_newton,
+                normN = cont_iter.normC,
+                callback = cont_iter.callback_newton,
                 fromDeflatedNewton = true)
         # we confirm that the residual for the non deflated problem is small
         # this should be the case unless the user pass "bad" options
-        @reset soln.converged = soln.converged && contIt.normC(residual(contIt.prob, soln.u, prob_df.params)) < optnewton.tol
-        if minimum(contIt.normC(soln.u - rt) for rt in deflationOp.roots) < optnewton.tol
+        @reset soln.converged = soln.converged && cont_iter.normC(residual(cont_iter.prob, soln.u, prob_df.params)) < optnewton.tol
+        if minimum(cont_iter.normC(soln.u - rt) for rt in deflationOp.roots) < optnewton.tol
             @reset soln.converged = false
         end
         return soln
@@ -271,7 +271,7 @@ function deflatedContinuation(dcIter::DefContIterable,
     while ((contParams.p_min < current_param < contParams.p_max) || nstep == 0) &&
                  nstep < contParams.max_steps
         # we update the parameter value
-        current_param = clamp_predp(current_param + contParams.ds, contIt)
+        current_param = clamp_predp(current_param + contParams.ds, cont_iter)
 
         verbosity > 0 && println("├"*"──"^31)
         nactive = mapreduce(isactive, +, dcstates)
@@ -311,9 +311,9 @@ function deflatedContinuation(dcIter::DefContIterable,
                     _success = true
                     verbosity >= 2 && println("├───▶ Deflating branch $idb")
                     while _success
-                        sol1 = getNewSolution(dcstate, current_param, idb)
+                        sol1 = _DC_get_new_solution(dcstate, current_param, idb)
                         _success = converged(sol1)
-                        if _success && contIt.normC(sol1.u - getx(dcstate)) < optnewton.tol
+                        if _success && cont_iter.normC(sol1.u - getx(dcstate)) < optnewton.tol
                             @error "Same solution found for identical parameter value!!"
                             _success = false
                         end
@@ -322,7 +322,7 @@ function deflatedContinuation(dcIter::DefContIterable,
                             push!(deflationOp.roots, sol1.u)
 
                             # create a new iterator and iterate it once to set up the ContState
-                            contitnew = @set contIt.prob = re_make(contIt.prob, u0 = sol1.u, params = sol1.prob.prob.params)
+                            contitnew = @set cont_iter.prob = re_make(cont_iter.prob, u0 = sol1.u, params = sol1.prob.prob.params)
                             push!(dcstates, DCState(sol1.u, iterate(contitnew)[1], n_active+1<alg.max_branches))
 
                             push!(branches, ContResult(contitnew, dcstates[end].state))
@@ -334,7 +334,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         nstep += 1
     end
     plot && plotAllDCBranch(branches)
-    return DCResult(contIt.prob, branches, contIt, [getx(c.state) for c in dcstates if isactive(c)], dcIter.alg)
+    return DCResult(cont_iter.prob, branches, cont_iter, [getx(c.state) for c in dcstates if isactive(c)], dcIter.alg)
 end
 
 # function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}
