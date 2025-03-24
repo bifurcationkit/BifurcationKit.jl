@@ -155,7 +155,7 @@ end
 
 # this is a function barrier to make Deflated continuation type stable
 # it returns the set of states and the ContResult
-function get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) where Tvec
+function _get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) where Tvec
     @assert length(roots) > 0 "You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process."
     contIt = iter.it
     copyto!(contIt.prob.u0, roots[1])
@@ -230,16 +230,16 @@ function continuation(prob::AbstractBifurcationProblem,
     return deflatedContinuation(iter, deflationOp, contParams, verbosity, plot)
 end
 
-function deflatedContinuation(dcIter::DefContIterable,
+function deflatedContinuation(dc_iter::DefContIterable,
                             deflationOp::DeflationOperator,
                             contParams,
                             verbosity,
                             plot)
 
-    dcstates, branches = get_states_contResults(dcIter, deflationOp.roots)
+    dcstates, branches = _get_states_contResults(dc_iter, deflationOp.roots)
 
-    cont_iter = dcIter.it
-    alg = dcIter.alg
+    cont_iter = dc_iter.it
+    alg = dc_iter.alg
     par = getparams(cont_iter.prob)
     lens = getlens(cont_iter)
     current_param = _get(par, lens)
@@ -285,7 +285,7 @@ function deflatedContinuation(dcIter::DefContIterable,
             # this computes the solution for the new parameter value current_param
             # it also updates deflationOp
             # if the branch is inactive, it returns
-            flag, itnewton = updatebranch!(dcIter, dcstate, branches[idb], deflationOp;
+            flag, itnewton = updatebranch!(dc_iter, dcstate, branches[idb], deflationOp;
                     current_param = current_param,
                     step = nstep)
             (verbosity>=2 && isactive(dcstate)) && println("├─── Continuation of branch $idb in $itnewton Iterations")
@@ -317,7 +317,7 @@ function deflatedContinuation(dcIter::DefContIterable,
                             @error "Same solution found for identical parameter value!!"
                             _success = false
                         end
-                        if _success && dcIter.alg.accept_solution(sol1.u, current_param)
+                        if _success && dc_iter.alg.accept_solution(sol1.u, current_param)
                             verbosity>=1 && printstyled(color=:green, "├───▶ new solution for branch $idb \n")
                             push!(deflationOp.roots, sol1.u)
 
@@ -334,7 +334,7 @@ function deflatedContinuation(dcIter::DefContIterable,
         nstep += 1
     end
     plot && plotAllDCBranch(branches)
-    return DCResult(cont_iter.prob, branches, cont_iter, [getx(c.state) for c in dcstates if isactive(c)], dcIter.alg)
+    return DCResult(cont_iter.prob, branches, cont_iter, [getx(c.state) for c in dcstates if isactive(c)], dc_iter.alg)
 end
 
 # function mergeBranches!(brs::Vector{T}, iter::ContIterable; plot = false, iterbrsmax = 2) where {T <: ContResult}
