@@ -516,7 +516,7 @@ end
     r2 = N*(m-1)+1:(m*N)
 
     # monodromy matrix
-    M = Matrix{𝒯}(LinearAlgebra.I(n))
+    M = Matrix{𝒯}(In)
 
     for 𝐢 in 1:Ntst
         Ai .= Jcop[r2, r1]
@@ -594,7 +594,7 @@ end
     r2 = N*(m-1)+1:(m*N)
 
     # monodromy matrix
-    M = Matrix{𝒯}(LinearAlgebra.I(N))
+    M = Matrix{𝒯}(In)
 
     for 𝐢 in 1:Ntst
         Ai = first_column_block[𝐢][end-N+1:end, 1:N]#Jcop[r2, r1]
@@ -615,7 +615,7 @@ function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     factor = iseven(Ntst) ? 1 : -1
 
     # floquet multipliers
-    vals, vecs = eigen(M)
+    vals = eigvals(M)
 
     nev = min(N, nev)
     logvals = @. log(Complex(factor * vals))
@@ -629,6 +629,6 @@ function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     if vp0 > 1e-9
         @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
     end
-    return σ, Complex.(vecs[I, :]), true, 1
+    return σ, nothing, true, 1
 end
 

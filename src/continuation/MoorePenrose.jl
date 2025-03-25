@@ -80,27 +80,27 @@ function update(alg0::MoorePenrose,
 end
 
 initialize!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
+             iter::AbstractContinuationIterable,
+              alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
 
 function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
-                        alg::MoorePenrose, nrm = false)
+                         alg::MoorePenrose, nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
     getpredictor!(state, iter, alg.tangent, nrm)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::MoorePenrose,
-                        nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
+                   iter::AbstractContinuationIterable,
+                    alg::MoorePenrose,
+                    nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
 
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,
-                it::AbstractContinuationIterable,
-                algo::MoorePenrose;
-                kwargs...)
+                       it::AbstractContinuationIterable,
+                     algo::MoorePenrose;
+                     kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
@@ -119,9 +119,11 @@ function corrector!(state::AbstractContinuationState,
 end
 
 function newton_moore_penrose(iter::AbstractContinuationIterable,
-                              state::AbstractContinuationState, dotθ;
-                              normN = norm,
-                              callback = cb_default, kwargs...)
+                             state::AbstractContinuationState, 
+                             dotθ;
+                             normN = norm,
+                             callback = cb_default,
+                             kwargs...)
     prob = iter.prob
     par = getparams(prob)
     ϵ = getdelta(prob)
@@ -180,7 +182,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
-        if method == direct || method == pInv
+        if method === direct || method === pInv
             Jb = hcat(J, dFdp)
 
             if method == direct
@@ -199,7 +201,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # X .= X .- A \ vcat(res_f, 0)
             # x .= X[begin:end-1]; p = X[end]
-            du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(𝒯), one(𝒯), one(𝒯))
+            du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp
             ~flag && @debug "[MoorePenrose] Bordered linear solver did not converge."
             minus!(x, du)
             p -= dup
@@ -210,14 +212,14 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         res_f .= residual(prob, x, set(par, paramlens, p))
         res = normN(res_f)
 
-        if method == iterative
+        if method === iterative
             # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
             copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-            minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
+            minus!(dFdp, res_f); rmul!(dFdp, 1 / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)
-            u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯))
+            u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp
             ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             ϕ.u .= u; ϕ.p = up
             # rmul!(ϕ,  one(𝒯) / norm(ϕ))

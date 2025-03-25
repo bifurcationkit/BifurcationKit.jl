@@ -196,7 +196,7 @@ $(SIGNATURES)
 
 Function to detect continuation branches which loop on themselves.
 """
-function detect_loop(br::ContResult, x, p::T; rtol = 1e-3, verbose::Bool = true) where T
+function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = true) where T
     if verbose == false
         return false
     end

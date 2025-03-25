@@ -88,7 +88,7 @@ A continuous call back returns a **tuple/scalar** value and we seek its zeros.
 $(TYPEDFIELDS)
 """
 struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
-    "number of events, ie the length of the result returned by the callback function"
+    "number of events, i.e. the length of the result returned by the callback function"
     nb::Int64
 
     ", ` (iter, state) -> NTuple{nb, T}` callback function which, at each continuation state, returns a tuple. For example, to detect crossing at 1.0 and at -2.0, you can pass `(iter, state) -> (getp(state)+2, getx(state)[1]-1)),`. Note that the type `T` should match the one of the parameter specified by the `::Lens` in `continuation`."

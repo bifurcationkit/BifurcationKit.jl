@@ -28,9 +28,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
             lens = getlens(br),
             Teigvec = _getvectortype(br),
             scaleζ = norm,
-            prm = true,
             autodiff = false,
-            detailed = true, # to get detailed normal form
             δ = getdelta(prob),
             k...
             )
@@ -42,13 +40,12 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ, k...)
 
     if bifpt.type == :pd
-        return period_doubling_normal_form(prob, br, id_bif; prm, detailed, δ, kwargs_nf...)
+        return period_doubling_normal_form(prob, br, id_bif; δ, kwargs_nf...)
     elseif bifpt.type == :bp
-        return branch_normal_form(prob, br, id_bif; prm, detailed, δ, autodiff, kwargs_nf...)
+        return branch_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(prob, br, id_bif; δ, detailed, prm, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif; δ, kwargs_nf...)
     end
-
     throw("Normal form for $(bifpt.type) not yet implemented.")
 end
 ####################################################################################################
