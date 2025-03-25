@@ -56,7 +56,7 @@ section(x, T, dx, dT) = dx[1] #* x[end]
 # standard simple shooting
 M = 1
 dM = 1
-_pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9)
+_pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol = 1e-10, reltol=1e-9)
 BifurcationKit.has_mono_DE(_pb.flow)
 
 initpo = [0.13, 0., 6.]

@@ -5,8 +5,7 @@ const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
 ####################################################################################################
-opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20)
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 100, n_inversion = 4)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = NewtonPar(tol = 1e-9), max_steps = 100, n_inversion = 4)
 
 prob = BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
 br = continuation(prob, PALC(), opts_br; normC = norminf)
@@ -65,10 +64,9 @@ br3 = continuation(br, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = t
 
 br4 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
 
-
 # automatic bifurcation diagram (Transcritical)
 bdiag = bifurcationdiagram(prob, PALC(), 2,
-    ContinuationPar(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(opt_newton, tol = 1e-12), max_steps = 15);
+    ContinuationPar(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
     normC = norminf)
 
 # plot(bdiag)
@@ -107,7 +105,7 @@ pred = predictor(bpp, 0.1)
 @test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol=1e-5
 
 # test automatic branch switching
-br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2, newton_options = (@set opt_newton.verbose=false)); ampfactor = 1)
+br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2); ampfactor = 1)
 # plot(brp,br2, marker=:d)
 
 # test methods for aBS
@@ -119,7 +117,7 @@ BK.propertynames(br2)
 
 # automatic bifurcation diagram (Pitchfork)
 bdiag = bifurcationdiagram(prob_pf, PALC(#=tangent=Bordered()=#), 2,
-    setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = NewtonPar(opt_newton, tol = 1e-12), max_steps = 15);
+    setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
     verbosediagram = true, normC = norminf)
 BK.getalg(bdiag)
 bdiag[1]
@@ -200,7 +198,7 @@ br_snd2 = BK.continuation(
 # plot(br_snd1,br_snd2, putbifptlegend=false)
 
 bdiag = bifurcationdiagram(prob, PALC(), 2,
-    ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20, newton_options = (@set opt_newton.verbose=false));
+    ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
     normC = norminf)
 
 # plot(bdiag; putbifptlegend=false, markersize=2, plotfold=false, title = "#branch = $(size(bdiag))")
@@ -249,7 +247,7 @@ bp2d = BK.get_normal_form(br, 1)
 # deflationOp = DeflationOperator(2, 1.0, [zeros(3)]; autodiff = true)
 
 bdiag = bifurcationdiagram(probD6, PALC(), 3,
-    (args...) -> setproperties(opts_br; p_min = -0.250, p_max = .4, ds = 0.001, dsmax = 0.005, n_inversion = 4, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20, newton_options = (@set opt_newton.verbose=false));
+    (args...) -> setproperties(opts_br; p_min = -0.250, p_max = .4, ds = 0.001, dsmax = 0.005, n_inversion = 4, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
     normC = norminf)
 
 # plot(bdiag; putspecialptlegend=false, markersize=2,plotfold=false);title!("#branch = $(size(bdiag))")
@@ -275,7 +273,7 @@ for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
     probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
     # detect hopf bifurcation
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, newton_options = (@set opt_newton.verbose = false), max_steps = 100)
+    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
 
     br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 

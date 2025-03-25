@@ -79,7 +79,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # "zero" eigenvalue at bifurcation point, it must be real
     λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
     if abs(λ) > 1e-5
-        @warn "The zero eigenvalue is not that small λ = $(λ), this can alter the computation of the normal form. You can either refine the point using Newton or use a more precise bisection by increasing `n_inversion`"
+        @warn "The zero eigenvalue is not that small λ = $(λ)\nThis can alter the computation of the normal form.\nYou can either refine the point using Newton or use a more precise bisection by increasing `n_inversion`"
     end
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
@@ -105,7 +105,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
-    @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev."
     ζ★ ./= dot(ζ, ζ★)
 
     # differentials and projector on Range(L), there are real valued
