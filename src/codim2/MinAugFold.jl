@@ -98,7 +98,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X, par) where {
     x = @view X[begin:end-1]
     p = X[end]
 
-    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0 = _get_bordered_terms(𝐅, x, p, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0) = _get_bordered_terms(𝐅, x, p, par)
 
     u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
     u2 = apply(JAd_at_xp, w) # TODO we know u2!!

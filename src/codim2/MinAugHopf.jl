@@ -98,7 +98,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X, par) where {
     ω = X[end]
     𝒯 = eltype(p)
 
-    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω = _get_bordered_terms(𝐇, x, p, ω, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
 
     cw = conj(w)
     vr = real(v); vi = imag(v)
@@ -524,10 +524,17 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
         (u, p; kw...)  -> begin
-            (; zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH, namedprintsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...)
+            (; zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2],
+                            l1 = 𝐇.l1,
+                            BT = 𝐇.BT,
+                            GH = 𝐇.GH,
+                            namedprintsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...)
 end :
         (u, p; kw...) -> begin
-           (; namedprintsol(_printsol(getvec(u, 𝐇), p; kw...))..., zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2], l1 = 𝐇.l1, BT = 𝐇.BT, GH = 𝐇.GH)
+           (; namedprintsol(_printsol(getvec(u, 𝐇), p; kw...))..., zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2],
+                        l1 = 𝐇.l1,
+                        BT = 𝐇.BT,
+                        GH = 𝐇.GH)
         end
 
     prob_h = re_make(prob_h, record_from_solution = _printsol2)
@@ -546,7 +553,7 @@ end :
                     BifDetectEvent)
         else
             event = SetOfEvents(
-                    ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT), 
+                    ContinuousEvent(2, test_bt_gh, true, ("bt", "gh"), threshBT), 
                     BifDetectEvent, 
                     event_user)
         end
@@ -606,7 +613,6 @@ function continuation_hopf(prob,
 
     if start_with_eigen
         # computation of adjoint eigenvalue
-        λ = Complex(0, -ω)
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         # jacobian at bifurcation point
         L = jacobian(prob, bifpt.x, parbif)

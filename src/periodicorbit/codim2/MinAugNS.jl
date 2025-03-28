@@ -130,7 +130,7 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     𝒯 = eltype(p)
 
-    @unpack JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
+    (;JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω) = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
 
     cw = conj(w)
     vr = real(v); vi = imag(v)

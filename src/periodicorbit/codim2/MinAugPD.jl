@@ -120,7 +120,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     POWrap = 𝐏𝐝.prob_vf
 
-    @unpack dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0 = _get_bordered_terms(𝐏𝐝, x, p, par)
+    (;dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0) = _get_bordered_terms(𝐏𝐝, x, p, par)
 
     u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
     u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)

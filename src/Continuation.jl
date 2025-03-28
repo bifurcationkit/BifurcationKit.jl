@@ -260,16 +260,16 @@ function save!(br::ContResult,
         (mod_counter(state.step, it.contparams.save_sol_every_step) || 
         ~done(it, state))
         push!(br.sol, (x = save_solution(it.prob, _copy(getx(state)), setparam(it.prob, getp(state))),
-                       p = getp(state), 
+                       p = getp(state),
                        step = state.step))
     end
     # save eigen elements
     if compute_eigenelements(it)
         if mod(state.step, it.contparams.save_eig_every_step) == 0
             eigvecs = it.contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
-            push!(br.eig, (eigenvals = state.eigvals, 
-                            eigenvecs = eigvecs, 
-                            converged = state.convergedEig, 
+            push!(br.eig, (eigenvals = state.eigvals,
+                            eigenvecs = eigvecs,
+                            converged = state.convergedEig,
                             step = state.step))
         end
     end
