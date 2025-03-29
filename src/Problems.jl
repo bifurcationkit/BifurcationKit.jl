@@ -284,21 +284,27 @@ for (op, at) in (
                 if _get(parms, new_lens) isa Int
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
-                if inplace || _isinplace(_F)
-                    # this form is best for computing normal forms based on AD
-                    F = (x, p) -> _F(similar(x, promote_type(eltype(x), typeof(_get(p, new_lens)))), x, p)
-                    Finp = _F
+                Foop = if inplace || _isinplace(_F)
+                    # promote_type useful for R01 and R11
+                    (x, p) -> _F(similar(x, promote_type(eltype(x), typeof(_get(p, new_lens)))), x, p)
                 else
-                    F = _F
-                    Finp = (o, x, p) -> copyto!(o, _F(x, p))
+                    _F
                 end
 
-                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> F(z, p), x) : J
+                Finp = if inplace || _isinplace(_F)
+                    _F
+                else
+                    (o, x, p) -> copyto!(o, _F(x, p))
+                end
+
+
+
+                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> Foop(z, p), x) : J
                 J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
 
                 jvp = isnothing(jvp) ?
-                      (x, p, dx) -> ForwardDiff.derivative(t -> F(x .+ t .* dx, p), zero(eltype(dx))) : dF
-                d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> F(x .+ t .* dx1, p), zero(eltype(dx1)))
+                      (x, p, dx) -> ForwardDiff.derivative(t -> Foop(x .+ t .* dx, p), zero(eltype(dx))) : dF
+                d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> Foop(x .+ t .* dx1, p), zero(eltype(dx1)))
 
                 if isnothing(d2F)
                     d2F = (x, p, dx1, dx2) -> ForwardDiff.derivative(t -> d1Fad(x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
@@ -315,7 +321,7 @@ for (op, at) in (
                 end
                 d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
 
-                VF = BifFunction(F, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
+                VF = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
                 return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end
