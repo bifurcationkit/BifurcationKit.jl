@@ -52,10 +52,6 @@ module BifurcationKit
     include("continuation/MoorePenrose.jl")
     include("continuation/AutoSwitch.jl")
     include("DeflatedContinuation.jl")
-
-    # wip
-    include("BorderedProblem.jl")
-
     include("Utils.jl")
 
     # generic codim 2

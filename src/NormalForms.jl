@@ -55,8 +55,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     autodiff = false)
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
-    @assert bifpt.type == :bp "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
-    @assert abs(bifpt.δ[1]) == 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
+    @assert bifpt.type in (:bp, :fold) "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
+    @assert abs(bifpt.δ[1]) <= 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
 
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bifpt.param)
@@ -501,7 +501,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         return zero_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
     elseif bifpt.type == :hh
         return hopf_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
-    elseif abs(bifpt.δ[1]) == 1 # simple branch point
+    elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
         return get_normal_form1d(prob, br, id_bif ; autodiff, kwargs_nf...)
     end
 
@@ -670,8 +670,10 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a = dgidp, b1 = d2gidxjdpk, b2 = d2gidxjdxk, b3 = d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
+get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(get_contresult(br), id_bif; kwargs...)
+
 get_normal_form(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
-get_normal_form(br::Branch, id_bif::Int; kwargs...) = get_normal_form(get_contresult(br), id_bif; kwargs...)
+
 
 """
 $(SIGNATURES)

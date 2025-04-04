@@ -183,24 +183,11 @@ function newton(br::AbstractBranchResult,
                 kwargs...)
     @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
     if br.specialpoint[ind_bif].type == :hopf
-        return newton_hopf(br, ind_bif; 
-                            normN = normN, 
-                            options = options, 
-                            start_with_eigen = start_with_eigen, 
-                            kwargs...)
+        return newton_hopf(br, ind_bif; normN, options, start_with_eigen, kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
-        return newton_bt(br, ind_bif; 
-                        lens2 = lens2, 
-                        normN = normN, 
-                        options = options, 
-                        start_with_eigen = start_with_eigen, 
-                        kwargs...)
+        return newton_bt(br, ind_bif; lens2, normN, options, start_with_eigen, kwargs...)
     else
-        return newton_fold(br, ind_bif; 
-                        normN = normN,
-                        options = options,
-                        start_with_eigen = start_with_eigen,
-                        kwargs...)
+        return newton_fold(br, ind_bif; normN, options, start_with_eigen, kwargs...)
     end
 end
 ################################################################################
@@ -219,7 +206,7 @@ Codimension 2 continuation of Fold / Hopf points. This function turns an initial
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)˟ or Jᵗ. Required in the linear solver for the Minimally Augmented Fold/Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
 - `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements
-- `detect_codim2_bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations.
+- `detect_codim2_bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations. Default value = 2.
 - `kwargs` keywords arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.

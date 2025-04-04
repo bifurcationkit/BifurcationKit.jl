@@ -131,6 +131,11 @@ struct POCollCache{T}
     In::Matrix{Bool}
 end
 
+"""
+$(SIGNATURES)
+
+In case `save_mem = true`, we do not allocate the identity matrix.
+"""
 function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     # in case save_mem = true, we do not allocate the identity matrix
     # indeed think about n = 100_000
@@ -1185,7 +1190,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     # this is the function s^{(k)} in the above paper [2] on page 63
     # we want to estimate sk = s^{(m+1)} which is 0 by definition, pol of degree m
     if isempty(findall(diff(τsT) .<= 0)) == false
-        @error "[Mesh-adaptation]. The mesh is non monotonic! Please report the error to the website of BifurcationKit.jl"
+        @error "[Mesh-adaptation]. The mesh is non monotonic!\nPlease report the error to the website of BifurcationKit.jl"
         return (success = false, newτsT = τsT, ϕ = τsT)
     end
     sk = zeros(𝒯, Ntst)

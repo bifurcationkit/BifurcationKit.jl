@@ -194,7 +194,7 @@ Solve the linear system associated with the collocation problem for computing pe
     nⱼ = size(J, 1)
     δn =  nⱼ - Npo # this allows to compute the border side
     @assert δn >= 0
-    @assert δn == dim "δn = $δn, dim = $dim"
+    @assert δn == dim "δn = $δn and dim = $dim should be equal!\nPass a proper COPCACHE."
 
     # matrix to contain the linear system for the external variables
     Jext = cop_cache.Jext
