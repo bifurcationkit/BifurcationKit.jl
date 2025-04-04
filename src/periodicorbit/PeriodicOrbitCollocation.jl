@@ -1205,7 +1205,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     ϕ = sk.^(1/m)
     # if the monitor function is too small, don't do anything
     if maximum(ϕ) < 1e-7
-        return (success = true, newmesh = nothing)
+        return (;success = true, newmesh = nothing, ϕ)
     end
     ϕ = max.(ϕ, maximum(ϕ) / K)
     @assert length(ϕ) == Ntst "Error. Please open an issue of the website of BifurcationKit.jl"

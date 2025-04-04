@@ -16,13 +16,12 @@ function Pop!(du, X, p, t = 0)
     du[4] = 2pi * u + v - s * v
     du
 end
-Pop(u,p) = Pop!(similar(u),u,p,0)
 
 par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 
 z0 = [0.1,0.1,1,0]
 
-prob = BifurcationProblem(Pop, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4)
 @reset opts_br.newton_options.verbose = true
@@ -35,7 +34,6 @@ sol = OrdinaryDiffEq.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol = 1e-12)
 sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 ################################################################################
-@info "plotting function"
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
@@ -48,8 +46,6 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 # @info "import Zygote"
 # using Zygote, SciMLSensitivity
 
-@info "generate shooting problem"
-
 probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
     jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF()
@@ -61,12 +57,7 @@ function flow(x0, prob0, tm, p = prob0.p)
     return sol[end]
 end
 
-# @info "set AD"
-# @reset probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
-
-@info "Newton"
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
-# lspo = GMRESKrylovKit(rtol = 1e-10, atol = 1e-12, verbose = 0, dim = 20, maxiter = 1)
 eigpo = EigKrylovKit(x₀ = rand(4))
 optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
 solpo = newton(probsh, cish, optnpo)
@@ -74,7 +65,6 @@ solpo = newton(probsh, cish, optnpo)
 _sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
 # plot(_sol.t, _sol[1:2,:]')
 
-@info "PO cont1"
 opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3, newton_options = optnpo)
 @reset opts_po_cont.newton_options.verbose = false
 br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont;
@@ -83,7 +73,6 @@ br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont
     argspo...)
 # pt = get_normal_form(br_fold_sh, 1)
 
-@info "PO cont2"
 probsh2 = @set probsh.lens = @optic _.ϵ
 brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
     # verbosity = 3, plot = true,
@@ -94,7 +83,6 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 # pt = get_normal_form(brpo_pd_sh, 1)
 
 # codim 2 Fold
-@info "--> Fold curve"
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 0, p_min = 0.01, p_max = 1.2)
 @reset opts_posh_fold.newton_options.tol = 1e-8
 # @reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1

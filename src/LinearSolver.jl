@@ -216,16 +216,16 @@ $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractIterativeLinearSolver
     "Krylov Dimension"
-    dim::Int64 = KrylovDefaults.krylovdim
+    dim::Int64 = KrylovDefaults.krylovdim[]
 
     "Absolute tolerance for solver"
-    atol::T = KrylovDefaults.tol
+    atol::T = KrylovDefaults.tol[]
 
     "Relative tolerance for solver"
-    rtol::T = KrylovDefaults.tol
+    rtol::T = KrylovDefaults.tol[]
 
     "Maximum number of iterations"
-    maxiter::Int64 = KrylovDefaults.maxiter
+    maxiter::Int64 = KrylovDefaults.maxiter[]
 
     "Verbosity ∈ {0,1,2}"
     verbose::Int64 = 0

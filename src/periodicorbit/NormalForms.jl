@@ -787,7 +787,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     #########
     # compute v1star
-    # J = D  +  T*At(t) + iθ/T
+    # J = D  +  T*Aᵗ(t) + iθ/T
     J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = ComplexF64, _transpose = Val(true), ρF = -1)
 
     nj = size(J, 1)

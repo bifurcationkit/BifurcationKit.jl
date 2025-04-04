@@ -43,10 +43,6 @@ sn_codim2 = continuation(br, 3, (@optic _.k),
     bothside = true,
     )
 
-# start_with_eigen = true, # ce truc fout la merde
-# le probleme est que prob.a change avec bothside. detect_bifurcation = 1 fout la merde aussi
-
-
 @test sn_codim2.kind == BK.FoldCont()
 @test sn_codim2.specialpoint[2].type == :bt
 @test sn_codim2.specialpoint[3].type == :cusp

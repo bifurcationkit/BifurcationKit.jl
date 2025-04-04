@@ -119,7 +119,7 @@ Just pass the above fields like `EigKrylovKit(;dim=2)`
 """
 @with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
     "Krylov Dimension"
-    dim::Int64 = KrylovDefaults.krylovdim
+    dim::Int64 = KrylovDefaults.krylovdim[]
 
     "Tolerance"
     tol::T = 1e-4
@@ -128,7 +128,7 @@ Just pass the above fields like `EigKrylovKit(;dim=2)`
     restart::Int64 = 200
 
     "Maximum number of iterations"
-    maxiter::Int64 = KrylovDefaults.maxiter
+    maxiter::Int64 = KrylovDefaults.maxiter[]
 
     "Verbosity ∈ {0, 1, 2}"
     verbose::Int = 0
