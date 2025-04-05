@@ -548,6 +548,8 @@ function continuation_fold(prob,
                 start_with_eigen = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 bdlinsolver_adjoint = bdlinsolver,
+                a = nothing,
+                b = nothing,
                 kwargs...)
     foldpointguess = foldpoint(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
@@ -578,8 +580,8 @@ function continuation_fold(prob,
         rmul!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
         # we use a minimally augmented formulation to set the initial vectors
-        a = ζ
-        b = ζad
+        a = isnothing(a) ? randn(length(ζ)) : a
+        b = isnothing(a) ? randn(length(ζ)) : a
         𝒯 = typeof(p)
         L = jacobian(prob, foldpointguess.u, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), 0*a, one(𝒯))

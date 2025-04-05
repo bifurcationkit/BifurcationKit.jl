@@ -358,7 +358,10 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 - `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
 - `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements.
+- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements. If `start_with_eigen = false`, then:
+
+    - `a::Nothing` estimate of null vector. If nothing is passed, a random vector is used. In case you do not rely on `AbstractArray`, you should probably pass this.
+    - `b::Nothing` estimate of second null vector. If nothing is passed, a random vector is used. In case you do not rely on `AbstractArray`, you should probably pass this.
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 !!! tip "ODE problems"
@@ -373,6 +376,8 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                 options = br.contparams.newton_options,
                 nev = br.contparams.nev,
                 start_with_eigen = false,
+                a = nothing,
+                b = nothing,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
                 kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}

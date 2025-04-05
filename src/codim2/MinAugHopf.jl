@@ -595,6 +595,8 @@ function continuation_hopf(prob,
                         start_with_eigen = false,
                         bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                         bdlinsolver_adjoint = bdlinsolver,
+                        a = nothing,
+                        b = nothing,
                         kwargs...)
     hopfpointguess = HopfPoint(br, ind_hopf)
     ω = hopfpointguess.p[2]
@@ -624,8 +626,9 @@ function continuation_hopf(prob,
         ζad .= ζ★ ./ dot(ζ★, ζ)
     else
         # we use a minimally augmented formulation to set the initial vectors
-        a = ζ
-        b = ζad
+        a = isnothing(a) ? randn(length(ζ)) : a
+        b = isnothing(b) ? randn(length(ζ)) : b
+
         𝒯 = typeof(ω)
         L = jacobian(prob, bifpt.x, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, -ω))

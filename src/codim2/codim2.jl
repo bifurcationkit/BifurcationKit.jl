@@ -205,8 +205,12 @@ Codimension 2 continuation of Fold / Hopf points. This function turns an initial
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)˟ or Jᵗ. Required in the linear solver for the Minimally Augmented Fold/Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
-- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements
 - `detect_codim2_bifurcation ∈ {0,1,2}` whether to detect Bogdanov-Takens, Bautin and Cusp. If equals `1` non precise detection is used. If equals `2`, a bisection method is used to locate the bifurcations. Default value = 2.
+- `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements. If `start_with_eigen = false`, then:
+
+    - `a::Nothing` estimate of null vector of J (resp. J-iω) for Fold (resp. Hopf). If nothing is passed, a random vector is used. In case you do not rely on `AbstractArray`, you should probably pass this.
+    - `b::Nothing` estimate of null vector of Jᵗ (resp. (J-iω)˟) for Fold (resp. Hopf). If nothing is passed, a random vector is used. In case you do not rely on `AbstractArray`, you should probably pass this.
+
 - `kwargs` keywords arguments to be passed to the regular [continuation](@ref Library-Continuation)
 
 where the parameters are as above except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of Hopf point in `br` you want to refine.
