@@ -165,7 +165,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐏𝐝.prob_vf
 
-    @unpack dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0, itv, itw = _get_bordered_terms(𝐏𝐝, x, p, par)
+    (; dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0, itv, itw) = _get_bordered_terms(𝐏𝐝, x, p, par)
 
     if has_hessian(𝐏𝐝) == false || 𝐏𝐝.usehessian == false
         # We invert the jacobian of the PD problem when the Hessian of x -> F(x, p) is not known analytically.

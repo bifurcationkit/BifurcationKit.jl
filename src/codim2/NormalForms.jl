@@ -341,8 +341,8 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     # the fold curve is β1 / a < 0 with x± := ±√(-β1/a)v
     # the Hopf curve is 0 = -x*b - β2, -x⋅a > 0
     # ie β2 = -bx with ±b√(-β1/a)
-    @unpack a, b = bt.nf
-    @unpack K10, K11, K2 = bt.nfsupp
+    (;a, b) = bt.nf
+    (;K10, K11, K2) = bt.nfsupp
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
     p2 = _get(bt.params, lens2)
@@ -408,8 +408,8 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
     # the fold curve is β1 / a < 0 with x± := ±√(-β1/a)
     # the Hopf curve is 0 = -x*b - β2, x⋅a > 0
     # ie β2 = -bx with ±b√(-β1/a)
-    @unpack a, b = bt.nf
-    @unpack K10, K11, K2 = bt.nfsupp
+    (;a, b) = bt.nf
+    (; K10, K11, K2) = bt.nfsupp
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
     p2 = _get(bt.params, lens2)
@@ -441,9 +441,9 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T;
     # we follow
     # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
 
-    @unpack a, b = bt.nf
-    @unpack K10, K11, K2, b1, e, d, a1 = bt.nfsupp
-    @unpack H0001, H0010, H0002, H1001, H2000 = bt.nfsupp
+    (;a, b) = bt.nf
+    (;K10, K11, K2, b1, e, d, a1) = bt.nfsupp
+    (;H0001, H0010, H0002, H1001, H2000) = bt.nfsupp
 
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
@@ -934,7 +934,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁ = gh.nf
+    (;h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁) = gh.nf
     lens1, lens2 = gh.lens
     p1 = _get(gh.params, lens1)
     p2 = _get(gh.params, lens2)
@@ -1204,7 +1204,7 @@ Compute the predictor for the curve of Hopf bifurcations near the Zero-Hopf bifu
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack ω, λ0 = zh.nf
+    (;ω, λ0) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
     p2 = _get(zh.params, lens2)
@@ -1238,7 +1238,7 @@ Compute the predictor for the curve of Fold bifurcations near the Zero-Hopf bifu
 function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack ω, λ0 = zh.nf
+    (;ω, λ0) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
     p2 = _get(zh.params, lens2)
@@ -1276,7 +1276,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2 = zh.nf
+    (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
     p2 = _get(zh.params, lens2)
@@ -1529,7 +1529,7 @@ Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack λ1, λ2 = hh.nf
+    (;λ1, λ2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
     p2 = _get(hh.params, lens2)
@@ -1567,7 +1567,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
                     ampfactor = T(1)) where T
-    @unpack λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2 = hh.nf
+    (;λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
     p2 = _get(hh.params, lens2)

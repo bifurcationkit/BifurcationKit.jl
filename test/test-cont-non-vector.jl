@@ -67,6 +67,7 @@ function (l::linsolveBd)(J, dx)
     out, true, 1
 end
 
+
 sol0 = BorderedArray([0.8], 0.0)
 
 opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
@@ -85,7 +86,7 @@ BK.get_solp(br, 1)
 # plot(br)
 
 prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
-    J = (x, r) -> Jacobian(x, r[1], r[2]),
+    J  = (x, r) -> Jacobian(x, r[1], r[2]),
     Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
     d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 

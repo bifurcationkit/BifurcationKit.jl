@@ -643,7 +643,7 @@ function continuation_hopf(prob,
         @debug "EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★,newa) - complex(0,ω)*newa) norminf(apply(L★,newa) + complex(0,ω)*newa)
 
         ζad = newa ./ normC(newa)
-        ζ = newb ./ normC(newb)
+        ζ   = newb ./ normC(newb)
     end
 
     return continuation_hopf(br.prob, alg,

@@ -184,7 +184,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
-    @unpack JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
+    (; JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw) = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
 
     # inversion of Jns 
     if has_hessian(𝐍𝐒) == false || 𝐍𝐒.usehessian == false

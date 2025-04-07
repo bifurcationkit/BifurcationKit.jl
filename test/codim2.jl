@@ -90,12 +90,12 @@ for eigen_start in (true, false), _jac in (:autodiff, :finiteDifferences, :MinAu
     ind = argmin(abs.(_eigvals))
     @test _eigvals[ind] ≈ 0 atol = 1e-10
     ζ = eigvec[:, ind]
-    @test sn_br.prob.prob.b ./ norm(sn_br.prob.prob.b) ≈ -ζ
+    @test sn_br.prob.prob.b ./ norm(sn_br.prob.prob.b) ≈ ζ * sign(ζ[1])*sign(sn_br.prob.prob.b[1])
 
     _eigvals, eigvec, = eigen(_J')
     ind = argmin(abs.(_eigvals))
     ζstar = eigvec[:, ind]
-    @test sn_br.prob.prob.a ≈ ζstar
+    @test sn_br.prob.prob.a ≈ ζstar * sign(ζstar[1])*sign(sn_br.prob.prob.a[1])
 end
 ####################################################################################################
 # different tests for the Hopf point

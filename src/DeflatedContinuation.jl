@@ -107,8 +107,8 @@ function updatebranch!(dcIter::DefContIterable,
     state = dcstate.state          # continuation state
     it = dcIter.it                 # continuation iterator
     alg = dcIter.alg
-    @unpack step, ds = state
-    @unpack verbosity = it
+    (;step, ds) = state
+    (; verbosity) = it
     state.z_pred.p = current_param
 
     getpredictor!(state, it)

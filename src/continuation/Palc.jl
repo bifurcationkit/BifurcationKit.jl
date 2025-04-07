@@ -405,10 +405,10 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     z0 = getsolution(state)
     τ0 = state.τ
-    @unpack z_pred, ds = state
+    (;z_pred, ds) = state
 
-    @unpack tol, max_iterations, verbose, α, αmin, linesearch = contparams.newton_options
-    @unpack p_min, p_max = contparams
+    (;tol, max_iterations, verbose, α, αmin, linesearch) = contparams.newton_options
+    (;p_min, p_max) = contparams
     linsolver = getlinsolver(iter)
 
     # record the damping parameter

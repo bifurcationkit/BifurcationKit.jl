@@ -130,7 +130,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     #  σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = 1
     ################### inversion of Jfold ####################
-    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw = _get_bordered_terms(𝐅, x, p, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw) = _get_bordered_terms(𝐅, x, p, par)
 
     if 𝐅.usehessian == false || has_hessian(𝐅) == false
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.

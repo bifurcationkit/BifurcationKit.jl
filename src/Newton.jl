@@ -69,7 +69,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
                     callback = cb_default,
                     kwargs...)
     # Extract parameters
-    @unpack tol, max_iterations, verbose = options
+    (;tol, max_iterations, verbose) = options
 
     x = _copy(x0)
     fx = residual(prob, x, p0)

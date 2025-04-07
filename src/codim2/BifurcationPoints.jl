@@ -128,7 +128,7 @@ function Base.show(io::IO, bp::BogdanovTakens)
     p1 = :β1 == get_lens_symbol(lens1) ? :p1 : :β1
     p2 = :β2 == get_lens_symbol(lens2) ? :p2 : :β2
     println(io, "Normal form (B, $p1 + $p2⋅B + b⋅A⋅B + a⋅A²)")
-    @unpack a,b = bp.nf
+    (;a, b) = bp.nf
     println(io, "Normal form coefficients:\n a = $a\n b = $b")
     println(io, "\nYou can call various predictors:\n - predictor(::BogdanovTakens, ::Val{:HopfCurve}, ds)\n - predictor(::BogdanovTakens, ::Val{:FoldCurve}, ds)\n - predictor(::BogdanovTakens, ::Val{:HomoclinicCurve}, ds)")
 end

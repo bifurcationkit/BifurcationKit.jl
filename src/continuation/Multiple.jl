@@ -83,7 +83,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
     verbose = it.verbosity
     # we create a copy of the continuation cache
     state = copy(_state)
-    @unpack ds = state
+    (;ds) = state
     (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─Multiple tangent predictor\n")
     # we combine the callbacks for the newton iterations
     cb = (state; k...) -> callback(it)(state; k...) && algo(state; k...)

@@ -311,13 +311,13 @@ end
     # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
     # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
 
-    @unpack blockⱼ,
-            blockₙ,
-            blockₙ₂,
-            Lₜ,
-            Uₜ,
-            last_row_𝐅𝐬⁻¹_analytical,
-            last_row_𝐅𝐬 = cop_cache
+    (; blockⱼ,
+        blockₙ,
+        blockₙ₂,
+        Lₜ,
+        Uₜ,
+        last_row_𝐅𝐬⁻¹_analytical,
+        last_row_𝐅𝐬) = cop_cache
     
     rhs = zero(rhs0)
     p = zeros(Int, nbcoll + 1 + δn)
