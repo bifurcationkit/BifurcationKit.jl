@@ -1,5 +1,5 @@
 using Revise
-using ForwardDiff, OrdinaryDiffEq
+using ForwardDiff, DifferentialEquations
 using Plots
 # using GLMakie; Makie.inline!(true)
 using BifurcationKit, LinearAlgebra, SparseArrays, LoopVectorization
@@ -32,7 +32,7 @@ function NL!(f, u, p, t = 0.)
     f1 = @view f[1:n]
     f2 = @view f[n+1:2n]
 
-    @tturbo for i=1:n
+    @turbo for i=1:n
         ua = u1[i]^2 + u2[i]^2
         f1[i] = r * u1[i] - ν * u2[i] - ua * (c3 * u1[i] - μ * u2[i]) - c5 * ua^2 * u1[i]
         f2[i] = r * u2[i] + ν * u1[i] - ua * (c3 * u2[i] + μ * u1[i]) - c5 * ua^2 * u2[i]
@@ -110,7 +110,7 @@ br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 plot(br)
 ####################################################################################################
 # Look for periodic orbits
-f1 = DiffEqArrayOperator(par_cgl.Δ);
+f1 = MatrixOperator(par_cgl.Δ);
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; reltol = 1e-8, dt = 0.1)
 prob = ODEProblem(Fcgl!, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
@@ -157,7 +157,6 @@ br_po = @time continuation(probSh, outpo.u, PALC(),
         linear_algo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
         plot_solution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
         # plot_solution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
-        record_from_solution = (u, p; k...) -> (amp = BK.getamplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
         normC = norminf)
 
 ####################################################################################################
@@ -182,5 +181,4 @@ br_po = continuation(
     end,
     plot_solution = (x, p; k...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, k...),
     # plot_solution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
-    record_from_solution = (u, p; k...) -> (amp = BK.getamplitude(p.prob, u, (@set par_cgl.r = p.p); ratio = 2), period = u[end]),
     normC = norminf)

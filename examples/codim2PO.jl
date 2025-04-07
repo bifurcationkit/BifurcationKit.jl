@@ -70,7 +70,6 @@ argspo = (record_from_solution = recordFromSolution,
 probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, update_section_every_step = 0), prob, sol, 2.)
 
 plot(sol)
-BK.residual(probtrap, ci, prob.params) |> plot
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 
@@ -78,7 +77,6 @@ _sol = BK.get_periodic_orbit(probtrap, solpo.u,1)
 plot(_sol.t, _sol[1:2,:]')
 
 opts_po_cont = ContinuationPar(opts_br, max_steps = 50, save_eigenvectors = true, tol_stability = 1e-8)
-@reset opts_po_cont.newton_options.verbose = true
 brpo_fold = continuation(probtrap, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...,
@@ -105,42 +103,10 @@ fold_po_trap1 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
-@test fold_po_trap1.kind isa BK.FoldPeriodicOrbitCont
 plot(fold_po_trap1)
-
-# codim 2 PD
-opts_potrap_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 0, max_steps = 10, p_min = -1., plot_every_step = 1, dsmax = 1e-2, ds = -1e-3)
-@reset opts_potrap_pd.newton_options.tol = 1e-9
-pd_po_trap = continuation(brpo_pd, 1, (@optic _.b0), opts_potrap_pd;
-        verbosity = 3, plot = true,
-        detect_codim2_bifurcation = 0,
-        start_with_eigen = false,
-        jacobian_ma = :finiteDifferences,
-        normC = norminf,
-        callback_newton = BK.cbMaxNorm(1),
-        # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-        )
-
-@test pd_po_trap.kind isa BK.PDPeriodicOrbitCont
-
-plot(fold_po_trap, pd_po_trap)
-
-#####
-fold_po_trap2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
-        verbosity = 3, plot = true,
-        detect_codim2_bifurcation = 0,
-        start_with_eigen = false,
-        bothside = true,
-        jacobian_ma = :minaug,
-        bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-        )
-plot(fold_po_trap1, fold_po_trap2, ylims = (0, 0.49))
-    # plot!(pd_po_trap.branch.ϵ, pd_po_trap.branch.b0)
 ################################################################################
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 2.; optimal_period = false)
-
 plot(sol)
-BK.residual(probcoll, ci, prob.params) |> plot
 
 solpo = BK.newton(probcoll, ci, NewtonPar(verbose = true));
 
@@ -153,7 +119,6 @@ brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
     verbosity = 3, plot = true,
     argspo...
     )
-pd = get_normal_form(brpo_fold, 1; prm = false)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, max_steps=250);
@@ -166,7 +131,8 @@ pd = get_normal_form(brpo_pd, 1, prm = false)
 brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,
                 ContinuationPar(brpo_pd.contparams, max_steps = 150);
                 verbosity = 0, plot = true,
-                δp = 0.001, ampfactor = 0.1,
+                # δp = 0.001, ampfactor = 0.1,
+                detailed = true, prm = false,
                 linear_algo = MatrixBLS(),
                 argspo...,)
 plot(brpo_pd, brpo_pd_sw)
@@ -204,8 +170,6 @@ fold_po_coll2 = @time continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
-@test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
-
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 60, p_min = -1., plot_every_step = 10, dsmax = 3e-3, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-9
@@ -223,8 +187,6 @@ pd_po_coll = @time continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
-
-@test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
 
 plot(fold_po_coll1, pd_po_coll)
 
@@ -393,8 +355,6 @@ fold_po_sh2 = continuation(br_fold_sh, 1, (@optic _.ϵ), opts_posh_fold;
         callback_newton = BK.cbMaxNorm(1),
         )
 
-@test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
-
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, max_steps = 40, p_min = -1.)
 @reset opts_posh_pd.newton_options.tol = 1e-12
@@ -402,7 +362,7 @@ opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, ma
 @reset opts_posh_pd.newton_options.verbose = true
 pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
         verbosity = 0, plot = true,
-        detect_codim2_bifurcation = 2,
+        detect_codim2_bifurcation = 0,
         jacobian_ma = :minaug,
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
@@ -495,15 +455,3 @@ plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 # plot!(ns_po_sh, vars = (:ϵ, :b0), branchlabel = "NS")
 # plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 plot!(pd_po_sh2, vars = (:ϵ, :b0), branchlabel = "PD2")
-################################################################################
-###### Poincare Shooting ########
-probpsh, cipsh = generate_ci_problem( PoincareShootingProblem( M=1 ), prob, prob_de, sol, 2.; alg = Rodas5(), update_section_every_step = 0)
-
-# je me demande si la section n'intersecte pas deux fois l'hyperplan
-hyper = probpsh.section
-plot(sol)
-plot!(sol.t, [hyper(zeros(1),u)[1] for u in sol.u])
-
-# solpo = newton(probpsh, cipsh, NewtonPar(verbose = true))
-BK.getperiod(probpsh, cipsh, sol.prob.p)
-_sol = BK.get_periodic_orbit(probpsh, cipsh, sol.prob.p)

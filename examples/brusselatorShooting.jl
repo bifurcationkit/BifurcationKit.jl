@@ -28,7 +28,7 @@ function Fbru!(f, x, p, t = 0)
     f[n]   = c1 * (u[n-1] - 2u[n] +  α   ) + α - (β + 1) * u[n] + f1(u[n], v[n])
     f[n+1] = c2 * (β / α  - 2v[1] + v[2])            + β * u[1] - f1(u[1], v[1])
 
-    @turbo for i=2:n-1
+    @tturbo for i=2:n-1
           f[i] = c1 * (u[i-1] - 2u[i] + u[i+1]) + α - (β + 1) * u[i] + f1(u[i], v[i])
         f[n+i] = c2 * (v[i-1] - 2v[i] + v[i+1])           + β * u[i] - f1(u[i], v[i])
     end
@@ -157,7 +157,6 @@ outpo = @time newton(probSh,
                     normN = norminf)
 plot(initpo[1:end-1], label = "Initial guess")
 plot!(outpo.u[1:end-1], label = "solution") |> display
-println("--> amplitude = ", BK.amplitude(outpo.u, n, length(1:dM:M); ratio = 2))
 println("--> period = ", BK.getperiod(probSh, outpo.u, par_hopf))
 
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 1.5, max_steps = 500, newton_options = optn_po, nev = 25, tol_stability = 1e-8, detect_bifurcation = 0)
@@ -209,7 +208,7 @@ br_po = continuation(
     plot_solution = (x, p; kwargs...) -> plot!(x[1:end-1]; label = "", kwargs...),
     normC = norminf)
 
-br_po2 = continuation(deepcopy(br_po), 3, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 50, ds = -0.01);
+br_po2 = continuation(deepcopy(br_po), 1, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 50, ds = -0.01);
     verbosity = 3, plot = true,
     ampfactor = .2, δp = 0.01,
     linear_algo = MatrixFreeBLS(@set ls.N = 2+2n*Mt),
@@ -234,17 +233,14 @@ probHPsh = PoincareShootingProblem(prob, QNDF(), normals, centers;
     parallel = false,
     δ = 1e-8,
     lens = (@optic _.l),
+    update_section_every_step = 2,
     par = par_hopf,
     jacobian = BK.FiniteDifferencesMF())
 
 initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 
-# P = @time PrecPartialSchurKrylovKit(dx -> probHPsh(vec(outpo_psh), par_hopf, dx), rand(length(vec(initpo_bar))), 25, :LM; verbosity = 2, krylovdim = 50)
-#     scatter(real.(P.eigenvalues), imag.(P.eigenvalues))
-#         plot!(1 .+ cos.(LinRange(0,2pi,100)), sin.(LinRange(0,2pi,100)))
-
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
-optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 30, linsolver = ls)
+optn = NewtonPar(verbose = true, tol = 1e-8,  max_iterations = 30, linsolver = ls)
 outpo_psh = @time newton(probHPsh, vec(initpo_bar), optn; normN = norminf)
 
 plot(outpo_psh.u, label = "Solution")
@@ -262,8 +258,6 @@ br_po = @time continuation(probHPsh, outpo_psh.u, PALC(),
     linear_algo = MatrixFreeBLS(@set ls.N = ls.N+1),
     verbosity = 3,
     plot = true,
-    plot_solution = (x, p; kwargs...) -> BK.plot!(x; label = "", kwargs...),
-    update_section_every_step = 2,
     finalise_solution = (z, tau, step, contResult; k...) -> begin
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
         return true
@@ -279,11 +273,12 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 25, linsolver 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, p_max = 1.5, max_steps = 100, newton_options = optn_po, nev = 10, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 2)
 
+Mt=1
 br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    PoincareShootingProblem(1, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
+    PoincareShootingProblem(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,

@@ -295,6 +295,8 @@ function residual!(pb::PoincareShootingProblem, out, x, p)
     out
 end
 
+residual(pb::PoincareShootingProblem, x, p) = pb(x, p)
+
 """
 This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x),x) where t(x) is the return time of x to the section.
 """

@@ -53,14 +53,12 @@ function dFmit(x, p, dx)
     f .= f .+ nl
 end
 
-function JFmit(x,p)
+function JFmit!(out,x,p)
     J = p.Δ
     dg = dϕ.(x, p.λ)
-    return J + spdiagm(0 => dg)
+    out .= J .+ spdiagm(0 => dg)
 end
-
-# computation of the derivatives
-d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
+JFmit(x,p) = JFmit!(L1, x, p)
 ####################################################################################################
 Nx = 30
 Ny = 30
@@ -72,6 +70,7 @@ par_mit = (λ = .01, Δ = Δ)
 sol0 = 0*ones(Nx, Ny) |> vec
 const w = (lx .+ LinRange(-lx,lx,Nx)) * transpose(LinRange(-ly,ly,Ny)) |> vec
 w .-= minimum(w)
+const L1 = copy(Δ)
 
 prob = BK.BifurcationProblem(Fmit!, sol0, par_mit, (@optic _.λ);
         J = JFmit,
@@ -122,11 +121,8 @@ plot(br)
 ####################################################################################################
 # automatic branch switching
 br1 = continuation(br, 3; kwargsC...)
-
 plot(br, br1, plotfold=false)
-
 br2 = continuation(br1, 1; kwargsC...)
-
 plot(br, br1, br2, plotfold=false)
 ####################################################################################################
 # bifurcation diagram

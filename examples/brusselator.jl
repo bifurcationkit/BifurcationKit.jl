@@ -94,7 +94,7 @@ par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
 prob = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); 
         J = Jbru_sp, 
-        # plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), # for Plots.jl
+        plot_solution = (x, p; kwargs...) -> plotsol(x; label="", kwargs... ), # for Plots.jl
         # plot_solution = (ax, x, p) -> plotsol(ax, x), # For Makie.jl
         record_from_solution = (x, p; k...) -> x[div(n,2)])
 ####################################################################################################
@@ -122,10 +122,9 @@ if 1==1
         br, ind_hopf, (@optic _.β),
         ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 10.5, p_min = 5.1, detect_bifurcation = 0, newton_options = optnew);
         update_minaug_every_step = 1,
-        start_with_eigen = true,
         detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
-        plot = true,
+        # plot = true,
         verbosity = 2, normC = norminf, bothside = true)
 end
 

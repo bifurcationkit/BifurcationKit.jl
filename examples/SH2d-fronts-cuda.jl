@@ -52,17 +52,16 @@ function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
     return SHLinearOp(AF(zeros(Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
 
-function apply(c::SHLinearOp, u, multiplier, op = *)
+function apply!(dest, c::SHLinearOp, u, multiplier, op = *)
     c.tmp_complex .= Complex.(u)
     c.fftplan * c.tmp_complex
     c.tmp_complex .= op.(c.tmp_complex, multiplier)
     c.ifftplan * c.tmp_complex
-    c.tmp_real .= real.(c.tmp_complex)
-    return copy(c.tmp_real)
+    dest .= real.(c.tmp_complex)
 end
 
-*(c::SHLinearOp, u) = apply(c, u, c.l1)
-\(c::SHLinearOp, u) = apply(c, u, c.l1, /)
+*(c::SHLinearOp, u) = apply!(similar(u), c, u, c.l1)
+\(c::SHLinearOp, u) = apply!(similar(u), c, u, c.l1, /)
 ####################################################################################################
 Nx = 2^9
 Ny = 2^9
@@ -82,14 +81,20 @@ sol0 .*= 1.7
 function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-8)
     u, l, ν = J
     udiag = l .+ 1 .+ (2ν) .* u .- 3 .* u.^2 .- shift
-    res, info = KrylovKit.linsolve( du -> -du .+ sh \ (udiag .* du), sh \ rhs; rtol, maxiter = 6, ishermitian = true)
+    tmp = copy(udiag); dudiag = copy(udiag)
+    function h(du)
+        dudiag .= udiag .* du
+        apply!(tmp, sh, dudiag, sh.l1, /)
+        (-1) .* du .+ tmp
+    end
+    res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 6, issymmetric = true, krylovdim = 50, atol = 1e-12)
     return res, true, info.numops
 end
 
 function (sheig::SHEigOp)(J, nev::Int; kwargs...)
+    @info "" nev
     u, l, ν = J
-    sh = sheig.sh
-    σ = sheig.σ
+    (;sh, σ) = sheig
     A = du -> sh(J, du; shift = σ)[1]
 
     # we adapt the krylov dimension as function of the requested eigenvalue number
@@ -98,23 +103,25 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     return 1 ./vals .+ σ, vec, true, info.numops
 end
 
-function F_shfft(u, p)
+function F_shfft!(dest, u, p)
     (;l, ν, L) = p
-    return -(L * u) .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
+    apply!(dest, L, u, L.l1)
+    dest .= (-1) .* dest .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
 end
 
 J_shfft(u, p) = (u, p.l, p.ν)
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
 Leig = SHEigOp(L, 0.1) # for eigenvalues computation
-# Leig((sol_hexa, -0.1, 1.3), 20; σ = 0.5)
+# @time Leig((sol_hexa.u, -0.15, 1.3), 10; σ = 0.1)
 
 par = (l = -0.15, ν = 1.3, L = L)
 
-@time F_shfft(AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
+@time F_shfft!(similar(sol0), (sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
-prob = BK.BifurcationProblem(F_shfft, AF(sol0), par, (@optic _.l) ;
+prob = BK.BifurcationProblem(F_shfft!, AF(sol0), par, (@optic _.l) ;
     J =  J_shfft,
+    issymmetric = true,
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
     record_from_solution = (x, p; k...) -> norm(x))
 
@@ -133,10 +140,12 @@ println("--> norm(sol) = ", norm(outdef.u))
 plotsol(outdef.u) |> display
 BK.converged(outdef) && push!(deflationOp, outdef.u)
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, p_max = 0.005, p_min = -1.0, plot_every_step = 10, newton_options = setproperties(opt_new; tol = 1e-6, max_iterations = 15), max_steps = 88,
-    detect_bifurcation = 0,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, p_max = 0.005, p_min = -1.0, plot_every_step = 10, newton_options = setproperties(opt_new; tol = 1e-6, max_iterations = 15), max_steps = 30,
+    detect_bifurcation = 3,
     tol_stability = 1e-5,
     save_eigenvectors = false,
+    n_inversion = 4,
+    max_bisection_steps = 4,
     nev = 11 )
 
 prob = re_make(prob, u0 = deflationOp[1])
@@ -149,4 +158,5 @@ br = @time continuation(prob,
 ####################################################################################################
 # computation of normal form
 # we collect the matrix-free derivatives
-nf = get_normal_form(br, 2)
+nf = get_normal_form(br, 1; nev = 15)
+
