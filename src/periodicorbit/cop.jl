@@ -213,7 +213,7 @@ Solve the linear system associated with the collocation problem for computing pe
 
     # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
     # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
-    @unpack last_row_𝐅𝐬⁻¹_analytical = cop_cache
+    (;last_row_𝐅𝐬⁻¹_analytical) = cop_cache
 
     if dim === 0 
         d = dot(last_row_𝐅𝐬⁻¹_analytical, 
