@@ -580,8 +580,8 @@ function continuation_fold(prob,
         rmul!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
         # we use a minimally augmented formulation to set the initial vectors
-        a = isnothing(a) ? randn(length(ζ)) : a
-        b = isnothing(a) ? randn(length(ζ)) : a
+        a = isnothing(a) ? _randn(ζ) : a
+        b = isnothing(b) ? _randn(ζ) : b
         𝒯 = typeof(p)
         L = jacobian(prob, foldpointguess.u, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), 0*a, one(𝒯))

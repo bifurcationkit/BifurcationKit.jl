@@ -9,7 +9,7 @@ module BifurcationKit
     using DocStringExtensions
     using DataStructures: CircularBuffer # used for Polynomial predictor
     using ForwardDiff
-
+    import Random: randn!
 
     include("Accessors.jl")
     include("Problems.jl")

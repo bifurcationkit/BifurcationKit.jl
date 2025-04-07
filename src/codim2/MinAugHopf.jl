@@ -142,7 +142,7 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     # This 2 x 2 system is then solved to get (dp, dω)
     ################### inversion of Jhopf ####################
 
-    @unpack J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω = _get_bordered_terms(𝐇, x, p, ω, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
 
     # we solve J⋅x1 = duu and J⋅x2 = dₚF
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dₚF)
@@ -607,7 +607,7 @@ function continuation_hopf(prob,
     @assert ~isnothing(br.eig[1].eigenvecs) "The branch contains no eigenvectors for the Hopf point. Please provide one."
 
     ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-    ζ ./= normC(ζ)
+    rmul!(ζ, 1 / normC(ζ))
     ζad = conj.(ζ)
 
     p = bifpt.param
@@ -623,11 +623,11 @@ function continuation_hopf(prob,
         L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
 
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
-        ζad .= ζ★ ./ dot(ζ★, ζ)
+        axpby!(1 / dot(ζ★, ζ), ζ★, 0, ζad)
     else
         # we use a minimally augmented formulation to set the initial vectors
-        a = isnothing(a) ? randn(length(ζ)) : a
-        b = isnothing(b) ? randn(length(ζ)) : b
+        a = isnothing(a) ? _randn(ζ) : a
+        b = isnothing(b) ? _randn(ζ) : b
 
         𝒯 = typeof(ω)
         L = jacobian(prob, bifpt.x, parbif)

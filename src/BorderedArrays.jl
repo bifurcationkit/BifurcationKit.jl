@@ -171,3 +171,18 @@ VI.scale!(y::BorderedArray, x::BorderedArray, α::Number) = throw("")#mul!(y, x,
 VI.scale!!(x::BorderedArray, α::Number) = α * x
 VI.scale!!(y::BorderedArray, x::BorderedArray, α::Number) = mul!(y, x, α)
 VI.inner(x::BorderedArray, y::BorderedArray) = dot(x, y)
+
+"""
+Initialize a vector like `randn!`.
+"""
+_randn(x) = randn!(_copy(x))
+function _randn(y::BorderedArray{T,V}) where {T <: AbstractArray, V}
+    x = _copy(y)
+    randn!(x.u)
+    if V <: Number
+        x.p = randn()
+    elseif T <: AbstractArray
+        randn!(x.p)
+    end
+    return x
+end
