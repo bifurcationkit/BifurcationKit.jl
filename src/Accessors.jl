@@ -8,10 +8,10 @@ function _set(obj, optics::Tuple{<:AllOpticTypes, <:AllOpticTypes}, val::Tuple)
     return obj2
 end
 
-@inline get_lens_symbol(lens) = :p
-@inline get_lens_symbol(::IndexLens{Tuple{Int64}}) = :p
+@inline get_lens_symbol(o) = :p
+@inline get_lens_symbol(o::IndexLens{Tuple{Int64}}) = Symbol("p"*"$(o.indices[1])")
 @inline get_lens_symbol(::PropertyLens{F}) where F = F
-get_lens_symbol(lens::ComposedOptic) = get_lens_symbol(lens.outer)
+get_lens_symbol(o::ComposedOptic) = get_lens_symbol(o.outer)
 
 function get_lens_symbol(lens1, lens2)
     p1 = get_lens_symbol(lens1)
