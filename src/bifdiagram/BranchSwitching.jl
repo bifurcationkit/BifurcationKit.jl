@@ -133,7 +133,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
         pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
     end
     if isnothing(pred)
-        @warn "The predictor is nothing. Probably a Fold point. See\n $bp"
+        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"
         return nothing
     end
 
