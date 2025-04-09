@@ -1,6 +1,6 @@
 using Revise
 using Plots
-using BifurcationKit, Test
+using BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
 function COm!(du, u, p, t = 0)

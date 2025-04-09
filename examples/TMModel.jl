@@ -62,13 +62,13 @@ plot(br, br_potrap, markersize = 3)
 plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
 # branching to PO from Hopf using Collocation
-opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 100, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 90, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
 
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
-    PeriodicOrbitOCollProblem(50, 3; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
-    # verbosity = 3,
-    # plot = true,
+    PeriodicOrbitOCollProblem(50, 4; meshadapt = false, jacobian = BK.DenseAnalyticalInplace());
+    verbosity = 3,
+    plot = true,
     args_po...,
     linear_algo = BK.COPBLS(),
     )

@@ -93,7 +93,7 @@ br_po = @time continuation(
     br, 1,
     # arguments for continuation
     optcontpo,
-    PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace, update_section_every_step = 0);
+    PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace);
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess
@@ -109,18 +109,22 @@ plot(br, br_po, label = "")
 # branching from PD using aBS
 br_po_pd = @time continuation(
     # arguments for branch switching from the first
-    # Hopf bifurcation point
+    # PD bifurcation point
     br_po, 1, setproperties(br_po.contparams; detect_bifurcation = 3, plot_every_step = 1, ds = 0.01);
     # OPTIONAL parameters
-    # we want to jump on the new branch at phopf + δp
+    # we want to jump on the new branch at p_perioddoubling + δp
     # ampfactor is a factor to increase the amplitude of the guess
-    ampfactor = 0.9, δp = -0.01,
+    ampfactor = 0.9, δp = -0.0051,
     verbosity = 3,
     plot = true,
     callback_newton = BK.cbMaxNorm(1e2),
     # jacobianPO = :FullSparseInplace,
     # jacobianPO = :BorderedSparseInplace,
-    plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br_po, subplot=1)),
+    plot_solution = (x, p;kwargs...) ->  begin
+        M = p.prob.M
+        heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...)
+        plot!(br_po, subplot=1)
+    end,
     record_from_solution = (u, p; k...) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
@@ -128,7 +132,7 @@ plot(br, br_po, br_po_pd, label = "")
 ####################################################################################################
 # shooting
 par_br_hopf = @set par_br.C = -0.86
-f1 = DiffEqArrayOperator(par_br.Δ)
+f1 = MatrixOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
 
@@ -154,7 +158,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo), maxiter = 50, verb
 optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 20, linsolver = ls)
 # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
 outposh = @time BK.newton(probSh, initpo, optn; normN = norminf)
-BK.converged(outposh) && printstyled(color=:red, "--> T = ", outposh.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh.u, par_br_hopf; ratio = 2),"\n")
+BK.converged(outposh) && printstyled(color=:red, "--> T = ", outposh.u[end])
 
 plot(initpo[1:end-1], label = "Init guess"); plot!(outposh.u[1:end-1], label = "sol")
 
@@ -167,7 +171,11 @@ br_po_sh = @time continuation(probSh, outposh.u, PALC(), optcontpo;
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...),
-    record_from_solution = (u, p; k...) -> BK.getmaximum(probSh, u, (@set par_br_hopf.C = p.p); ratio = 2), normC = norminf)
+    record_from_solution = (u, p; k...) -> begin
+            xtt = BK.get_periodic_orbit(p.prob, u, p.p)
+            maximum(xtt[1,:])
+    end,
+)
 
 # branches = [br_po_sh]
 # push!(branches, br_po_sh)
@@ -178,7 +186,7 @@ plot(br_po_sh, br, label = "")
 ####################################################################################################
 # shooting Period Doubling
 par_br_pd = @set par_br.C = -1.32
-f1 = DiffEqArrayOperator(par_br.Δ)
+f1 = MatrixOperator(par_br.Δ)
 f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd; abstol=1e-14, reltol=1e-14, dt = 0.01)
 # solution close to the PD point.
@@ -204,7 +212,7 @@ optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 12, linsolver = l
 outposh_pd = @time BK.newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
         # callback = (state; kwargs...) -> (@show state.x[end];true),
         normN = norminf)
-BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end], ", amplitude = ", BK.getamplitude(probSh, outposh_pd.u, (@set par_br.C = -0.86); ratio = 2),"\n")
+BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end])
 
 plot(initpo[1:end-1], label = "Init guess"); plot!(outposh_pd.u[1:end-1], label = "sol")
 
@@ -215,7 +223,10 @@ br_po_sh_pd = @time continuation(outposh_pd.prob.prob, outposh_pd.u, PALC(), opt
     # finalise_solution = (z, tau, step, contResult; k...) ->
         # (Base.display(contResult.eig[end].eigenvals) ;println("--> T = ", z.u[end]);true),
     plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...); plot!(br_po_sh; subplot=1, legend=false)),
-    record_from_solution = (u, p; k...) -> BK.getmaximum(probSh, u, (@set par_br_pd.C = p.p); ratio = 2),
+    record_from_solution = (u, p; k...) -> begin
+            xtt = BK.get_periodic_orbit(p.prob, u, p.p)
+            maximum(xtt[1,:])
+    end,
     normC = norminf)
 
 plot(br_po_sh_pd, br, label = "");title!("")
@@ -251,7 +262,10 @@ br_po = @time continuation(
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    record_from_solution = (u, p; k...) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    record_from_solution = (u, p; k...) -> begin
+            xtt = BK.get_periodic_orbit(p.prob, u, p.p)
+            maximum(xtt[1,:])
+    end,
     normC = norminf)
 
 plot(br, br_po, label = "")
@@ -273,7 +287,11 @@ br_po_pd = BK.continuation(br_po, 1, setproperties(br_po.contparams, detect_bifu
         heatmap!(outt[:,:]'; color = :viridis, subplot = 3)
         plot!(br_po; legend=false, subplot=1)
     end,
-    record_from_solution = (u, p; k...) -> (BK.getmaximum(p.prob, u, (@set par_br_hopf.C = p.p); ratio = 2)), normC = norminf
+    record_from_solution = (u, p; k...) -> begin
+            xtt = BK.get_periodic_orbit(p.prob, u, p.p)
+            maximum(xtt[1,:])
+    end,
+    normC = norminf
     )
 
 plot(br_po, br_po_pd, legend=false)
@@ -296,7 +314,10 @@ br_po_pdcodim2 = @time continuation(
     finalise_solution = (z, tau, step, contResult; kw...) ->
         (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> (BK.plot_periodic_shooting!(x[1:end-1], 1; kwargs...);plot!(br, subplot=1)),
-    record_from_solution = (u, p; k...) -> BK.getmaximum(probPO, u, (@set par_br.C = p.p); ratio = 2),
+    record_from_solution = (u, p; k...) -> begin
+            xtt = BK.get_periodic_orbit(p.prob, u, p.p)
+            maximum(xtt[1,:])
+    end,
     normC = norminf)
 ####################################################################################################
 # aBS Poincare Shooting

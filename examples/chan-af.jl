@@ -23,7 +23,7 @@ rmul!(y::ApproxFun.Fun, b::Float64) = (y.coefficients .*= b; y)
 rmul!(y::ApproxFun.Fun, b::Bool) = b == true ? y : (y.coefficients .*= 0; y)
 
 # copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( copyto!(x.coefficients, y.coefficients);x)
-copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( (x.coefficients = copy(y.coefficients);x))
+copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( (x.coefficients .= (y.coefficients);x))
 
 ####################################################################################################
 N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
@@ -64,16 +64,16 @@ prob = BifurcationProblem(F_chan, sol0, par_af, (@optic _.α);
             plot_solution = (x, p; kwargs...) -> plot!(x; label = "l = $(length(x))", kwargs...))
 
 optnew = NewtonPar(tol = 1e-12, verbose = true)
-sol = @time BK.solve(prob, Newton(), optnew, normN = norminf)
+sol = @time BK.solve(prob, Newton(), optnew, normN = norm)
 
 plot(sol.u, label="Solution")
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = true), max_steps = 300, detect_bifurcation = 0)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 20, newton_options = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = true), max_steps = 300, detect_bifurcation = 0)
 
 br = @time continuation(
     prob, PALC(bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
     plot = true, verbosity = 2,
-    normC = norminf)
+    normC = norm)
 ####################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [sol.u])
@@ -86,9 +86,8 @@ solp = copy(sol.u)
 
 plot(sol.u);plot!(solp)
 
-outdef1 = @time BK.newton(
-    BK.re_make(prob, u0 = solp), deflationOp, optdef)
-    BK.converged(outdef1) && push!(deflationOp, outdef1.u)
+outdef1 = @time BK.newton(BK.re_make(prob, u0 = solp), deflationOp, optdef)
+BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(deflationOp.roots)
 ####################################################################################################

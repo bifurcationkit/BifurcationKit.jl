@@ -1,8 +1,8 @@
 using Revise
 using Plots
 # using GLMakie; Makie.inline!(true)
-using Test, ForwardDiff, LinearAlgebra
-using BifurcationKit, Test
+using ForwardDiff, LinearAlgebra
+using BifurcationKit
 const BK = BifurcationKit
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
@@ -92,18 +92,18 @@ brpo_pd = continuation(prob2, ci, PALC(), opts_po_cont;
 pt = get_normal_form(brpo_pd, 1)
 
 # codim 2 Fold
-opts_potrap_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 100, p_min = 0., p_max=1.2, n_inversion = 4, plot_every_step = 2)
+opts_potrap_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 0, max_steps = 100, p_min = 0., p_max=1.2, n_inversion = 4, plot_every_step = 2)
 @reset opts_potrap_fold.newton_options.tol = 1e-9
-fold_po_trap1 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
-        verbosity = 3, plot = true,
-        detect_codim2_bifurcation = 0,
-        start_with_eigen = false,
-        bothside = true,
-        jacobian_ma = :minaug,
-        bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-        )
+# fold_po_trap1 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_potrap_fold;
+#         verbosity = 3, plot = true,
+#         detect_codim2_bifurcation = 0,
+#         start_with_eigen = false,
+#         bothside = true,
+#         jacobian_ma = :minaug,
+#         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
+#         )
 
-plot(fold_po_trap1)
+# plot(fold_po_trap1)
 ################################################################################
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 2.; optimal_period = false)
 plot(sol)
@@ -137,7 +137,6 @@ brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,
                 argspo...,)
 plot(brpo_pd, brpo_pd_sw)
 ########
-
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams,
                                   detect_bifurcation = 3,

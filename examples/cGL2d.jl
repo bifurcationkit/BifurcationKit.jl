@@ -328,11 +328,11 @@ outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 
 lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
 opt_po_inp_kl = @set opt_po.linsolver = lsi
-outpo_f = @time newton(poTrapMFi, 
-                        orbitguess_f,
-                        opt_po_inp_kl; 
-                        normN = norminf, 
-                        )
+# outpo_f = @time newton(poTrapMFi, 
+#                         orbitguess_f,
+#                         opt_po_inp_kl; 
+#                         normN = norminf, 
+#                         )
 
 ####################################################################################################
 # Computation of Fold of limit cycle
@@ -340,18 +340,8 @@ function d2Fcglpb(f, x, dx1, dx2)
     return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2), 0.), 0.)
 end
 
-function JacT(F, x, v)
-    # ForwardDiff.gradient(x -> dot(v, F(x)), x)
-    ReverseDiff.gradient(x -> dot(v, F(x)), x)
-end
-
-function JacT2(F, x, v)
-    # ForwardDiff.gradient(x -> dot(v, F(x)), x)
-    Tracker.gradient(x -> dot(v, F(x)), x)
-end
-
 # we look at the second fold point
-indfold = 2
+indfold = 1
 foldpt = BK.foldpoint(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1));
@@ -359,10 +349,10 @@ Precilu = @time ilu(Jpo, τ = 0.005);
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log = true)
 ls(Jpo, rand(ls.N))
 
-probFold = BifurcationProblem((x, p) -> poTrap(x, p), 
+probFold = BifurcationProblem((x, p) -> BK.residual(poTrap, x, p), 
                         foldpt, getparams(br), getlens(br);
                         J = (x, p) -> poTrap(Val(:JacFullSparse), x, p),
-                        d2F = (x, p, dx1, dx2) -> d2Fcglpb(z -> poTrap(z, p), x, dx1, dx2))
+                        )
 outfold = @time BK.newton_fold(
         br_po, indfold; #index of the fold point
         prob = probFold,

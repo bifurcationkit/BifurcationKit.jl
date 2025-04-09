@@ -1,7 +1,7 @@
 using Revise, KrylovKit
 using GLMakie
 using BifurcationKit
-using LinearAlgebra, SparseArrays, LinearMaps
+using LinearAlgebra, SparseArrays#, LinearMaps
 const BK = BifurcationKit
 
 Makie.inline!(true)
@@ -153,13 +153,12 @@ end
 BifurcationKit.geteigenvector(eigsolve::SH3dEigMB, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
 eigSH3d = SH3dEigMB(0.0, lu(L1))
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
-@time eigSH3d(J_sh(sol_hexa.u, par), 10)
-@time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
+# @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 3, nev = 15, n_inversion = 4, plot_every_step  = 1)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = NewtonPar(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 3, nev = 15, n_inversion = 4, plot_every_step  = 1)
 
 br = @time continuation(
-    re_make(prob, u0 = prob.u0), PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
+    prob, PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
     plot = true, verbosity = 1,
     normC = norminf,
     event = BK.FoldDetectEvent,
@@ -169,7 +168,7 @@ BK.plot(br)
 ####################################################################################################
 get_normal_form(br, 3; nev = 25)
 
-br1 = @time continuation(br, 3, setproperties(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
+br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,
     δp = 0.005,
     verbosedeflation = true,
