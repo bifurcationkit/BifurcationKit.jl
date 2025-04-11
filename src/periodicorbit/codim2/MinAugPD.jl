@@ -156,7 +156,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     #    Jpd =  │ dxF  dpF │
     #           │ σx   σp  │
     #           └          ┘
-    # where σx := ∂_xσ and σp := ∂_pσ
+    # where σx := ∂ₓσ and σp := ∂ₚσ
     # We recall the expression of
     #            σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
@@ -384,17 +384,17 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
 
         # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-        JPD★ = has_adjoint(𝐏𝐝) ? jad(POWrap, x, newpar) : transpose(JPD)
+        JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, newpar) : transpose(JPD)
 
         # normalization
         n = one(𝒯)
 
         # we solve N[v, σ1] = [0, 1]
-        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n)
+        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n; lsbd = 𝐏𝐝.linbdsolver)
         ~cv && @debug "Linear solver for Pd did not converge."
 
         # # we solve Nᵗ[w, σ2] = [0, 1]
-        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n)
+        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n; lsbd = 𝐏𝐝.linbdsolverAdjoint)
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
 
         copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))

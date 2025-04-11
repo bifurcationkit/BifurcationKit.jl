@@ -168,11 +168,12 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     # functional. We recall that N⋅[v, σ] ≡ [0, 1]
     # The Jacobian Jpd of the functional is expressed at (x, p)
     # We solve here Jpd⋅res = rhs := [rhsu, rhsp, rhsω]
-    # The Jacobian expression of the NS problem is
+    # The jacobian expression of the NS problem is
     #           ┌             ┐
-    #  Jhopf =  │  J  dpF   0 │
+    #    Jns =  │  J  dpF   0 │
     #           │ σx   σp  σω │
     #           └             ┘
+    # where σx := ∂ₓσ and σp := ∂ₚσ
     ########## Resolution of the bordered linear system ########
     # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
     # The second equation
@@ -378,7 +379,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge. it = $it"
 
         # compute new a
-        JNS★ = has_adjoint(𝐍𝐒) ? jacobianAdjointNeimarkSacker(POWrap, x, newpar, ω) : adjoint(JNS)
+        JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
         newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolverAdjoint)
         ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 

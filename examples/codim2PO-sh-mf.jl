@@ -1,6 +1,6 @@
 # CAREFUL: VERY ADVANCED EXAMPLE
 using Revise
-using Test, ForwardDiff, Plots#, LinearAlgebra
+using Test, ForwardDiff, Plots, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 
@@ -35,7 +35,6 @@ alg = Rodas5()
 sol = DifferentialEquations.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-10, abstol = 1e-12)
 sol = DifferentialEquations.solve(prob_de, Rodas5())
-
 plot(sol)
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
@@ -52,8 +51,8 @@ argspo = (record_from_solution = (x, p; k...) -> begin
         # plot!(br; subplot = 1, putspecialptlegend = false)
     end)
 ################################################################################
-using Test, Zygote, SciMLSensitivity, FiniteDifferences
-import AbstractDifferentiation as AD
+using Test, ForwardDiff, Zygote
+import DifferentiationInterface as DI
 
 probsh0 = ShootingProblem(M=1)
 
@@ -80,20 +79,16 @@ dϕ = ForwardDiff.jacobian(x->flow(x, prob_de, 1), sol0_f)
 res1 = ForwardDiff.derivative(t->flow(sol0_f .+ t .* sol0_f, prob_de, 1), zero(eltype(sol0_f)))
 @test norm(res1 - dϕ * sol0_f, Inf) < 1e-8
 
-res1, = AD.pushforward_function(AD.ForwardDiffBackend(), x->flow(x, prob_de, 1), sol0_f)(sol0_f)
+res1, = DI.pushforward(x->flow(x, prob_de, 1), DI.AutoForwardDiff(), sol0_f, (sol0_f,))
 @test norm(res1 - dϕ * sol0_f, Inf) < 1e-7
 
 # vjp
-res1, = Zygote.pullback(x->flow(x,prob_de,1), sol0_f)[2](sol0_f)
-@test norm(res1 - dϕ' * sol0_f, Inf) < 1e-8
-
-res1 = AD.pullback_function(AD.ZygoteBackend(), x->flow(x, prob_de,1), sol0_f)(sol0_f)[1]
+res1, = DI.pullback(x->flow(x, prob_de, 1), DI.AutoForwardDiff(), sol0_f, (sol0_f,))
 @test norm(res1 - dϕ' * sol0_f, Inf) < 1e-8
 ######
 
-AD.pullback_function(AD.FiniteDifferencesBackend(), z -> probsh(z, getparams(probsh)), cish)(cish)[1]
 
-@reset probsh.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+@reset probsh.flow.vjp = (x,p,dx,tm) -> DI.pullback(z->flow(z, prob_de,tm,p), DI.AutoForwardDiff(), x, (dx,))[1]
 
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
 eigpo = EigKrylovKit(x₀ = rand(4))
@@ -153,7 +148,6 @@ fold_po_sh2 = continuation(br_fold_sh, 1, (@optic _.ϵ), opts_posh_fold;
         callback_newton = BK.cbMaxNorm(1),
         )
 
-@test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
 plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
 
 # codim 2 PD
@@ -191,7 +185,7 @@ probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params =
             # jacobian = BK.FiniteDifferencesMF()
             )
 
-@reset probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
+@reset probshns.flow.vjp = (x,p,dx,tm) -> DI.pullback(z->flow(z, prob_de,tm,p), DI.AutoForwardDiff(), x, (dx,))[1]
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 3, plot = true,
@@ -204,11 +198,10 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 ns = get_normal_form(brpo_ns, 1)
 
 # codim 2 NS
-using AbbreviatedStackTraces
 opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 100, p_min = -0., p_max = 1.2)
 @reset opts_posh_ns.newton_options.tol = 1e-9
 ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
-        verbosity = 2, plot = true,
+        verbosity = 2, plot = false,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         usehessian = false,

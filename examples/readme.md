@@ -60,6 +60,15 @@ using Pkg
 pkg"add Plots ForwardDiff OrdinaryDiffEq"
 ```
 
+## codim2PO-sh-mf.jl
+
+This is a Work In Progress to show how to detect codim 2 bifurcations of periodic orbits in fully matrix-free context.
+
+```julia
+using Pkg
+pkg"add Test Plots ComponentArrays DifferentialEquations DifferentiationInterface Zygote ForwardDiff"
+```
+
 ## COModel.jl
 
 ```julia
