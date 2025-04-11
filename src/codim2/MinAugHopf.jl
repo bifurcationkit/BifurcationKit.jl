@@ -468,9 +468,9 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
 
         # call the user-passed finalizer
-        resFinal = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
+        final_result = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
 
-        return abs(ω) >= threshBT && isbt && resFinal
+        return abs(ω) >= threshBT && isbt && final_result
     end
 
     function test_bt_gh(iter, state)

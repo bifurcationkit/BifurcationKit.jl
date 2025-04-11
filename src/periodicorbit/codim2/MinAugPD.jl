@@ -402,9 +402,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         copyto!(𝐏𝐝.b, newb); rmul!(𝐏𝐝.b, 1/normC(newb))
 
         # call the user-passed finalizer
-        resFinal = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
+        final_result = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
 
-        return resFinal
+        return final_result
     end
 
     function test_for_gpd_cp(iter, state)

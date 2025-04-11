@@ -404,9 +404,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         end
 
         # call the user-passed finalizer
-        resFinal = _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
+        final_result = _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
 
-        return ~stop_R1 && isbif && resFinal && ~pdjump
+        return ~stop_R1 && isbif && final_result && ~pdjump
     end
 
     function test_ch(iter, state)

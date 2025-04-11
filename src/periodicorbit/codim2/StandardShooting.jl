@@ -144,7 +144,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    start_with_eigen = false,
                     detect_codim2_bifurcation::Int = 0,
                     update_minaug_every_step = 1,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
