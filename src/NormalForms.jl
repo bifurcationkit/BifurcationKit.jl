@@ -1008,6 +1008,10 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
         a = nf.a
         b = nf.b
 
+        if abs(real(b)) < 1e-10
+            @error "The Lyapunov coefficient is nearly zero:\nb = $b.\nThe Hopf predictor may be unreliable."
+        end
+
         # we need to find the type, supercritical or subcritical
         dsfactor = real(a) * real(b) < 0 ? 1 : -1
         dsnew::𝒯 = abs(ds) * dsfactor
@@ -1030,7 +1034,7 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
         Ψ200 = 0
         dsfactor = 1
     end
-    A(t) = amp * exp(complex(0, t))
+    A(t) = amp * cis(t)
 
     return (orbit = t -> hp.x0 .+ 
                     2 .* real.(hp.ζ .* A(t)) .+
