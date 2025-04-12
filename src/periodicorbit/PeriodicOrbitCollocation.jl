@@ -3,18 +3,18 @@ using FastGaussQuadrature: gausslegendre
 """
     cache = MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
 
-Structure to hold the cache for the collocation method. More precisely, it starts from a partition of [0,1] based on the mesh points:
+Structure to hold the cache for the collocation method. More precisely, it starts from a partition of [0, 1] based on the mesh points:
 
     0 = τ₁ < τ₂ < ... < τₙₜₛₜ₊₁ = 1
 
-On each mesh interval [τⱼ, τⱼ₊₁] mapped to [-1,1], a Legendre polynomial of degree m is formed. 
+On each mesh interval [τⱼ, τⱼ₊₁] mapped to [-1, 1], a Legendre polynomial of degree m is formed. 
 
 
 $(TYPEDFIELDS)
 
 # Constructor
 
-    MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
+    MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
 
 - `Ntst` number of time steps
 - `m` degree of the collocation polynomials
@@ -175,8 +175,8 @@ Here are some useful methods you can apply to `pb`
 
 - `length(pb)` gives the total number of unknowns
 - `size(pb)` returns the triplet `(N, m, Ntst)`
-- `getmesh(pb)` returns the mesh `0 = τ0 < ... < τNtst+1 = 1`. This is useful because this mesh is born to vary during automatic mesh adaptation
-- `get_mesh_coll(pb)` returns the (static) mesh `0 = σ0 < ... < σm+1 = 1`
+- `getmesh(pb)` returns the mesh `0 = τ₀ < ... < τₙₜₛₜ₊₁ = 1`. This is useful because this mesh is born to vary during automatic mesh adaptation
+- `get_mesh_coll(pb)` returns the (static) mesh `0 = σ₀ < ... < σₘ₊₁ = 1`
 - `get_times(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
 - `generate_solution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
 - `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
@@ -333,7 +333,7 @@ end
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`. Used also in `generate_ci_problem`.
 """
 function generate_solution(pb::PeriodicOrbitOCollProblem{Tp, Tj, T}, orbit, period) where {Tp, Tj, T}
     n, _m, Ntst = size(pb)
@@ -1128,7 +1128,6 @@ end
 end
 ####################################################################################################
 # mesh adaptation method
-
 @views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
     n, m, Ntst = size(sol.pb)
     xc = get_time_slices(sol.pb, sol.x)

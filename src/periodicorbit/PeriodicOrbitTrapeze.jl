@@ -225,7 +225,7 @@ function potrap_scheme!(pb::AbstractPOFDProblem,
                         linear::Bool = true; 
                         applyf::Bool = true)
     # this function implements the basic implicit scheme used for the time integration
-    # because this function is called in a cyclic manner, we save in the variable tmp the value of F(u2) in order to avoid recomputing it in a subsequent call
+    # because this function is called in a cyclic manner, we save the value of F(u2) in the variable tmp in order to avoid recomputing it in a subsequent call
     # basically tmp is F(u2)
     if linear
         dest .= tmp
@@ -1113,7 +1113,7 @@ function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
 
     par = sol.prob.p
     prob_vf = re_make(bifprob, params = par)
-    probtrap = PeriodicOrbitTrapProblem(;M = pb.M, N = N, prob_vf = prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
+    probtrap = setproperties(pb; M = pb.M, N = N, prob_vf = prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
 
     M, N = size(probtrap)
     resize!(probtrap.ϕ, N * M)

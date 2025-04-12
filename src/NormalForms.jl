@@ -471,13 +471,15 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         id_bif::Int ;
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
-                        ζs = nothing,
-                        ζs_ad = nothing,
                         lens = getlens(br),
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
+
                         detailed = true,
                         autodiff = false,
+                        ζs = nothing,
+                        ζs_ad = nothing,
+
                         bls = MatrixBLS(),
                         bls_adjoint = bls,
                         bls_block = bls,

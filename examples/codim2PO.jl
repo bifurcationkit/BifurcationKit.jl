@@ -24,8 +24,6 @@ z0 = [0.1,0.1,1,0]
 prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
-@reset opts_br.newton_options.verbose = true
-
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
@@ -125,7 +123,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     verbosity = 3, plot = true,
     argspo...
     )
-pd = get_normal_form(brpo_pd, 1, prm = false)
+pd = get_normal_form(brpo_pd, 1)
 #########
 # pd branch switching
 brpo_pd_sw = continuation(deepcopy(brpo_pd), 1,
@@ -219,7 +217,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     # bothside = true,
     )
 
-get_normal_form(brpo_ns, 1; prm = false)
+get_normal_form(brpo_ns, 1)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -227,10 +225,10 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     argspo...,
     bothside = true,
     )
-get_normal_form(brpo_pd, 2, prm = true)
+get_normal_form(brpo_pd, 2)
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 3, max_steps = 40, p_min = 1.e-2, plot_every_step = 1, dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-10
 pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,

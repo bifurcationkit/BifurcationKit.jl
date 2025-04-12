@@ -154,15 +154,15 @@ function modify_po_record(probPO, kwargs, par, lens)
         end
     end
 end
-
+####################################################################################################
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, kwargs)
     _plotsol = get(kwargs, :plot_solution, nothing)
-    _plotsol2 = isnothing(_plotsol) ? (x, p; k...) -> nothing : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
+    _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(x, (prob = probPO, p = p); k...)
 end
 
 function modify_po_plot(::BK_Makie, probPO, kwargs)
     _plotsol = get(kwargs, :plot_solution, nothing)
-    _plotsol2 = isnothing(_plotsol) ? (ax, x, p; k...) -> nothing : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
+    _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, x, (prob = probPO, p = p); k...)
 end
 
 modify_po_plot(probPO, kwargs) = modify_po_plot(get_plot_backend(), probPO, kwargs)

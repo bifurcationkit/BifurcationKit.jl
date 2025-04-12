@@ -29,7 +29,7 @@ function save_to_file(iter::AbstractContinuationIterable, sol, p, i::Int64, br::
     end
 end
 
-# final save of branch, in case bothsided = true is used
+# final save of branch, in case bothside = true is used
 function save_to_file(iter::AbstractContinuationIterable, br::ContResult)
     if iter.contparams.save_to_file == false; return nothing; end
     filename = iter.filename

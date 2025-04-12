@@ -524,17 +524,20 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
         (u, p; kw...)  -> begin
-            (; zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2],
+                 (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
+                            ωₕ = getp(u, 𝐇)[2],
                             l1 = 𝐇.l1,
                             BT = 𝐇.BT,
                             GH = 𝐇.GH,
-                            namedprintsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...)
-end :
+                            _namedrecordfromsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...)
+            end :
         (u, p; kw...) -> begin
-           (; namedprintsol(_printsol(getvec(u, 𝐇), p; kw...))..., zip(lenses, (getp(u, 𝐇)[1], p))..., ωₕ = getp(u, 𝐇)[2],
+            (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
+                        ωₕ = getp(u, 𝐇)[2],
                         l1 = 𝐇.l1,
                         BT = 𝐇.BT,
-                        GH = 𝐇.GH)
+                        GH = 𝐇.GH,
+                        _namedrecordfromsol(_printsol(getvec(u, 𝐇), p; kw...))...)
         end
 
     prob_h = re_make(prob_h, record_from_solution = _printsol2)

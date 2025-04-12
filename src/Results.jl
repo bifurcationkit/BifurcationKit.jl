@@ -3,11 +3,18 @@ abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
 
 ####################################################################################################
 # functions used in record_from_solution
-namedprintsol(x) = (x = x,)
-namedprintsol(x::Real) = (x = x,)
-namedprintsol(x::NamedTuple) = x
-namedprintsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x)...)
-mergefromuser(x, a::NamedTuple) = merge(namedprintsol(x), a)
+"""
+[Internal] Transform the result of `record_from_solution` into a named tuple.
+"""
+_namedrecordfromsol(x) = (x = x,)
+_namedrecordfromsol(x::Real) = (x = x,)
+_namedrecordfromsol(x::NamedTuple) = x
+_namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x)...)
+
+"""
+[Internal] Merge the result of `record_from_solution` with a named tuple.
+"""
+_mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
 ####################################################################################################
 # Structure to hold continuation result
 """
@@ -265,7 +272,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
 end
 
 # this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
-get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} = br.eig[bp.idx]
+get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype} = br.eig[bp.idx]
 
 """
 $(SIGNATURES)
@@ -284,9 +291,9 @@ function _contresult(iter,
                      x0,
                      contparams::ContinuationPar{T, S, E}) where {T, S, E}
     # example of bifurcation point
-    bif0 = SpecialPoint(x0, state.τ, T, namedprintsol(printsol))
-    # save full solution?
-    sol = contparams.save_sol_every_step > 0 ? [(x = x0, p = getparam(iter.prob), step = 0)] : [(x = empty(x0), p = getparam(iter.prob), step = 0)]
+    bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
+    # save full solution? At least, we keep the first one
+    sol = [(x = x0, p = getparam(iter.prob), step = 0)]
     n_unstable = n_imag = 0
     stability = true
     eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)

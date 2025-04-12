@@ -26,7 +26,6 @@ Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
 _rhs = rand(size(Jco, 1))
 sol_bs = Jco \ _rhs;
 
-using BifurcationKit
 Jco_tmp = zero(Jco)
 Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
 cop_cache = BK.COPCACHE(prob_col)

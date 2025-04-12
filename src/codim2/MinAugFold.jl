@@ -501,8 +501,20 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...) -> (; zip(lenses, (getp(u), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH, namedprintsol(BifurcationKit.record_from_solution(prob)(getvec(u), p; kw...))...) :
-        (u, p; kw...) -> (; namedprintsol(_printsol(getvec(u), p; kw...))..., zip(lenses, (getp(u, 𝐅), p))..., BT = 𝐅.BT, CP = 𝐅.CP, ZH = 𝐅.ZH,)
+        (u, p; kw...) -> begin 
+                (; zip(lenses, (getp(u, 𝐅), p))..., 
+                        BT = 𝐅.BT,
+                        CP = 𝐅.CP,
+                        ZH = 𝐅.ZH,
+                        _namedrecordfromsol(BifurcationKit.record_from_solution(prob)(getvec(u), p; kw...))...) 
+            end :
+        (u, p; kw...) -> begin 
+                (; zip(lenses, (getp(u, 𝐅), p))..., 
+                    BT = 𝐅.BT, 
+                    CP = 𝐅.CP, 
+                    ZH = 𝐅.ZH,
+                    _namedrecordfromsol(_printsol(getvec(u), p; kw...))...) 
+            end
 
     prob_f = re_make(prob_f, record_from_solution = _printsol2)
 

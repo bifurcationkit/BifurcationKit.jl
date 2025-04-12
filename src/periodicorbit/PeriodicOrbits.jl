@@ -52,7 +52,7 @@ end
 """
 $(SIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`.
 """
 function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
     M = get_mesh_size(pb)
@@ -85,7 +85,7 @@ POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
 save_solution(::WrapPOSh, x, p) = x
 
 """
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case of mesh adaptation or when the phase condition is adapted.
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case of mesh adaptation or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
 """
 struct POSolutionAndState{T1, T2, T3, T4}
     mesh::T1
@@ -97,7 +97,7 @@ end
 @inline _getsolution(pb::POSolutionAndState) = pb.sol
 ####################################################################################################
 """
-This struct allows to have a unified interface with Shooting methods in term of plotting.
+This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
 """
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
     t::Ts
@@ -496,7 +496,7 @@ end
 """
 $(SIGNATURES)
 
-Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional used to compute the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
+Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)

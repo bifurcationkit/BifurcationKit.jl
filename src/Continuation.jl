@@ -231,14 +231,15 @@ function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, 
     x = getx(state)
     p = getp(state)
     pt = record_from_solution(it)(x, p; iter = it, state)
-    stable = Teigvals!=Nothing ? is_stable(state) : nothing
+    stable = Teigvals != Nothing ? is_stable(state) : nothing
+    # we merge the output from record_from_solution with a named tuple with iteration indicators
     return mergefromuser(pt, 
                         (param = p,
                         itnewton = state.itnewton,
                         itlinear = state.itlinear,
                         ds = state.ds,
-                        n_unstable = state.n_unstable[1],
-                        n_imag = state.n_imag[1],
+                        n_unstable = state.n_unstable[begin],
+                        n_imag = state.n_imag[begin],
                         stable = stable,
                         step = state.step))
 end
@@ -362,7 +363,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     @assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
     if verbose
         print("\n──▶ convergence of the initial guess = ")
-        printstyled("OK\n\n", color=:green)
+        printstyled("OK\n\n", color = :green)
         println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
     end
     return iterate_from_two_points(it, sol₀.u, p₀, 
@@ -386,17 +387,18 @@ function iterate_from_two_points(it::ContIterable,
 
     # compute event value and store it into state
     cbval = is_event_active(it) ? initialize(it.event, T) : nothing
-    state = ContState(z_pred = BorderedArray(_copy(u₀), p₀),
-                        τ = BorderedArray(0*u₁, zero(p₁)),
-                        z = z,
+    state = ContState(;z_pred = BorderedArray(_copy(u₀), p₀),
+                        τ = BorderedArray(0 * u₁, zero(p₁)),
+                        z,
                         z_old = BorderedArray(_copy(u₀), p₀),
                         converged = true,
                         ds = it.contparams.ds,
-                        eigvals = eigvals,
-                        eigvecs = eigvecs,
-                        eventValue = (cbval, cbval))
+                        eigvals,
+                        eigvecs,
+                        eventValue = (cbval, cbval)
+                    )
 
-    # compute the state for the continuation algorithm
+    # initialize the state for the continuation algorithm
     # at this stage, the tangent is set up
     initialize!(state, it)
 

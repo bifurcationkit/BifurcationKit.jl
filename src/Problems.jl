@@ -194,7 +194,7 @@ for (op, at) in (
                 plotSolution::Tplot
                 "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Signature `save_solution(x, p)`"
+                "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (not as a view to `x`). Signature: `save_solution(x, p)`"
                 save_solution::Tgets
             end
 
@@ -429,7 +429,7 @@ function re_make(prob::AbstractBifurcationProblem;
                 Jᵗ = missing,
                 d2F = missing,
                 d3F = missing)
-    prob2 = setproperties(prob; u0 = u0, params = params, lens = lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
+    prob2 = setproperties(prob; u0, params, lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
     if ~ismissing(J)
         @reset prob2.VF.J = J
     end
@@ -439,11 +439,9 @@ function re_make(prob::AbstractBifurcationProblem;
     if ~ismissing(d2F)
         @reset prob2.VF.d2F = d2F
     end
-
     if ~ismissing(d3F)
         @reset prob2.VF.d3F = d3F
     end
-
     return prob2
 end
 ####################################################################################################

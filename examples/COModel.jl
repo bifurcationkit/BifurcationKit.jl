@@ -4,7 +4,7 @@ using BifurcationKit
 const BK = BifurcationKit
 ####################################################################################################
 function COm!(du, u, p, t = 0)
-    (;q1,q2,q3,q4,q5,q6,k) = p
+    q1,q2,q3,q4,q5,q6,k = p
     x, y, s = u
     z = 1-x-y-s
     du[1] = 2q1 * z^2 - 2q5 * x^2 - q3 * x * y
@@ -23,7 +23,8 @@ opts_br = ContinuationPar(dsmax = 0.015, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max
 br = @time continuation(prob, PALC(), opts_br;
     plot = true, verbosity = 0,
     normC = norminf,
-    bothside = true)
+    # bothside = true
+    )
 
 plot(br)
 ####################################################################################################

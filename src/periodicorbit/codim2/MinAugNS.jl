@@ -467,9 +467,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                 R₂ = 𝐍𝐒.R2,
                 R₃ = 𝐍𝐒.R3,
                 R₄ = 𝐍𝐒.R4, 
-                namedprintsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
+                _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
         (u, p; kw...) -> (; 
-            namedprintsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
+            _namedrecordfromsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
             zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
             ωₙₛ = getp(u, 𝐍𝐒)[2], 
             CH = real(𝐍𝐒.l1), )

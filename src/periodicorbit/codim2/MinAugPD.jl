@@ -462,12 +462,12 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _recordsol = get(kwargs, :record_from_solution, nothing)
     _recordsol2 = isnothing(_recordsol) ?
         (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))...,
-                    period = getperiod(prob, getvec(u), nothing), # do not work for PoincareShootingProblem
+                    period = getperiod(prob, getvec(u, 𝐏𝐝), nothing), # do not work for PoincareShootingProblem
                     CP  = 𝐏𝐝.CP,
                     GPD = 𝐏𝐝.GPD,
                     R₂  = 𝐏𝐝.R2,
-                    namedprintsol(record_from_solution(prob)(getvec(u), p; kw...))...) :
-        (u, p; kw...) -> (; namedprintsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., 
+                    _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐏𝐝), p; kw...))...) :
+        (u, p; kw...) -> (; _namedrecordfromsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., 
                             CP  = 𝐏𝐝.CP, 
                             GPD = 𝐏𝐝.GPD,
                             R₂  = 𝐏𝐝.R2,
