@@ -77,7 +77,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       alg = getalg(br),
                       δp = nothing, 
                       ampfactor::Real = 1,
-                      use_normal_form = false,
+                      use_normal_form = true,
                       nev = options_cont.nev,
                       usedeflation::Bool = false,
                       verbosedeflation::Bool = false,
@@ -89,7 +89,9 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
                       kwargs...) where {Tprob}
-    # The usual branch switching algorithm is described in the work of Keller. Numerical solution of bifurcation and nonlinear eigenvalue problems. We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
+    # The usual branch switching algorithm is described in the work of Keller. 
+    # Numerical solution of bifurcation and nonlinear eigenvalue problems.
+    # We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
     ~(br.specialpoint[ind_bif].type in (:bp, :nd)) && error("You cannot banch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n ")
 

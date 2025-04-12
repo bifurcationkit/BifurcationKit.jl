@@ -524,9 +524,9 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                     ampfactor = 1,
                     usedeflation = false,
                     linear_algo = nothing,
-                    detailed = false,
-                    prm = true,
-                    use_normal_form = false,
+                    detailed = true,
+                    prm = getprob(br) isa WrapPOColl ? false : true,
+                    use_normal_form = true,
                     kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
@@ -559,16 +559,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     end
 
     # a priori, the following do not overwrite the options in br
-    # hence the results / parameters in br are kept intact
-    if pb isa AbstractShootingProblem
-        if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
-            @reset _contParams.newton_options.linsolver.N = length(orbitguess)
-        elseif _contParams.newton_options.linsolver isa FloquetWrapperLS
-            if _contParams.newton_options.linsolver.solver isa GMRESIterativeSolvers
-                @reset _contParams.newton_options.linsolver.solver.N = length(orbitguess)
-            end
-        end
-    end
+    # hence the results / parameters in br are kept intact)
+    _contParams = _update_cont_params(_contParams, pbnew, orbitguess)
 
     if usedeflation
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")

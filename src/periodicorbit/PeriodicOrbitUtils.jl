@@ -36,6 +36,33 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M::Int, a
     return p_hopf, 2π/ωH, orbitguess, hopfpoint, vec_hopf
 end
 ####################################################################################################
+"""
+($SIGNATURES)
+
+Update the continuation parameters according to a problem. This can be useful for branching from PD points where the linear solvers have to be updated, e.g. the number of unknowns is roughly doubled.
+"""
+function _update_cont_params(contParams::ContinuationPar, pb::AbstractShootingProblem, orbitguess)
+    if contParams.newton_options.linsolver isa GMRESIterativeSolvers
+        @reset contParams.newton_options.linsolver.N = length(orbitguess)
+    elseif contParams.newton_options.linsolver isa FloquetWrapperLS
+        if contParams.newton_options.linsolver.solver isa GMRESIterativeSolvers
+            @reset contParams.newton_options.linsolver.solver.N = length(orbitguess)
+        end
+    end
+    return contParams
+end
+
+function _update_cont_params(contParams::ContinuationPar, coll::PeriodicOrbitOCollProblem, orbitguess)
+    if contParams.newton_options.linsolver isa BifurcationKit.FloquetWrapperLS{<:COPLS}
+        @reset contParams.newton_options.linsolver.solver = COPLS(COPCACHE(coll, Val(0)))
+    end
+    return contParams
+end
+
+function _update_cont_params(contParams::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
+    return contParams
+end
+####################################################################################################
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
 end

@@ -240,7 +240,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
                                 ind_bif::Int;
                                 verbose = false,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
-                                prm = true,
+                                prm = false,
                                 detailed = true,
                                 kwargs_nf...)
     # first, get the bifurcation point parameters
@@ -573,7 +573,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                 ind_bif::Int;
                                 verbose = false,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
-                                prm = true,
+                                prm = false,
                                 detailed = true,
                                 kwargs_nf...)
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
