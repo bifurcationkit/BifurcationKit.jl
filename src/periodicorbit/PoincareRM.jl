@@ -63,12 +63,12 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
 
     M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
-    T⁰ = getperiod(sh, Π.po) # period of the reference periodic orbit
+    T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
     tₘ = extract_period(x)    # estimate of the last bit for the return time
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
     poc = get_time_slices(sh, Π.po)
-    # unknowns are po₁, po₂,...,poₘ,period
+    # unknowns are po₁, po₂, ..., poₘ, period
     @assert size(poc) == (N, M+1)
 
     xc = get_time_slices(Π, x)

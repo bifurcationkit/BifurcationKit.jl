@@ -966,9 +966,6 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     ev ./= sqrt(dot(ev, ev))
     evp ./= dot(evp, ev)
 
-    # @debug "" xₛ ev evp dΠ _nrm pars F.values[ind] Fp.values[indp]
-    # @debug "" F.values ns0.x0
-
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
@@ -1094,7 +1091,7 @@ end
 """
 $(SIGNATURES)
 
-Compute the predictor for the period bifurcation of periodic orbit.
+Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
 function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
                     δp,
@@ -1103,6 +1100,7 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
     if ~isnothing(nf.nf.nf) && ~override
         pred = predictor(nf.nf, δp)
         ampfactor = pred.x1
+        ampfactor = pred.x1 * ampfactor
         δp = pred.δp
     end
 
