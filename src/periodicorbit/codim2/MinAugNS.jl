@@ -459,15 +459,15 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)
     _recordsol2 = isnothing(_recordsol) ?
-        (u, p; kw...) -> (; zip(lenses, 
-                (getp(u, 𝐍𝐒)[1], p))...,
+        (u, p; kw...) -> (; _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...,
+                zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
                 ωₙₛ = getp(u, 𝐍𝐒)[2],
                 CH = real(𝐍𝐒.l1),
                 R₁ = 𝐍𝐒.R1,
                 R₂ = 𝐍𝐒.R2,
                 R₃ = 𝐍𝐒.R3,
                 R₄ = 𝐍𝐒.R4, 
-                _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...) :
+                ) :
         (u, p; kw...) -> (; 
             _namedrecordfromsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
             zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
@@ -481,7 +481,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # change the plotter
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
-    _plotsol = modify_po_plot(prob, _kwargs)
+    _plotsol = modify_po_plot(prob_ns, _kwargs)
     prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
     # define event for detecting bifurcations. Coupled it with user passed events

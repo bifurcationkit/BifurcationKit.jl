@@ -360,17 +360,17 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `br` branch result from a call to `continuation`
 - `ind_hopf` index of the bifurcation point in `br`
 - `contParams` parameters for the call to `continuation`
-- `probPO` problem used to specify the way the periodic orbit is computed. It can be [`PeriodicOrbitTrapProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
+- `probPO` problem used to specify the way toc compute the periodic orbit. It can be [`PeriodicOrbitTrapProblem`](@ref), [`PeriodicOrbitOCollProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
 
 # Optional arguments
 
 - `alg = br.alg` continuation algorithm
-- `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
-- `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
+- `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
+- `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `use_normal_form = true` compute the normal form to get the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the eigenvector. This can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `autodiff_nf = true` use `autodiff` in `get_normal_form`?
+- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
@@ -395,9 +395,8 @@ function continuation(br::AbstractBranchResult,
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-    cb = get(kwargs, :callback_newton, cb_default)
-
     hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose, detailed = use_normal_form, autodiff = autodiff_nf)
+    par_hopf = hopfpt.params
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
@@ -405,7 +404,7 @@ function continuation(br::AbstractBranchResult,
     pred = predictor(hopfpt, ds; verbose, ampfactor = 𝒯(ampfactor))
 
     # we compute a phase so that the constraint equation
-    # < u(0) − u_hopf, ψ > is satisfied, i.e. equal to zero.
+    # < u(0) − u_hopf, ψ > = 0 is satisfied.
     ζr = real.(hopfpt.ζ)
     ζi = imag.(hopfpt.ζ)
     # this phase is for POTrap problem constraint to be satisfied
@@ -425,13 +424,12 @@ function continuation(br::AbstractBranchResult,
         @debug "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
-    M = get_mesh_size(pbPO)
-    orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]]
-
     # extract the vector field and use it possibly to affect the PO functional
-    prob_vf_rm = re_make(prob_vf, params = setparam(br, pred.p))
+    prob_vf_rm = re_make(prob_vf, params = par_hopf, u0 = hopfpt.x0)
 
-    # build the variable to hold the functional for computing PO based on finite differences
+    # build the initial guess
+    M = get_mesh_size(pbPO)
+    orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]] # GIVES RUNTIME DISPATCH
     probPO, orbitguess = re_make(pbPO, prob_vf_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
@@ -455,7 +453,7 @@ function continuation(br::AbstractBranchResult,
         else
             Tfactor = 0.001
         end
-
+        cb = get(kwargs, :callback_newton, cb_default)
         # TODO should only update guess here, cf Poincaré
         probPO0, orbitzeroamp = re_make(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, 𝒯(Tfactor * abs(2pi / pred.ω)))
         sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
@@ -501,7 +499,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the branch point
-- `_contParams` parameters to be used by a regular [`continuation`](@ref)
+- `_contParams` continuation parameters, see [`continuation`](@ref)
 
 # Optional arguments
 - `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
@@ -545,11 +543,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
-            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type, " [NF based on = $(prm ? "Poincaré" : "Iooss")]",
+            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
+            "\n├─── normal form    = ", use_normal_form ? "based on $(prm ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, ", p - p0 = ", newp - bifpt.param,
-            "\n└─── amplitude p.o. = ", pred.ampfactor,
+            "\n├─── amplitude p.o. = ", pred.ampfactor,
             "\n")
 
     if pred.ampfactor > 0.1

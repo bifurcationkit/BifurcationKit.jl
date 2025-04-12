@@ -86,7 +86,6 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 
     verbose && print_nonlinear_step(step, res)
 
-
     # invoke callback before algo really starts
     compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 

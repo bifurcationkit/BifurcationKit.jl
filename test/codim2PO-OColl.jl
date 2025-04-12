@@ -59,9 +59,9 @@ brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont
     argspo...
     )
 
-pd = get_normal_form(brpo_pd, 1, prm = true)
+get_normal_form(brpo_pd, 1, prm = true)
 # test PD normal form computation using Iooss method
-pd = get_normal_form(brpo_pd, 1, prm = false)
+get_normal_form(brpo_pd, 1, prm = false)
 ################################################################################
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)

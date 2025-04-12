@@ -355,7 +355,7 @@ for _F in (Fbt!, Fbt)
     @test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
     # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
-    btpt = get_normal_form(sn_codim2, 1; nev = 2)
+    btpt = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
     show(btpt)
     BK.type(btpt)
     @test norm(btpt.nf.b * sign(sum(btpt.ζ[1])) - par.b, Inf) < 1e-5

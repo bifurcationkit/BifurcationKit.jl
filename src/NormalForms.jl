@@ -52,7 +52,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     Teigvec = _getvectortype(br),
                     tol_fold = 1e-3,
                     scaleζ = norm,
-                    autodiff = false)
+                    autodiff = true
+                    )
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     @assert bifpt.type in (:bp, :fold) "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
@@ -476,7 +477,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         scaleζ = norm,
 
                         detailed = true,
-                        autodiff = false,
+                        autodiff = true,
+
                         ζs = nothing,
                         ζs_ad = nothing,
 
@@ -506,7 +508,23 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
         return get_normal_form1d(prob, br, id_bif ; autodiff, kwargs_nf...)
     end
+    return get_normal_formNd(prob, br, id_bif ; autodiff, kwargs_nf..., ζs, ζs_ad)
+end
 
+function get_normal_formNd(prob::AbstractBifurcationProblem,
+                            br::ContResult,
+                            id_bif::Int;
+                            ζs = nothing,
+                            ζs_ad = nothing,
+                            nev = length(eigenvalsfrombif(br, ind_bif)),
+                            verbose = false,
+                            lens = getlens(br),
+                            Teigvec = _getvectortype(br),
+                            tol_fold = 1e-3,
+                            scaleζ = norm,
+                            autodiff = false
+                            )
+    bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
 

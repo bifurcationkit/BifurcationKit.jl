@@ -20,9 +20,9 @@ BK.get_lens_symbol(nothing)
 BK.DotTheta(dot)
 BK.DotTheta()
 # tests for the predictors
-BK.mergefromuser(1., (a = 1,))
-BK.mergefromuser(rand(2), (a = 1,))
-BK.mergefromuser((1, 2), (a = 1,))
+BK._mergewithrecordfromuser(1., (a = 1,))
+BK._mergewithrecordfromuser(rand(2), (a = 1,))
+BK._mergewithrecordfromuser((1, 2), (a = 1,))
 
 BK._reverse!(rand(2))
 BK._reverse!(nothing)

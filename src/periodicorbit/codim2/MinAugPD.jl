@@ -322,29 +322,28 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _plotsol = modify_po_plot(prob, _kwargs)
 
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
 
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferences
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p...)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferencesMF
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :MinAugMatrixBased
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, MinAugMatrixBased(), pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, MinAugMatrixBased(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, _plotsol, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 
@@ -476,7 +475,10 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver), prob_pd)
 
-    prob_pd = re_make(prob_pd, record_from_solution = _recordsol2)
+    # change the plotter
+    _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
+    _plotsol = modify_po_plot(prob_pd, _kwargs)
+    prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
     event = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
 
