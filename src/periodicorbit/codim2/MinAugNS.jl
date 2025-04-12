@@ -206,6 +206,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         σt = -dot(w, dJvdt) 
 
         _Jpo = jacobian(POWrap, x, par0)
+
         x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
