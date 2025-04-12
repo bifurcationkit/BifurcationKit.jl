@@ -1,4 +1,5 @@
-# using Revise, Plots
+# using Revise
+using Plots
 using Test
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
@@ -9,6 +10,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p
 
 prob = BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
 br = continuation(prob, PALC(), opts_br; normC = norminf)
+plot(br)
 
 @test br.specialpoint[1].interval[1] ≈ -2.136344567951428e-5
 @test br.specialpoint[1].interval[2] ≈ 0.0005310637271224761
@@ -57,7 +59,7 @@ BK.eigenvals(br2, 1, true)
 BK._getfirstusertype(br2)
 @test length(br2) == 12
 get_normal_form(br2, 1)
-# plot(br,br2)
+plot(br,br2)
 
 br3 = continuation(br, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
 @test isnothing(BK.multicontinuation(br, 1))
@@ -69,7 +71,7 @@ bdiag = bifurcationdiagram(prob, PALC(), 2,
     ContinuationPar(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
     normC = norminf)
 
-# plot(bdiag)
+plot(bdiag)
 
 # same from the non-trivial branch
 prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
@@ -186,7 +188,7 @@ prob = BK.BifurcationProblem(FbpSecBif, [0.0], -0.2,  (@optic _))
 br_snd1 = BK.continuation(prob, PALC(),
     ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation=3); normC = norminf)
 
-# plot(br_snd1)
+plot(br_snd1)
 
 br_snd2 = BK.continuation(
     br_snd1, 1,
@@ -195,7 +197,7 @@ br_snd2 = BK.continuation(
     #     (Base.display(contResult.eig[end].eigenvals) ;true)
     )
 
-# plot(br_snd1,br_snd2, putbifptlegend=false)
+plot(br_snd1, br_snd2, putbifptlegend=false)
 
 bdiag = bifurcationdiagram(prob, PALC(), 2,
     ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);

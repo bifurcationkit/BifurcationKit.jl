@@ -1,5 +1,5 @@
 #using Revise
-# using Plots
+using Plots
 using Test
 using ForwardDiff
 using BifurcationKit, LinearAlgebra, SparseArrays
@@ -389,3 +389,5 @@ brdc = continuation(prob2,
     ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 15), plot_every_step = 40, detect_bifurcation = 3, p_min = -0.8);
     plot=false, verbosity = 0,
     callback_newton = BK.cbMaxNorm(1e6))
+
+plot(brdc)

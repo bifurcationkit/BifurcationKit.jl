@@ -30,6 +30,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     end
 
     @testset "Normal forms" begin
+        # we test Plots.jl here
         include("testNF.jl")
         include("testNF_maps.jl")
     end
