@@ -99,6 +99,7 @@ end
 
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
+getalg(br::AbstractBranchResult) = br.alg
 """
 Return the parameters of the bifurcation problem of the branch.
 """

@@ -383,7 +383,7 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       pbPO::AbstractPeriodicOrbitProblem ;
                       prob_vf = br.prob,
-                      alg = br.alg,
+                      alg = getalg(br),
                       δp = nothing,
                       ampfactor = 1,
                       usedeflation = false,
@@ -519,14 +519,14 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                     ind_bif::Int,
                     _contParams::ContinuationPar;
-                    alg = br.alg,
+                    alg = getalg(br),
                     δp = _contParams.ds, 
                     ampfactor = 1,
                     usedeflation = false,
                     linear_algo = nothing,
                     detailed = false,
                     prm = true,
-                    override = false,
+                    use_normal_form = false,
                     kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
@@ -540,7 +540,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     pb = deepcopy(br.prob.prob)
 
     nf = get_normal_form(br, ind_bif; detailed, prm)
-    pred = predictor(nf, δp, ampfactor; override)
+    pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     pbnew = pred.prob # modified problem
