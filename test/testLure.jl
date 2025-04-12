@@ -174,7 +174,6 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
 
 # plot(br_po, br_po_pd)
 #######################################
-@info "testLure Poincare"
 opts_po_cont_ps = @set opts_po_cont.newton_options.tol = 1e-9
 @set opts_po_cont_ps.dsmax = 0.0025
 br_po = continuation(br, 2, opts_po_cont_ps,

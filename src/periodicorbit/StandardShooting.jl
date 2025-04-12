@@ -274,31 +274,6 @@ function residual!(pb::ShootingProblem, out, x, p)
 end
 residual(pb::ShootingProblem, x, p) = pb(x, p)
 ####################################################################################################
-
-function _get_extremum(prob::ShootingProblem, x::AbstractVector, p; ratio = 1, op = (max, maximum))
-    # this function extracts the amplitude of the cycle
-    T = getperiod(prob, x)
-    M = get_mesh_size(prob)
-    N = div(length(x) - 1, M)
-    xv = @view x[1:end-1]
-    xc = reshape(xv, N, M)
-    Th = eltype(x)
-    n = div(N, ratio)
-
-    # !!!! we could use @views but then Sundials will complain !!!
-    if ~isparallel(prob)
-        sol = evolve(prob.flow, Val(:Full), xc[:, 1], p, T)
-        mx = @views op[2](sol[1:n, :], dims = 1)
-    else # threaded version
-        sol = evolve(prob.flow, Val(:Full), xc, p, prob.ds .* T)
-        mx = op[2](sol[1][1:n, :] , dims = 2)
-        for ii in 2:M
-            mx = op[1].(mx, op[2](sol[ii][1:n, :], dims = 2))
-        end
-    end
-    return mx
-end
-
 """
 $(SIGNATURES)
 

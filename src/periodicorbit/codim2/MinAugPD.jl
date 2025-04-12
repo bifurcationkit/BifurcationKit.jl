@@ -474,7 +474,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                             )
 
     # eigen solver
-    eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver))
+    eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver), prob_pd)
 
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2)
 

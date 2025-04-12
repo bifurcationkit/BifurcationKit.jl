@@ -534,8 +534,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     @assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
     @assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
 
-    _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
-
     # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
@@ -583,6 +581,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     pbnew = set_params_po(pbnew, setparam(br, newp))
 
     residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
+
+    _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten just below!

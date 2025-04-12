@@ -11,6 +11,7 @@ fl = MyFlow()
 x0 = 0
 p0 = 0
 BK.jvp(fl, x0,p0,0,0)
+BK.vjp(fl, x0,p0,0,0)
 BK.vf(fl,x0, p0)
 BK.evolve(fl, x0, p0, 0)
 BK.evolve(fl, Val(:Full), x0, p0, 0)

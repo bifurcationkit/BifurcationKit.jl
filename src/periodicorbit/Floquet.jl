@@ -458,10 +458,10 @@ struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     FloquetColl(eigls::FloquetColl) = eigls
 end
 
-@views function (eig::FloquetColl)(JacColl, nev; kwargs...)
-    pbcoll = JacColl.pb
+function (eig::FloquetColl)(JacColl::FloquetWrapper, nev; kwargs...)
+    coll = JacColl.pb
     J = _get_matrix(JacColl)
-    n, m, Ntst = size(pbcoll)
+    n, m, Ntst = size(coll)
     _eig_floquet_col(J, n, m, Ntst, nev)
 end
 

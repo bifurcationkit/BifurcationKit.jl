@@ -70,6 +70,10 @@ out2 = a₀ * dx + a₁ * J0 * dx
 @test out1 ≈ out2
 @test a₀ * I + a₁ * J0  ≈ BK._axpy(J0, a₀, a₁)
 BK._axpy_op!(_o, J0, dx, a₀, a₁)
+BK._axpy_op!(_o, J0, dx, 0, 1)
+BK._axpy_op!(_o, J0, dx, 0, a₁)
+BK._axpy_op!(_o, J0, dx, 1, 1)
+BK._axpy_op!(_o, J0, dx, 1, a₁)
 ####################################################################################################
 # test of MatrixFreeBLSmap
 map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)

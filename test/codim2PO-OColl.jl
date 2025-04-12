@@ -22,7 +22,6 @@ z0 = [0.1,0.1,1,0]
 prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
-@reset opts_br.newton_options.verbose = false
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
@@ -39,7 +38,7 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), prob, sol, 2.)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.)
 
 solpo = newton(probcoll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -48,19 +47,19 @@ _sol = BK.get_periodic_orbit(probcoll, solpo.u, 1)
 
 opts_po_cont = setproperties(opts_br, max_steps = 40, save_eigenvectors = true, tol_stability = 1e-8)
 @reset opts_po_cont.newton_options.verbose = false
-brpo_fold = continuation(probcoll, ci, PALC(), opts_po_cont;
+brpo_fold = continuation(probcoll, deepcopy(ci), PALC(), opts_po_cont;
     verbosity = 0, plot = false,
     argspo...
     )
 # pt = get_normal_form(brpo_fold, 1)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
-brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
+brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 0, plot = false,
     argspo...
     )
 
-pd = get_normal_form(brpo_pd, 1)
+pd = get_normal_form(brpo_pd, 1, prm = true)
 # test PD normal form computation using Iooss method
 pd = get_normal_form(brpo_pd, 1, prm = false)
 ################################################################################
@@ -79,93 +78,65 @@ fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_p
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 3, p_min = -1., dsmax = 1e-2, ds = 1e-3)
-@reset opts_pocoll_pd.newton_options.tol = 1e-9
+@reset opts_pocoll_pd.newton_options.tol = 1e-12
 
-for jma in (:minaug, :MinAugMatrixBased, )
-    comp_ev = jma == :minaug ? 3 : 0
-    pd_po_coll = @time continuation(deepcopy(brpo_pd), 1, (@optic _.b0), ContinuationPar(opts_pocoll_pd; detect_bifurcation = comp_ev);
-            verbosity = 0, plot = false,
-            detect_codim2_bifurcation = jma == :minaug ? 1 : 0,
-            start_with_eigen = false,
-            usehessian = false,
-            jacobian_ma = jma,
-            normC = norminf,
-            callback_newton = BK.cbMaxNorm(10),
-            bothside = true,
-            )
-    @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
-end
+pd_po_colls = [ continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
+                    ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
+                    # verbosity = 3, plot = true,
+                    detect_codim2_bifurcation = jma == :minaug ? 1 : 0,
+                    start_with_eigen = false,
+                    usehessian = false,
+                    jacobian_ma = jma,
+                    normC = norminf,
+                    callback_newton = BK.cbMaxNorm(10),
+                    bothside = true,
+                    ) for jma in (:minaug, :MinAugMatrixBased, )]
+@test all(x->x.kind isa BK.PDPeriodicOrbitCont, pd_po_colls)
 ################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
     argspo...,
     )
 
-# compute NS normal form using Poincare return map     
+# compute NS normal form using Poincare return map
 get_normal_form(brpo_ns, 1; prm = true)
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = false)
 
-prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
-brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
-    verbosity = 0, plot = false,
-    argspo...,
-    bothside = true,
-    )
-get_normal_form(brpo_pd, 2)
+# prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
+# brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
+#     verbosity = 0, plot = false,
+#     argspo...,
+#     bothside = true,
+#     )
+# get_normal_form(brpo_pd, 2)
 
-# codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 2, p_min = 1.e-2, dsmax = 1e-2, ds = 1e-3)
-@reset opts_pocoll_pd.newton_options.tol = 1e-10
-pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
-        verbosity = 0, plot = false,
-        detect_codim2_bifurcation = 1,
-        start_with_eigen = false,
-        usehessian = false,
-        jacobian_ma = :minaug,
-        normC = norminf,
-        callback_newton = BK.cbMaxNorm(1),
-        bothside = true,
-        )
+opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
-opts_pocoll_ns = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
-@reset opts_pocoll_ns.newton_options.verbose = false
+ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
+            verbosity = 0, plot = false,
+            detect_codim2_bifurcation = 1,
+            update_minaug_every_step = 1,
+            start_with_eigen = false,
+            usehessian = false,
 
-ns_po_coll = @time continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
-        verbosity = 0, plot = false,
-        detect_codim2_bifurcation = 1,
-        update_minaug_every_step = 0,
-        start_with_eigen = false,
-        usehessian = false,
-
-        jacobian_ma = :MinAugMatrixBased,
-        normC = norminf,
-        callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
-        )
-
-ns_po_coll = @time continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
-        verbosity = 0, plot = false,
-        detect_codim2_bifurcation = 1,
-        update_minaug_every_step = 0,
-        start_with_eigen = false,
-        usehessian = false,
-
-        jacobian_ma = :minaug,
-        normC = norminf,
-        callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
-        )
+            jacobian_ma = :minaug,
+            normC = norminf,
+            callback_newton = BK.cbMaxNorm(10),
+            bothside = true,
+            ) for jma in (:minaug, :MinAugMatrixBased, )]
+@test all(x->x.kind isa BK.NSPeriodicOrbitCont, ns_po_colls)
 ################################################################################
 # test of the implementation of the jacobian for the PD case
 using ForwardDiff
+pd_po_coll2 = pd_po_colls[1]
 _probpd = pd_po_coll2.prob
 _x = pd_po_coll2.sol[end].x
 _solpo = pd_po_coll2.sol[end].x.u
@@ -193,6 +164,7 @@ J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
 
 #########
 # test of the implementation of the jacobian for the NS case
+ns_po_coll = ns_po_colls[1]
 _probns = ns_po_coll.prob
 _x = ns_po_coll.sol[end].x
 _solpo = ns_po_coll.sol[end].x.u

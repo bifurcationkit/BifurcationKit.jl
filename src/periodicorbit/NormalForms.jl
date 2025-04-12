@@ -501,6 +501,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
                                     nev = 3,
                                     δ = 1e-7,
                                     verbose = false,
+                                    detailed = true,
                                     lens = getlens(pbwrap),
                                     kwargs_nf...)
     @debug "PD normal form collocation, method PRM"
@@ -541,7 +542,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
-    pd = period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose)
+    pd = detailed ? period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose) : nothing
 
     # we get the floquet eigenvectors for μ = -1
     jac = jacobian(pbwrap, pd0.x0, pars)

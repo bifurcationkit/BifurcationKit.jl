@@ -118,5 +118,5 @@ function init(contparams::ContinuationPar{T,S,E},
             @reset contparams.nev = n
         end
     end
-    contparams
+    return contparams
 end

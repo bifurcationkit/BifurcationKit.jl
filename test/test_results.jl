@@ -5,9 +5,7 @@ const BK = BifurcationKit
 function f(u, p)
     return @. p.r * u - u^3
 end
-p = (r = -1.0,)
-u0 = zeros(1)
-prob = BK.BifurcationProblem(f, u0, p, (@optic _.r))
+prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
 
 @testset "ContResult" begin
     opt = BK.ContinuationPar(p_min=-1.0, p_max=1.0)
@@ -32,6 +30,7 @@ prob = BK.BifurcationProblem(f, u0, p, (@optic _.r))
     @test length(contres[1:end]) == length(contres)
     @test length(contres[1:end].sol) == length(contres.sol)
     @test length(contres[1:end].eig) == length(contres.eig)
+    BK.getparams(contres, 1)
 end
 
 @testset "Branch" begin

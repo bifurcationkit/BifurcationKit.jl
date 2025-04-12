@@ -177,42 +177,6 @@ function get_periodic_orbit(prob::PoincareShootingProblem, x_bar::AbstractVector
 end
 get_periodic_orbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
-function _get_extremum(psh::PoincareShootingProblem, x_bar::AbstractVector, par; ratio = 1, op = (max, maximum))
-    # this function extracts the amplitude of the cycle
-    M = get_mesh_size(psh)
-    Nm1 = div(length(x_bar), M)
-
-    # reshape the period orbit guess
-    x_barc = reshape(x_bar, Nm1, M)
-    xc = similar(x_bar, Nm1 + 1, M)
-
-    Th = eltype(x_bar)
-    n = div(Nm1, ratio)
-
-    if ~isparallel(psh)
-        E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
-        # We need the callback to be active here!!!
-        sol = @views evolve(psh.flow, Val(:Full), xc[:, 1], par, Inf)
-        mx = op[2](sol[1:n, :])
-        for ii in 2:M
-            E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
-            # We need the callback to be active here!!!
-            sol = @views evolve(psh.flow, Val(:Full), xc[:, ii], par, Inf)
-            mx = op[1](mx, op[2](sol[1:n, :]))
-        end
-    else
-        for ii in 1:M
-            E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
-        end
-        solOde =  evolve(psh.flow, Val(:Full), xc, par, repeat([Inf], M) )
-        mx = op[2](solOde[1][1:n, :])
-        for ii in 1:M
-            mx = op[1](mx, op[2](solOde[ii][1:n, :]))
-        end
-    end
-    return mx
-end
-
 """
 $(SIGNATURES)
 
