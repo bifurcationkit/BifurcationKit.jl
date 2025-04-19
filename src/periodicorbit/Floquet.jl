@@ -182,7 +182,9 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
 
     # reshape the period orbit guess into a Matrix
     x_barc = reshape(x_bar, Nm1, M)
-    @assert length(dx_bar) == Nm1 "Please provide the right dimension to your matrix-free eigensolver, it must be $Nm1."
+    if length(dx_bar) != Nm1 
+        error("Please provide the right dimension to your matrix-free eigensolver, it must be $Nm1.")
+    end
 
     xc = similar(x_bar, Nm1 + 1)
     outbar = copy(dx_bar)

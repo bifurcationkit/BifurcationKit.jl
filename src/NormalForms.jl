@@ -971,7 +971,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
-        @assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+        if ~(_λ[bifpt.ind_ev] ≈ λ)
+            error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+        end
         ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
     else
         ζ = copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
@@ -987,7 +989,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # normalise left eigenvector
     ζ★ ./= dot(ζ, ζ★)
-    @assert dot(ζ, ζ★) ≈ 1
+    if ~(dot(ζ, ζ★) ≈ 1)
+        error("Error of precision in normalization")
+    end
 
     𝒯 = eltype(bifpt.x)
     hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
@@ -1306,7 +1310,9 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
-        @assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+        if ~(_λ[bifpt.ind_ev] ≈ λ)
+            error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+        end
         ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
     else
         ζ = copy(geteigenvector(options.eigsolver ,br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
@@ -1322,7 +1328,9 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # normalise left eigenvector
     ζ★ ./= dot(ζ, ζ★)
-    @assert dot(ζ, ζ★) ≈ 1
+    if ~(dot(ζ, ζ★) ≈ 1)
+        error("Error of precision in normalization")
+    end
 
     nspt = NeimarkSacker(bifpt.x, bifpt.τ, bifpt.param,
         ω,

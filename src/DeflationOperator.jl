@@ -81,6 +81,7 @@ Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, T
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
 Base.getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
 Base.length(df::DeflationOperator) = length(df.roots)
+Base.isempty(df::DeflationOperator) = isempty(df.roots)
 Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
 Base.firstindex(df::DeflationOperator) = 1
@@ -97,7 +98,7 @@ function Base.show(io::IO, df::DeflationOperator; prefix = "")
 end
 
 # Compute M(u)
-# optimised version which does not allocate much
+# optimized version which does not allocate much
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot, T, vectype}
     length(df.roots) == 0 && return T(1)
     M(u) = T(1) / df.dot(u, u)^df.power + df.α

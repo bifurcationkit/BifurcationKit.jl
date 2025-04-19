@@ -156,7 +156,9 @@ end
 # this is a function barrier to make Deflated continuation type stable
 # it returns the set of states and the ContResult
 function _get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) where Tvec
-    @assert length(roots) > 0 "You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process."
+    if isempty(roots)
+        error("You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process.")
+    end
     contIt = iter.it
     copyto!(contIt.prob.u0, roots[1])
     states = [DCState(rt, iterate(contIt)[1]) for rt in roots]
@@ -207,7 +209,9 @@ function continuation(prob::AbstractBifurcationProblem,
     algdc = @set algdc.max_iter_defop = algdc.max_iter_defop * contParams.newton_options.max_iterations
     # allow to remove the corner case and associated specific return variables, type stable
     defOp = algdc.deflation_operator
-    @assert length(defOp) > 0 "You must provide at least one guess"
+    if isempty(defOp)
+        error("You must provide at least one guess")
+    end
 
     # we make a copy of the deflation operator
     deflationOp = copy(defOp)

@@ -26,7 +26,9 @@ end
 # Function to locate precisely an Event using a bisection algorithm. We make sure that, at the end of the algorithm, the state is just after the event (in the s coordinate).
 # I put the event in first argument even if it is in `iter` in order to allow for easier dispatch
 function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
-    @assert isnothing(_state.eventValue) == false "Empty event value, this should not be happening. Please open an issue."
+    if isnothing(_state.eventValue)
+        error("Empty event value, this should not be happening. Please open an issue.")
+    end
 
     # type of scalars in iter
     𝒯 = eltype(iter)

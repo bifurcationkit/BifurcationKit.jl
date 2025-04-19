@@ -188,7 +188,9 @@ $(SIGNATURES)
 Return the solution for the ind-th point stored in br.sol
 """
 @inline function get_solx(br::ContResult, ind::Int)
-    @assert hassolution(br) "You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`"
+    if ~hassolution(br) 
+        error("You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`")
+    end
     return br.sol[ind].x
 end
 
@@ -198,7 +200,9 @@ $(SIGNATURES)
 Return the parameter for the ind-th point stored in br.sol
 """
 @inline function get_solp(br::ContResult, ind::Int)
-    @assert hassolution(br) "You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`"
+    if ~hassolution(br)
+        error("You did not record the solution in the branch. Please set `save_sol_every_step` in `ContinuationPar`")
+    end
     return br.sol[ind].p
 end
 
@@ -220,7 +224,9 @@ Return the eigenvalues of the ind-th continuation step. `verbose` is used to tel
 Note that `ind = 0` is allowed.
 """
 function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
-    @assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
+    if br.eig[ind+1].step != ind
+        error("Error in indexing eigenvalues. Please open an issue on the website.")
+    end
     if verbose
         println("──> For ", get_lens_symbol(br), " = ", br.branch[ind].param)
         println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
@@ -243,7 +249,9 @@ $(SIGNATURES)
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
 function eigenvec(br::AbstractBranchResult, ind::Int, indev::Int)
-    @assert br.eig[ind+1].step == ind "Error in indexing eigenvalues. Please open an issue on the website."
+    if br.eig[ind+1].step != ind
+        error("Error in indexing eigenvalues. Please open an issue on the website.")
+    end
     return geteigenvector(br.contparams.newton_options.eigsolver, br.eig[ind+1].eigenvecs, indev)
 end
 

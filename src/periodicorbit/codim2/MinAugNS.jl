@@ -15,7 +15,7 @@ end
 
 function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     if _transpose == false
-        @assert false
+        throw("Work in progress")
         return jacobian_adjoint_neimark_sacker_matrix_free(pb, x, par, ω, dx)
     else
         # if matrix-free:

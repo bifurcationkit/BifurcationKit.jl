@@ -360,7 +360,9 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
                             callback = callback(it),
                             iterationC = 0,
                             p = p₀ + ds / η)
-    @assert converged(sol₁) "Newton failed to converge. Required for the computation of the initial tangent."
+    if ~converged(sol₁) 
+        error("Newton failed to converge. Required for the computation of the initial tangent.")
+    end
     if verbose
         print("\n──▶ convergence of the initial guess = ")
         printstyled("OK\n\n", color = :green)

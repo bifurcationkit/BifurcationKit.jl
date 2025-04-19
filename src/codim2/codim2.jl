@@ -181,7 +181,9 @@ function newton(br::AbstractBranchResult,
                 start_with_eigen = false,
                 lens2::AllOpticTypes = (@optic _),
                 kwargs...)
-    @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
+    if isempty(br.specialpoint)
+        error("The branch does not contain bifurcation points")
+    end
     if br.specialpoint[ind_bif].type == :hopf
         return newton_hopf(br, ind_bif; normN, options, start_with_eigen, kwargs...)
     elseif br.specialpoint[ind_bif].type == :bt
@@ -230,7 +232,9 @@ function continuation(br::AbstractBranchResult,
             detect_codim2_bifurcation = 0,
             update_minaug_every_step = 1,
             kwargs...)
-    @assert length(br.specialpoint) > 0 "The branch does not contain bifurcation points"
+    if isempty(br.specialpoint)
+        error("The branch does not contain bifurcation points")
+    end
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
