@@ -1,4 +1,5 @@
-using IterativeSolvers, LinearAlgebra, Krylov
+using IterativeSolvers, LinearAlgebra
+import Krylov
 import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
 norminf(x) = LinearAlgebra.norm(x, Inf)
 
@@ -289,9 +290,9 @@ $(TYPEDFIELDS)
 
 Look at `KrylovLSInplace` for a method where the Krylov space is kept in memory
 """
-mutable struct KrylovLS{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
-    "Can be Krylov.GmresSolver(m, n, memory, S) for example. Default = `Krylov.gmres`"
-    KrylovAlg::F
+mutable struct KrylovLS{K, Tl, Tr} <: AbstractIterativeLinearSolver
+    "Krylov method"
+    KrylovAlg::Symbol
     "Arguments passed to the linear solver"
     kwargs::K
     "Left preconditioner"
@@ -301,18 +302,18 @@ mutable struct KrylovLS{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
 end
 
 function KrylovLS(args...; 
-                    KrylovAlg = Krylov.gmres,
-                    Pl = I, Pr = I,
-                    kwargs...)
+                  KrylovAlg :: Symbol = :gmres,
+                  Pl = I, Pr = I,
+                  kwargs...)
     return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
 end
 
 function (l::KrylovLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
     J_map = v -> _axpy_op(J, v, a₀, a₁)
     Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
-    sol, stats = l.KrylovAlg(Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
     return sol, stats.solved, stats.niter
-end 
+end
 
 """
 $(TYPEDEF)
@@ -325,8 +326,10 @@ The Krylov space is pre-allocated. This is really great for GPU but also for CPU
 $(TYPEDFIELDS)
 """
 mutable struct KrylovLSInplace{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
-    "Can be Krylov.GmresSolver(m, n, memory, S) for example"
-    solver::F
+    "Can be Krylov.GmresWorkspace for example"
+    workspace::F
+    "Krylov method"
+    KrylovAlg::Symbol
     "Arguments passed to the linear solver"
     kwargs::K
     "Left preconditioner"
@@ -342,11 +345,16 @@ function KrylovLSInplace(args...;
                         m = 10,
                         memory = 20,
                         S = Vector{Float64},
-                        KrylovAlg = Krylov.GmresSolver(m, n, memory, S),
+                        KrylovAlg :: Symbol = :gmres
                         Pl = I, Pr = I,
                         is_inplace = false,
                         kwargs...)
-    return KrylovLSInplace(KrylovAlg, kwargs, Pl, Pr, is_inplace)
+    if krylovAlg == :gmres || krylovAlg == :fgmres || krylovAlg == :dqgmres || krylovAlg == :fom || krylovAlg == :diom
+        workspace = Krylov.krylov_workspace(Val(KrylovAlg), m, n, S; memory)
+    else
+        workspace = Krylov.krylov_workspace(Val(KrylovAlg), m, n, S)
+    end
+    return KrylovLSInplace(workspace, KrylovAlg, kwargs, Pl, Pr, is_inplace)
 end
 
 function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
@@ -357,6 +365,6 @@ function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
         J_map = v -> _axpy_op(J, v, a₀, a₁)
         Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     end
-    Krylov.solve!(l.solver, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
-    return solution(l.solver), issolved(l.solver), statistics(l.solver).niter
-end 
+    Krylov.krylov_solve!(l.workspace, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    return Krylov.solution(l.workspace), Krylov.issolved(l.workspace), Krylov.iteration_count(l.workspace)
+end
