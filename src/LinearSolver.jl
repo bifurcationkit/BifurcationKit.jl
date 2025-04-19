@@ -349,7 +349,7 @@ function KrylovLSInplace(args...;
                         Pl = I, Pr = I,
                         is_inplace = false,
                         kwargs...)
-    if krylovAlg == :gmres || krylovAlg == :fgmres || krylovAlg == :dqgmres || krylovAlg == :fom || krylovAlg == :diom
+    if KrylovAlg == :gmres || KrylovAlg == :fgmres || KrylovAlg == :dqgmres || KrylovAlg == :fom || KrylovAlg == :diom
         workspace = Krylov.krylov_workspace(Val(KrylovAlg), m, n, S; memory)
     else
         workspace = Krylov.krylov_workspace(Val(KrylovAlg), m, n, S)
