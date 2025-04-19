@@ -609,18 +609,18 @@ function continuation_hopf(prob,
     if isnothing(br.eig) 
         error("The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website.")
     end
-    if ~haseigenvector(br)
-        error("The branch contains no eigenvectors for the Hopf point. Please provide one.")
-    end
-
-    ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-    rmul!(ζ, 1 / normC(ζ))
-    ζad = conj.(ζ)
 
     p = bifpt.param
     parbif = setparam(br, p)
 
     if start_with_eigen
+        if ~haseigenvector(br)
+            error("The branch contains no eigenvectors for the Hopf point.\nPlease provide one.")
+        end
+        ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
+        rmul!(ζ, 1 / normC(ζ))
+        ζad = conj.(ζ)
+
         # computation of adjoint eigenvalue
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         # jacobian at bifurcation point
@@ -633,6 +633,8 @@ function continuation_hopf(prob,
         axpby!(1 / dot(ζ★, ζ), ζ★, 0, ζad)
     else
         # we use a minimally augmented formulation to set the initial vectors
+        # we start with a vector similar to an eigenvector
+        ζ = _copy(getu0(br.prob))
         a = isnothing(a) ? _randn(ζ) : a
         b = isnothing(b) ? _randn(ζ) : b
 
