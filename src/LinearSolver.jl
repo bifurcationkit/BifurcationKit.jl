@@ -345,7 +345,7 @@ function KrylovLSInplace(args...;
                         m = 10,
                         memory = 20,
                         S = Vector{Float64},
-                        KrylovAlg :: Symbol = :gmres
+                        KrylovAlg :: Symbol = :gmres,
                         Pl = I, Pr = I,
                         is_inplace = false,
                         kwargs...)
