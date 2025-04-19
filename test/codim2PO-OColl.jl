@@ -110,14 +110,6 @@ get_normal_form(brpo_ns, 1; prm = true)
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = false)
 
-# prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
-# brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
-#     verbosity = 0, plot = false,
-#     argspo...,
-#     bothside = true,
-#     )
-# get_normal_form(brpo_pd, 2)
-
 opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
 ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;

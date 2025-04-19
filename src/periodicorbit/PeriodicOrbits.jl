@@ -294,7 +294,9 @@ function continuation(probPO::AbstractShootingProblem,
                         plot_solution = nothing,
                         kwargs...)
     jacobianPO = probPO.jacobian
-    @assert ~isnothing(getlens(probPO)) "You need to provide a lens for your periodic orbit problem."
+    if isnothing(getlens(probPO)) 
+        error("You need to provide a lens for your periodic orbit problem.")
+    end
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ)
 
@@ -425,7 +427,7 @@ function continuation(br::AbstractBranchResult,
     end
 
     # extract the vector field and use it possibly to affect the PO functional
-    prob_vf_rm = re_make(prob_vf, params = par_hopf, u0 = hopfpt.x0)
+    prob_vf_rm = re_make(prob_vf, params = setparam(br, pred.p))
 
     # build the initial guess
     M = get_mesh_size(pbPO)
@@ -467,7 +469,9 @@ function continuation(br::AbstractBranchResult,
 
         verbose && println("\n──▶ Compute point on bifurcated branch...")
         solbif = newton(probPO, orbitguess, deflationOp, (@set optn.max_iterations = 10 * optn.max_iterations); callback = cb, kwargs...)
-        @assert converged(solbif) "Deflated newton did not converge"
+        if converged(solbif) == false
+            error("Deflated newton did not converge")
+        end
         orbitguess .= solbif.u
 
         branch = continuation(
@@ -502,7 +506,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `_contParams` continuation parameters, see [`continuation`](@ref)
 
 # Optional arguments
-- `δp = 0.1` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
+- `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 
@@ -529,8 +533,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    @assert bptype in (:pd, :bp) "Branching from $(bptype) not possible yet."
-    @assert abs(bifpt.δ[1]) == 1 "Only simple bifurcation points are handled"
+    if ~(bptype in (:pd, :bp))
+        error("Branching from $(bptype) not possible yet.")
+    end
+    if abs(bifpt.δ[1]) != 1 
+        error("Only simple bifurcation points are handled")
+    end
 
     # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
@@ -565,14 +573,18 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         # find point on the first branch
         pbnew = set_params_po(pbnew, setparam(br, newp))
         sol0 = newton(pbnew, pred.po, optn; kwargs...)
-        @assert converged(sol0) "The first guess did not converge"
+        if converged(sol0) == false
+            error("The first guess did not converge")
+        end
 
         # find the bifurcated branch using deflation
         deflationOp = DeflationOperator(2, (x, y) -> dot(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
-        @assert converged(solbif) "Deflated newton did not converge"
+        if converged(solbif) == false
+            error("Deflated newton did not converge")
+        end
         orbitguess .= solbif.u
     end
 

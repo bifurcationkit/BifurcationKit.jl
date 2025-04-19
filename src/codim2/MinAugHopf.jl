@@ -2,11 +2,12 @@
 For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_hopf`.
 """
 function HopfPoint(br::AbstractBranchResult, index::Int)
-    @assert br.specialpoint[index].type == :hopf "The provided index does not refer to a Hopf point"
+    if br.specialpoint[index].type != :hopf 
+        error("The provided index does not refer to a Hopf point")
+    end
     specialpoint = br.specialpoint[index] # Hopf point
-    eigRes = br.eig                       # eigenvector at the Hopf point
     p = specialpoint.param                # parameter value at the Hopf point
-    ω = imag(eigRes[specialpoint.idx].eigenvals[specialpoint.ind_ev]) # frequency at the Hopf point
+    ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) # frequency at the Hopf point
     return BorderedArray(specialpoint.x, [p, ω] )
 end
 ####################################################################################################
@@ -605,9 +606,12 @@ function continuation_hopf(prob,
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
 
-    @assert ~isnothing(br.eig) "The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website."
-
-    @assert ~isnothing(br.eig[1].eigenvecs) "The branch contains no eigenvectors for the Hopf point. Please provide one."
+    if isnothing(br.eig) 
+        error("The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website.")
+    end
+    if ~haseigenvector(br)
+        error("The branch contains no eigenvectors for the Hopf point. Please provide one.")
+    end
 
     ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     rmul!(ζ, 1 / normC(ζ))

@@ -5,7 +5,9 @@ For an initial guess from the index of a PD bifurcation point located in ContRes
 """
 function pd_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
-    @assert bptype == :pd "This should be a PD point"
+    if bptype != :pd 
+        error("This should be a PD point")
+    end
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
@@ -18,7 +20,7 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
         # else
         #  return apply(jacobian_period_doubling(pb, x, par), dx)
         # end
-        @assert false "Please report to the website of BifurcationKit"
+        @error("Please report to the website of BifurcationKit")
     else
         # if matrix-free:
         if has_adjoint(pb)

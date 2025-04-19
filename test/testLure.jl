@@ -1,9 +1,9 @@
 # using Revise#, Plots
 using LinearAlgebra, Test
-using BifurcationKit, Test
+using BifurcationKit
 const BK = BifurcationKit
 
-recordFromSolution(x, p; k...) = (u1 = x[1], u2 = x[2])
+record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
 function lur!(dz, u, p, t = 0)
     (; α, β) = p
@@ -14,9 +14,7 @@ function lur!(dz, u, p, t = 0)
     dz
 end
 
-par_lur = (α = -1.0, β = 1.)
-z0 = zeros(3)
-prob = BifurcationProblem(lur!, z0, par_lur, (@optic _.α); record_from_solution = recordFromSolution)
+prob = BifurcationProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false
@@ -40,9 +38,9 @@ function recordPO(x, p; k...)
 end
 ####################################################################################################
 # continuation parameters
-opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-5., max_steps = 122, newton_options = NewtonPar(tol = 1e-8,  max_iterations = 25), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step=1, n_inversion = 6)
+opts_po_cont = ContinuationPar(dsmax = 0.02, dsmin = 1e-4, p_max = 1.1, max_steps = 80, tol_stability = 1e-4, ds = -0.01)
 
-Mt = 90 # number of time sections
+Mt = 120 # number of time sections
 br_po = continuation(
         br, 2, opts_po_cont,
         PeriodicOrbitTrapProblem(M = Mt; update_section_every_step = 1, jacobian = :Dense);
@@ -67,7 +65,7 @@ for _ind in (1,3,16)
         length(br_po.specialpoint) >= 3 &&
         br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
             println("")
-            pt = get_normal_form(br_po, _ind; verbose = true)
+            local pt = get_normal_form(br_po, _ind; verbose = true)
             predictor(pt, 0.1, 1.)
             show(pt)
     end
@@ -123,7 +121,7 @@ end
 ####################################################################################################
 using OrdinaryDiffEq
 
-probsh = ODEProblem(lur!, copy(z0), (0., 1000.), par_lur; abstol = 1e-12, reltol = 1e-10)
+probsh = ODEProblem(lur!, copy(BK.getu0(prob)), (0., 1000.), BK.getparams(prob); abstol = 1e-12, reltol = 1e-10)
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps = 122, newton_options = NewtonPar(tol = 1e-12, max_iterations = 25), tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10, n_inversion = 6, nev = 3)

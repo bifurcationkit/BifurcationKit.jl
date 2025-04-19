@@ -5,23 +5,11 @@ For an initial guess from the index of a NS bifurcation point located in ContRes
 """
 function ns_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
-    @assert bptype == :ns "This should be a NS point"
-    specialpoint = br.specialpoint[index]
-    ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
-    return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
-end
-
-function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
-    bptype = br.specialpoint[index].type
-    @assert bptype == :ns "This should be a NS point"
-    specialpoint = br.specialpoint[index]
-    ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
-    if specialpoint.x isa POSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
-        specialpoint = @set specialpoint.x = specialpoint.x.sol
+    if bptype != :ns 
+        error("This should be a NS point")
     end
+    specialpoint = br.specialpoint[index]
+    ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
     return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
 end
 

@@ -233,7 +233,7 @@ function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, 
     pt = record_from_solution(it)(x, p; iter = it, state)
     stable = Teigvals != Nothing ? is_stable(state) : nothing
     # we merge the output from record_from_solution with a named tuple with iteration indicators
-    return mergefromuser(pt, 
+    return _mergewithrecordfromuser(pt, 
                         (param = p,
                         itnewton = state.itnewton,
                         itlinear = state.itlinear,
@@ -295,7 +295,7 @@ function ContResult(it::AbstractContinuationIterable,
     return _contresult(it, state,
                         pt,
                         get_state_summary(it, state), 
-                        save_solution(it.prob, x0, setparam(it.prob, p0)), 
+                        save_solution(it.prob, _copy(x0), setparam(it.prob, p0)), 
                         getcontparams(it))
 end
 

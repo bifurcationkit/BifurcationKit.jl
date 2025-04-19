@@ -5,7 +5,9 @@ For an initial guess from the index of a Fold bifurcation point located in ContR
 """
 function foldpoint(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
-    @assert bptype in (:bp, :nd, :fold) "This should be a Fold / BP point. You passed a $bptype point."
+    if ~(bptype in (:bp, :nd, :fold))
+        error("This should be a Fold / BP point. You passed a $bptype point.")
+    end
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
@@ -580,7 +582,7 @@ function continuation_fold(prob,
             ζ .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
             rmul!(ζ, 1/normC(ζ))
         else
-            @assert false "No index for the eigenvalue has been saved. Please open an issue on the website of BifurcationKit."
+            error("No index for the eigenvalue has been saved.\nPlease open an issue on the website of BifurcationKit.")
         end
 
         # jacobian adjoint at bifurcation point

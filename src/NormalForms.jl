@@ -56,8 +56,12 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     )
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
-    @assert bifpt.type in (:bp, :fold) "The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt."
-    @assert abs(bifpt.δ[1]) <= 1 "We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1]))."
+    if bifpt.type ∉ (:bp, :fold)
+        error("The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt.")
+    end
+    if ~(abs(bifpt.δ[1]) <= 1)
+        error("We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
+    end
 
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bifpt.param)
@@ -89,7 +93,9 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
-        @assert _λ[bifpt.ind_ev] ≈ λ "We did not find the correct eigenvalue $λ. We found $(_λ)"
+        if ~(_λ[bifpt.ind_ev] ≈ λ)
+            error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+        end
         ζ = real.(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
     else
         ζ = real.(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
@@ -106,7 +112,9 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
-    @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev."
+    if ~(abs(dot(ζ, ζ★)) > 1e-10)
+        error("We got ζ⋅ζ★ = $((dot(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
+    end
     ζ★ ./= dot(ζ, ζ★)
 
     # differentials and projector on Range(L), there are real valued
@@ -282,7 +290,9 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x, p::𝒯) where 𝒯
     # formula from https://fr.qwe.wiki/wiki/Taylor's_theorem
     # dimension of the kernel
     N = length(bp.ζ)
-    @assert N == length(x)
+    if ~(N == length(x))
+        error("N and length(x) should match!")
+    end
     out = zero(x)
     # normal form
     nf = bp.nf
@@ -396,7 +406,9 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # we could use projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-    @assert abs(det(G)) > 1e-14 "The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))"
+    if abs(det(G)) <= 1e-14
+        error("The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))")
+    end
 
     # save those in case the first algo fails
     _ζs = deepcopy(ζs)
@@ -430,7 +442,9 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # test the bi-orthogonalization
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
-    @assert norm(G - LinearAlgebra.I, Inf) < 1e-5 "Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))"
+    if ~(norm(G - LinearAlgebra.I, Inf) < 1e-5)
+        error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
+    end
     return ζs, ζ★s
 end
 
@@ -488,7 +502,9 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         )
     bifpt = br.specialpoint[id_bif]
 
-    @assert !(bifpt.type in (:endpoint,)) "Normal form for $(bifpt.type) not implemented"
+    if (bifpt.type in (:endpoint,)) 
+        error("Normal form for $(bifpt.type) not implemented")
+    end
 
     # parameters for normal form
     kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
@@ -931,7 +947,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                     detailed = true,
                     autodiff = true,
                     scaleζ = norm)
-    @assert br.specialpoint[ind_hopf].type == :hopf "The provided index does not refer to a Hopf Point"
+    if ~(br.specialpoint[ind_hopf].type == :hopf)
+        error("The provided index does not refer to a Hopf Point")
+    end
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
 
     options = br.contparams.newton_options
@@ -1350,7 +1368,9 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     # jacobian at bifurcation point
     L = jacobian(prob, x0, parbif)
 
-    @assert abs(dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    if ~(abs(dot(ζ, ζ★)) > 1e-10)
+        error("We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+    end
     ζ★ ./= dot(ζ, ζ★)
 
     # differentials and projector on Range(L), there are real valued
