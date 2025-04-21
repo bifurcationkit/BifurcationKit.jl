@@ -101,4 +101,9 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         @info "Entry in wave.jl"
         include("test_wave.jl")
     end
+
+     @testset "RecordFromSolution" begin
+         @info "Entry in test-record-from-solution.jl"
+         include("test-record-from-solution.jl")
+     end
 end
