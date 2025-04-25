@@ -20,7 +20,7 @@ function F0(x::Vector, r)
     out = r .+  x .- x.^3
 end
 
-opt_newton0 = NewtonPar(tol = 1e-11, verbose = false)
+opt_newton0 = NewtonPar(tol = 1e-11)
 prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
         record_from_solution = (x, p; k...) -> x[1],
         J = (x, r) -> diagm(0 => 1 .- 3 .* x.^2),
@@ -28,7 +28,7 @@ prob = BK.BifurcationProblem(F0, [0.8], 1., (@optic _);
         d2F = (x, r, v1, v2) -> -6 .* x .* v1 .* v2,)
 sol0 = BK.solve(prob, Newton(), opt_newton0)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton0; max_iterations = 70, tol = 1e-8), detect_bifurcation = 0, max_steps = 150)
+opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.07, ds= -0.02, p_max = 4.1, p_min = -1., newton_options = NewtonPar(tol = 1e-8), detect_bifurcation = 0, max_steps = 150)
 
 BK.is_stable(opts_br0, nothing)
 
@@ -70,12 +70,12 @@ end
 
 sol0 = BorderedArray([0.8], 0.0)
 
-opt_newton = NewtonPar(tol = 1e-11, verbose = false, linsolver = linsolveBd())
+opt_newton = NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd())
 prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p;k...) -> x.u[1])
 sol = BK.solve(prob, Newton(), opt_newton)
 @test BK.converged(sol)
 
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton; max_iterations = 70, tol = 1e-8), detect_bifurcation = 0, max_steps = 150, save_sol_every_step = 1)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton; max_iterations = 10), detect_bifurcation = 0, max_steps = 150, save_sol_every_step = 1)
 
 br = continuation(prob, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 
@@ -86,9 +86,9 @@ BK.get_solp(br, 1)
 # plot(br)
 
 prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
-    J  = (x, r) -> Jacobian(x, r[1], r[2]),
-    Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
-    d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
+            J  = (x, r) -> Jacobian(x, r[1], r[2]),
+            Jᵗ = (x, r) -> Jacobian(x, r[1], r[2]),
+            d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 
 br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 @test br.param[end] == -1
@@ -96,7 +96,11 @@ br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
-outfoldco = continuation(br, 1, (@optic _[2]), opts_br; bdlinsolver = BorderingBLS(opt_newton.linsolver), jacobian_ma = :minaug)
+outfoldco = continuation(br, 1, (@optic _[2]), opts_br; 
+                verbosity = 2,
+                # start_with_eigen = false,
+                bdlinsolver = BorderingBLS(opt_newton.linsolver), 
+                jacobian_ma = :minaug)
 
 # try with newtonDeflation
 # test with Newton deflation 1

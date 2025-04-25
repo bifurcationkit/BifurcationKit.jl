@@ -525,7 +525,7 @@ Fhh(u, p) = Fhh!(similar(u .* p.β1), u, p)
 
 let
     for _F in (Fhh!, Fhh)
-        par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
+        par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022 = 5., G1110 = 6., G0021 = 7., G2210 = 8., G1121 = 9., G0032 = 10. )
         prob = BK.BifurcationProblem(_F, zeros(4), par_hh, (@optic _.β1))
         br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, max_steps = 30, detect_bifurcation = 3, n_inversion = 2))
         _cparams = br.contparams

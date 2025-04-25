@@ -11,6 +11,11 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("test_linear.jl")
     end
 
+    @testset "RecordFromSolution" begin
+        @info "Entry in test-record-from-solution.jl"
+        include("test-record-from-solution.jl")
+    end
+
     @testset "Results" begin
         include("test_results.jl")
     end
@@ -100,10 +105,5 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     @testset "Wave" begin
         @info "Entry in wave.jl"
         include("test_wave.jl")
-    end
-
-    @testset "RecordFromSolution" begin
-        @info "Entry in test-record-from-solution.jl"
-        include("test-record-from-solution.jl")
     end
 end

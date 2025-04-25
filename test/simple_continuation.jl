@@ -214,7 +214,7 @@ br3 = continuation(prob, PALC(), opts, normC = norminf)
 
 # test for linesearch in Newton method
 opts = @set opts.newton_options.linesearch = true
-br4 = continuation(prob, PALC(), opts, normC = norminf) # (15.61 k allocations: 1.020 MiB)
+br4 = continuation(prob, PALC(), opts, normC = norminf) # (4.50 k allocations: 306.703 KiB)
 
 # test for different ways to solve the bordered linear system arising during the continuation step
 opts = @set opts.newton_options.linesearch = false
