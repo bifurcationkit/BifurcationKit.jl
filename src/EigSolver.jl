@@ -20,7 +20,7 @@ __to_array_for_eig(x::Array) = x
 """
 $(TYPEDEF)
 
-The struct `DefaultEig` is used to  provide the `eigen` operator to `BifurcationKit`.
+The struct `DefaultEig` is used to  provide the `eigen` method to `BifurcationKit`.
 
 ## Fields
 $(TYPEDFIELDS)
@@ -34,13 +34,13 @@ Just pass the above fields like `DefaultEig(; which = abs)`
 end
 
 function (l::DefaultEig)(J, nev; kwargs...)
-    Ind = sortperm(F.values; by = l.which, rev = true)
-    nev2 = min(nev, length(Ind))
-    return Complex.(F.values[Ind[begin:nev2]]), Complex.(F.vectors[:, Ind[begin:nev2]]), true, 1
     # we convert to Array so we can call l on small sparse matrices
     F = eigen(__to_array_for_eig(J))
     # we perform a conversion to Complex numbers here as the type can 
     # change from Float to Complex along the branch, this would cause a bug
+    Ind = sortperm(F.values; by = l.which, rev = true)
+    nev2 = min(nev, length(Ind))
+    return Complex.(F.values[Ind[begin:nev2]]), Complex.(F.vectors[:, Ind[begin:nev2]]), true, 1
 end
 
 function gev(l::DefaultEig, A, B, nev; kwargs...)
