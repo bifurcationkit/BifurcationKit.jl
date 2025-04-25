@@ -15,6 +15,8 @@ getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
 # Default Solvers
 ####################################################################################################
+__to_array_for_eig(x) = Array(x)
+__to_array_for_eig(x::Array) = x
 """
 $(TYPEDEF)
 
@@ -24,7 +26,7 @@ The struct `DefaultEig` is used to  provide the `eigen` operator to `Bifurcation
 $(TYPEDFIELDS)
 
 ## Constructors
-Just pass the above fields like `DefaultEig(;which=abs)`
+Just pass the above fields like `DefaultEig(; which = abs)`
 """
 @with_kw struct DefaultEig{T} <: AbstractDirectEigenSolver
     "How do we sort the computed eigenvalues."
@@ -32,17 +34,18 @@ Just pass the above fields like `DefaultEig(;which=abs)`
 end
 
 function (l::DefaultEig)(J, nev; kwargs...)
-    # we convert to Array so we can call it on small sparse matrices
-    F = eigen(Array(J))
     Ind = sortperm(F.values; by = l.which, rev = true)
     nev2 = min(nev, length(Ind))
-    # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
     return Complex.(F.values[Ind[begin:nev2]]), Complex.(F.vectors[:, Ind[begin:nev2]]), true, 1
+    # we convert to Array so we can call l on small sparse matrices
+    F = eigen(__to_array_for_eig(J))
+    # we perform a conversion to Complex numbers here as the type can 
+    # change from Float to Complex along the branch, this would cause a bug
 end
 
 function gev(l::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
-    F = eigen(Array(A), Array(B))
+    F = eigen(__to_array_for_eig(A), __to_array_for_eig(B))
     return Complex.(F.values), Complex.(F.vectors)
 end
 
@@ -58,7 +61,7 @@ $(TYPEDFIELDS)
 
 `EigArpack(sigma = nothing, which = :LR; kwargs...)`
 
-More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.
+More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol = 0.0, maxiter = 300, ritzvec = true, v0 = zeros((0,))`.
 """
 struct EigArpack{T, Tby, Tw} <: AbstractIterativeEigenSolver
     "Shift for Shift-Invert method with `(J - sigma⋅I)"
@@ -86,8 +89,7 @@ function (l::EigArpack)(J, nev; kwargs...)
         N = length(l.kwargs[:v0])
         T = eltype(l.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = l.which, sigma = l.sigma,
-                                 l.kwargs...)
+        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = l.which, sigma = l.sigma, l.kwargs...)
     end
     Ind = sortperm(λ; by = l.by, rev = true)
     ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
@@ -99,7 +101,7 @@ function gev(l::EigArpack, A, B, nev; kwargs...)
     if A isa AbstractMatrix
         values, ϕ, ncv = @time "eigs" Arpack.eigs(A, B; nev, sigma = l.sigma, which = l.which, l.kwargs...)
     else
-        throw("Not defined yet. Please open an issue or make a Pull Request")
+        error("Not defined yet. Please open an issue or make a Pull Request")
     end
     return values, ϕ
 end
@@ -149,18 +151,16 @@ end
 function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     # note that there is no need to order the eigen-elements. KrylovKit does it
     # with the option `which`, by decreasing order.
+    kw = (verbosity = l.verbose,
+            krylovdim = l.dim, maxiter = l.maxiter,
+            tol = l.tol, issymmetric = l.issymmetric,
+            ishermitian = l.ishermitian)
     if J isa AbstractMatrix && isnothing(l.x₀)
         nev = min(_nev, size(J, 1))
-        vals, vec, info = KrylovKit.eigsolve(J, nev, l.which; verbosity = l.verbose,
-                                             krylovdim = l.dim, maxiter = l.maxiter,
-                                             tol = l.tol, issymmetric = l.issymmetric,
-                                             ishermitian = l.ishermitian)
+        vals, vec, info = KrylovKit.eigsolve(J, nev, l.which; kw...)
     else
         nev = min(_nev, length(l.x₀))
-        vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which; verbosity = l.verbose,
-                                             krylovdim = l.dim, maxiter = l.maxiter,
-                                             tol = l.tol, issymmetric = l.issymmetric,
-                                             ishermitian = l.ishermitian)
+        vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which; kw...)
     end
     # (length(vals) != _nev) && (@warn "EigKrylovKit returned $(length(vals)) eigenvalues instead of the $_nev requested")
     info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
@@ -228,7 +228,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
     λ, ϕ = partialeigen(decomp)
     # shift and invert
     if isnothing(l.sigma) == false
-        λ .= l.sigma .- 1 ./ λ
+        λ .= @. l.sigma - 1 / λ
     end
     Ind = sortperm(λ; by = l.by, rev = true)
     ncv = length(λ)

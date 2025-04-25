@@ -111,14 +111,14 @@ getalg(br::AbstractBranchResult) = br.alg
 Return the parameters of the bifurcation problem of the branch.
 """
 function getparams(br::AbstractBranchResult) 
-    getparams(br.prob)
+    return getparams(br.prob)
 end
 
 """
 Return the parameters corresponding to the ind-th step in the branch.
 """
 function getparams(br::AbstractBranchResult, ind::Int)
-    setparam(br, get_solp(br, ind))
+    return setparam(br, get_solp(br, ind))
 end
 
 getlens(br::AbstractBranchResult) = getlens(br.prob)
@@ -126,7 +126,7 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline type(br::AbstractBranchResult, ind) = type(br.specialpoint[ind])
 
 # check whether the eigenvalues are saved in the branch
-# this is a good test bifucause we always fill br.eig with a dummy vector :(
+# this is a good test because we always fill br.eig with a dummy vector :(
 @inline haseigenvalues(br::ContResult) = _hasstability(br)
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 

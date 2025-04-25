@@ -231,7 +231,7 @@ function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, 
     x = getx(state)
     p = getp(state)
     pt = record_from_solution(it)(x, p; iter = it, state)
-    stable = Teigvals != Nothing ? is_stable(state) : nothing
+    stable = (Teigvals != Nothing) ? is_stable(state) : nothing
     # we merge the output from record_from_solution with a named tuple with iteration indicators
     return _mergewithrecordfromuser(pt, 
                         (param = p,
@@ -381,7 +381,7 @@ function iterate_from_two_points(it::ContIterable,
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
     # compute eigenvalues to get the type. Necessary to give a ContResult
-    eigvals, eigvecs = (nothing, nothing)
+    eigvals = eigvecs = nothing
     cveig::Bool = true
     if compute_eigenelements(it)
         eigvals, eigvecs, cveig, = compute_eigenvalues(it, (z = z,), u₀, getparams(it.prob), it.contparams.nev)
@@ -557,18 +557,19 @@ function continuation(it::ContIterable)
     # The return type of this method, e.g. ContResult
     # is not known at compile time so we
     # use a function barrier to resolve it
+    # this is also true for states (record function, eigenvectors, events, ...)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     # we compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
-    states = iterate(it)
-    isnothing(states) && return nothing
+    state, = iterate(it)
+    isnothing(state) && return nothing
 
     # variable to hold the result from continuation, i.e. a branch
-    contRes = ContResult(it, states[1])
+    contRes = ContResult(it, state)
 
     # perform the continuation
-    return continuation!(it, states[1], contRes)
+    return continuation!(it, state, contRes)
 end
 ####################################################################################################
 

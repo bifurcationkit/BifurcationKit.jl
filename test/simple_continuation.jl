@@ -80,7 +80,10 @@ let
     args = (iter, state,
             _J0, _dFdp,
             rhs[1:end-1], rhs[end])
-    for bls in (MatrixBLS(), BorderingBLS(DefaultLS()),MatrixFreeBLS(GMRESIterativeSolvers()))
+    for bls in (MatrixBLS(), 
+                BorderingBLS(DefaultLS()), 
+                MatrixFreeBLS(GMRESIterativeSolvers())
+                )
         @debug bls
         sol_bls = BK.solve_bls_palc(bls, args... )
         @test sol_bls[1] ≈ sol_fd[1:end-1]
@@ -110,7 +113,7 @@ end
 # basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
 opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40, nev = 1)
-_br0 = @time BK.continuation(_prob0, PALC(), opts0) #597 allocations: 38.547 KiB
+_br0 = @time BK.continuation(_prob0, PALC(), opts0) #(597 allocations: 34.062 KiB)
 
 try
     BK.continuation(_prob0, PALC(), opts0, essai = 0)
@@ -140,7 +143,7 @@ br0 = @time continuation(prob,
                 ContinuationPar(opts0, max_steps = 47, detect_fold = false, newton_options = NewtonPar(max_iterations = 5), dsmax = 0.051); 
                 verbosity = 1)
 ###############
-br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(6.20 k allocations: 409.469 KiB)
+br0 = @time continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10)) #(4.50 k allocations: 305.359 KiB)
 try
     continuation(prob, PALC(), opts; callback_newton = BK.cbMaxNormAndΔp(10,10))
 catch
@@ -178,7 +181,7 @@ end
 br0 = continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = (state; kwargs...)->(true));
 
 ###### Used to check type stability of the methods
-iter = ContIterable(prob, PALC(), opts)
+iter = ContIterable(prob, PALC(), opts) # type stable
 eltype(iter)
 length(iter)
 
@@ -189,13 +192,13 @@ length(iter)
 # end
 #####
 
-opts = ContinuationPar(opts; detect_bifurcation = 3, save_eigenvectors=true)
-br1 = continuation(prob, PALC(), opts) #(14.28 k allocations: 1001.500 KiB)
+opts = ContinuationPar(opts; detect_bifurcation = 3, save_eigenvectors = true)
+br1 = continuation(prob, PALC(), opts) #(4.50 k allocations: 306.656 KiB)
 show(br1)
 length(br1)
 br1[1]
-BK.eigenvals(br1,20)
-BK.eigenvec(br1,20,1)
+BK.eigenvals(br1, 20)
+BK.eigenvec(br1, 20, 1)
 BK.haseigenvector(br1)
 BK._getvectortype(br1)
 BK._getvectoreltype(br1)
@@ -221,7 +224,7 @@ br5 = continuation(prob, PALC(bls = MatrixBLS()), opts, normC = norminf)
 
 # test for stopping continuation based on user defined function
 finalise_solution = (z, tau, step, contResult; k...) -> (step < 20)
-br5a = continuation(prob, PALC(), opts, finalise_solution = finalise_solution)
+br5a = continuation(prob, PALC(), opts; finalise_solution)
 @test length(br5a.branch) == 21
 
 # test for different predictors
@@ -234,7 +237,7 @@ br7 = continuation((@set prob.recordFromSolution = (x,p;k...)->x[1]), Natural(),
 br8 = continuation(prob, PALC(tangent = Bordered()), opts)
 
 # tangent prediction with Multiple predictor
-opts9 = (@set opts.newton_options.verbose=false)
+opts9 = (@set opts.newton_options.verbose = false)
 opts9 = ContinuationPar(opts9; max_steps = 48, ds = 0.015, dsmin = 1e-5, dsmax = 0.05)
 br9 = continuation(prob,  Multiple(copy(x0), 0.01,13), opts9; verbosity = 2)
 BK.empty!(Multiple(copy(x0), 0.01, 13))
@@ -245,7 +248,7 @@ opts9_1 = ContinuationPar(opts9, dsmax = 0.2, max_steps = 125, ds = 0.1)
 @reset opts9_1.newton_options.tol = 1e-14
 @reset opts9_1.newton_options.verbose = false
 @reset opts9_1.newton_options.max_iterations = 3
-br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4,7), opts9_1, verbosity = 0)
+br9_1 = continuation(prob,  Multiple(copy(x0), 1e-4, 7), opts9_1, verbosity = 0)
 @test length(br9_1) == 126
 BK.empty!(Multiple(copy(x0), 0.01, 13))
 

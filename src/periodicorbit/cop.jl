@@ -93,7 +93,7 @@ $TYPEDFIELDS
 ## Constructors
 
 - `COPBLS()`
-- `COPBLS(coll::PeriodicOrbitOCollProblem; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
+- `COPBLS(coll::PeriodicOrbitOCollProblem; cache::COPCACHE, solver = nothing, J = nothing)`
 
 ## Related
 

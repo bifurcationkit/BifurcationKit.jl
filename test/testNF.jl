@@ -270,32 +270,34 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x .* p.r), x, p, 0.)
 
-for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
-    par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
-    probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
+let
+    for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
+        par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
+        probsl2 = BK.BifurcationProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
-    # detect hopf bifurcation
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
+        # detect hopf bifurcation
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
 
-    br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
+        br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 
-    hp = BK.get_normal_form(br, 1; detailed = false)
-    hp = BK.get_normal_form(br, 1; autodiff)
-    BK.type(hp)
+        hp = BK.get_normal_form(br, 1; detailed = false)
+        hp = BK.get_normal_form(br, 1; autodiff)
+        BK.type(hp)
 
-    nf = hp.nf
-    BK.type(hp)
+        nf = hp.nf
+        BK.type(hp)
 
-    @test abs(nf.a - 1) < 1e-9
-    @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+        @test abs(nf.a - 1) < 1e-9
+        @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
 
-    # same but when the eigenvalues are not saved in the branch but computed on the fly instead
-    br = BK.continuation(probsl2, PALC(), ContinuationPar(opts_br, save_eigenvectors = false); normC = norminf)
-    hp = BK.get_normal_form(br, 1)
-    show(hp)
-    nf = hp.nf
-    @test abs(nf.a - 1) < 1e-9
-    @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+        # same but when the eigenvalues are not saved in the branch but computed on the fly instead
+        br = BK.continuation(probsl2, PALC(), ContinuationPar(opts_br, save_eigenvectors = false); normC = norminf)
+        hp = BK.get_normal_form(br, 1)
+        show(hp)
+        nf = hp.nf
+        @test abs(nf.a - 1) < 1e-9
+        @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+    end
 end
 ####################################################################################################
 # test for the Cusp normal form
@@ -325,91 +327,93 @@ function Fbt!(out, x, p)
 end
 Fbt(x, p) = Fbt!(similar(x .* p.β1), x, p)
 
-for _F in (Fbt!, Fbt)
-    par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
-    prob  = BK.BifurcationProblem(_F, [0.01, 0.01], par, (@optic _.β1))
-    opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+let
+    for _F in (Fbt!, Fbt)
+        par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
+        prob  = BK.BifurcationProblem(_F, [0.01, 0.01], par, (@optic _.β1))
+        opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
 
-    br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
+        br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
 
-    sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
-        detect_codim2_bifurcation = 2,
-        update_minaug_every_step = 1,
-        bdlinsolver = MatrixBLS()
-        )
-    @test sn_codim2.specialpoint[1].type == :bt
-    @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
-    @test length(unique(sn_codim2.BT)) == length(sn_codim2)
+        sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+            detect_codim2_bifurcation = 2,
+            update_minaug_every_step = 1,
+            bdlinsolver = MatrixBLS()
+            )
+        @test sn_codim2.specialpoint[1].type == :bt
+        @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
+        @test length(unique(sn_codim2.BT)) == length(sn_codim2)
 
-    hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
-        detect_codim2_bifurcation = 2,
-        update_minaug_every_step = 1,
-        bothside = true,
-        bdlinsolver = MatrixBLS(),
-        )
+        hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
+            detect_codim2_bifurcation = 2,
+            update_minaug_every_step = 1,
+            bothside = true,
+            bdlinsolver = MatrixBLS(),
+            )
 
-    @test length(hopf_codim2.specialpoint) == 3
-    @test hopf_codim2.specialpoint[2].type == :bt
-    @test hopf_codim2.specialpoint[2].param ≈ 0 atol = 1e-6
-    @test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
-    # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
+        @test length(hopf_codim2.specialpoint) == 3
+        @test hopf_codim2.specialpoint[2].type == :bt
+        @test hopf_codim2.specialpoint[2].param ≈ 0 atol = 1e-6
+        @test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
+        # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
-    btpt = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
-    show(btpt)
-    BK.type(btpt)
-    @test norm(btpt.nf.b * sign(sum(btpt.ζ[1])) - par.b, Inf) < 1e-5
-    @test norm(btpt.nf.a * sign(sum(btpt.ζ[1])) - par.a, Inf) < 1e-5
-    @test isapprox(abs.(btpt.ζ[1]), [1, 0])
-    @test isapprox(abs.(btpt.ζ[2]), [0, 1];rtol = 1e-6)
-    @test isapprox(abs.(btpt.ζ★[1]), [1, 0];rtol = 1e-6)
+        btpt = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
+        show(btpt)
+        BK.type(btpt)
+        @test norm(btpt.nf.b * sign(sum(btpt.ζ[1])) - par.b, Inf) < 1e-5
+        @test norm(btpt.nf.a * sign(sum(btpt.ζ[1])) - par.a, Inf) < 1e-5
+        @test isapprox(abs.(btpt.ζ[1]), [1, 0])
+        @test isapprox(abs.(btpt.ζ[2]), [0, 1];rtol = 1e-6)
+        @test isapprox(abs.(btpt.ζ★[1]), [1, 0];rtol = 1e-6)
 
-    @test isapprox(btpt.nfsupp.K2, [0, 0]; atol = 1e-5)
-    @test isapprox(btpt.nfsupp.d, 0; atol = 1e-3)
-    @test isapprox(btpt.nfsupp.e, 0; atol = 1e-3)
-    @test isapprox(btpt.nfsupp.a1, 0; atol = 1e-3)
-    @test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
+        @test isapprox(btpt.nfsupp.K2, [0, 0]; atol = 1e-5)
+        @test isapprox(btpt.nfsupp.d, 0; atol = 1e-3)
+        @test isapprox(btpt.nfsupp.e, 0; atol = 1e-3)
+        @test isapprox(btpt.nfsupp.a1, 0; atol = 1e-3)
+        @test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
 
-    btpt1 = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
-    @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
-    @test mapreduce(isapprox, &, btpt.nfsupp, btpt1.nfsupp)
+        btpt1 = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
+        @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
+        @test mapreduce(isapprox, &, btpt.nfsupp, btpt1.nfsupp)
 
-    HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
-    HC.hopf(0.)
-    SN = BK.predictor(btpt, Val(:FoldCurve), 0.)
-    Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
-    Hom.orbit(0,0)
+        HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
+        HC.hopf(0.)
+        SN = BK.predictor(btpt, Val(:FoldCurve), 0.)
+        Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
+        Hom.orbit(0,0)
 
-    # plot(sn_codim2, branchlabel = ["Fold"], vars = (:β1, :β2))
-    #     _S = LinRange(-0.06, 0.06, 1000)
-    #     plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=5, label = "Hpred")
-    #     plot!([SN.fold(s)[1] for s in _S], [SN.fold(s)[2] for s in _S], linewidth=5, label = "SNpred")
-    #     _S = LinRange(-0.25, 0.25, 1000)
-    #     plot!([Hom.α(s)[1] for s in _S], [Hom.α(s)[2] for s in _S], linewidth=5, label = "Hom")
-    #
-    #     plot!(hopf_codim2, branchlabel = ["Hopf"], vars = (:β1, :β2), color = :black)
-    #     xlims!(-0.001, 0.05)
+        # plot(sn_codim2, branchlabel = ["Fold"], vars = (:β1, :β2))
+        #     _S = LinRange(-0.06, 0.06, 1000)
+        #     plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=5, label = "Hpred")
+        #     plot!([SN.fold(s)[1] for s in _S], [SN.fold(s)[2] for s in _S], linewidth=5, label = "SNpred")
+        #     _S = LinRange(-0.25, 0.25, 1000)
+        #     plot!([Hom.α(s)[1] for s in _S], [Hom.α(s)[2] for s in _S], linewidth=5, label = "Hom")
+        #
+        #     plot!(hopf_codim2, branchlabel = ["Hopf"], vars = (:β1, :β2), color = :black)
+        #     xlims!(-0.001, 0.05)
 
 
-    # plot of the homoclinic orbit
-    # hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
-    # hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
-    # plot(hom1, hom2)
+        # plot of the homoclinic orbit
+        # hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
+        # hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
+        # plot(hom1, hom2)
 
-    # branch switching from BT from Fold
-    opt = sn_codim2.contparams
-    @reset opt.newton_options.verbose = false
-    @reset opt.max_steps = 20
-    hp_fromBT = continuation(sn_codim2, 1, opt;
-        verbosity = 0, plot = false,
-        δp = 1e-4,
-        update_minaug_every_step = 1,
-        )
-    # plot(sn_codim2, hp_fromBT)
+        # branch switching from BT from Fold
+        opt = sn_codim2.contparams
+        @reset opt.newton_options.verbose = false
+        @reset opt.max_steps = 20
+        hp_fromBT = continuation(sn_codim2, 1, opt;
+            verbosity = 0, plot = false,
+            δp = 1e-4,
+            update_minaug_every_step = 1,
+            )
+        # plot(sn_codim2, hp_fromBT)
 
-    # update the BT point using newton and MA formulation
-    solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = :autodiff)
-    @assert BK.converged(solbt)
+        # update the BT point using newton and MA formulation
+        solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = :autodiff)
+        @assert BK.converged(solbt)
+    end
 end
 ####################################################################################################
 # test of the Bautin normal form
@@ -423,32 +427,34 @@ function Fsl2!(f, u, p, t = 0)
 end
 Fsl2(x, p) = Fsl2!(similar(x.*p.r), x, p, 0.)
 
-for _F in (Fsl2, Fsl2!)
-    par_sl = (r = -0.5, μ = 0., ν = 1.0, c3 = 0.1, c5 = 0.3)
-    prob = BK.BifurcationProblem(_F, [0.01, 0.01], par_sl, (@optic _.r))
+let
+    for _F in (Fsl2, Fsl2!)
+        par_sl = (r = -0.5, μ = 0., ν = 1.0, c3 = 0.1, c5 = 0.3)
+        prob = BK.BifurcationProblem(_F, [0.01, 0.01], par_sl, (@optic _.r))
 
-    opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+        opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
 
-    @reset opts_br.newton_options.verbose = false
-    @reset opts_br.newton_options.tol = 1e-12
-    opts_br = setproperties(opts_br;n_inversion = 10, max_bisection_steps = 25)
+        @reset opts_br.newton_options.verbose = false
+        @reset opts_br.newton_options.tol = 1e-12
+        opts_br = setproperties(opts_br;n_inversion = 10, max_bisection_steps = 25)
 
-    br = continuation(prob, PALC(), opts_br)
+        br = continuation(prob, PALC(), opts_br)
 
-    hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
-        detect_codim2_bifurcation = 2,
-        start_with_eigen = true,
-        update_minaug_every_step = 1,
-        bdlinsolver = MatrixBLS(),
-        )
-    @test hopf_codim2.specialpoint[1].type == :gh
+        hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
+            detect_codim2_bifurcation = 2,
+            start_with_eigen = true,
+            update_minaug_every_step = 1,
+            bdlinsolver = MatrixBLS(),
+            )
+        @test hopf_codim2.specialpoint[1].type == :gh
 
-    bautin = BK.get_normal_form(hopf_codim2, 1; nev = 2)
-    show(bautin)
-    BK.type(bautin)
+        bautin = BK.get_normal_form(hopf_codim2, 1; nev = 2)
+        show(bautin)
+        BK.type(bautin)
 
-    @test bautin.nf.l2 ≈ par_sl.c5 * 4 atol = 1e-6
+        @test bautin.nf.l2 ≈ par_sl.c5 * 4 atol = 1e-6
+    end
 end
 ####################################################################################################
 # test of the Zero-Hopf normal form
@@ -468,27 +474,29 @@ function Fzh!(f, u, p)
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
-for _F in (Fzh!, Fzh)
-    par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
-    prob = BK.BifurcationProblem(_F, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))
-    br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, max_steps = 70, detect_bifurcation=3, n_inversion = 2), verbosity = 0)
+let
+    for _F in (Fzh!, Fzh)
+        par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
+        prob = BK.BifurcationProblem(_F, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))
+        br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, max_steps = 70, detect_bifurcation=3, n_inversion = 2), verbosity = 0)
 
-    _cparams = br.contparams
-    opts2 = @set _cparams.newton_options.verbose = false
-    opts2 = setproperties(opts2 ; n_inversion = 10, ds = 0.001)
-    br_codim2 = continuation(br, 2, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
+        _cparams = br.contparams
+        opts2 = @set _cparams.newton_options.verbose = false
+        opts2 = setproperties(opts2 ; n_inversion = 10, ds = 0.001)
+        br_codim2 = continuation(br, 2, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
 
-    @test br_codim2.specialpoint[1].type == :zh
-    zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
-    @test zh.nf.G200 ≈ par_zh.G200
-    @test zh.nf.G110 ≈ par_zh.G110
-    @test zh.nf.G011/2 ≈ par_zh.G011
-    BK.type(zh)
+        @test br_codim2.specialpoint[1].type == :zh
+        zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
+        @test zh.nf.G200 ≈ par_zh.G200
+        @test zh.nf.G110 ≈ par_zh.G110
+        @test zh.nf.G011/2 ≈ par_zh.G011
+        BK.type(zh)
 
-    pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
-    pred.EigenVec(0.1)
-    pred.EigenVecAd(0.1)
-    pred.fold(0.1)
+        pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
+        pred.EigenVec(0.1)
+        pred.EigenVecAd(0.1)
+        pred.fold(0.1)
+    end
 end
 ####################################################################################################
 # test of the Hopf-Hopf normal form
@@ -515,20 +523,22 @@ function Fhh!(f, u, p)
 end
 Fhh(u, p) = Fhh!(similar(u .* p.β1), u, p)
 
-for _F in (Fhh!, Fhh)
-    par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
-    prob = BK.BifurcationProblem(_F, zeros(4), par_hh, (@optic _.β1))
-    br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, max_steps = 30, detect_bifurcation = 3, n_inversion = 2))
-    _cparams = br.contparams
-    opts2 = @set _cparams.newton_options.verbose = false
-    opts2 = setproperties(opts2 ; n_inversion = 10, ds = 0.001)
-    br_codim2 = continuation(br, 1, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 2, update_minaug_every_step = 1)
+let
+    for _F in (Fhh!, Fhh)
+        par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022=5., G1110=6., G0021=7., G2210=8., G1121=9., G0032=10. )
+        prob = BK.BifurcationProblem(_F, zeros(4), par_hh, (@optic _.β1))
+        br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0051, max_steps = 30, detect_bifurcation = 3, n_inversion = 2))
+        _cparams = br.contparams
+        opts2 = @set _cparams.newton_options.verbose = false
+        opts2 = setproperties(opts2 ; n_inversion = 10, ds = 0.001)
+        br_codim2 = continuation(br, 1, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 2, update_minaug_every_step = 1)
 
-    @test br_codim2.specialpoint[1].type == :hh
-    hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
-    BK.type(hh)
-    # @test hh.nf.G2100 == par_hh.G2100
-    # @test hh.nf.G0021 == par_hh.G0021
-    # @test hh.nf.G1110 == par_hh.G1110
-    # @test hh.nf.G1011 == par_hh.G1011
+        @test br_codim2.specialpoint[1].type == :hh
+        hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
+        BK.type(hh)
+        # @test hh.nf.G2100 == par_hh.G2100
+        # @test hh.nf.G0021 == par_hh.G0021
+        # @test hh.nf.G1110 == par_hh.G1110
+        # @test hh.nf.G1011 == par_hh.G1011
+    end
 end

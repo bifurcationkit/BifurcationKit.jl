@@ -24,7 +24,7 @@ const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     More precisely
 
-    Rᵢⱼ(x,p) = 1/i!j! dⁱₓ dʲₚ F(x, p)
+    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
 
     ## Note
 
@@ -44,7 +44,9 @@ Determine if the vector field is of the form `f!(out, z, p)`.
 """
 function _isinplace(f)
     m = minimum(numargs(f))
-    @assert 1 < m < 4 "You have too many/few arguments in your vector field F. It should be of the form `F(x,p)` or `F!(x,p)`."
+    if ~(1 < m < 4) 
+        error("You have too many/few arguments in your vector field F. It should be of the form `F(x,p)` or `F!(x,p)`.")
+    end
     return m == 3
 end
 

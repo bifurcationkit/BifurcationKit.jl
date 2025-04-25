@@ -415,7 +415,8 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     _ζ★s = deepcopy(ζ★s)
 
     # first algo
-    tmp = copy(ζ★s[1])
+    switch_algo = false
+    tmp = copy(ζ★s[begin])
     for ii in eachindex(ζ★s)
         tmp .= ζ★s[ii]
         for jj in eachindex(ζs)
@@ -423,13 +424,18 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
                 tmp .-= _dot(tmp, ζs[jj]) .* ζs[jj] ./ _dot(ζs[jj], ζs[jj])
             end
         end
-        ζ★s[ii] .= tmp ./ _dot(tmp, ζs[ii])
+        α = _dot(tmp, ζs[ii])
+        if α ≈ 0
+            switch_algo = true
+            break
+        end
+        ζ★s[ii] .= tmp ./ α
     end
 
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 
     # we switch to another algo if the above fails
-    if norm(G - LinearAlgebra.I, Inf) >= 1e-5
+    if norminf(G - LinearAlgebra.I) >= 1e-5 || switch_algo
         @warn "Gram matrix not equal to identity. Switching to LU algorithm."
         println("G (det = $(det(G))) = "); display(G)
         G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
@@ -442,7 +448,7 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # test the bi-orthogonalization
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
-    if ~(norm(G - LinearAlgebra.I, Inf) < 1e-5)
+    if ~(norminf(G - LinearAlgebra.I) < 1e-5)
         error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
     end
     return ζs, ζ★s

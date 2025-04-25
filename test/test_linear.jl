@@ -22,67 +22,74 @@ BK._print_line(1,nothing,1)
 # @test (vcat(out.u,out.p) == 1.1 .*x0 .-0.1 .*y0)
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
-z_pred = BorderedArray(rand(10), 1.0)
-tau_pred = BorderedArray(rand(10), 2.0)
-BK.minus!(z_pred, tau_pred)
-BK.eltype(z_pred)
+let
+    z_pred = BorderedArray(rand(10), 1.0)
+    tau_pred = BorderedArray(rand(10), 2.0)
+    BK.minus!(z_pred, tau_pred)
+    BK.eltype(z_pred)
 
-axpy!(2. /3, tau_pred, z_pred)
-axpby!(2. /3, tau_pred, 1.0, z_pred)
-dot(z_pred, tau_pred)
+    axpy!(2. /3, tau_pred, z_pred)
+    axpby!(2. /3, tau_pred, 1.0, z_pred)
+    dot(z_pred, tau_pred)
 
-dottheta = BK.DotTheta((x, y) -> dot(x, y) / length(x))
+    dottheta = BK.DotTheta((x, y) -> dot(x, y) / length(x))
 
-dottheta(z_pred, 0.1)
-dottheta(z_pred, tau_pred, 0.1)
-dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
+    dottheta(z_pred, 0.1)
+    dottheta(z_pred, tau_pred, 0.1)
+    dottheta(z_pred.u, tau_pred.u, 1.0, 1.0, 0.1)
 
-z = BorderedArray(z_pred, rand(10))
-z2 = BorderedArray(z_pred, rand(10))
-zero(z2); zero(z_pred)
-@test length(z_pred) == 11
+    z = BorderedArray(z_pred, rand(10))
+    z2 = BorderedArray(z_pred, rand(10))
+    zero(z2); zero(z_pred)
+    @test length(z_pred) == 11
 
-copyto!(z,z2)
-BK.minus(z.u,z2.u); BK.minus!(z.u,z2.u)
-BK.minus(1.,2.); BK.minus!(1.,2.)
-rmul!(z_pred, 1.0)
-rmul!(z_pred, true)
-mul!(z_pred, tau_pred, 1.0)
+    copyto!(z,z2)
+    BK.minus(z.u,z2.u); BK.minus!(z.u,z2.u)
+    BK.minus(1.,2.); BK.minus!(1.,2.)
+    rmul!(z_pred, 1.0)
+    rmul!(z_pred, true)
+    mul!(z_pred, tau_pred, 1.0)
 
-z_predC = BorderedArray(ComplexF64.(z_pred.u), ComplexF64.(z_pred.u))
-z3 = similar(z_predC, ComplexF64)
-mul!(z3, z3, 1.0)
+    z_predC = BorderedArray(ComplexF64.(z_pred.u), ComplexF64.(z_pred.u))
+    z3 = similar(z_predC, ComplexF64)
+    mul!(z3, z3, 1.0)
 
-z_sim = BorderedArray(rand(3), rand(2))
-z_sim2 = similar(z_sim)
-typeof(z_sim) == typeof(z_sim2)
+    z_sim = BorderedArray(rand(3), rand(2))
+    z_sim2 = similar(z_sim)
+    typeof(z_sim) == typeof(z_sim2)
+end
 ####################################################################################################
 # test _axpy_op
-J0 = rand(100, 100)
-dx = rand(size(J0, 1))
-_o = rand(ComplexF64, size(J0, 1))
-a₀ = rand(ComplexF64)
-a₁ = -1.432
-BK._axpy(J0, 0, a₁)
-BK._axpy(J0, 1, 1)
-out1 = BK._axpy_op(J0, dx, a₀, a₁)
-out2 = a₀ * dx + a₁ * J0 * dx
-@test out1 ≈ out2
-@test a₀ * I + a₁ * J0  ≈ BK._axpy(J0, a₀, a₁)
-BK._axpy_op!(_o, J0, dx, a₀, a₁)
-BK._axpy_op!(_o, J0, dx, 0, 1)
-BK._axpy_op!(_o, J0, dx, 0, a₁)
-BK._axpy_op!(_o, J0, dx, 1, 1)
-BK._axpy_op!(_o, J0, dx, 1, a₁)
+let
+    J0 = rand(100, 100)
+    dx = rand(size(J0, 1))
+    _o = rand(ComplexF64, size(J0, 1))
+    a₀ = rand(ComplexF64)
+    a₁ = -1.432
+    BK._axpy(J0, 0, a₁)
+    BK._axpy(J0, 1, 1)
+    out1 = BK._axpy_op(J0, dx, a₀, a₁)
+    out2 = a₀ * dx + a₁ * J0 * dx
+    @test out1 ≈ out2
+    @test a₀ * I + a₁ * J0  ≈ BK._axpy(J0, a₀, a₁)
+    BK._axpy_op!(_o, J0, dx, a₀, a₁)
+    BK._axpy_op!(_o, J0, dx, 0, 1)
+    BK._axpy_op!(_o, J0, dx, 0, a₁)
+    BK._axpy_op!(_o, J0, dx, 1, 1)
+    BK._axpy_op!(_o, J0, dx, 1, a₁)
+end
 ####################################################################################################
 # test of MatrixFreeBLSmap
-map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)
-x_bd = BorderedArray(rand(100), rand())
-x_bd_v = vcat(copy(x_bd.u), x_bd.p)
-o1 = map_bls(x_bd)
-o2 = map_bls(x_bd_v)
-@test o1.u ≈ o2[begin:end-1]
-@test o1.p ≈ o2[end]
+let
+    J0 = rand(100, 100)
+    map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)
+    x_bd = BorderedArray(rand(100), rand())
+    x_bd_v = vcat(copy(x_bd.u), x_bd.p)
+    o1 = map_bls(x_bd)
+    o2 = map_bls(x_bd_v)
+    @test o1.u ≈ o2[begin:end-1]
+    @test o1.p ≈ o2[end]
+end
 ####################################################################################################
 let
     # test of the linear  solvers
@@ -517,6 +524,19 @@ let
     sol0,_ = ls0(I - h*J0, rhs)
     sol1,_ = ls0(J0, rhs; a₀ = 1., a₁ = -h)
     @test norm(sol0 - sol1, Inf) < 1e-8
+end
+####################################################################################################
+# test biorthogonalise
+let
+    vs = [[1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0]]
+    BK.biorthogonalise(vs, deepcopy(vs), true)
+
+    vss = [[0.0, 0.0, 1.0],
+           [0.0, 1.0, 0.0],
+           [1.0, 0.0, 0.0]]
+    BK.biorthogonalise(vs, vss, true)
 end
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
