@@ -35,12 +35,11 @@ end
 
 function (l::DefaultEig)(J, nev; kwargs...)
     # we convert to Array so we can call l on small sparse matrices
-    F = eigen(__to_array_for_eig(J))
+    F = eigen(__to_array_for_eig(J); sortby = l.which)
+    nev2 = min(nev, length(F.values))
     # we perform a conversion to Complex numbers here as the type can 
     # change from Float to Complex along the branch, this would cause a bug
-    Ind = sortperm(F.values; by = l.which, rev = true)
-    nev2 = min(nev, length(Ind))
-    return Complex.(F.values[Ind[begin:nev2]]), Complex.(F.vectors[:, Ind[begin:nev2]]), true, 1
+    return Complex.(F.values[end:-1:end-nev2+1]), Complex.(F.vectors[:, end:-1:end-nev2+1]), true, 1
 end
 
 function gev(l::DefaultEig, A, B, nev; kwargs...)
