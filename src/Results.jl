@@ -404,7 +404,6 @@ $(SIGNATURES)
 Merge two `ContResult`s and put the result in `br`.
 """
 function _cat!(br::ContResult, br2::ContResult)
-    # br = deepcopy(br1)
     nb = length(br.branch)
     if ~isnothing(br.branch)
         append!(br.branch,
