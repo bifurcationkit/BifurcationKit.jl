@@ -229,7 +229,7 @@ function continuation(br::AbstractBranchResult,
             options_cont::ContinuationPar = br.contparams ;
             prob = br.prob,
             start_with_eigen = false,
-            detect_codim2_bifurcation = 0,
+            detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
             kwargs...)
     if isempty(br.specialpoint)
