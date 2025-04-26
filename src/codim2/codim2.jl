@@ -121,6 +121,19 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; updat
         return options_cont
     end
 end
+
+function Base.show(io::IO, prob::AbstractMABifurcationProblem; prefix = "")
+    print(io, prefix * "┌─ Problem for bif. points continuation with uType ")
+    printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Inplace:  ")
+    printstyled(io, isinplace(prob), color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Dimension:  ")
+    printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ Jacobian: ")
+    printstyled(io, prob.jacobian, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "└─ Parameter: ")
+    printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
+end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     prob_ma = getprob(br).prob
