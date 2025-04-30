@@ -427,10 +427,10 @@ function period_doubling_normal_form_iooss(pbwrap,
                 # a cause de Icoll
                 # h₂ₛ[:, end] .= h₂ₛ[:,1]
     if abs(∫( ψ₁★ₛ, h₂ₛ)) > 1e-10
-        @warn "The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
+        @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
     end
     if abs(h₂[end]) > 1e-10
-        @warn "The value h₂[end] should be zero. We found $(h₂[end])"
+        @warn "[PD-Iooss] The value h₂[end] should be zero. We found $(h₂[end])"
     end
 
     # computation of c
@@ -445,7 +445,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                  ∫( v₁★ₛ, Bₛ ) -
          2a₁/T * ∫( v₁★ₛ, Aₛ )
 
-                    @debug "" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
+                    @debug "[PD-Iooss]" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
     # computation of a₀₁
     ∂Fu₀ₛ = copy(u₀ₛ)
@@ -861,10 +861,10 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
                 @debug "" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
-        @warn "The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
+        @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
     end
     if abs(h₁₁[end]) > 1e-10
-        @warn "The value h₁₁[end] should be zero. We found $(h₁₁[end])"
+        @warn "[NS-Iooss] The value h₁₁[end] should be zero. We found $(h₁₁[end])"
     end
     #########
     # compute d
@@ -877,13 +877,13 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
 
     d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
 
-                @debug "B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
+                @debug "[NS-Iooss] B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
 
     for i = 1:size(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₂₀ₛ[:, i], conj(v₁ₛ[:, i]))
         Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
     end
-                @debug "B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
+                @debug "[NS-Iooss] B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
     d +=  ∫( v₁★ₛ, Bₛ )
     d = d/2
                 @debug ""  -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2

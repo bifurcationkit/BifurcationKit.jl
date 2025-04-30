@@ -55,7 +55,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     # Thus, b should be a null vector of J +I
     #       a should be a null vector of J'+I
     # we solve Jv + v + a σ1 = 0 with <b, v> = 1
-    # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)^{-1}a>.
+    # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)⁻¹a>.
     # In the case of collocation, the matrix J is simply Jpo without the phase condition and with PD boundary condition.
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
     σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)[2]
@@ -163,7 +163,6 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
     #            σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
     ########################## Extraction of function names ########################################
-
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐏𝐝.prob_vf
 

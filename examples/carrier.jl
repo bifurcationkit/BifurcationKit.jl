@@ -98,7 +98,7 @@ plot(brdc, legend=true)#, marker=:d)
 ####################################################################################################
 # bifurcation diagram
 diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
-        (@set optcont.newton_options.verbose=false);
+        (@set optcont.newton_options.verbose = false);
         plot = true)
 
-plot(diagram, legend=false)
+plot(diagram, legend = false)

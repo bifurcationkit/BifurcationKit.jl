@@ -160,7 +160,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     elseif biftype == :ns
         return continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     end
-    throw("You passed the bifurcation type = $biftype. We continue only Fold / PD / NS points of periodic orbits for now.")
+    throw("You passed the bifurcation type = $biftype.\nWe continue only Branch Point /Fold / PD / NS points of periodic orbits for now.")
 end
 
 """
@@ -317,8 +317,8 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     ωₙₛ = λₙₛ/1im
 
     J = jacobian_neimark_sacker(pbwrap, bifpt.x, par_ns, ωₙₛ)
-    nj = length(bifpt.x)-1
-    q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(rand(nj)), 0, Complex.(zeros(nj)), 1)
+    nj = length(bifpt.x) - 1
+    q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(randn(nj)), 0, Complex.(zeros(nj)), 1)
     q ./= norm(q)
     p = conj(q)
 

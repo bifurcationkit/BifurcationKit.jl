@@ -1,9 +1,9 @@
 # BifurcationKit.jl
 
-| **Documentation** | **Build Status** | **Coverage** | **Version** |
+| **Documentation** | **Build Status** | **Coverage** | **Version / Stats** |
 | :-: | :-: | :-: | :-: |
 | [![][docs-stable-img]][docs-stable-url] | [![Build status](https://badge.buildkite.com/fc3fdd514333077cbb6600923ed0ef631a59de5226b197665f.svg)](https://buildkite.com/julialang/bifurcationkit-dot-jl) | [![codecov](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/bifurcationkit/BifurcationKit.jl) | [![ver-img]][ver-url] |
-| [![][docs-dev-img]][docs-dev-url] | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) |  [![](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/BifurcationKit)](https://pkgs.genieframework.com?packages=BifurcationKit) | [![deps-img]][deps-url] |
+| [![][docs-dev-img]][docs-dev-url] | [![Build status](https://github.com/rveltz/BifurcationKit.jl/workflows/CI/badge.svg)](https://github.com/rveltz/BifurcationKit.jl/actions) |   | [![deps-img]][deps-url] [![downloads][downloads-img]][downloads-url]|
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://bifurcationkit.github.io/BifurcationKitDocs.jl/stable
@@ -16,6 +16,9 @@
 [deps-img]: https://juliahub.com/docs/General/BifurcationKit/stable/deps.svg
 [deps-url]: https://juliahub.com/ui/Packages/General/BifurcationKit?t=2
 
+[downloads-img]: https://img.shields.io/badge/dynamic/json?url=http%3A%2F%2Fjuliapkgstats.com%2Fapi%2Fv1%2Fmonthly_downloads%2FBifurcationKit&query=total_requests&suffix=%2Fmonth&label=Downloads
+[downloads-url]: https://juliapkgstats.com/pkg/BifurcationKit
+
 This Julia package aims at performing **automatic bifurcation analysis** of possibly large dimensional equations F(u, λ)=0 where λ is real by taking advantage of iterative methods, dense / sparse formulation and specific hardwares (*e.g.* GPU).
 
 It incorporates continuation algorithms (PALC, deflated continuation, ...) based on a Newton-Krylov method to correct the predictor step and a Matrix-Free/Dense/Sparse eigensolver is used to compute stability and bifurcation points.
@@ -27,6 +30,10 @@ It incorporates continuation algorithms (PALC, deflated continuation, ...) based
 The current focus is on large scale nonlinear problems and multiple hardwares. Hence, the goal is to provide Matrix Free methods on **GPU** (see [PDE example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorials2b/#The-Swift-Hohenberg-equation-on-the-GPU-(non-local)-1) and [Periodic orbit example](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/tutorials/tutorialsCGL/#Continuation-of-periodic-orbits-on-the-GPU-(Advanced)-1)) or on **cluster** to study non linear PDE, nonlocal problems, compute sub-manifolds...
 
 > Despite this focus, the package can easily handle low dimensional problems and specific optimizations are regularly added.
+
+## SciML Integration
+
+**BifurcationKit.jl** is listed in Third patry parameter analysis of [SciML Docs](https://docs.sciml.ai/DiffEqDocs/stable/#DifferentialEquations.jl:-Efficient-Differential-Equation-Solving-in-Julia) under the "Analysis" menu. [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/tutorials/bifurcation_diagram_computation/) and [Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/steady_state_functionality/bifurcation_diagrams/) rely on **BifurcationKit.jl** as external dependency.
 
 ## 📚 Support and citation
 If you use `BifurcationKit.jl` in your work, we ask that you cite the following paper on [HAL-Inria](https://hal.archives-ouvertes.fr/hal-02902346) with *bibtex* entry [CITATION.bib](https://github.com/bifurcationkit/BifurcationKit.jl/blob/master/CITATION.bib). Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future.

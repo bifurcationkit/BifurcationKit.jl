@@ -116,7 +116,6 @@ for meshadapt in (false, true)
     ampfactor = .2, δp = -0.005,
     usedeflation = true,
     )
-
 end
 ####################################################################################################
 using OrdinaryDiffEq

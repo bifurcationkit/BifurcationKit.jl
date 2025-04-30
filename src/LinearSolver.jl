@@ -182,17 +182,17 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESIterativeSolvers{T, Tl, Tr})(J, rhs; a₀ = 0, a₁ = 1,
-                                               kwargs...) where {T, Tl, Tr}
+function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = 0, a₁ = 1,
+                                               kwargs...) where {𝒯, 𝒯l, 𝒯r}
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
         if ~((a₀ == 0) && (a₁ == 1))
             error("Perturbed inplace linear problem not done yet!")
         end
-        Jmap = J isa AbstractArray ? J : LinearMap{T}(J, l.N, l.N; ismutating = true)
+        Jmap = J isa AbstractArray ? J : LinearMap{𝒯}(J, l.N, l.N; ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
-        Jmap = LinearMaps.LinearMap{T}(J_map, length(rhs), length(rhs); ismutating = false)
+        Jmap = LinearMaps.LinearMap{𝒯}(J_map, length(rhs), length(rhs); ismutating = false)
     end
     res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol,
                                  log = l.log, verbose = l.verbose, restart = l.restart,
@@ -248,8 +248,8 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESKrylovKit{T, Tl})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {T, Tl}
-    if Tl == Nothing
+function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {𝒯, 𝒯l}
+    if 𝒯l === Nothing
         res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose,
                                        krylovdim = l.dim, maxiter = l.maxiter,
                                        atol = l.atol, issymmetric = l.issymmetric,

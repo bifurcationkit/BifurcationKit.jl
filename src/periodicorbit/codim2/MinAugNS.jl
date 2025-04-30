@@ -170,7 +170,6 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
     ########################## Extraction of function names ########################################
-
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
     (; JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw) = _get_bordered_terms(𝐍𝐒, x, p, ω, par)

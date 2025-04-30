@@ -415,7 +415,9 @@ function iterate_from_two_points(it::ContIterable,
     return state, state
 end
 
-function Base.iterate(it::ContIterable, state::ContState; _verbosity = it.verbosity)
+function Base.iterate(it::ContIterable,
+                        state::ContState; 
+                        _verbosity = it.verbosity)
     if !done(it, state) return nothing end
     # the next line is to overwrite verbosity behaviour, for example when locating bifurcations
     verbosity = min(it.verbosity, _verbosity)
