@@ -97,7 +97,7 @@ end
 ls = GMRESKrylovKit(dim = 100)
 optnewton_mf = NewtonPar(tol = 1e-11, verbose = false, linsolver = ls)
 prob2 = @set prob.VF.J = (x, p) -> (dx -> dF_chan(x, dx, p))
-out_mf = @time newton(prob2, @set optnewton_mf.verbose = true)
+out_mf = @time BK.solve(prob2, Newton(), @set optnewton_mf.verbose = true)
 
 opts_cont_mf  = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.01, p_max = 4.2, nev = 5, plot_every_step = 40, newton_options = NewtonPar(optnewton_mf; max_iterations = 10, tol = 1e-8), max_steps = 150, detect_bifurcation = 0)
 brmf = @time continuation(prob2, PALC(bls = MatrixFreeBLS(ls)), opts_cont_mf)

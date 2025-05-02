@@ -317,7 +317,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, MinAugMatrixBased(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    
     else
         prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
@@ -384,7 +383,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
          # if the frequency is null, this is not a NS point, we halt the process
          stop_R1 = 1-cos(ω) <= ϵR1
          if stop_R1
-            @warn "[Codim 2 NS - Finalizer]\n The NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at $(get_lenses(contResult)) = ($p1, $p2).\n If the R1 point is not detected, try lowering Newton tolerance or dsmax."
+            @warn "[Codim 2 NS - Finalizer]\n The NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\n If the R1 point is not detected, try lowering Newton tolerance or dsmax."
         end
 
         if pdjump
@@ -446,14 +445,15 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)
     _recordsol2 = isnothing(_recordsol) ?
-        (u, p; kw...) -> (; _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))...,
+        (u, p; kw...) -> (; 
                 zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
                 ωₙₛ = getp(u, 𝐍𝐒)[2],
                 CH = real(𝐍𝐒.l1),
                 R₁ = 𝐍𝐒.R1,
                 R₂ = 𝐍𝐒.R2,
                 R₃ = 𝐍𝐒.R3,
-                R₄ = 𝐍𝐒.R4, 
+                R₄ = 𝐍𝐒.R4,
+                _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))... #putting it last is important for plotting
                 ) :
         (u, p; kw...) -> (; 
             _namedrecordfromsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
@@ -474,13 +474,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # define event for detecting bifurcations. Coupled it with user passed events
     # event for detecting codim 2 points
     event_user = get(kwargs, :event, nothing)
-    if isnothing(event_user)
-        event = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
-    else
-        event = PairOfEvents(
-                ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0),
-                event_user)
-    end
+    event_bif = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
+    event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
 
     # solve the NS equations
     br_ns_po = continuation(

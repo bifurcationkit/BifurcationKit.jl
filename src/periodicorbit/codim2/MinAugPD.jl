@@ -324,8 +324,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
 
-    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
-
     # Jacobian for the PD problem
     if jacobian_ma == :autodiff
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
@@ -481,7 +479,12 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _plotsol = modify_po_plot(prob_pd, _kwargs)
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    event = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
+    # define event for detecting bifurcations. Coupled it with user passed events
+    # event for detecting codim 2 points
+    event_user = get(kwargs, :event, nothing)
+    event_bif = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
+    event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
+
 
     # solve the PD equations
     br_pd_po = continuation(

@@ -39,7 +39,7 @@ hpnf = get_normal_form(br, 5)
 hpnf = get_normal_form(br, 2)
 @test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2
 
-BK.FoldProblemMinimallyAugmented(prob)
+show(stdout, BK.FoldProblemMinimallyAugmented(prob))
 BK.HopfProblemMinimallyAugmented(prob)
 BK.PeriodDoublingProblemMinimallyAugmented(prob)
 BK.NeimarkSackerProblemMinimallyAugmented(prob)

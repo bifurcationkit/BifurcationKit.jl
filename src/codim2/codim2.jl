@@ -134,6 +134,28 @@ function Base.show(io::IO, prob::AbstractMABifurcationProblem; prefix = "")
     print(io, "\n" * prefix * "└─ Parameter: ")
     printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
 end
+
+function Base.show(io::IO, prob::AbstractProblemMinimallyAugmented{Tprob}; prefix = "") where {Tprob}
+    print(io, prefix * "┌─ Minimally Augmented Problem continuation")
+    print(io, "\n" * prefix * "├─ use hessian:  ")
+    printstyled(io, prob.usehessian, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ linear solver:  ")
+    printstyled(io, prob.linsolver, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ linear solver for adjoint:  ")
+    printstyled(io, prob.linsolverAdjoint, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ linear solver for adjoint:  ")
+    printstyled(io, prob.linsolverAdjoint, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ linear bordered solver for the jacobian:  ")
+    printstyled(io, prob.linbdsolver, color = :cyan, bold = true)
+    print(io, "\n" * prefix * "├─ linear bordered solver for the jacobian adjoint:  ")
+    printstyled(io, prob.linbdsolverAdjoint, color = :cyan, bold = true)
+    # print(io, "\n" * prefix * "├─ Dimension:  ")
+    # printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
+    # print(io, "\n" * prefix * "├─ Jacobian: ")
+    # printstyled(io, prob.jacobian, color = :cyan, bold = true)
+    # print(io, "\n" * prefix * "└─ Parameter: ")
+    # printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
+end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     prob_ma = getprob(br).prob

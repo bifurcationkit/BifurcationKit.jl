@@ -65,7 +65,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                                     update_minaug_every_step,
                                     kwargs... )
     else
-        throw("We continue only Fold / PD / NS points of periodic orbits. Please report this error on the website.")
+        throw("We continue only Branch Point / Fold / PD / NS points of periodic orbits. Please report this error on the website.")
     end
     nothing
 end
@@ -73,7 +73,7 @@ end
 function foldpoint(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bptype = br.specialpoint[index].type
     if ~(bptype == :bp || bptype == :nd || bptype == :fold)
-        error("This should be a Fold / BP point")
+        error("This should be a Branch Point / Fold / BP point")
     end
     specialpoint = br.specialpoint[index]
     if specialpoint.x isa POSolutionAndState

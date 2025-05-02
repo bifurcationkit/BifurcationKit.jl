@@ -37,9 +37,10 @@ struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractIterativeLinea
     ifftplan::Tiplan
 end
 
-struct SHEigOp{Tsh <: SHLinearOp, Tσ} <: BK.AbstractEigenSolver
+struct SHEigOp{Tsh <: SHLinearOp, Tσ, Tc} <: BK.AbstractEigenSolver
     sh::Tsh
     σ::Tσ
+    cache::Tc
 end
 BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
 
@@ -63,8 +64,8 @@ end
 *(c::SHLinearOp, u) = apply!(similar(u), c, u, c.l1)
 \(c::SHLinearOp, u) = apply!(similar(u), c, u, c.l1, /)
 ####################################################################################################
-Nx = 2^9
-Ny = 2^9
+const Nx = 2^9
+const Ny = 2^9
 lx = 8pi * 2
 ly = 2*2pi/sqrt(3) * 2
 
@@ -78,7 +79,7 @@ sol0 = sol0 .- 0.25
 sol0 .*= 1.7
 # heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-8)
+function (sh::SHLinearOp)(J, rhs; shift = 0., rtol = 1e-8)
     u, l, ν = J
     udiag = l .+ 1 .+ (2ν) .* u .- 3 .* u.^2 .- shift
     tmp = copy(udiag); dudiag = copy(udiag)
@@ -92,7 +93,7 @@ function (sh::SHLinearOp)(J, rhs; shift = 0., rtol =  1e-8)
 end
 
 function (sheig::SHEigOp)(J, nev::Int; kwargs...)
-    @info "" nev
+    @error "" nev
     u, l, ν = J
     (;sh, σ) = sheig
     A = du -> sh(J, du; shift = σ)[1]
@@ -112,12 +113,12 @@ end
 J_shfft(u, p) = (u, p.l, p.ν)
 
 L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
-Leig = SHEigOp(L, 0.1) # for eigenvalues computation
+Leig = SHEigOp(L, 0.1, nothing) # for eigenvalues computation
 # @time Leig((sol_hexa.u, -0.15, 1.3), 10; σ = 0.1)
 
 par = (l = -0.15, ν = 1.3, L = L)
 
-@time F_shfft!(similar(sol0), (sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
+@time F_shfft!(similar(AF(sol0)), AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
 prob = BK.BifurcationProblem(F_shfft!, AF(sol0), par, (@optic _.l) ;
     J =  J_shfft,
@@ -140,7 +141,7 @@ println("--> norm(sol) = ", norm(outdef.u))
 plotsol(outdef.u) |> display
 BK.converged(outdef) && push!(deflationOp, outdef.u)
 ####################################################################################################
-opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, p_max = 0.005, p_min = -1.0, plot_every_step = 10, newton_options = setproperties(opt_new; tol = 1e-6, max_iterations = 15), max_steps = 30,
+opts_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.007, ds= -0.005, p_max = 0.005, p_min = -1.0, plot_every_step = 10, newton_options = setproperties(opt_new; tol = 1e-6, max_iterations = 15), max_steps = 130,
     detect_bifurcation = 3,
     tol_stability = 1e-5,
     save_eigenvectors = false,
@@ -153,10 +154,44 @@ prob = re_make(prob, u0 = deflationOp[1])
 br = @time continuation(prob, 
                         PALC(bls = BorderingBLS(solver = L, check_precision = false)), 
                         opts_cont;
-                        plot = true, verbosity = 3, normC = norminf,
+                        plot = true, 
+                        verbosity = 2,
+                        normC = norminf,
                         )
 ####################################################################################################
 # computation of normal form
 # we collect the matrix-free derivatives
-nf = get_normal_form(br, 1; nev = 15)
+function dF_shfft(u, p, du)
+    (;l, ν, L) = p
+    dest = similar(du)
+    apply!(dest, L, du, L.l1)
+    dest .= (-1) .* dest .+ ((l+1) .* du .+ 2ν .* u .* du .- 3 .* u.^2 .* du)
+end
 
+function d2F_shfft(u, p, du, du2)
+    (;l, ν, L) = p
+    dest = similar(du)
+    apply!(dest, L, du, L.l1)
+    dest .= (-1) .* dest .+ (2ν .* du2 .* du .- 6 .* u .* du2 .* du)
+end
+
+function d3F_shfft(u, p, du, du2, du3)
+    (;l, ν, L) = p
+    dest = similar(du)
+    apply!(dest, L, du, L.l1)
+    dest .= (-1) .* dest .+ ( - 6 .* du3 .* du2 .* du)
+end
+
+@reset br.prob.VF.dF = dF_shfft
+@reset br.prob.VF.d2F = d2F_shfft
+@reset br.prob.VF.d3F = d3F_shfft
+
+nf = get_normal_form(br, 1; nev = 15, autodiff = false)
+####################################################################################################
+# automatic branch switching
+
+br2 = @time continuation(br, 6, 
+                        ContinuationPar(opts_cont, detect_bifurcation = 0);
+                        plot = true, verbosity = 2, normC = norminf,
+                        nev = 40,
+                        )

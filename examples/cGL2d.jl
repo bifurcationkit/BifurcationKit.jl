@@ -102,7 +102,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, 
 br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
-hopfpt = get_normal_form(br, 2)
+hopfpt = get_normal_form(br, 2; autodiff = false)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
 
