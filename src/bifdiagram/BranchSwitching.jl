@@ -86,6 +86,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       plot_solution = plot_solution(br.prob),
                       Teigvec = _getvectortype(br),
                       scaleζ = norm,
+                      autodiff = true,
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
                       kwargs...) where {Tprob}
@@ -126,6 +127,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                             verbose,
                             Teigvec,
                             scaleζ,
+                            autodiff,
                             tol_fold)
 
     # compute predictor for a point on new branch
@@ -223,11 +225,12 @@ function multicontinuation(br::AbstractBranchResult,
                             scaleζ = norm,
                             perturb_guess = identity,
                             plot_solution = plot_solution(br.prob),
+                            autodiff = true,
                             kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-    bpnf = get_normal_form(br, ind_bif; nev, verbose, Teigvec, ζs, scaleζ)
+    bpnf = get_normal_form(br, ind_bif; nev, verbose, Teigvec, ζs, scaleζ, autodiff)
 
     return multicontinuation(br,
                             bpnf,
