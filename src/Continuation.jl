@@ -52,7 +52,7 @@ function ContIterable(prob::AbstractBifurcationProblem,
                     verbosity = 0, 
                     kwargs...) where {T <: Real, S, E}
     if ~isempty(kwargs)
-        @warn "Unrecognized keyword arguments found. Future versions will error."
+        @error "Unrecognized keyword arguments found."
         print("Unrecognized keyword arguments: ")
         unrecognized = keys(kwargs)
         printstyled(unrecognized; bold = true, color = :red)

@@ -21,16 +21,16 @@ Compute the normal form (NF) of periodic orbits. We detail the additional keywor
 For collocation, the default method to compute the NF of Period-doubling and Neimark-Sacker bifurcations is Iooss' method.
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
-            br::ContResult{ <: PeriodicOrbitCont}, id_bif::Int ;
-            nev = length(eigenvalsfrombif(br, id_bif)),
-            verbose = false,
-            ζs = nothing,
-            lens = getlens(br),
-            Teigvec = _getvectortype(br),
-            scaleζ = norm,
-            autodiff = false,
-            δ = getdelta(prob),
-            k...
+                        br::ContResult{ <: PeriodicOrbitCont}, id_bif::Int ;
+                        nev = length(eigenvalsfrombif(br, id_bif)),
+                        verbose = false,
+                        ζs = nothing,
+                        lens = getlens(br),
+                        Teigvec = _getvectortype(br),
+                        scaleζ = norm,
+                        autodiff = false,
+                        δ = getdelta(prob),
+                        k...
             )
     bifpt = br.specialpoint[id_bif]
 
