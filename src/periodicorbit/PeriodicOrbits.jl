@@ -500,6 +500,9 @@ $(SIGNATURES)
 
 Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
+!!! note "deep copy"
+    We deepcopy the underlying periodic orbit functional to prevent mutation
+
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the branch point
@@ -533,11 +536,11 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
-    if ~(bptype in (:pd, :bp))
+    if ~(bptype in (:pd, :bp, :nd))
         error("Branching from $(bptype) not possible yet.")
     end
     if abs(bifpt.δ[1]) != 1 
-        error("Only simple bifurcation points are handled")
+        error("Only simple bifurcation points are handled properly")
     end
 
     # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.

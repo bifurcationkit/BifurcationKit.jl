@@ -1252,7 +1252,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
         # orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
     # we append twice the period
     orbitguess = vcat(vec(orbitguess_c), 2nf.T)
-    # we updat the phase condition
+    # we update the phase condition
     @reset pbnew.xπ = orbitguess[begin:end-1]
     @reset pbnew.ϕ = circshift(orbitguess[begin:end-1], length(orbitguess))
     # we need to duplicate the po as well in case deflation is used
@@ -1265,10 +1265,15 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem},
                     δp,
                     ampfactor;
                     override = false)
-    M, N = size(nf.prob)
+    prob = nf.prob
+    M, N = size(prob)
     orbitguess = copy(nf.po)
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po, ζc = reshape(nf.ζ, N, M))
+    # we update the phase condition
+    pbnew = deepcopy(prob)
+    pars = set(getparams(prob), getlens(prob), nf.nf.p)
+    updatesection!(pbnew, nf.po, pars)
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po = nf.po, ζc = reshape(nf.ζ, N, M))
 end
 
 function predictor(nf::NeimarkSackerPO,

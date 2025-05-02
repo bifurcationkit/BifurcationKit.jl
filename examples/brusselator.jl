@@ -125,7 +125,9 @@ if 1==1
         detect_codim2_bifurcation = 2,
         jacobian_ma = :minaug,
         # plot = true,
-        verbosity = 2, normC = norminf, bothside = true)
+        verbosity = 2, normC = norminf, 
+        # bothside = true
+        )
 end
 
 plot(br_hopf)
