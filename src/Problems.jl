@@ -178,6 +178,8 @@ for (op, at) in (
                 - `record_from_solution` see above
                 - `plot_solution` see above
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need of providing an adjoint
+                - `jvp` jacobian-vector product, siganture `jvp(x,p,dx)`
+                - `vjp` vector-jacobian product (adjoint of jvp), siganture `vjp(x,p,dx)`
                 - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x,p,dx1,dx2)`
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x,p,dx1,dx2,dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.

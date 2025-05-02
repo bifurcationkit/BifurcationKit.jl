@@ -84,16 +84,16 @@ plotsol(deflationOp[end])
 
 plotsol(0.4vec(sol_hexa.u) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = -0.0, p_min = -1.0, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), max_steps = 146, detect_bifurcation = 3, nev = 40, dsmin_bisection = 1e-9, n_inversion = 6, tol_bisection_eigenvalue= 1e-19)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = -0.0, p_min = -1.0, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), max_steps = 146, detect_bifurcation = 3, nev = 10, n_inversion = 6, save_eigenvectors = false)
 optcont = @set optcont.newton_options.eigsolver = EigArpack(0.1, :LM)
 # prob.u0 .= deflationOp[1]
 
 br = @time continuation(
     prob, PALC(), optcont;
     plot = true, verbosity = 2,
-    # finalise_solution = (z, tau, step, contResult; k...) -> (Base.display(contResult.eig[end].eigenvals) ;true),
-    # callback_newton = cb,
     normC = norminf)
+
+get_normal_form(br, 19; verbose = true)
 ###################################################################################################
 # codim2 Fold continuation
 optfold = @set optcont.detect_bifurcation = 0
@@ -107,11 +107,12 @@ brfold = continuation(br, 1, (@optic _.ν), optfold;
     verbosity = 3, plot = true,
     bdlinsolver = MatrixBLS(),
     jacobian_ma = :minaug,
-    start_with_eigen = true,
+    start_with_eigen = false,
     detect_codim2_bifurcation = 0,
     bothside = true,
     # plot_solution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
     update_minaug_every_step = 1,
+    normC = norminf,
     )
 
 plot(brfold)

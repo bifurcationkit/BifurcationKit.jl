@@ -1,7 +1,7 @@
 function get_adjoint_basis(L★, λs, eigsolver; nev = 3, verbose = false)
     # we compute the eigen-elements of the adjoint of L
     λ★, ev★, cv, = eigsolver(L★, nev)
-    ~cv && @warn "Eigen Solver did not converge"
+    ~cv && @warn "Adjoint eigen solver did not converge"
     verbose && Base.display(λ★)
     # vectors to hold eigen-elements for the adjoint of L
     λ★s = Vector{eltype(λs)}()
@@ -11,7 +11,7 @@ function get_adjoint_basis(L★, λs, eigsolver; nev = 3, verbose = false)
     for (idvp, λ) in enumerate(λs)
         I = argmin(abs.(λ★ .- λ))
         abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
-        verbose && println("──> VP[$idvp] paired with VP★[$I]")
+        verbose && println("──▶ VP[$idvp] paired with VP★[$I]")
         ζ★ = geteigenvector(eigsolver, ev★, I)
         push!(ζ★s, copy(ζ★))
         push!(λ★s, λ★[I])
@@ -63,7 +63,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         error("We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
     end
 
-    verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
+    verbose && println("━"^53*"\n┌─ Normal form computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bifpt.param)
 
     options = br.contparams.newton_options
@@ -91,8 +91,9 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # corresponding eigenvector, it must be real
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
-        _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
+        nev_required = max(nev, bifpt.ind_ev + 2)
+        verbose && @info "Eigen-elements not saved in the branch. Recomputing $nev_required of them..."
+        _λ, _ev, _ = options.eigsolver(L, nev_required)
         if ~(_λ[bifpt.ind_ev] ≈ λ)
             error("We did not find the correct eigenvalue $λ. We found $(_λ)")
         end
@@ -222,7 +223,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = 
         xm1 = bp.x0 .- amp .* real.(bp.ζ) .+ ds .* Ψ01
     end
 
-    verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+    verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
     return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp, p0 = bp.p)
 end
 
@@ -261,7 +262,7 @@ function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, a
     #     amp = ampfactor * abs(ds)
     #     pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
     end
-    verbose && println("──> Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+    verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
     return (;x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor, amp)
 end
 
@@ -447,7 +448,7 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
 
     # test the bi-orthogonalization
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-    verbose && (printstyled(color=:green, "──> Gram matrix = \n"); Base.display(G))
+    verbose && (printstyled(color=:green, "──▶ Gram matrix = \n"); Base.display(G))
     if ~(norminf(G - LinearAlgebra.I) < 1e-5)
         error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
     end
@@ -555,8 +556,8 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(2N, nev)
-    verbose && println("━"^53*"\n──> Normal form Computation for a $N-d kernel")
-    verbose && println("──> analyse bifurcation at p = ", bifpt.param)
+    verbose && println("━"^53*"\n──▶ Normal form Computation for a $N-d kernel")
+    verbose && println("──▶ analyse bifurcation at p = ", bifpt.param)
 
     options = br.contparams.newton_options
     ls = options.linsolver
@@ -581,14 +582,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     rightEv = br.eig[bifpt.idx].eigenvals
     indev = br.specialpoint[id_bif].ind_ev
     λs = rightEv[indev-N+1:indev]
-    verbose && println("──> smallest eigenvalues at bifurcation = ", real.(λs))
+    verbose && println("──▶ smallest eigenvalues at bifurcation = ", real.(λs))
     # and corresponding eigenvectors
     if isnothing(ζs) # do we have a basis for the kernel?
         if haseigenvector(br) == false # are the eigenvector saved in the branch?
             @info "No eigenvector recorded, computing them on the fly"
             # we recompute the eigen-elements if there were not saved during the computation of the branch
-            _λ, _ev, _ = options.eigsolver(L, max(nev, length(rightEv)))
-            verbose && (println("──> (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
+            _λ, _ev, _ = options.eigsolver(L, max(nev, max(nev, length(rightEv))))
+            verbose && (println("──▶ (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
@@ -978,7 +979,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
         if ~(_λ[bifpt.ind_ev] ≈ λ)
-            error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+            error("We did not find the correct eigenvalue $λ. We found $(_λ).\nIf you use aBS, pass a higher `nev` (number of eigenvalues) to be computed.")
         end
         ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
     else
@@ -1318,7 +1319,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
         if ~(_λ[bifpt.ind_ev] ≈ λ)
-            error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+            error("We did not find the correct eigenvalue $λ. We found $(_λ).\nIf you use aBS, pass a higher `nev` (number of eigenvalues) to be computed. Currently it is `nev` = $nev")
         end
         ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
     else
@@ -1331,7 +1332,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
-    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev"
+    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev"
 
     # normalise left eigenvector
     ζ★ ./= dot(ζ, ζ★)
