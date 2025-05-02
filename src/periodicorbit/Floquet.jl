@@ -30,23 +30,27 @@ If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eige
 """
 struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
     eigsolver::E
-    function FloquetQaD(eigls::AbstractEigenSolver)
+    matrix_free::Bool
+    function FloquetQaD(eigls::AbstractEigenSolver, matrix_free = ~(eigls isa AbstractDirectEigenSolver))
         eigls2 = check_floquet_options(eigls)
-        return new{typeof(eigls2)}(eigls2)
+        return new{typeof(eigls2)}(eigls2, matrix_free)
     end
     FloquetQaD(eigls::AbstractFloquetSolver) = eigls
 end
 geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function (fl::FloquetQaD)(J, nev; kwargs...)
-    if fl.eigsolver isa AbstractDirectEigenSolver
-        monodromy = MonodromyQaD(J)
-    else
+    if fl.matrix_free
         # Matrix Free version
         monodromy = dx -> MonodromyQaD(J, dx)
+    else
+        monodromy = MonodromyQaD(J)
     end
-    vals, vecs, cv, info = fl.eigsolver(monodromy, nev)
-    Inf in vals && @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients"
+    vals, vecs, cv, info = fl.eigsolver(monodromy, nev; kwargs...)
+
+    if Inf in vals
+        @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients"
+    end
 
     # the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
     logvals = log.(complex.(vals))
@@ -56,7 +60,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
     σ = logvals[I]
     vp0 = minimum(abs, σ)
     if (J isa FloquetWrapper{ShootingProblem}) && vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+        @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`"
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
