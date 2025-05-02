@@ -165,33 +165,47 @@ function dF_shfft(u, p, du)
     (;l, ν, L) = p
     dest = similar(du)
     apply!(dest, L, du, L.l1)
-    dest .= (-1) .* dest .+ ((l+1) .* du .+ 2ν .* u .* du .- 3 .* u.^2 .* du)
+    dest .= (-1) .* dest .+ ((l+1) .* du .+ (2ν) .* u .* du .- 3 .* u.^2 .* du)
 end
 
 function d2F_shfft(u, p, du, du2)
     (;l, ν, L) = p
-    dest = similar(du)
-    apply!(dest, L, du, L.l1)
-    dest .= (-1) .* dest .+ (2ν .* du2 .* du .- 6 .* u .* du2 .* du)
+    dest = similar(du2)
+    dest .= ((2ν) .* du2 .* du .- 6 .* u .* du2 .* du)
 end
 
 function d3F_shfft(u, p, du, du2, du3)
     (;l, ν, L) = p
-    dest = similar(du)
-    apply!(dest, L, du, L.l1)
-    dest .= (-1) .* dest .+ ( - 6 .* du3 .* du2 .* du)
+    dest = similar(du2)
+    dest .= ( (-6) .* du3 .* du2 .* du)
 end
 
 @reset br.prob.VF.dF = dF_shfft
+@reset br.prob.VF.isSymmetric = true
+@reset br.prob.VF.Jᵗ = (x,p) -> dx -> dF_shfft(x,p,dx)
 @reset br.prob.VF.d2F = d2F_shfft
 @reset br.prob.VF.d3F = d3F_shfft
 
-nf = get_normal_form(br, 1; nev = 15, autodiff = false)
+bpnf = get_normal_form(br, 2; nev = 30, autodiff = false, verbose = true)
 ####################################################################################################
 # automatic branch switching
-
-br2 = @time continuation(br, 6, 
+br2 = @time continuation(br, 2, 
                         ContinuationPar(opts_cont, detect_bifurcation = 0);
                         plot = true, verbosity = 2, normC = norminf,
                         nev = 40,
+                        autodiff = false,
+                        δp = δp,
                         )
+
+plot(br, br2...)
+
+# less automatic
+δp = 0.001
+rootsNFm, rootsNFp = predictor(bpnf, δp;  verbose = true)
+br2 = BK.multicontinuation(br, bpnf, (before = rootsNFm, after = rootsNFp),
+                            ContinuationPar(opts_cont, detect_bifurcation = 0);
+                            plot = true, verbosity = 2, normC = norminf,
+                            δp = δp,
+                            )
+
+plot(br, br2...)

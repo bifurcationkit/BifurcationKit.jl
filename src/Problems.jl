@@ -305,10 +305,12 @@ for (op, at) in (
 
                 J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> Foop(z, p), x) : J
                 J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
-
-                jvp = isnothing(jvp) ?
-                      (x, p, dx) -> ForwardDiff.derivative(t -> Foop(x .+ t .* dx, p), zero(eltype(dx))) : dF
                 d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> Foop(x .+ t .* dx1, p), zero(eltype(dx1)))
+                jvp = if isnothing(jvp)
+                    (x, p, dx) -> ForwardDiff.derivative(t -> Foop(x .+ t .* dx, p), zero(eltype(dx)))
+                else
+                    jvp
+                end
 
                 if isnothing(d2F)
                     d2F = (x, p, dx1, dx2) -> ForwardDiff.derivative(t -> d1Fad(x .+ t .* dx2, p, dx1), zero(eltype(dx1)))

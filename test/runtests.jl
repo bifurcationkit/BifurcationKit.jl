@@ -66,6 +66,11 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("cop.jl")
     end
 
+    @testset "Periodic orbits BP-PO" begin
+        # for testing BP-PO aBS
+        include("freire.jl")
+    end
+
     @testset "Periodic orbits function SH1" begin
         @info "Entry in test_SS.jl"
         include("test_SS.jl")
