@@ -222,13 +222,13 @@ residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
 residual!(pdpb::PDMAProblem, out, x, p) = (copyto!(out, pdpb.prob(x, p)); out)
 save_solution(::PDMAProblem, x, p) = x
 
-jacobian(pdpb::PDMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = pdpb.prob)
+jacobian(pdpb::PDMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = pdpb.prob)
 
-jacobian(pdpb::PDMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
+jacobian(pdpb::PDMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
 
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ################################################################################################### Newton / Continuation functions
 """
 $(SIGNATURES)
@@ -479,8 +479,8 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _plotsol = modify_po_plot(prob_pd, _kwargs)
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    # define event for detecting bifurcations. Coupled it with user passed events
-    # event for detecting codim 2 points
+    # Define event for detecting codim 2 bifurcations.
+    # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)

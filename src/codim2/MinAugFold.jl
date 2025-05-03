@@ -523,7 +523,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_f)
 
-    # define event for detecting bifurcations. Coupled with user passed events
+    # Define event for detecting codim 2 bifurcations.
+    # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     if isnothing(event_user)
         event = PairOfEvents(

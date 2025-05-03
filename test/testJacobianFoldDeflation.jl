@@ -3,7 +3,7 @@ using Test, BifurcationKit, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
 
 source_term(x; a = 0.5, b = 0.01) = 1 + (x + a*x^2)/(1 + b*x^2)
-limits(x,i,N, b) = (i<1||i>N) ? b : x[i]
+limits(x, i, N, b) = (i<1 || i>N) ? b : x[i]
 
 function F_chan(x, p)
     α, β = p

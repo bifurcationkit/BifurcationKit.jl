@@ -247,12 +247,12 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 - `amp` non trivial zero of the normal form
 """
-function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, ampfactor = one(T)) where T
+function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
     nf = bp.nf
-    a, b1, b2, b3 = nf
+    (;a, b1, b2, b3) = nf
 
     # we need to find the type, supercritical or subcritical
-    dsfactor = b1 * b3 < 0 ? T(1) : T(-1)
+    dsfactor = b1 * b3 < 0 ? 𝒯(1) : 𝒯(-1)
     if true
         # we solve b1 * ds + b3 * amp^2 / 6 = 0
         amp = ampfactor * sqrt(-6abs(ds) * dsfactor * b1 / b3)
@@ -266,16 +266,16 @@ function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::T; verbose = false, a
     return (;x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor, amp)
 end
 
-function predictor(bp::Fold, ds::T; verbose = false, ampfactor = T(1)) where T
+function predictor(bp::Fold, ds::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
     @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is aδμ + b1⋅x + b2⋅x² + b3⋅x³\n with coefficients \n a = $(bp.nf.a), b1 = $(bp.nf.b1), b2 = $(bp.nf.b2), b3 = $(bp.nf.b3)."
     return nothing
 end
 ####################################################################################################
-function factor3d(i,j,k)
+function factor3d(i, j, k)
     if i == j == k
         return 1/6
     else
-        _power = length(unique((i,j,k)))
+        _power = length(unique((i, j, k)))
         if _power == 1
             factor = 1/6 /2
         elseif _power == 2
@@ -728,24 +728,24 @@ This function provides prediction for what the zeros of the reduced equation / n
 - `perturb` perturb function used in Deflated newton
 - `normN` norm used for newton.
 """
-function predictor(bp::NdBranchPoint, δp::T;
+function predictor(bp::NdBranchPoint, δp::𝒯;
                     verbose::Bool = false,
-                    ampfactor = one(T),
+                    ampfactor = one(𝒯),
                     nbfailures = 50,
                     maxiter = 100,
                     perturb = identity,
                     J = nothing,
                     normN = norminf,
-                    optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+                    optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where 𝒯
 
     # dimension of the kernel
     n = length(bp.ζ)
 
     # find zeros of the normal on each side of the bifurcation point
     function _get_roots_nf(_ds)
-        deflationOp = DeflationOperator(2, T(1), [zeros(T, n)]; autodiff = true)
+        deflationOp = DeflationOperator(2, one(𝒯), [zeros(𝒯, n)]; autodiff = true)
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-                                    (rand(T, n) .- T(1/2)) .* T(1.1), 
+                                    (rand(𝒯, n) .- 𝒯(1/2)) .* 𝒯(1.1), 
                                     _ds)
         if ~isnothing(J)
             @reset prob.VF.J = J
@@ -759,7 +759,7 @@ function predictor(bp::NdBranchPoint, δp::T;
             else
                 failures += 1
             end
-            prob.u0 .= outdef1.u .+ T(1/10) .* (rand(T, n) .- T(1/2))
+            prob.u0 .= outdef1.u .+ 𝒯(1/10) .* (rand(𝒯, n) .- 𝒯(1/2))
         end
         return deflationOp.roots
     end
@@ -781,16 +781,16 @@ This function provides prediction for what the zeros of the reduced equation / n
 - `normN` norm used for newton.
 - `igs` vector of initial guesses. If not passed, these are the vertices of the hypercube.
 """
-function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
-                verbose::Bool = false,
-                ampfactor = T(1),
-                nbfailures = 30,
-                maxiter = 100,
-                perturb = identity,
-                J = nothing,
-                igs = nothing,
-                normN = norminf,
-                optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where T
+function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::𝒯;
+                    verbose::Bool = false,
+                    ampfactor = one(𝒯),
+                    nbfailures = 30,
+                    maxiter = 100,
+                    perturb = identity,
+                    J = nothing,
+                    igs = nothing,
+                    normN = norminf,
+                    optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where 𝒯
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -802,10 +802,10 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::T;
 
     # find zeros of the normal on each side of the bifurcation point
     function _get_roots_nf(_ds)
-        deflationOp = DeflationOperator(2, 1.0, [zeros(n)]; autodiff = true)
+        deflationOp = DeflationOperator(2, one(𝒯), [zeros(𝒯, n)]; autodiff = true)
 
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
-                                    zeros(n), _ds, @optic _)
+                                    zeros(𝒯, n), _ds, @optic _)
         if ~isnothing(J)
             @reset prob.VF.J = J
         end
@@ -852,14 +852,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                             autodiff = true,
                             L = nothing)
     δ = getdelta(prob)
-    x0 = pt.x0
-    p = pt.p
-    lens = pt.lens
+    (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
-    ω = pt.ω
-    ζ = pt.ζ
     cζ = conj.(pt.ζ)
-    ζ★ = pt.ζ★
 
     # jacobian at the bifurcation point
     # do not recompute it if passed
@@ -1055,8 +1050,7 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
     # get the normal form
     nf = hp.nf
     if ~ismissing(nf.a) && ~ismissing(nf.b)
-        a = nf.a
-        b = nf.b
+        (;a, b) = nf
 
         if abs(real(b)) < 1e-10
             @error "The Lyapunov coefficient is nearly zero:\nb = $b.\nThe Hopf predictor may be unreliable."
@@ -1098,18 +1092,24 @@ function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
             dsfactor = dsfactor)
 end
 ################################################################################
-# computation based on 
-# James. “Centre Manifold Reduction for Quasilinear Discrete Systems.” Journal of Nonlinear Science 13, no. 1 (February 2003): 27–63. https://doi.org/10.1007/s00332-002-0525-x.
-# and on
-# Kuznetsov, Yuri A. Elements of Applied Bifurcation Theory. Vol. 112. Applied Mathematical Sciences. Cham: Springer International Publishing, 2023. https://doi.org/10.1007/978-3-031-22007-4.
-# on page 202
+"""
+$(SIGNATURES)
+
+Computation of the period doubling normal form for maps based on the following articles.
+
+The `BifurcationProblem` must represent xₙ₊₁ = F(xₙ, pars).
+
+## References
+[1] James. “Centre Manifold Reduction for Quasilinear Discrete Systems.” Journal of Nonlinear Science 13, no. 1 (February 2003): 27–63. https://doi.org/10.1007/s00332-002-0525-x.
+
+[2] Kuznetsov, Yuri A. Elements of Applied Bifurcation Theory. Vol. 112. Applied Mathematical Sciences. Cham: Springer International Publishing, 2023. https://doi.org/10.1007/978-3-031-22007-4. on page 202
+"""
 function period_doubling_normal_form(prob::AbstractBifurcationProblem,
-                                pt::PeriodDoubling, 
-                                ls::AbstractLinearSolver; 
-                                verbose::Bool = false)
-    x0 = pt.x0
-    p = pt.p
-    lens = pt.lens
+                                     pt::PeriodDoubling, 
+                                     ls::AbstractLinearSolver; 
+                                     autodiff = false,
+                                     verbose::Bool = false)
+    (;x0, p, lens) = pt
     parbif = set(pt.params, lens, p)
     ζ = pt.ζ |> real
     ζ★ = pt.ζ★ |> real
@@ -1150,7 +1150,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     verbose && println("──▶ b₃ = ", b)
 
     nf = (a = a, b3 = b)
-    # the second iterate of the normal for is x → -x -2⋅b₃⋅x³
+    # the second iterate of the normal for is x → -x - 2b₃⋅x³
     if real(b) > 0
         type = :SuperCritical
     elseif real(b) < 0
@@ -1197,14 +1197,9 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                             detailed = false,
                             verbose::Bool = false)
     δ = getdelta(prob)
-    x0 = pt.x0
-    p = pt.p
-    lens = pt.lens
+    (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
-    ω = pt.ω
-    ζ = pt.ζ
     cζ = conj.(pt.ζ)
-    ζ★ = pt.ζ★
 
     # jacobian at the bifurcation point
     L = jacobian(prob, x0, parbif)
@@ -1370,9 +1365,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bp.p)
 
-    x0 = bp.x0
-    p = bp.p
-    lens = bp.lens
+    (;x0, p, lens) = bp
     parbif = bp.params
     ζ = bp.ζ |> real
     ζ★ = bp.ζ★ |> real

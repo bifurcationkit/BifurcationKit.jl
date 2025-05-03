@@ -36,7 +36,6 @@ function finaliser_sae(event_point, it, state, success)
     event_point
 end
 ####################################################################################################
-# detection of Fold bifurcation, should be based on Bordered
 """
     `FoldDetectEvent`
 
@@ -65,7 +64,7 @@ end
 """
     `BifDetectEvent`
 
-This event implements the detection of bifurcations points along a continuation curve. The detection is based on monitoring the number of unstable eigenvalues. More details are given at [Detection of bifurcation points of Equilibria](@ref).
+This event implements the detection of bifurcations points along a continuation curve. The detection is based on monitoring the number of unstable eigenvalues. More details are given on the website at [Detection of bifurcation points of Equilibria](@ref).
 """
 BifDetectEvent = BifEvent(1, detect_bifurcation_event)
 

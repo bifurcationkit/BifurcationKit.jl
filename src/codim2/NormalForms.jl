@@ -84,7 +84,7 @@ function cusp_normal_form(_prob,
         ζ★ = copy(ζ)
     else
         _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-        ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), eigsolver; nev = nev, verbose = verbose)
+        ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), eigsolver; nev, verbose)
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
@@ -165,10 +165,10 @@ function bogdanov_takens_normal_form(prob_ma, L,
     ζs0, ζs1 = pt.ζ★
 
     G = [dot(xs, x) for xs in pt.ζ★, x in pt.ζ]
-    norm(G-I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
+    norm(G - I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
 
-    G = [dot(xs, apply(L,x)) for xs in pt.ζ★, x in pt.ζ]
-    norminf(G - [0 1;0 0]) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norm(G-[0 1;0 0], Inf))"
+    G = [dot(xs, apply(L, x)) for xs in pt.ζ★, x in pt.ζ]
+    norminf(G - [0 1;0 0]) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norm(G - [0 1;0 0], Inf))"
 
     # second differential
     R2(dx1, dx2) = d2F(VF, x0, parbif, dx1, dx2) ./2
@@ -334,7 +334,7 @@ Compute the predictor for the Hopf curve near the Bogdanov-Takens point.
 """
 function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     # If we write the normal form [y2, β1 + β2 y2 + a y1^2 + b y1 y2]
     # equilibria y2 = 0, 0 = β1 + a y1^2
     # Characteristic polynomial: t^2 + (-x*b - β2)*t - 2*x*a
@@ -402,7 +402,7 @@ Compute the predictor for the Fold curve near the Bogdanov-Takens point.
 """
 function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     # If we write the normal form [y2, β1 + β2 y2 + a y1^2 + b y1 y2]
     # equilibria y2 = 0, 0 = β1 + a y1^2
     # the fold curve is β1 / a < 0 with x± := ±√(-β1/a)
@@ -660,7 +660,7 @@ function bautin_normal_form(_prob,
     ϵ = 𝒯(δ)
 
     # functional
-    @assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of of Hopf points."
+    @assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of Hopf points."
     ls = prob_ma.linsolver
     bls = prob_ma.linbdsolver
 
@@ -711,7 +711,7 @@ function bautin_normal_form(_prob,
 
     # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
@@ -933,7 +933,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 """
 function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁) = gh.nf
     lens1, lens2 = gh.lens
     p1 = _get(gh.params, lens1)
@@ -1171,7 +1171,7 @@ function zero_hopf_normal_form(_prob,
     LL[2, 2] = G110
 
     # formula (25) in REF2
-    # this corrected by Hil Meijer, personal communication
+    # this is corrected by Hil Meijer, personal communication
     RR = [ -dot(p0, B(q0, r1) .+ A1(q0, lens1) .* s1[1] .+ A1(q0, lens2) .* s1[2]), 
            -dot(p1, B(q1, r1) .+ A1(q1, lens1) .* s1[1] .+ A1(q1, lens2) .* s1[2])]
 
@@ -1203,7 +1203,7 @@ Compute the predictor for the curve of Hopf bifurcations near the Zero-Hopf bifu
 """
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;ω, λ0) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
@@ -1237,7 +1237,7 @@ Compute the predictor for the curve of Fold bifurcations near the Zero-Hopf bifu
 """
 function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;ω, λ0) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
@@ -1275,7 +1275,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 """
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
@@ -1528,7 +1528,7 @@ Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 """
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;λ1, λ2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
@@ -1566,7 +1566,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 """
 function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
-                    ampfactor = T(1)) where T
+                    ampfactor = one(T)) where T
     (;λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)

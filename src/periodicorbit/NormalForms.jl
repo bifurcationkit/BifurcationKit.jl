@@ -99,14 +99,14 @@ function branch_normal_form(pbwrap::WrapPOSh,
     verbose && println("━"^53*"\n──▶ Branch point of periodic orbit normal form computation")
     prob_sh = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
-    par = setparam(br, bifpt.param)
-    period = getperiod(prob_sh, bifpt.x, par)
+    pars = setparam(br, bifpt.param)
+    period = getperiod(prob_sh, bifpt.x, pars)
 
     # we compute the kernel:
     # it is two-dimensional. One vector is the trivial vector ∂u₀ where
     # u₀ is the periodic orbit. Hence, ζ₀ = F(u₀, par)
     po = get_time_slices(prob_sh, bifpt.x)
-    ζ₀ = vf(prob_sh.flow, po[:, 1], par)
+    ζ₀ = vf(prob_sh.flow, po[:, 1], pars)
     ζ₀ ./= scaleζ(ζ₀)
     # get the non trivial null vector
     spectrum = br.eig[bifpt.idx].eigenvals
@@ -130,7 +130,7 @@ function branch_normal_form(pbwrap::WrapPOSh,
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed
         return BranchPointPO(bifpt.x, period, real.(ζs), nothing, bp0, prob_sh, true)
@@ -154,7 +154,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                     scaleζ = norminf,
                                     detailed = true,
                                     kwargs_nf...)
-    # ζₚₒ is the trivial eigenvector ∂ₜu₀(0) where u₀ is the periodic orbit
+    # ζₚₒ is the trivial eigenvector ∂ₜu₀(0)=F(u₀) where u₀ is the periodic orbit
     sh = pbwrap.prob
     pars = bp0.params
     period = getperiod(sh, bp0.x0, pars)
@@ -257,7 +257,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     pars = bp0.params
     period = getperiod(coll, bp0.x0, pars)
 
-    # we get the nontrivial floquet eigenvectors for μ = 1
+    # we get the nontrivial floquet eigenvectors μ = 1
     # We could use Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” n.d.
     # formula (6.9) on page 201
     # but I am not sure the formula is correct, ie having a Jordan block [0 1; 0 0].
@@ -266,8 +266,8 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     u₀ₛ = get_time_slices(coll, bp0.x0) # periodic solution at bifurcation
     Fu₀ₛ = copy(u₀ₛ)
     Fu₀ = vec(Fu₀ₛ)
-    for i = 1:size(u₀ₛ, 2)
-        Fu₀ₛ[:,i] .= residual(coll.prob_vf, u₀ₛ[:,i], pars)
+    for i in axes(u₀ₛ, 2)
+        Fu₀ₛ[:, i] .= residual(coll.prob_vf, u₀ₛ[:, i], pars)
     end
 
     jac = jacobian(pbwrap, bp0.x0, pars)
@@ -285,7 +285,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     J[end, 1:end-1] .= q[begin:end-1]
     J[1:end-1, end] .= p[begin:end-1]
     
-    #the matrix L₀ = 0
+    # the matrix L₀ = 0
     Jbd = zeros(nj+1, nj+1)
     Jbd[1:nj,1:nj] .= J
     Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[1:end-1]
@@ -302,7 +302,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
 
     Jbd[1:nj-1,end] .= q₀# ∂(coll, vcat(Fu₀,period), pars)[1:end-1]
     Jbd[end,1:nj-1] .= p₀
-    
+
     sols   = Jbd  \ rhs
     q₀ = sols[1:nj-1,1]
     q₁ = sols[1:nj-1,2]
@@ -433,7 +433,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
-    # If M is the monodromy matrix and E = x - <x,e>e with e the eigen
+    # If M is the monodromy matrix and E := x - <x,e>e with e the eigen
     # vector of M for the eigenvalue 1, then, we find that
     # eigenvector(P) = E ∘ eigenvector(M)
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
@@ -451,21 +451,16 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
-    Fp = eigen(dΠ')
-    ind₋₁ = argmin(abs.(Fp.values .+ 1))
-    ev₋₁p = Fp.vectors[:, ind₋₁]
+    F★ = eigen(dΠ')
+    ind₋₁ = argmin(abs.(F★.values .+ 1))
+    ev₋₁★ = F★.vectors[:, ind₋₁]
     ####
 
-    @debug "" Fₘ.values F.values Fp.values
-
-    # dΠ * ζ₋₁ + ζ₋₁ |> display # not good, need projector E
-    # dΠ * ev₋₁ + ev₋₁ |> display
-    # dΠ' * ev₋₁p + ev₋₁p |> display
-    # e = Fₘ.vectors[:,end]; e ./= norm(e)
+    @debug "" Fₘ.values F.values F★.values
 
     # normalize eigenvectors
     ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
-    ev₋₁p ./= dot(ev₋₁, ev₋₁p)
+    ev₋₁★ ./= dot(ev₋₁, ev₋₁★)
 
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
@@ -475,7 +470,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             )
 
-    pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
+    pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁★, nothing, :none)
     # normal form computation
     pd = period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose)
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), nothing, pd, sh, true)
@@ -1228,6 +1223,11 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+Compute the predictor for the period-doubling bifurcation of periodic orbit.
+"""
 function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
                     δp,
                     ampfactor;
@@ -1261,6 +1261,11 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po, ζc)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the simple branch point of periodic orbit.
+"""
 function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem},
                     δp,
                     ampfactor;
@@ -1284,6 +1289,11 @@ function predictor(nf::NeimarkSackerPO,
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+Compute the predictor for the period-doubling bifurcation of periodic orbit.
+"""
 function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem }, 
                     δp, 
                     ampfactor; 
@@ -1340,6 +1350,11 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor, po)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the simple branch point of periodic orbit.
+"""
 function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
                     δp,
                     ampfactor;
@@ -1396,6 +1411,11 @@ function predictor(nf::BranchPointPO{ <: ShootingProblem },
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+Compute the predictor for the period-doubling bifurcation of periodic orbit.
+"""
 function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, 
                     δp, 
                     ampfactor;
@@ -1411,6 +1431,11 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem },
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the predictor for the simple branch point of periodic orbit.
+"""
 function predictor(nf::BranchPointPO{ <: PoincareShootingProblem},
                     δp,
                     ampfactor;

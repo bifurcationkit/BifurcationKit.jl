@@ -1,5 +1,6 @@
 """
-Construct a Poincaré return map `Π` to an hyperplane `Σ` from a `AbstractPeriodicOrbitProblem`. If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
+Construct a Poincaré return map `Π` to an hyperplane `Σ` from a `AbstractPeriodicOrbitProblem`.
+If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
 """
 struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
     "periodic orbit problem"

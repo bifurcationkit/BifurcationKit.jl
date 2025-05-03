@@ -109,6 +109,7 @@ end
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
 function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
     if l.useFactorization
+        # factorize makes this type-unstable
         Jfact = factorize(_axpy(J, a₀, a₁))
         return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
     else

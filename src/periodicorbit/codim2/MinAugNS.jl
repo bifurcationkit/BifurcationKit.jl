@@ -200,25 +200,14 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         σxx1 = dot(vcat(σx,σt), x1)
         σxx2 = dot(vcat(σx,σt), x2)
 
-        dp, dω = [real(σₚ - σxx2) real(σω);
-                  imag(σₚ + σxx2) imag(σω) ] \
-                  [dup - real(σxx1), duω + imag(σxx1)]
-
-        # Jns = hcat(_Jpo, dₚF, zero(dₚF))
-        # Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
-        # Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
-
-        # sol = Jns \ vcat(duu,dup,duω)
-        # return sol[1:end-2], sol[end-1],sol[end],true,2
-
-        # Jfd = ForwardDiff.jacobian(z->𝐍𝐒(z,par0),vcat(x,p,ω))
-
-        # display(Jfd[end, 1:19]')
-        # display(vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
-
-        # @debug "" norm(Jns-Jfd, Inf) dp dω
-
-        # Jns .= Jfd
+         # We need to be careful here because the dot produces conjugates. 
+        # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
+        LS = Matrix{𝒯}(undef, 2, 2);
+        rhs = Vector{𝒯}(undef, 2);
+        LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
+        LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+        rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
+        dp, dω = LS \ rhs
 
         if debugArray isa AbstractArray
             Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
@@ -471,8 +460,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     _plotsol = modify_po_plot(prob_ns, _kwargs)
     prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    # define event for detecting bifurcations. Coupled it with user passed events
-    # event for detecting codim 2 points
+    # Define event for detecting codim 2 bifurcations.
+    # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)

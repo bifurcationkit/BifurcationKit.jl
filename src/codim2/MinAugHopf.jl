@@ -92,12 +92,12 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw, σω)
 end
 ###################################################################################################
-function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+# since this is matrix based, it requires X to ba an AbstractVector
+function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector{𝒯}, par) where {Tprob, 𝒯}
     𝐇 = pdpb.prob
     x = @view X[begin:end-2]
     p = X[end-1]
     ω = X[end]
-    𝒯 = eltype(p)
 
     (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
 
@@ -121,7 +121,7 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 """
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
 """
-function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
+function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
                             duu, dup, duω;
                             debugArray = nothing) where 𝒯
     ################################################################################################
@@ -171,10 +171,14 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
         d2Fv = d2Fc(𝐇.prob_vf, x, par0, v, x2)
         σxx2 = -conj(dot(w, d2Fv))
     end
-    # we need to be carefull here because the dot produces conjugates. Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
-    dp, dω = [real(σₚ - σxx2) real(σω);
-              imag(σₚ + σxx2) imag(σω) ] \
-              [dup - real(σxx1), duω + imag(σxx1)]
+    # We need to be careful here because the dot produces conjugates. 
+    # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
+    LS = Matrix{𝒯}(undef, 2, 2);
+    rhs = Vector{𝒯}(undef, 2);
+    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
+    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
+    dp, dω = LS \ rhs
 
     if debugArray isa AbstractVector
         debugArray .= vcat(σₚ, σω, σx)
@@ -182,9 +186,9 @@ function hopfMALinearSolver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugm
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...)  where {vectype, T}
+function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...)  where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
-    out = hopfMALinearSolver((Jhopf.x).u,
+    out = _hopf_MA_linear_solver((Jhopf.x).u, #!! TODO !! This seems TU
                 (Jhopf.x).p[1],
                 (Jhopf.x).p[2],
                 Jhopf.hopfpb,
@@ -192,7 +196,7 @@ function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, T}; d
                 du.u, du.p[1], du.p[2];
                 debugArray = debugArray)
     # this type annotation enforces type stability
-    BorderedArray{vectype, T}(out[1], [out[2], out[3]]), out[4], out[5]
+    return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
 # define a problem <: AbstractBifurcationProblem
@@ -530,7 +534,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                             l1 = 𝐇.l1,
                             BT = 𝐇.BT,
                             GH = 𝐇.GH,
-                            _namedrecordfromsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...)
+                            _namedrecordfromsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...
+                            )
             end :
         (u, p; kw...) -> begin
             (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
@@ -538,7 +543,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                         l1 = 𝐇.l1,
                         BT = 𝐇.BT,
                         GH = 𝐇.GH,
-                        _namedrecordfromsol(_printsol(getvec(u, 𝐇), p; kw...))...)
+                        _namedrecordfromsol(_printsol(getvec(u, 𝐇), p; kw...))...
+                        )
         end
 
     prob_h = re_make(prob_h, record_from_solution = _printsol2)
@@ -546,8 +552,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_h)
 
-    # define event for detecting bifurcations. Coupled it with user passed events
-    # event for detecting codim 2 points
+    # Define event for detecting codim 2 bifurcations.
+    # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
 
     if compute_eigen_elements #|| event_user == BifDetectEvent

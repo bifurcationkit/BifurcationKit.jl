@@ -52,12 +52,11 @@ sol0 .*= 1.7
 heatmap(sol0', color=:viridis)
 
 Δ, D2x = Laplacian2D(Nx, Ny, lx, ly)
-const L1 = (I + Δ)^2
-par = (l = -0.1, ν = 1.3, L1 = L1);
+par = (l = -0.1, ν = 1.3, L1 = (I + Δ)^2);
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20)
 
-prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)), d2F=d2F_sh, d3F=d3F_sh)
+prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)), d2F = d2F_sh, d3F = d3F_sh)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, eigsolver = EigArpack(0.5, :LM))
 sol_hexa = @time BK.solve(prob, Newton(), optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
@@ -84,7 +83,7 @@ plotsol(deflationOp[end])
 
 plotsol(0.4vec(sol_hexa.u) .* vec([1 .- exp(-1(x+0lx)^2/55) for x in X, y in Y]))
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = -0.0, p_min = -1.0, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), max_steps = 146, detect_bifurcation = 3, nev = 10, n_inversion = 6, save_eigenvectors = false)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = -0.0, p_min = -1.0, newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), max_steps = 146, detect_bifurcation = 3, nev = 10, n_inversion = 6, save_eigenvectors = true)
 optcont = @set optcont.newton_options.eigsolver = EigArpack(0.1, :LM)
 # prob.u0 .= deflationOp[1]
 
@@ -110,6 +109,7 @@ brfold = continuation(br, 1, (@optic _.ν), optfold;
     start_with_eigen = false,
     detect_codim2_bifurcation = 0,
     bothside = true,
+    linear_algo = MatrixBLS(),
     # plot_solution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
     update_minaug_every_step = 1,
     normC = norminf,
@@ -145,10 +145,10 @@ plot(br, br2)
 function optionsCont(x,p,l; opt = optcont)
     if l <= 1
         return opt
-    elseif l==2
-        return setproperties(opt ;detect_bifurcation = 0,ds = 0.001, a = 0.75)
+    elseif l == 2
+        return setproperties(opt ;detect_bifurcation = 3,ds = 0.001, a = 0.75)
     else
-        return setproperties(opt ;detect_bifurcation = 0,ds = 0.00051, dsmax = 0.01)
+        return setproperties(opt ;detect_bifurcation = 3,ds = 0.00051, dsmax = 0.01)
     end
 end
 

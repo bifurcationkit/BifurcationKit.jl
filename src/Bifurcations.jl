@@ -38,7 +38,9 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     lazy_params = LazyRows(branch)
 
     # Fold point detection based on continuation parameter monotony
-    if iter.contparams.detect_fold && length(branch) > 2 && detect_fold(lazy_params[n_br-2].param, lazy_params[n_br-1].param, lazy_params[n_br].param)
+    if iter.contparams.detect_fold &&
+                length(branch) > 2 &&
+                detect_fold(lazy_params[n_br-2].param, lazy_params[n_br-1].param, lazy_params[n_br].param)
         if iter.verbosity > 0
             printstyled(color=:red, "──> Fold bifurcation point in ", getinterval(branch[end-1].param, branch[end].param), "\n")
         end
