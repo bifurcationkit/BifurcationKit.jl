@@ -70,7 +70,7 @@ end
 
 sol0 = BorderedArray([0.8], 0.0)
 
-opt_newton = NewtonPar(tol = 1e-10, verbose = false, linsolver = linsolveBd())
+opt_newton = NewtonPar(tol = 1e-9, verbose = false, linsolver = linsolveBd())
 prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Jacobian(x, r[1], r[2]), record_from_solution = (x,p;k...) -> x.u[1])
 sol = BK.solve(prob, Newton(), opt_newton)
 @test BK.converged(sol)
@@ -97,8 +97,8 @@ solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
 outfoldco = continuation(br, 1, (@optic _[2]), opts_br; 
-                verbosity = 2,
-                # start_with_eigen = false,
+                # verbosity = 2,
+                start_with_eigen = false,
                 bdlinsolver = BorderingBLS(opt_newton.linsolver), 
                 jacobian_ma = :minaug)
 

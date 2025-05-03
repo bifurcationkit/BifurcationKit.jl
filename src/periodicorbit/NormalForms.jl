@@ -1339,6 +1339,15 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
     # no need to change pbnew.cache
     return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor, po)
 end
+
+function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
+                    δp,
+                    ampfactor;
+                    override = false)
+    orbitguess = copy(nf.po)
+    orbitguess[begin:end-1] .+= ampfactor .* nf.ζ
+    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
+end
 ####################################################################################################
 """
 $(SIGNATURES)
