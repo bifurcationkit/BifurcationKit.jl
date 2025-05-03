@@ -555,26 +555,22 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # Define event for detecting codim 2 bifurcations.
     # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
+    event_bif = ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT)
 
     if compute_eigen_elements #|| event_user == BifDetectEvent
         if isnothing(event_user)
-            event = PairOfEvents(
-                    ContinuousEvent(2, test_bt_gh, true, ("bt", "gh"), threshBT), 
-                    BifDetectEvent)
+            event = PairOfEvents(event_bif, BifDetectEvent)
         else
-            event = SetOfEvents(
-                    ContinuousEvent(2, test_bt_gh, true, ("bt", "gh"), threshBT), 
-                    BifDetectEvent, 
-                    event_user)
+            event = SetOfEvents(event_bif, BifDetectEvent, event_user)
         end
         # careful here, we need to adjust the tolerance for stability to avoid
         # spurious ZH or HH bifurcations
         @reset opt_hopf_cont.tol_stability = max(10opt_hopf_cont.newton_options.tol, opt_hopf_cont.tol_stability)
     else
         if isnothing(event_user)
-            event = ContinuousEvent(2, test_bt_gh, false, ("bt", "gh"), threshBT)
+            event = event_bif
         else
-            event = PairOfEvents(ContinuousEvent(2, test_bt_gh, false, ("bt", "gh"), threshBT), event_user)
+            event = PairOfEvents(event_bif, event_user)
         end
     end
 

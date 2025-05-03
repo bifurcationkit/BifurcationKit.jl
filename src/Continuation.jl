@@ -466,6 +466,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
     contparams = getcontparams(it)
     verbose = it.verbosity > 0
     verbose1 = it.verbosity > 1
+    status::Symbol = :guess # for bifurcations / events
 
     next = (state, state)
 
@@ -487,9 +488,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             end
 
             if contparams.detect_bifurcation > 1 && detect_bifurcation(state)
-                status::Symbol = :guess
-                _T = eltype(it)
-                interval::Tuple{_T, _T} = getinterval(getpreviousp(state), getp(state))
+                _𝒯 = eltype(it)
+                interval::Tuple{_𝒯, _𝒯} = getinterval(getpreviousp(state), getp(state))
                 # if the detected bifurcation point involves a parameter values with is on
                 # the boundary of the parameter domain, we disable bisection because it would
                 # lead to infinite looping. Indeed, clamping messes up the `ds`
@@ -514,7 +514,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                 event_detected && (verbose && printstyled(color=:red, "──▶ Event detected before p = ", getp(state), "\n"))
                 # save the event if detected and / or use bisection to locate it precisely
                 if event_detected
-                    _T = eltype(it); status = :guess; interval_event = (_T(0),_T(0))
+                    status = :guess
+                    _𝒯 = eltype(it)
+                    interval_event::Tuple{_𝒯, _𝒯} = getinterval(getpreviousp(state), getp(state))
                     if contparams.detect_event > 1
                         status, interval_event = locate_event!(it.event, it, state, it.verbosity > 2)
                     end

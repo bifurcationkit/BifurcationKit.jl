@@ -45,8 +45,8 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     contParams = iter.contparams
 
     n2, n1 = nb_signs(_state.eventValue[1], event), nb_signs(_state.eventValue[2], event)
-    verbose && println("────> Entering [Event], indicator of 2 last events = ", (n2, n1))
-    verbose && println("────> [Bisection] initial ds = ", _state.ds)
+    verbose && println("────▶ Entering [Event], indicator of 2 last events = ", (n2, n1))
+    verbose && println("────▶ [Bisection] initial ds = ", _state.ds)
 
     # we create a new state copy for stepping through the continuation routine
     after = copy(_state)  # after the bifurcation point
@@ -78,7 +78,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # index of active index in the bisection interval, allows to track interval
     indinterval = interval[1] == getp(state) ? 1 : 2
 
-    verbose && println("────> [Bisection] state.ds = ", state.ds)
+    verbose && println("────▶ [Bisection] state.ds = ", state.ds)
 
     # we compute the number of changes in event indicator
     n_inversion = 0
@@ -89,10 +89,10 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # for a polynomial tangent predictor, we disable the update of the predictor parameters
     internal_adaptation!(iter.alg, false)
 
-    verbose && printstyled(color=:green, "──> eve (initial) ",
-        _state.eventValue[2], " ──> ",  _state.eventValue[1], "\n")
+    verbose && printstyled(color=:green, "──▶ eve (initial) ",
+        _state.eventValue[2], " ──▶ ",  _state.eventValue[1], "\n")
     if verbose && ~isnothing(_state.eigvals)
-        printstyled(color=:green, "\n──> eigvals = \n")
+        printstyled(color=:green, "\n──▶ eigvals = \n")
         print_ev(_state.eigvals, :green)
         # calcul des VP et determinant
     end
@@ -115,11 +115,11 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         # the eigenelements have been computed/stored in state during the call iterate(iter, state)
         update_event!(iter, state)
         push!(nsigns, nb_signs(state.eventValue[1], event))
-        verbose && printstyled(color=:green, "\n────> eve (current) ",
-            state.eventValue[2], " ──> ", state.eventValue[1], "\n")
+        verbose && printstyled(color=:green, "\n────▶ eve (current) ",
+            state.eventValue[2], " ──▶ ", state.eventValue[1], "\n")
 
         if verbose && ~isnothing(state.eigvals)
-            printstyled(color=:blue, "────> eigvals = \n")
+            printstyled(color=:blue, "────▶ eigvals = \n")
             print_ev(state.eigvals, :blue)
         end
 
@@ -147,10 +147,10 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         state.stopcontinuation = ~iter.finalise_solution(state.z, state.τ, state.step, nothing; state = state, bisection = true)
 
         if verbose
-            printstyled(color=:blue, bold = true, "────> ", state.step,
+            printstyled(color=:blue, bold = true, "────▶ ", state.step,
                 " - [Bisection] (n1, n_current, n2) = ", (n1, nsigns[end], n2),
                 "\n\t\t\tds = ", state.ds, ", p = ", getp(state), ", #reverse = ", n_inversion,
-                "\n────> event ∈ ", getinterval(interval...),
+                "\n────▶ event ∈ ", getinterval(interval...),
                 ", precision = ", @sprintf("%.3E", interval[2] - interval[1]), "\n")
         end
 
@@ -172,12 +172,12 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     end
 
     if verbose
-        printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
-        printstyled(color=:blue, "─"^40*"\n────> Stopping reason:\n──────> isnothing(next)             = ", isnothing(next),
-                "\n──────> |ds| < dsmin_bisection      = ", abs(state.ds) < contParams.dsmin_bisection,
-                "\n──────> step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
-                "\n──────> n_inversion >= n_inversion  = ", n_inversion >= contParams.n_inversion,
-                "\n──────> eventlocated                = ", eventlocated == true, "\n")
+        printstyled(color=:red, "────▶ Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs.(2 .* nsigns[end] .- n1 .- n2), ", from p = ", getp(_state), "\n")
+        printstyled(color=:blue, "─"^40*"\n────▶ Stopping reason:\n──────▶ isnothing(next)             = ", isnothing(next),
+                "\n──────▶ |ds| < dsmin_bisection      = ", abs(state.ds) < contParams.dsmin_bisection,
+                "\n──────▶ step >= max_bisection_steps = ", state.step >= contParams.max_bisection_steps,
+                "\n──────▶ n_inversion >= n_inversion  = ", n_inversion >= contParams.n_inversion,
+                "\n──────▶ eventlocated                = ", eventlocated == true, "\n")
 
     end
 
@@ -233,7 +233,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     end
     # update the predictor before leaving
     update_predictor!(_state, iter)
-    verbose && println("────> Leaving [Loc-Bif]")
+    verbose && println("────▶ Leaving [Loc-Bif]")
     return status, getinterval(interval...)
 end
 ####################################################################################################
@@ -280,7 +280,7 @@ function get_event_type(event::AbstractContinuousEvent,
     end
 
     if isempty(event_index_C) == true
-        @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+        @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
         return false, EventSpecialPoint(iter, state, Symbol(typeE), status, interval)
@@ -317,7 +317,7 @@ function get_event_type(event::AbstractDiscreteEvent,
         end
     end
     if isempty(event_index_D) == true
-        @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+        @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
         return false, EventSpecialPoint(iter, state, Symbol(typeE), status, interval)
@@ -352,7 +352,7 @@ function get_event_type(event::PairOfEvents,
     elseif is_event_crossed(event.eventD, iter, state, nC+1:n)
         return get_event_type(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
     else
-        @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+        @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
         return false, EventSpecialPoint(iter, state, :PairOfEvents, status, interval)
@@ -391,7 +391,7 @@ function get_event_type(event::SetOfEvents,
         indD = event_index_D[1]
         return get_event_type(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
     else
-        @error "Error, no event was characterized whereas one was detected. Please open an issue at https://github.com/rveltz/BifurcationKit.jl/issues. \n The events are eventValue = $(state.eventValue)"
+        @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
         # we halt continuation as it will mess up the detection of events
         state.stopcontinuation = true
         return false, EventSpecialPoint(iter, state, :SetOfEvents, status, interval)

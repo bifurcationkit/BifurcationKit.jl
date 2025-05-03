@@ -526,16 +526,11 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # Define event for detecting codim 2 bifurcations.
     # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
+    event_bif = ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0)
     if isnothing(event_user)
-        event = PairOfEvents(
-            ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0),
-            DiscreteEvent(1, test_zh, false, ("zh",)))
+        event = PairOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)))
     else
-        event = SetOfEvents(
-            ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0),
-            DiscreteEvent(1, test_zh, false, ("zh",)),
-            event_user
-            )
+        event = SetOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
     end
 
     # solve the Fold equations
