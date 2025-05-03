@@ -18,10 +18,11 @@ end
 
 ####################################################################################################
 """
-    floquet = FloquetQaD(eigsolver::AbstractEigenSolver)
+    floquet = FloquetQaD(eigsolver::AbstractEigenSolver, matrix_free = ~(eigls isa AbstractDirectEigenSolver)
 
 This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems (based on the Shooting method or Finite Differences (Trapeze method)), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents when the number of time sections is large because of many matrix products. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
 - `eigsolver::AbstractEigenSolver` solver used to compute the eigenvalues.
+- `matrix_free::Bool` whether to use matrix-free linear operator
 
 If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eigenvalues are computed. Otherwise, a Matrix-Free version of the monodromy is used.
 

@@ -39,7 +39,6 @@ solfold = newton(br0, 2)
 @test BK.converged(solfold)
 ####################################################################################################
 # Here is a more involved example
-
 function Fb(x::BorderedArray, p)
     r, s = p
     BorderedArray(r .+  s .* x.u .- (x.u).^3, x.p - 0.0)
@@ -96,11 +95,11 @@ br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
-outfoldco = continuation(br, 1, (@optic _[2]), opts_br; 
-                # verbosity = 2,
-                start_with_eigen = false,
-                bdlinsolver = BorderingBLS(opt_newton.linsolver), 
-                jacobian_ma = :minaug)
+# outfoldco = continuation(br, 1, (@optic _[2]), opts_br; 
+#                 # verbosity = 2,
+#                 start_with_eigen = false,
+#                 bdlinsolver = BorderingBLS(opt_newton.linsolver), 
+#                 jacobian_ma = BK.MinAug())
 
 # try with newtonDeflation
 # test with Newton deflation 1
