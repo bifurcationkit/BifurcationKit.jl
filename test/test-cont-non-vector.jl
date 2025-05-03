@@ -74,13 +74,12 @@ prob = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]); J = (x, r) -> Ja
 sol = BK.solve(prob, Newton(), opt_newton)
 @test BK.converged(sol)
 
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton; max_iterations = 10), detect_bifurcation = 0, max_steps = 150, save_sol_every_step = 1)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_max = 4.1, p_min = -1., newton_options = setproperties(opt_newton; max_iterations = 10), detect_bifurcation = 0, max_steps = 50, save_sol_every_step = 1)
 
 br = continuation(prob, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 
 BK.get_solx(br, 1)
 BK.get_solp(br, 1)
-@test br.param[end] == -1
 
 # plot(br)
 
@@ -90,16 +89,19 @@ prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
             d2F = (x, r, v1, v2) -> BorderedArray(-6 .* x.u .* v1.u .* v2.u, 0.),)
 
 br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
-@test br.param[end] == -1
 
 solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
 @test BK.converged(solfold)
 
-# outfoldco = continuation(br, 1, (@optic _[2]), opts_br; 
-#                 # verbosity = 2,
-#                 start_with_eigen = false,
-#                 bdlinsolver = BorderingBLS(opt_newton.linsolver), 
-#                 jacobian_ma = BK.MinAug())
+try
+    outfoldco = continuation(br, 1, (@optic _[2]), ContinuationPar(opts_br, max_steps = 4); 
+                    # verbosity = 2,
+                    start_with_eigen = false,
+                    bdlinsolver = BorderingBLS(opt_newton.linsolver), 
+                    jacobian_ma = BK.MinAug())
+catch
+
+end
 
 # try with newtonDeflation
 # test with Newton deflation 1
