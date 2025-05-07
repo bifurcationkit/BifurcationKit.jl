@@ -17,12 +17,12 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
         You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
         to find the zeros of the normal form polynomials.
         """
-        mutable struct $op{Tprob, Tv, T, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
+        mutable struct $op{Tprob, Tv, 𝒯, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
             "Bifurcation point (periodic orbit)"
             po::Tv
 
             "Period"
-            T::T
+            T::𝒯
 
             "Right eigenvector(s)"
             ζ::Tevr
@@ -93,15 +93,15 @@ $(TYPEDFIELDS)
 
 You can call `predictor(bp::NeimarkSackerPO, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
 """
-mutable struct NeimarkSackerPO{Tprob, Tv, T, Tω, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
+mutable struct NeimarkSackerPO{Tprob, Tv, 𝒯, Tω, Tevr, Tevl, Tnf} <: AbstractSimpleBifurcationPointPO
     "Bifurcation point (periodic orbit)"
     po::Tv
 
     "Period"
-    T::T
+    T::𝒯
 
     "Parameter value at the Neimark-Sacker point"
-    p::T
+    p::𝒯
 
     "Frequency of the Neimark-Sacker point"
     ω::Tω

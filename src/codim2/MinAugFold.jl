@@ -170,7 +170,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
     return dX, dσ, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
+function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = foldMALinearSolver((Jfold.x).u,
                  (Jfold.x).p,
@@ -179,7 +179,7 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, T}; d
                  du.u, du.p;
                  debugArray = debugArray)
     # this type annotation enforces type stability
-    return BorderedArray{vectype, T}(out[1], out[2]), out[3], out[4]
+    return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
 @inline has_adjoint(foldpb::FoldMAProblem) = has_adjoint(foldpb.prob)
@@ -190,13 +190,13 @@ residual!(foldpb::FoldMAProblem, out, x, p) = (copyto!(out, foldpb.prob(x, p)); 
 jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
 save_solution(::FoldMAProblem, x, p) = x
 
-jacobian(foldpb::FoldMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, prob = foldpb.prob)
+jacobian(foldpb::FoldMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = foldpb.prob)
 
 jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)

@@ -208,13 +208,13 @@ residual!(hopfpb::HopfMAProblem, out, x, p) = (copyto!(out, hopfpb.prob(x, p)); 
 save_solution(::HopfMAProblem, x ,p) = x
 
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
-jacobian(hopfpb::HopfMAProblem{Tprob, Nothing, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = (x = x, params = p, hopfpb = hopfpb.prob)
+jacobian(hopfpb::HopfMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, hopfpb = hopfpb.prob)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
+jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
 
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(SIGNATURES)

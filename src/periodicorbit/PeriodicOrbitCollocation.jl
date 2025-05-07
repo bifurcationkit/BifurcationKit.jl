@@ -1216,7 +1216,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     for i = 2:Ntst
         θs[i] = θs[i-1] + ϕ[i] * (τsT[i+1] - τsT[i])
     end
-    θs = vcat(0, θs)
+    pushfirst!(θs, zero(𝒯)) # θs = vcat(0, θs)
     θ = θs[end]
     ############
     # compute new mesh from equipartition
