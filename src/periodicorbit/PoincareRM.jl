@@ -76,7 +76,7 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     # unknowns are x₂,...,xₘ,tΣ
 
     # variable to hold the computed result
-    out = similar(x, typeof(x[1]*x₁[1]))
+    out = similar(x, typeof(x[1]*x₁[1]*_get(par, getlens(sh))))
     outc = get_time_slices(Π, out)
 
     if M == 0
