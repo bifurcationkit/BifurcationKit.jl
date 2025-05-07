@@ -196,7 +196,7 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     return (u = out, t = ∂th)
 end
 
-function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x, pars)
+function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
     sh = Π.probpo.prob
     normal = Π.Σ.normal
 
@@ -204,8 +204,9 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x, pars)
     Fx = vf(sh.flow, Πx, pars)
     # monodromy matrix
     N = length(x)
-    M = zeros(N, N)
-    h = zeros(N)
+    𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
+    M = zeros(𝒯p, N, N)
+    h = zeros(𝒯p, N)
     for i = eachindex(h)
         h[i] += 1
         y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du

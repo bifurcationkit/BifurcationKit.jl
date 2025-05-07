@@ -516,6 +516,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 ## For normal form
 - `detailed = false` whether to fully compute the normal form.
 - `record_from_solution = (u, p) -> u[end]`, record method used in the bifurcation diagram, by default this records the period of the periodic orbit.
+- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
 
 ## For continuation
 - `linear_algo = BorderingBLS()`, same as for [`continuation`](@ref)
@@ -532,6 +533,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                     detailed = true,
                     prm = getprob(br) isa WrapPOColl ? false : true,
                     use_normal_form = true,
+                    autodiff_nf = true,
                     kwargs...) where Tprob
 
     bifpt = br.specialpoint[ind_bif]
@@ -546,7 +548,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
-    nf = get_normal_form(br, ind_bif; detailed, prm)
+    nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
