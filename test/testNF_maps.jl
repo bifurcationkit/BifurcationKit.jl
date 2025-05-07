@@ -60,7 +60,8 @@ prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@optic _.μ))
 pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
 BK.type(pd)
 
-nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(), verbose = false)
+nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false)
+nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false, autodiff = true)
 @test nf.nf.a ≈ pars_pd.a
 @test nf.nf.b3 ≈ pars_pd.c
 show(nf)
@@ -83,7 +84,7 @@ function Fns!(f, u, p, t)
     return f
 end
 Fns(x, p) = Fns!(similar(x, promote_type(eltype(x), typeof(p.μ))), x, p, 0.)
-pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -1.123 - 0.456im)
+pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -6.789 - 0.456im)
 
 prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))
 br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
@@ -93,6 +94,7 @@ ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoi
 BK.type(ns)
 
 nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
+nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true, autodiff = true)
 @test nf.nf.a ≈ pars_ns.a
 @test nf.nf.b ≈ pars_ns.c3
 show(nf)

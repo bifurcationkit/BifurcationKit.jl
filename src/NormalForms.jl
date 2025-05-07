@@ -1127,10 +1127,15 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     E(x) = x .- dot(ζ★, x) .* ζ
 
     # coefficient of x*p
-    R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-           residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
-           apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    if ~autodiff
+        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
+               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
+    else
+        R01 = ForwardDiff.derivative(x -> residual(prob, x0, set(parbif, lens, x)), p)
+        R11 = ForwardDiff.derivative(x -> apply(jacobian(prob, x0, set(parbif, lens, x)), ζ), p)
+    end
 
     # (I − L)⋅Ψ01 = R01
     Ψ01, cv, it = ls(L, -E(R01); a₀ = -1)

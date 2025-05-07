@@ -40,11 +40,11 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ, k...)
 
     if bifpt.type == :pd
-        return period_doubling_normal_form(prob, br, id_bif; δ, kwargs_nf...)
+        return period_doubling_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :bp
         return branch_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(prob, br, id_bif; δ, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
     end
     throw("Normal form for $(bifpt.type) not yet implemented.")
 end
@@ -424,6 +424,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 δ = 1e-9,
+                                autodiff = false,
                                 kwargs_nf...)
     sh = pbwrap.prob
     pars = pd0.params
