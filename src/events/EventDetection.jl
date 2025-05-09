@@ -238,7 +238,9 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
 end
 ####################################################################################################
 ####################################################################################################
-# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information) corresponding to the current event point are saved in br.eig[step+1]
+# because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], 
+# it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information)
+# corresponding to the current event point are saved in br.eig[step+1]
 EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Symbol, interval) = SpecialPoint(it, state, Utype, status, interval; idx = state.step + 1)
 
 # I put the callback in first argument even if it is in iter in order to allow for dispatch

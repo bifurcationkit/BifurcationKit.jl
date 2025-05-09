@@ -28,35 +28,35 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     $(FIELDS)
     """
     mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
-        "Functional F(x, p) - vector field - with all derivatives"
+        "Functional F(x, p) - vector field - with all derivatives."
         prob_vf::Tprob
-        "close to null vector of Jᵗ"
+        "close to null vector of Jᵗ."
         a::vectype
-        "close to null vector of J"
+        "close to null vector of J."
         b::vectype
-        "vector zero, to avoid allocating it many times"
+        "vector zero, to avoid allocating it many times."
         zero::vectype
-        "Lyapunov coefficient"
+        "Lyapunov coefficient."
         l1::Complex{T}
-        "Cusp test value"
+        "Cusp test value."
         CP::T
-        "Bogdanov-Takens test value"
+        "Bogdanov-Takens test value."
         BT::T
-        "Bautin test values"
+        "Bautin test values."
         GH::T
-        "Zero-Hopf test values"
+        "Zero-Hopf test values."
         ZH::Int
-        "linear solver. Used to invert the jacobian of MA functional"
+        "linear solver. Used to invert the jacobian of MA functional."
         linsolver::S
-        "linear solver for the jacobian adjoint"
+        "linear solver for the jacobian adjoint."
         linsolverAdjoint::Sa
-        "bordered linear solver"
+        "bordered linear solver."
         linbdsolver::Sbd
-        "linear bordered solver for the jacobian adjoint"
+        "linear bordered solver for the jacobian adjoint."
         linbdsolverAdjoint::Sbda
-        "whether to use the hessian of prob_vf"
+        "whether to use the hessian of prob_vf."
         usehessian::Bool
-        "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I"
+        "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I."
         massmatrix::Tmass
     end
 
@@ -107,6 +107,10 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
     end
     end
 end
+@inline getvec(x, ::FoldProblemMinimallyAugmented) = get_vec_bls(x)
+@inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
+@inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
+@inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
 
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step = 1, kwargs...)
     if detect_codim2_bifurcation > 0
@@ -291,23 +295,23 @@ end
 ####################################################################################################
 # branch switching at BT / ZH / HH bifurcation point
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
-        options_cont::ContinuationPar = br.contparams;
-        alg = br.alg,
-        δp = nothing, 
-        ampfactor::Real = 1,
-        nev = options_cont.nev,
-        detect_codim2_bifurcation::Int = 0,
-        Teigvec = _getvectortype(br),
-        scaleζ = norm,
-        start_with_eigen = false,
-        autodiff = false,
-        detailed = true,
-        ζs = nothing,
-        ζs_ad = nothing,
-        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-        bdlinsolver_adjoint = bdlinsolver,
-        bdlinsolver_block = bdlinsolver,
-        kwargs...) where {Tkind <: TwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+                        options_cont::ContinuationPar = br.contparams;
+                        alg = br.alg,
+                        δp = nothing, 
+                        ampfactor::Real = 1,
+                        nev = options_cont.nev,
+                        detect_codim2_bifurcation::Int = 0,
+                        Teigvec = _getvectortype(br),
+                        scaleζ = norm,
+                        start_with_eigen = false,
+                        autodiff_nf = false,
+                        detailed = true,
+                        ζs = nothing,
+                        ζs_ad = nothing,
+                        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+                        bdlinsolver_adjoint = bdlinsolver,
+                        bdlinsolver_block = bdlinsolver,
+                        kwargs...) where {Tkind <: TwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
@@ -336,7 +340,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                             verbose,
                             Teigvec,
                             scaleζ,
-                            autodiff,
+                            autodiff = autodiff_nf,
                             detailed,
                             bls = bdlinsolver,
                             bls_adjoint = bdlinsolver_adjoint,

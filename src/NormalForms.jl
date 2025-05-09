@@ -509,7 +509,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         )
     bifpt = br.specialpoint[id_bif]
 
-    if (bifpt.type in (:endpoint,)) 
+    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh))
         error("Normal form for $(bifpt.type) not implemented")
     end
 

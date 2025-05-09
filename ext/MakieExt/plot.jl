@@ -245,9 +245,9 @@ function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-
     end
 end
 ####################################################################################################
-function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, k...)
+function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, applyY = identity, k...)
     p = getproperty(br.branch, var)
-    data = mapreduce(x -> x.eigenvals, hcat, br.eig)
+    data = mapreduce(x -> applyY.(x.eigenvals), hcat, br.eig)
     if with_param
         series(p, real.(data); k...)
     else

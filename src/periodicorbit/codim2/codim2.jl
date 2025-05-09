@@ -215,7 +215,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+    # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
     linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)

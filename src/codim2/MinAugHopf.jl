@@ -1,7 +1,7 @@
 """
 For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_hopf`.
 """
-function HopfPoint(br::AbstractBranchResult, index::Int)
+function hopf_point(br::AbstractBranchResult, index::Int)
     if br.specialpoint[index].type != :hopf 
         error("The provided index does not refer to a Hopf point")
     end
@@ -10,9 +10,6 @@ function HopfPoint(br::AbstractBranchResult, index::Int)
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) # frequency at the Hopf point
     return BorderedArray(specialpoint.x, [p, ω] )
 end
-####################################################################################################
-@inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
 ###################################################################################################
 # this function encodes the functional
 function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
@@ -282,7 +279,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
             nev = br.contparams.nev,
             start_with_eigen = false,
             kwargs...)
-    hopfpointguess = HopfPoint(br, ind_hopf)
+    hopfpointguess = hopf_point(br, ind_hopf)
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
     options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -604,7 +601,7 @@ function continuation_hopf(prob,
                         a = nothing,
                         b = nothing,
                         kwargs...)
-    hopfpointguess = HopfPoint(br, ind_hopf)
+    hopfpointguess = hopf_point(br, ind_hopf)
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
 

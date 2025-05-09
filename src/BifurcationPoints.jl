@@ -89,41 +89,45 @@ Return the dimension of the kernel of the special point.
 """
 @inline kernel_dimension(bp::SpecialPoint) = abs(bp.δ[1])
 
-# constructors
-SpecialPoint(x0, τ, T::Type, printsol) = SpecialPoint(type = :none,
-                                            idx = 0,
-                                            param = zero(T),
-                                            norm  = zero(T),
-                                            printsol = printsol,
-                                            x = x0,
-                                            τ = τ,
-                                            ind_ev = 0,
-                                            step = 0,
-                                            status = :guess,
-                                            δ = (0, 0),
-                                            precision = T(-1),
-                                            interval = (zero(T), zero(T)))
+function SpecialPoint(x0, τ, T::Type, printsol)
+    return SpecialPoint(type = :none,
+                        idx = 0,
+                        param = zero(T),
+                        norm  = zero(T),
+                        printsol = printsol,
+                        x = x0,
+                        τ = τ,
+                        ind_ev = 0,
+                        step = 0,
+                        status = :guess,
+                        δ = (0, 0),
+                        precision = T(-1),
+                        interval = (zero(T), zero(T)))
+end
 
-SpecialPoint(it::ContIterable,
-             state::ContState,
-             type::Symbol,
-             status::Symbol,
-             interval; ind_ev = 0,
-             δ = (0,0),
-             idx = state.step ) = SpecialPoint(;
-                                type,
-                                idx,
-                                param = getp(state),
-                                norm = it.normC(getx(state)),
-                                printsol = _namedrecordfromsol(record_from_solution(it)(getx(state), getp(state); iter=it, state)),
-                                x = save_solution(it.prob, _copy(getx(state)), getparam(it.prob)),
-                                τ = copy(state.τ),
-                                ind_ev,
-                                step = state.step,
-                                status,
-                                δ,
-                                precision = abs(interval[2] - interval[1]),
-                                interval)
+function SpecialPoint(it::ContIterable,
+                    state::ContState,
+                    type::Symbol,
+                    status::Symbol,
+                    interval; 
+                    ind_ev = 0,
+                    δ = (0,0),
+                    idx = state.step )
+    return SpecialPoint(;
+                        type,
+                        idx,
+                        param = getp(state),
+                        norm = it.normC(getx(state)),
+                        printsol = _namedrecordfromsol(record_from_solution(it)(getx(state), getp(state); iter=it, state)),
+                        x = save_solution(it.prob, _copy(getx(state)), getparam(it.prob)),
+                        τ = copy(state.τ),
+                        ind_ev,
+                        step = state.step,
+                        status,
+                        δ,
+                        precision = abs(interval[2] - interval[1]),
+                        interval)
+end
 
 
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")

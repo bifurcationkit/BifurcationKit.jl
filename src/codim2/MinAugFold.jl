@@ -1,20 +1,17 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which will can refined using `newtonFold`.
+For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which can can refined using `newtonFold`.
 """
-function foldpoint(br::AbstractBranchResult, index::Int)
+function fold_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
     if ~(bptype in (:bp, :nd, :fold))
-        error("This should be a Fold / BP point. You passed a $bptype point.")
+        error("This should be a Fold / BP point.\nYou passed a $bptype point.")
     end
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
-@inline getvec(x, ::FoldProblemMinimallyAugmented) = get_vec_bls(x)
-@inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
-
 function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
     # input:
@@ -262,7 +259,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                 start_with_eigen = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 kwargs...)
-    foldpointguess = foldpoint(br, ind_fold)
+    foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
     eigenvec = bifpt.τ.u; rmul!(eigenvec, 1 / normN(eigenvec))
     eigenvec_ad = _copy(eigenvec)
@@ -561,7 +558,7 @@ function continuation_fold(prob,
                 a = nothing,
                 b = nothing,
                 kwargs...)
-    foldpointguess = foldpoint(br, ind_fold)
+    foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
     ζ = bifpt.τ.u; rmul!(ζ, 1 / norm(ζ))
     ζad = _copy(ζ)

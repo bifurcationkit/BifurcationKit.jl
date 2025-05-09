@@ -635,7 +635,7 @@ function bogdanov_takens_normal_form(_prob,
                 bls_block)
 end
 ####################################################################################################
-function bautin_normal_form(_prob,
+function bautin_normal_form(_prob::HopfMAProblem,
                             br::AbstractBranchResult, ind_bif::Int;
                             δ = 1e-8,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
@@ -695,8 +695,7 @@ function bautin_normal_form(_prob,
     L = jacobian(prob_vf, x0, parbif)
 
     # right eigenvector
-    # TODO IMPROVE THIS
-    if true#haseigenvector(br) == false
+    if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Recomputing eigenvector on the fly"
         _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
@@ -705,7 +704,9 @@ function bautin_normal_form(_prob,
         abs(_λ[_ind] - λ) > 10br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
         ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
     else
-        ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+        _λ = br.eig[bifpt.idx].eigenvals
+        _ind = argmin(abs.(_λ .- λ))
+        ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, _ind))
     end
     ζ ./= scaleζ(ζ)
 

@@ -205,7 +205,7 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     # monodromy matrix
     N = length(x)
     𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
-    M = zeros(𝒯p, N, N)
+    Mono = zeros(𝒯p, N, N)
     h = zeros(𝒯p, N)
     for i = eachindex(h)
         h[i] += 1
@@ -213,10 +213,10 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
         # differential of return time
         ∂th = - dot(normal, y) / dot(normal, Fx)
         out = @. y + ∂th * Fx
-        M[:, i] .= out
+        Mono[:, i] .= out
         h[i] -= 1
     end
-    return M
+    return Mono
 end
 
 
@@ -296,8 +296,8 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
 
     # last bit
     y .+= d2vf(Πx, ∂ϕh1, ∂Πh3) .* ∂th2 .+
-            dvf(Πx, ∂2ϕt13) .* ∂th2 .+
-            dvf(Πx, ∂ϕh1) .* ∂2t23
+           dvf(Πx, ∂2ϕt13) .* ∂th2 .+
+           dvf(Πx, ∂ϕh1) .* ∂2t23
 
     # we compute dτ(x)[h₁, h₂, h₃]
     ∂3t = -dot(normal, y) / dot(normal, Fx)

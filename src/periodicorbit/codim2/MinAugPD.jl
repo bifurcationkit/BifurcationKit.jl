@@ -1,12 +1,12 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a PD bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newton_fold`.
+For an initial guess from the index of a PD bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_fold`.
 """
 function pd_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
     if bptype != :pd 
-        error("This should be a PD point")
+        error("This should be a PD point.\nYou passed a $bptype point.")
     end
     specialpoint = br.specialpoint[index]
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
