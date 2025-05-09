@@ -6,6 +6,8 @@ abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 using SciMLBase: numargs
 
+const OpticType = Union{Nothing, AllOpticTypes}
+
 _getvectortype(::AbstractBifurcationProblem) = Nothing
 isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
@@ -66,7 +68,7 @@ $(TYPEDFIELDS)
 - `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other jet functions.
 - etc
 """
-struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tsym, Tδ, Tjet} <: AbstractBifurcationFunction
+struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tδ, Tjet} <: AbstractBifurcationFunction
     "Vector field. Function of type out-of-place `result = f(x, p)` or inplace `f(result, x, p)`. For type stability, the types of `x` and `result` should match"
     F::Tf
     "Same as F but inplace with signature F!(result, x, p)"
@@ -93,7 +95,7 @@ struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td
     "[internal] Third Differential of `F` with respect to `x` which accept complex vectors dxi"
     d3Fc::Td3fc
     "Whether the jacobian is auto-adjoint."
-    isSymmetric::Tsym
+    isSymmetric::Bool
     "used internally to compute derivatives (with finite differences), for example for normal form computation and codim 2 continuation."
     δ::Tδ
     "optionally sets whether the function is inplace or not. You can use `in_bisection(state)` to inquire whether the current state is in bisection mode."
@@ -105,16 +107,52 @@ end
 # getters
 residual(pb::BifFunction, x, p) = pb.F(x, p)
 residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p);o)
+#####
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
+
+function jacobian(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Nothing}, x, p) where {Tf, TFinp, Tdf, Tdfad}
+    ForwardDiff.jacobian(z -> pb.F(z, p), x)
+end
+#####
 jacobian!(pb::BifFunction, J, x, p) = pb.J!(J, x, p)
+
+function jacobian!(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, Nothing}, J, x, p) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad}
+    J .= jacobian(pb, x, p)
+end
+#####
 jad(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
+#####
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
+
+function dF(pb::BifFunction{Tf, TFinp, Nothing}, x, p, dx) where {Tf, TFinp}
+    ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(eltype(dx)))
+end
+
 dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
+#####
 d2F(pb::BifFunction, x, p, dx1, dx2) = pb.d2F(x, p, dx1, dx2)
-d2Fc(pb::BifFunction, x, p, dx1, dx2) = pb.d2Fc(x, p, dx1, dx2)
+
+function d2F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
+    ForwardDiff.derivative(t -> dF(pb, x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
+end
+
+function d2Fc(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
+    dx1r = real.(dx1); dx2r = real.(dx2)
+    dx1i = imag.(dx1); dx2i = imag.(dx2)
+    return d2F(pb, x, p, dx1r, dx2r) .- 
+           d2F(pb, x, p, dx1i, dx2i) .+ 
+           im .* (d2F(pb, x, p, dx1r, dx2i) .+ 
+                  d2F(pb, x, p, dx1i, dx2r))
+end
+#####
 d3F(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3F(x, p, dx1, dx2, dx3)
-d3Fc(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3Fc(x, p, dx1, dx2, dx3)
+
+function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f}
+    ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
+end
+#####
 is_symmetric(pb::BifFunction) = pb.isSymmetric
+
 has_hessian(pb::BifFunction) = ~isnothing(pb.d2F)
 has_adjoint(pb::BifFunction) = ~isnothing(pb.Jᵗ)
 has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.dFad)
@@ -202,9 +240,9 @@ for (op, at) in (
                 save_solution::Tgets
             end
 
-            _getvectortype(::$op{Tvf, Tu, Tp, Tl, Tplot, Trec}) where {Tvf, Tu, Tp, Tl, Tplot, Trec} = Tu
+            _getvectortype(::$op{Tvf, Tu}) where {Tvf, Tu} = Tu
             plot_solution(prob::$op) = prob.plotSolution
-            record_from_solution(prob::$op) = prob.recordFromSolution
+            record_from_solution(prob::$op, x, p; k...) = prob.recordFromSolution(x, p; k...)
             save_solution(prob::$op, x, p) = prob.save_solution(x, p)
         end
     elseif op in (:FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :BTMAProblem)
@@ -216,7 +254,7 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, AllOpticTypes}, Tplot, Trecord} <: $at{Tprob}
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -226,7 +264,7 @@ for (op, at) in (
                 recordFromSolution::Trecord
             end
 
-            _getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
+            _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
@@ -240,7 +278,7 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: Union{Nothing, AllOpticTypes}, Tplot, Trecord} <: $at
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -250,7 +288,7 @@ for (op, at) in (
                 recordFromSolution::Trecord
             end
 
-            _getvectortype(::$op{Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord}) where {Tprob, Tjac, Tu0, Tp, Tl, Tplot, Trecord} = Tu0
+            _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
             isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
@@ -275,7 +313,9 @@ for (op, at) in (
                          J! = nothing,
                          Jᵗ = nothing,
                          d2F = nothing,
+                         d2Fc = nothing,
                          d3F = nothing,
+                         d3Fc = nothing,
                          issymmetric::Bool = false,
                          record_from_solution = record_sol_default,
                          plot_solution = plot_default,
@@ -301,34 +341,22 @@ for (op, at) in (
                     (o, x, p) -> copyto!(o, _F(x, p))
                 end
 
+                J! = if isnothing(J!) && u0 isa AbstractArray
+                    nothing 
+                else
+                    J!
+                end
 
-
-                J = isnothing(J) ? (x, p) -> ForwardDiff.jacobian(z -> Foop(z, p), x) : J
-                J! = isnothing(J!) ? (out, x, p) -> out .= J(x, p) : J!
-                d1Fad(x,p,dx1) = ForwardDiff.derivative(t -> Foop(x .+ t .* dx1, p), zero(eltype(dx1)))
                 jvp = if isnothing(jvp)
-                    (x, p, dx) -> ForwardDiff.derivative(t -> Foop(x .+ t .* dx, p), zero(eltype(dx)))
+                    nothing
                 else
                     jvp
                 end
 
-                if isnothing(d2F)
-                    d2F = (x, p, dx1, dx2) -> ForwardDiff.derivative(t -> d1Fad(x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
-                    d2Fc = (x, p, dx1, dx2) -> BilinearMap((_dx1, _dx2) -> d2F(x, p, _dx1, _dx2))(dx1, dx2)
-                else
-                    d2Fc = d2F
-                end
-
-                if isnothing(d3F)
-                    d3F = (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
-                    d3Fc = (x, p, dx1, dx2, dx3) -> TrilinearMap((_dx1, _dx2, _dx3) -> d3F(x, p, _dx1, _dx2, _dx3))(dx1, dx2, dx3)
-                else
-                    d3Fc = d3F
-                end
-                d3F = isnothing(d3F) ? (x, p, dx1, dx2, dx3) -> ForwardDiff.derivative(t -> d2F(x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1))) : d3F
-
-                VF = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, Jet(;kwargs_jet...))
-                return $op(VF, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
+                # type unstable but simplifies the type a lot
+                jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
+                vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d2Fc, d3F, d3Fc, issymmetric, delta, inplace, jet)
+                return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end
     end

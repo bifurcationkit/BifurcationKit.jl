@@ -163,9 +163,9 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
         σxx1 = dot(σx, x1)
         σxx2 = dot(σx, x2)
     else
-        d2Fv = d2Fc(𝐇.prob_vf, x, par0, v, x1)
+        d2Fv = d2F(𝐇.prob_vf, x, par0, v, x1)
         σxx1 = -conj(dot(w, d2Fv))
-        d2Fv = d2Fc(𝐇.prob_vf, x, par0, v, x2)
+        d2Fv = d2F(𝐇.prob_vf, x, par0, v, x2)
         σxx2 = -conj(dot(w, d2Fv))
     end
     # We need to be careful here because the dot produces conjugates. 

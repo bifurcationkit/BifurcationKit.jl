@@ -287,16 +287,16 @@ function plot_branch_cont(contres::ContResult,
     end
 end
 
-function ContResult(it::AbstractContinuationIterable, 
+function ContResult(iter::AbstractContinuationIterable, 
                     state::AbstractContinuationState)
     x0 = _copy(getx(state))
     p0 = getp(state)
-    pt = record_from_solution(it)(x0, p0; iter = it, state)
-    return _contresult(it, state,
+    pt = record_from_solution(iter)(x0, p0; iter, state)
+    return _contresult(iter, state,
                         pt,
-                        get_state_summary(it, state), 
-                        save_solution(it.prob, _copy(x0), setparam(it.prob, p0)), 
-                        getcontparams(it))
+                        get_state_summary(iter, state), 
+                        save_solution(iter.prob, _copy(x0), setparam(iter.prob, p0)), 
+                        getcontparams(iter))
 end
 
 # function to update the state according to the event

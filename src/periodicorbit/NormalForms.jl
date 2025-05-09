@@ -46,7 +46,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :ns
         return neimark_sacker_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
     end
-    throw("Normal form for $(bifpt.type) not yet implemented.")
+    error("Normal form for $(bifpt.type) not yet implemented.")
 end
 ####################################################################################################
 """

@@ -18,7 +18,7 @@ The arguments are
 - `amplitude`: amplitude of the periodic orbit guess
 """
 function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M::Int, amplitude; phase = 0)
-    hopfpoint = HopfPoint(br, ind_hopf)
+    hopfpoint = hopf_point(br, ind_hopf)
     specialpoint = br.specialpoint[ind_hopf]
 
     # parameter value at the Hopf point

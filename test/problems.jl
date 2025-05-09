@@ -19,7 +19,6 @@ BK.PDMAProblem((prob_vf = prob,), prob, prob.u0, prob.params, prob.lens, BK.plot
 BK._getvectortype(prob)
 
 BK.d3F(prob, rand(2), rand(2), rand(2), rand(2), rand(2))
-BK.d3Fc(prob, rand(2), rand(2), rand(2), rand(2), rand(2))
 
 BK.has_adjoint_MF(prob)
 

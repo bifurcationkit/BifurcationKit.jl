@@ -133,7 +133,7 @@ function testEV(br, verbose = false)
 
         # we test the eigenvalues
         vp = eigenvals(br, step)
-        J = prob_vf.VF.J(x0, par1)
+        J = BK.jacobian(prob_vf.VF, x0, par1)
         vp2 = eig(J, 4)[1]
         verbose && display(hcat(vp, vp2))
         @test vp == vp2

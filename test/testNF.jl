@@ -138,7 +138,7 @@ let
         @info "" autodiff _F
         par_2d = (μ = -0.2, ν = 0., α = α)
         prob2d = BK.BifurcationProblem(_F, [0.01, 0.01, 0.01], par_2d, (@optic _.μ))
-        prob2d.VF.J(rand(3), prob2d.params)
+        BK.jacobian(prob2d.VF, rand(3), prob2d.params)
 
         br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = saveev);
             plot = false, verbosity = 0, normC = norminf)

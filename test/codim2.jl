@@ -58,15 +58,15 @@ snpt = get_normal_form(br, 3)
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 # printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
     # plot(br);scatter!([sn.x.p], [sn.x.u[1]])
-@test BK.converged(sn) && sn.itlineartot == 8
+@test BK.converged(sn) && sn.itlineartot == 6
 @test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
 @test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
 
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
-@test BK.converged(sn) && sn.itlineartot == 8
+@test BK.converged(sn) && sn.itlineartot == 6
 
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
-@test BK.converged(sn) && sn.itlineartot == 8
+@test BK.converged(sn) && sn.itlineartot == 6
 
 for eigen_start in (true, false), _jac in (:autodiff, :finiteDifferences, :MinAugMatrixBased, :minaug)
     # @info "" eigen_start _jac
@@ -120,7 +120,7 @@ hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = 
 pb = hp.prob.prob
 ω = hp.u.p[2]
 par_hp = BK.set(BK.getparams(br), BK.getlens(br), hp.u.p[1])
-_J = pb.prob_vf.VF.J(hp.u.u, par_hp)
+_J = BK.jacobian(pb.prob_vf.VF, hp.u.u, par_hp)
 _eigvals, eigvec, = eigen(_J)
 ind = argmin(abs.(_eigvals .- Complex(0, ω)))
 @test real(_eigvals[ind]) ≈ 0 atol=1e-9

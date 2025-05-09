@@ -92,7 +92,7 @@ outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = t
 ind_hopf = 1
 # av = randn(Complex{Float64},2n); av = av./norm(av)
 # bv = randn(Complex{Float64},2n); bv = bv./norm(bv)
-hopfpt = BK.HopfPoint(br, ind_hopf)
+hopfpt = BK.hopf_point(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
                     (@set prob.VF.d2F = nothing), # this is for debug array
@@ -128,12 +128,12 @@ tmpVecforσ = zeros(ComplexF64, 2+2n)
 sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debugArray = tmpVecforσ)
 
 # we test the expression for σp
-σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end,end-1])
+σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end, end-1])
 σp_fd_ana = tmpVecforσ[1]
 @test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
 # we test the expression for σω
-σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end,end])
+σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end, end])
 σω_fd_ana = tmpVecforσ[2]
 @test σω_fd ≈ σω_fd_ana rtol = 1e-4
 
@@ -145,27 +145,23 @@ sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[
 outhopf = newton(br, 1)
 @test BK.converged(outhopf)
 
-pbgopfperso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
+pb_hopf_perso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
                 hopfpt, par_bru;
                 J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
-outhopf = BK.solve(pbgopfperso, Newton(), NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
+outhopf = BK.solve(pb_hopf_perso, Newton(), NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
 @test BK.converged(outhopf)
 
 # version with analytical Hessian = 2 P(du2) P(du1) QU + 2 PU P(du1) Q(du2) + 2PU P(du2) Q(du1)
 function d2F(x, p1, du1, du2)
     n = div(length(x), 2)
-    out = similar(du1)
-    @views out[1:n] .= 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
+    out = 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
                        2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
                        2 .* x[1:n] .* du2[1:n] .* du1[1:n]
-    @inbounds for ii=1:n
-        out[ii+n] = -out[ii]
-    end
-    return out
+    return vcat(out, -out)
 end
 
 # add specific hessian
-br_d2f = (@set br.prob.VF.d2F = (x, p1, v1, v2) -> d2F(x, 0., v1, v2))
+br_d2f = (@set br.prob.VF.d2F = d2F)
 
 outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
@@ -179,7 +175,7 @@ br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β),
             jacobian_ma = :minaug)
 ####################################################################################################
 ind_hopf = 1
-hopfpt = BK.HopfPoint(br, ind_hopf)
+hopfpt = BK.hopf_point(br, ind_hopf)
 
 l_hopf = hopfpt.p[1]
 ωH     = hopfpt.p[2] |> abs

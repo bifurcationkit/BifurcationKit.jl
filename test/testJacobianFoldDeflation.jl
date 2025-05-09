@@ -60,7 +60,7 @@ outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β),
 
 # manual handling
 indfold = 1
-foldpt = foldpoint(br, indfold)
+foldpt = BK.fold_point(br, indfold)
 foldpb = FoldProblemMinimallyAugmented(
         (@set prob.VF.d2F = nothing), # this is for debug array
         br.specialpoint[indfold].x,
