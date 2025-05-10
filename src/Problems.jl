@@ -4,6 +4,23 @@ abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 # this type is based on the type BifFunction, see below
 # it provides all derivatives
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+################################################################################
+abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
+abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
+#####################################
+# Periodic orbit computations by finite differences
+abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
+#####################################
+# Periodic orbit computations by shooting
+abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
+#####################################
+# wrapper problems for periodic orbits
+abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
+abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
+################################################################################
 using SciMLBase: numargs
 
 const OpticType = Union{Nothing, AllOpticTypes}
@@ -364,8 +381,8 @@ function getparams(pb::AbstractBifurcationProblem)
     pb.params
 end
 @inline getlens(pb::AbstractBifurcationProblem) = pb.lens
-getparam(pb::AbstractBifurcationProblem) = _get(pb.params, pb.lens)
-setparam(pb::AbstractBifurcationProblem, p0) = set(pb.params, pb.lens, p0)
+getparam(pb::AbstractBifurcationProblem) = _get(getparams(pb), getlens(pb))
+setparam(pb::AbstractBifurcationProblem, p0) = set(getparams(pb), getlens(pb), p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
 

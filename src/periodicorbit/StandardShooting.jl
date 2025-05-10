@@ -89,10 +89,10 @@ function Base.show(io::IO, sh::ShootingProblem)
 end
 
 # this function updates the section during the continuation run
-function updatesection!(sh::ShootingProblem, x, par)
+function updatesection!(sh::ShootingProblem, x, pars)
     @debug "Update section shooting"
     xt = get_time_slices(sh, x)
-    @views update!(sh.section, vf(sh.flow, xt[:, 1], par), xt[:, 1])
+    @views update!(sh.section, vf(sh.flow, xt[:, 1], pars), xt[:, 1])
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
@@ -108,7 +108,7 @@ end
 @inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
-function (sh::ShootingProblem)(x::AbstractVector, par)
+function (sh::ShootingProblem)(x::AbstractVector, pars)
     # Sundials does not like @views :(
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
@@ -125,10 +125,10 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # we can use views but Sundials will complain
-            outc[:, ii] .= evolve(sh.flow, xc[:, ii], par, sh.ds[ii] * T).u .- xc[:, ip1]
+            outc[:, ii] .= evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
         end
     else
-        solOde = evolve(sh.flow, xc, par, sh.ds .* T)
+        solOde = evolve(sh.flow, xc, pars, sh.ds .* T)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # we can use views but Sundials will complain
@@ -142,7 +142,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par)
 end
 
 # shooting functional, this allows for AbstractArray state space
-function (sh::ShootingProblem)(x::BorderedArray, par)
+function (sh::ShootingProblem)(x::BorderedArray, pars)
     # period of the cycle
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
@@ -157,7 +157,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
         for ii in 1:M
             # we can use views but Sundials will complain
             ip1 = (ii == M) ? 1 : ii+1
-            copyto!(out.u[ii], evolve(sh.flow, xc[ii], par, sh.ds[ii] * T).u .- xc[ip1])
+            copyto!(out.u[ii], evolve(sh.flow, xc[ii], pars, sh.ds[ii] * T).u .- xc[ip1])
         end
     else
         @assert false "Not implemented yet. Try to use an AbstractVector instead"
@@ -169,7 +169,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par)
 end
 
 # jacobian of the shooting functional
-function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
+function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
     # period of the cycle
     # Sundials does not like @views :(
     dT = getperiod(sh, dx)
@@ -186,16 +186,16 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            tmp = jvp(sh.flow, xc[:, ii], par, dxc[:, ii], sh.ds[ii] * T)
+            tmp = jvp(sh.flow, xc[:, ii], pars, dxc[:, ii], sh.ds[ii] * T)
             # call jacobian of the flow, jacobian-vector product
-            outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     else
-        solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
+        solOde = jvp(sh.flow, xc, pars, dxc, sh.ds .* T)
         # call jacobian of the flow, jacobian-vector product
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, par) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     end
 
@@ -206,7 +206,7 @@ function (sh::ShootingProblem)(x::AbstractVector, par, dx::AbstractVector; δ = 
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = convert(eltype(x.u), 1e-8))
+function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = convert(eltype(x.u), 1e-8))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -218,8 +218,8 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
-            tmp = jvp(sh.flow, x.u[ii], par, dx.u[ii], sh.ds[ii] * T)
-            copyto!(out.u[ii], tmp.du .+ vf(sh.flow, tmp.u, par) .* sh.ds[ii] .* dT .- dx.u[ip1])
+            tmp = jvp(sh.flow, x.u[ii], pars, dx.u[ii], sh.ds[ii] * T)
+            copyto!(out.u[ii], tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dx.u[ip1])
         end
     else
         @assert false "Not implemented yet. Try using AbstractVectors instead"
@@ -231,7 +231,7 @@ function (sh::ShootingProblem)(x::BorderedArray, par, dx::BorderedArray; δ = co
 end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
-function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, par)
+function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, pars)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
@@ -240,7 +240,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
     xc = get_time_slices(sh, x)
 
     # jacobian of the flow
-    dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, par, _T).u, _x)
+    dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, pars, _T).u, _x)
 
     # put the matrices by blocks
     In = I(N)
@@ -254,8 +254,8 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
             J[(ii-1)*N+1:(ii-1)*N+N, (ip1-1)*N+1:(ip1-1)*N+N]  .= (-1) .* In
         end
         # we fill the last column
-        tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], par, sh.ds[ii] * T).u
-        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vf(sh.flow, tmp, par) .* sh.ds[ii]
+        tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], pars, sh.ds[ii] * T).u
+        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vf(sh.flow, tmp, pars) .* sh.ds[ii]
     end
 
     # we fill the last row
@@ -266,7 +266,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 end
 
 # out of place version
-(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
+(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, pars)
 
 function residual!(pb::ShootingProblem, out, x, p)
     copyto!(out, pb(x, p))
@@ -279,7 +279,7 @@ $(SIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, par; kode...)
+function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode...)
     T = getperiod(prob, x)
     M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
@@ -289,7 +289,7 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, par; kode.
 
     # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(prob)
-        sol = [evolve(prob.flow, Val(:Full), xc[:, ii], par, prob.ds[ii] * T; kode...) for ii in 1:M]
+        sol = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
         time = sol[1].t; u = VectorOfArray(sol[1].u)
         # we could also use Matrix(sol[1])
         for ii in 2:M
@@ -299,7 +299,7 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, par; kode.
         return SolPeriodicOrbit(t = time, u = u)
 
     else # threaded version
-        sol = evolve(prob.flow, Val(:Full), xc, par, prob.ds .* T; kode...)
+        sol = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
         time = sol[1].t; u = VectorOfArray(sol[1].u)
         for ii in 2:M
             append!(time, sol[ii].t .+ time[end])
@@ -365,72 +365,3 @@ function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, peri
 
     return probSh, orbitguess
 end
-
-using SciMLBase: AbstractTimeseriesSolution
-"""
-$(SIGNATURES)
-
-Generate a periodic orbit problem from a solution.
-
-## Arguments
-- `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
-- `bifprob` a bifurcation problem to provide the vector field
-- `prob_de::ODEProblem` associated to `sol`
-- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
-- `tspan::Tuple` estimate of the period of the periodic orbit
-- `alg` algorithm for solving the Cauchy problem
-- `prob_mono` problem for monodromy
-- `alg_mono` algorithm for solving the monodromy Cauchy problem
-- `k` kwargs arguments passed to the constructor of `ShootingProblem`
-
-## Output
-- returns a `ShootingProblem` and an initial guess.
-"""
-function generate_ci_problem(shooting::ShootingProblem, 
-                            bifprob::AbstractBifurcationProblem, 
-                            prob_de, 
-                            sol::AbstractTimeseriesSolution, 
-                            tspan::Tuple;
-                            prob_mono = nothing,
-                            alg = sol.alg,
-                            alg_mono = sol.alg,
-                            use_bordered_array = false, 
-                            ksh...)
-    t0 = sol.t[begin]
-    u0 = sol(t0)
-    M = shooting.M
-
-    # points for the sections
-    centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
-
-    # shooting kwargs
-    sh_kw = (lens = getlens(bifprob), 
-            jacobian = shooting.jacobian,
-            parallel = shooting.parallel,
-            update_section_every_step = shooting.update_section_every_step,
-            )
-
-    # do we provide an ODE alg for computing the monodromy?
-    if isnothing(prob_mono)
-        probsh = ShootingProblem(prob_de, alg, centers; 
-                            sh_kw..., 
-                            ksh...)
-    else
-        probsh = ShootingProblem(prob_de, alg, prob_mono, alg, centers; 
-                        sh_kw...,
-                        ksh...)
-        @info has_mono_DE(probsh.flow)
-    end
-
-    if ~use_bordered_array
-        @assert u0 isa AbstractVector
-        cish = reduce(vcat, centers)
-        cish = vcat(cish, tspan[2]-tspan[1])
-    else
-        cish = BorderedArray(VectorOfArray(deepcopy(centers)), tspan[2]-tspan[1])
-    end
-
-    return probsh, cish
-end
-
-generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); ksh...)

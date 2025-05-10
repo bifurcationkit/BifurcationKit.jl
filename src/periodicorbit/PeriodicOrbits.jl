@@ -1,17 +1,3 @@
-abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
-abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
-
-# Periodic orbit computations by finite differences
-abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
-# Periodic orbit computations by shooting
-abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
-# wrapper problems
-abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
-abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
-
 # get the number of time slices
 @inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
 
@@ -23,15 +9,19 @@ Compute the period of the periodic orbit associated to `x`.
 @inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extract_period(x)
 @inline getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
 @inline getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
+
 @inline extract_period(x::AbstractVector) = x[end]
 @inline extract_period(x::BorderedArray)  = x.p
-set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
-set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
+# next method only used just in the file. Allows to set the parameters, like during aBS
+_set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
+_set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
+
+# function to extract trajectories from branch
 get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
 get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
-# function to extract trajectories from branch
 get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
+
 @inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
 @inline has_hessian(::WrapPOSh) = true
 
@@ -211,10 +201,10 @@ $DocStringJacobianPOSh
 function newton(prob::AbstractShootingProblem,
                 orbitguess,
                 options::NewtonPar;
-                lens::Union{AllOpticTypes, Nothing} = nothing,
+                lens::OpticType = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
-    jac = _generate_jacobian(prob, orbitguess, getparams(prob); δ = δ)
+    jac = _generate_jacobian(prob, orbitguess, getparams(prob); δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     return solve(probw, Newton(), options; kwargs...)
 end
@@ -238,7 +228,7 @@ function newton(prob::AbstractShootingProblem,
                 orbitguess::vectype,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, S, E};
-                lens::Union{AllOpticTypes, Nothing} = nothing,
+                lens::OpticType = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _generate_jacobian(prob, orbitguess, getparams(prob))
@@ -576,7 +566,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newton_options
         # find point on the first branch
-        pbnew = set_params_po(pbnew, setparam(br, newp))
+        pbnew = _set_params_po(pbnew, setparam(br, newp))
         sol0 = newton(pbnew, pred.po, optn; kwargs...)
         if converged(sol0) == false
             error("The first guess did not converge")
@@ -594,7 +584,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     end
 
     # perform continuation
-    pbnew = set_params_po(pbnew, setparam(br, newp))
+    pbnew = _set_params_po(pbnew, setparam(br, newp))
 
     residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 

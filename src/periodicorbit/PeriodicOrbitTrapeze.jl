@@ -135,6 +135,7 @@ get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
 setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
 @inline get_state_dim(pb::PeriodicOrbitTrapProblem) = pb.N
 @inline length(pb::PeriodicOrbitTrapProblem) = pb.M * get_state_dim(pb)
+
 # type unstable!
 @inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
     if returnArray == false

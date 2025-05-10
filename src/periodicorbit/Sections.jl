@@ -22,12 +22,12 @@ This composite type (named for Section Standard Shooting) encodes a type of sect
 $(TYPEDFIELDS)
 
 """
-struct SectionSS{Tn, Tc}  <: AbstractSection
+struct SectionSS{Tn}  <: AbstractSection
     "Normal to define hyperplane"
     normal::Tn
 
     "Representative point on hyperplane"
-    center::Tc
+    center::Tn
 end
 
 (sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
@@ -37,7 +37,7 @@ function (sect::SectionSS)(u, T::Ty, du, dT::Ty) where Ty
     return sect(u, one(Ty)) * dT + dot(du, sect.normal) * T
 end
 
-_isempty(sect::SectionSS{Tn, Tc}) where {Tn, Tc} = (Tn == Nothing) || (Tn == Nothing)
+_isempty(sect::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
 
 # we update the field of Section, useful during continuation procedure for updating the section
 function update!(sect::SectionSS, normal, center)
@@ -68,7 +68,7 @@ This composite type (named for SectionPoincaréShooting) encodes a type of Poinc
 $(TYPEDFIELDS)
 
 # Constructor(s)
-    SectionPS(normals::Vector{Tv}, centers::Vector{Tv})
+    SectionPS(normals, centers)
 
 """
 struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection

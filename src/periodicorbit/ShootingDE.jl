@@ -31,7 +31,7 @@ ShootingProblem(prob::ODEType, alg, M::Int, section; kwargs...) = ShootingProble
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, par = prob.p, kwargs...)
     F = get_vector_field(prob)
-    sh = ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel = parallel, par = par, kwargs...)
+    sh = ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel, par = par, kwargs...)
     # set jacobian for the flow too
     _sync_jacobian!(sh)
 end
@@ -52,7 +52,7 @@ function ShootingProblem(prob1::ODEType, alg1,
     _pb2 = parallel ? EnsembleProblem(prob2) : prob2
     kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(ShootingProblem)]
     kwargsDE = setdiff(kwargs, kwargsSh)
-    sh = ShootingProblem(;M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+    sh = ShootingProblem(;M = _M, flow = Flow(_pb1, alg1, _pb2, alg2; kwargsDE...), kwargsSh..., ds, section, parallel, par = par)
     # set jacobian for the flow too
     _sync_jacobian!(sh)
 end
@@ -206,3 +206,77 @@ function PoincareShootingProblem(prob1::ODEProblem, alg1,
     # set jacobian for the flow too
     _sync_jacobian!(psh)
 end
+####################################################################################################
+using SciMLBase: AbstractTimeseriesSolution
+"""
+$(SIGNATURES)
+
+Generate a periodic orbit problem from a solution.
+
+## Arguments
+- `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
+- `bifprob` a bifurcation problem to provide the vector field
+- `prob_de::ODEProblem` associated to `sol`
+- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
+- `tspan::Tuple` estimate of the period of the periodic orbit
+- `alg` algorithm for solving the Cauchy problem
+- `prob_mono` problem for monodromy
+- `alg_mono` algorithm for solving the monodromy Cauchy problem
+- `k` kwargs arguments passed to the constructor of `ShootingProblem`
+
+## Output
+- returns a `ShootingProblem` and an initial guess.
+"""
+function generate_ci_problem(shooting::ShootingProblem, 
+                            bifprob::AbstractBifurcationProblem, 
+                            prob_de, 
+                            sol::AbstractTimeseriesSolution, 
+                            tspan::Tuple;
+                            prob_mono = nothing,
+                            alg = sol.alg,
+                            alg_mono = sol.alg,
+                            use_bordered_array = false, 
+                            ksh...)
+    t0 = sol.t[begin]
+    u0 = sol(t0)
+    M = shooting.M
+
+    lens = getlens(bifprob)
+    pars = getparams(bifprob)
+
+    # points for the sections
+    centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
+
+    # shooting kwargs
+    sh_kw = (#lens = lens, 
+            jacobian = shooting.jacobian,
+            parallel = shooting.parallel,
+            update_section_every_step = shooting.update_section_every_step,
+            )
+
+    # do we provide an ODE alg for computing the monodromy?
+    if isnothing(prob_mono)
+        probsh = ShootingProblem(prob_de, alg, centers; 
+                            sh_kw..., 
+                            ksh...)
+    else
+        probsh = ShootingProblem(prob_de, alg, prob_mono, alg, centers; 
+                        sh_kw...,
+                        ksh...)
+        @info has_monodromy_DE(probsh.flow)
+    end
+
+    if ~use_bordered_array
+        @assert u0 isa AbstractVector
+        cish = reduce(vcat, centers)
+        cish = vcat(cish, tspan[2]-tspan[1])
+    else
+        cish = BorderedArray(VectorOfArray(deepcopy(centers)), tspan[2]-tspan[1])
+    end
+
+    wrap_sh = WrapPOSh(probsh, nothing, nothing, pars, lens, nothing, nothing)
+
+    return wrap_sh, cish
+end
+
+generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); ksh...)
