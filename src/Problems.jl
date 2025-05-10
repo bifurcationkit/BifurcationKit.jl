@@ -121,14 +121,13 @@ function jacobian!(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, Nothing}, J,
 end
 #####
 jad(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
+dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
 #####
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
 
 function dF(pb::BifFunction{Tf, TFinp, Nothing}, x, p, dx) where {Tf, TFinp}
     ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(eltype(dx)))
 end
-
-dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
 #####
 d2F(pb::BifFunction, x, p, dx1, dx2) = pb.d2F(x, p, dx1, dx2)
 
@@ -147,7 +146,7 @@ end
 #####
 d3F(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3F(x, p, dx1, dx2, dx3)
 
-function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f}
+function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc,Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc}
     ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
 end
 #####
@@ -347,15 +346,9 @@ for (op, at) in (
                     J!
                 end
 
-                jvp = if isnothing(jvp)
-                    nothing
-                else
-                    jvp
-                end
-
                 # type unstable but simplifies the type a lot
                 jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
-                vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d2Fc, d3F, d3Fc, issymmetric, delta, inplace, jet)
+                vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, jet)
                 return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
             end
         end
