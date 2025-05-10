@@ -951,8 +951,8 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     _finsol = modify_po_finalise(prob, kwargs, prob.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(prob, _kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
-    _plotsol = modify_po_plot(prob, _kwargs)
+    _recordsol = modify_po_record(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
+    _plotsol = modify_po_plot(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
 
     if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
         if jacobianPO == :FullLU

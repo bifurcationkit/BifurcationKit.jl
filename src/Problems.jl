@@ -198,10 +198,10 @@ for (op, at) in (
                 (:PDMAProblem, AbstractMABifurcationProblem),
                 (:NSMAProblem, AbstractMABifurcationProblem),
                 (:BTMAProblem, AbstractMABifurcationProblem),
-                (:WrapPOTrap, AbstractBifurcationProblem),
-                (:WrapPOSh, AbstractBifurcationProblem),
-                (:WrapPOColl, AbstractBifurcationProblem),
-                (:WrapTW, AbstractBifurcationProblem),
+                (:WrapPOTrap, AbstractWrapperFDProblem),
+                (:WrapPOSh, AbstractWrapperShootingProblem),
+                (:WrapPOColl, AbstractWrapperPOProblem),
+                (:WrapTW, AbstractWrapperFDProblem),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
         @eval begin
@@ -286,7 +286,7 @@ for (op, at) in (
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
         end
     else
-        @eval begin
+        @eval begin #WrapPOTrap, WrapPOSh, WrapPOColl, WrapTW
             """
             $(TYPEDEF)
 

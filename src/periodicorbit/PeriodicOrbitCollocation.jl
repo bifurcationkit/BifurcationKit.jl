@@ -1071,8 +1071,8 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     _finsol = modify_po_finalise(coll, kwargs, coll.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(coll, _kwargs, getparams(coll.prob_vf), getlens(coll.prob_vf))
-    _plotsol = modify_po_plot(coll, _kwargs)
+    _recordsol = modify_po_record(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); _kwargs...)
+    _plotsol = modify_po_plot(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); _kwargs...)
 
     wrap_coll = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, _recordsol)
 

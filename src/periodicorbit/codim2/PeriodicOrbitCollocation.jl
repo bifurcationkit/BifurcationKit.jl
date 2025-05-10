@@ -70,7 +70,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     nothing
 end
 
-function foldpoint(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+function fold_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bptype = br.specialpoint[index].type
     if ~(bptype == :bp || bptype == :nd || bptype == :fold)
         error("This should be a Branch Point / Fold / BP point")

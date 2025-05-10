@@ -7,7 +7,7 @@ Create a problem to implement the Simple / Parallel Multiple Standard Shooting m
 - `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
 - `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you).
 - `par` parameters of the model
-- `lens` parameter axis
+- `lens` parameter axis.
 - `update_section_every_step` updates the section every `update_section_every_step` step during continuation
 - `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 

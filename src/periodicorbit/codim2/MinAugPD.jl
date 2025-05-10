@@ -476,7 +476,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
     # change the plotter
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
-    _plotsol = modify_po_plot(prob_pd, _kwargs)
+    _plotsol = modify_po_plot(prob_pd, getparams(prob_pd), getlens(prob_pd);_kwargs...)
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
     # Define event for detecting codim 2 bifurcations.

@@ -400,7 +400,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
 
     # newton parameter
     optn = br.contparams.newton_options
-    period_doubling_normal_form(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose = verbose, nev = nev, kwargs_nf...)
+    period_doubling_normal_form(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose, nev, kwargs_nf...)
 end
 
 function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProblem },

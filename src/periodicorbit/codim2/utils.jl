@@ -1,9 +1,9 @@
-function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO::Union{PDMAProblem, NSMAProblem}, kwargs)
+function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO::Union{PDMAProblem, NSMAProblem}, pars, lens; kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
 
-function modify_po_plot(::BK_Makie, probPO::Union{PDMAProblem, NSMAProblem}, kwargs)
+function modify_po_plot(::BK_Makie, probPO::Union{PDMAProblem, NSMAProblem}, pars, lens; kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
