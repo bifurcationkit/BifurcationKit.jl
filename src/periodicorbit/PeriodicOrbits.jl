@@ -374,11 +374,12 @@ function continuation(br::AbstractBranchResult,
                       ind_bif::Int,
                       _contParams::ContinuationPar,
                       pbPO::AbstractPeriodicOrbitProblem ;
-                      prob_vf = br.prob,
+                      bif_prob = br.prob,
                       alg = getalg(br),
                       δp = nothing,
                       ampfactor = 1,
                       usedeflation = false,
+                      detailed = true,
                       use_normal_form = true,
                       autodiff_nf = true,
                       nev = length(eigenvalsfrombif(br, ind_bif)),
@@ -387,7 +388,7 @@ function continuation(br::AbstractBranchResult,
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-    hopfpt = hopf_normal_form(prob_vf, br, ind_bif; nev, verbose, detailed = use_normal_form, autodiff = autodiff_nf)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
     par_hopf = hopfpt.params
 
     # compute predictor for point on new branch
@@ -417,12 +418,12 @@ function continuation(br::AbstractBranchResult,
     end
 
     # extract the vector field and use it possibly to affect the PO functional
-    prob_vf_rm = re_make(prob_vf, params = setparam(br, pred.p))
+    bif_prob_rm = re_make(bif_prob; params = setparam(br, pred.p))
 
     # build the initial guess
     M = get_mesh_size(pbPO)
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]] # GIVES RUNTIME DISPATCH
-    probPO, orbitguess = re_make(pbPO, prob_vf_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+    probPO, orbitguess = re_make(pbPO, bif_prob_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
@@ -447,7 +448,7 @@ function continuation(br::AbstractBranchResult,
         end
         cb = get(kwargs, :callback_newton, cb_default)
         # TODO should only update guess here, cf Poincaré
-        probPO0, orbitzeroamp = re_make(probPO, prob_vf, hopfpt, ζr, orbitzeroamp_a, 𝒯(Tfactor * abs(2pi / pred.ω)))
+        probPO0, orbitzeroamp = re_make(probPO, bif_prob, hopfpt, ζr, orbitzeroamp_a, 𝒯(Tfactor * abs(2pi / pred.ω)))
         sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
 
         # find the bifurcated branch using deflation
@@ -538,6 +539,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
     pb = deepcopy(br.prob.prob)
 
+    detailed = detailed && use_normal_form
     nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
