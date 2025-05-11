@@ -1,11 +1,11 @@
 using SciMLBase: ODEProblem, DAEProblem, EnsembleProblem, terminate!, VectorContinuousCallback, ContinuousCallback
 const ODEType = Union{ODEProblem, DAEProblem}
 
-function get_vector_field(prob::Union{ODEProblem, DAEProblem})
-    if isinplace_sciml(prob)
-        return (x, p) -> (out = similar(x); prob.f(out, x, p, prob.tspan[1]); return out)
+function get_vector_field(odeprob::Union{ODEProblem, DAEProblem})
+    if isinplace_sciml(odeprob)
+        return (x, p) -> (out = similar(x); odeprob.f(out, x, p, odeprob.tspan[1]); return out)
     else
-        return (x, p) -> prob.f(x, p, prob.tspan[1])
+        return (x, p) -> odeprob.f(x, p, odeprob.tspan[1])
     end
 end
 get_vector_field(pb::EnsembleProblem) = get_vector_field(pb.prob)
