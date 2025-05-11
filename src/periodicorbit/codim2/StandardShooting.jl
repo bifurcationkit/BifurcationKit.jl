@@ -156,9 +156,9 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     if biftype == :bp || biftype == :fold
         return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     elseif biftype == :pd
-        return continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
+        return  continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     elseif biftype == :ns
-        return continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
+        return  continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
     end
     throw("You passed the bifurcation type = $biftype.\nWe continue only Branch Point /Fold / PD / NS points of periodic orbits for now.")
 end

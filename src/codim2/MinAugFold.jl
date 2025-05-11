@@ -356,7 +356,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
-            usehessian = usehessian)
+            usehessian,
+            )
 
     # Jacobian for the Fold problem
     if jacobian_ma == :autodiff
@@ -442,7 +443,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         return true
     end
 
-    function test_bt_cp(iter, state)
+    function test_bt_cusp(iter, state)
         z = getx(state)
         x = getvec(z)    # fold point
         p1 = getp(z)     # first parameter
@@ -512,7 +513,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # Define event for detecting codim 2 bifurcations.
     # Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
-    event_bif = ContinuousEvent(2, test_bt_cp, compute_eigen_elements, ("bt", "cusp"), 0)
+    event_bif = ContinuousEvent(2, test_bt_cusp, compute_eigen_elements, ("bt", "cusp"), 0)
     if isnothing(event_user)
         event = PairOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)))
     else

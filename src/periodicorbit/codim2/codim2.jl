@@ -16,13 +16,20 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         """
         $(TYPEDEF)
 
-        Structure to encode the functional based on a Minimally Augmented formulation.
+        Structure to encode PD / NS functional based on a Minimally Augmented formulation.
 
         # Fields
 
         $(FIELDS)
         """
-        mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
+        mutable struct $op{Tprob <: AbstractBifurcationProblem,
+                           vectype,
+                           T <: Real,
+                           S <: AbstractLinearSolver,
+                           Sa <: AbstractLinearSolver,
+                           Sbd <: AbstractBorderedLinearSolver,
+                           Sbda <: AbstractBorderedLinearSolver,
+                           Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
             "close to null vector of Jᵗ"
@@ -37,7 +44,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             CP::T
             "Fold-Neimark Sacker test value"
             FOLDNS::T
-            "Generalised period douling test value"
+            "Generalized period doubling test value"
             GPD::T
             "Fold-NS test values"
             FLIPNS::Int

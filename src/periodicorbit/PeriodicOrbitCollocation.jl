@@ -1074,7 +1074,8 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                       contParams;
                       kwargs...,
                       kind = PeriodicOrbitCont(),
-                      finalise_solution = _finsol)
+                      finalise_solution = _finsol
+                      )
     return br
 end
 
