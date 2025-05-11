@@ -240,12 +240,12 @@ end
 # Continuation for shooting problems
 function generate_jacobian(probPO::AbstractShootingProblem, 
                         orbitguess, 
-                        par;
+                        pars;
                         δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
     @assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
     if jacobianPO isa AutoDiffDenseAnalytical
-        _J = probPO(Val(:JacobianMatrix), orbitguess, getparams(probPO))
+        _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
         jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
     elseif jacobianPO isa AutoDiffDense
         jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
@@ -298,8 +298,8 @@ function continuation(probPO::AbstractShootingProblem,
     _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
     # remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))
-    _plotsol   = modify_po_plot(probPO, _kwargs)
+    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _plotsol   = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
