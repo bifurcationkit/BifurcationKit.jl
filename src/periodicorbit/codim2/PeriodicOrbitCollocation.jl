@@ -1,7 +1,9 @@
 @inline has_adjoint_MF(::WrapPOColl) = false
-@inline has_hessian(::WrapPOColl) = false
+@inline has_hessian(::WrapPOColl) = true
 
-d2F(pbwrap::WrapPOColl, x, p, dx1, dx2) = d2PO(z -> pbwrap.prob(z, p), x, dx1, dx2)
+function d2F(wrapcoll::WrapPOColl,x,p,dx1,dx2)
+    d2PO(z -> residual(wrapcoll.prob, z, p), x,dx1,dx2)
+end
 
 function Base.transpose(J::FloquetWrapper{ <: PeriodicOrbitOCollProblem})
     @set J.jacpb = transpose(J.jacpb)
@@ -109,6 +111,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
+                    alg = br.alg,
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
@@ -116,40 +119,33 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
     ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
+    usehessian = get(kwargs, :usehessian, false)
+    if ~usehessian
+        @warn("You should pass `usehessian = true`.")
+    end
+
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        if br.prob.prob.meshadapt
+            update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        end
         updatesection!(pbwrap.prob, bifpt.x.ϕ, nothing)
         bifpt = @set bifpt.x = bifpt.x.sol
     end
 
-    # we get the collocation problem
-    coll = deepcopy(getprob(br).prob)
-
-    # update section
     # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
     # updatesection!(coll, ϕ, nothing)
 
+    # this updates the section
+    coll = br.prob.prob
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
-
-    if get_plot_backend() == BK_Makie()
-        plotsol = (ax, x, p; ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p; ax1, k...)
-    else
-        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; k...)
-    end
-
-    coll_fold = BifurcationProblem((x, p) -> residual(coll, x, p), bifpt, getparams(br), getlens(br);
-                J = getprob(br).jacobian,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(coll, z, p), x, dx1, dx2),
-                plot_solution = plotsol
-                )
 
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    br_fold_po = continuation_fold(coll_fold,
+    br_fold_po = continuation_fold(br.prob,
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen = start_with_eigen,
@@ -158,7 +154,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         finalise_solution = _finsol,
         kwargs...
         )
-    correct_bifurcation(br_fold_po)
 end
 
 """

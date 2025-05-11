@@ -178,7 +178,6 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
@@ -186,23 +185,17 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
 
     pbwrap = getprob(br)
-    probsh = pbwrap.prob
+    sh = pbwrap.prob
 
-    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probsh)),lens2), kwargs, probsh.update_section_every_step)
-
-    probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), bifpt, getparams(br), getlens(br);
-                J = (x, p) -> jacobian(pbwrap, x, p),
-                Jᵗ = Jᵗ,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> probsh(z, p), x, dx1, dx2)
-                )
+    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(sh)),lens2), kwargs, sh.update_section_every_step)
 
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
 
     # perform continuation
-    br_fold_po = continuation_fold(probsh_fold,
+    br_fold_po = continuation_fold(
+        pbwrap,
         br, ind_bif, lens2,
         options_foldpo;
-        start_with_eigen = start_with_eigen,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = FoldPeriodicOrbitCont(),
         finalise_solution = _finsol,

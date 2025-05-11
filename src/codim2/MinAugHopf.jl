@@ -383,22 +383,22 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # Jacobian for the Hopf problem
     if jacobian_ma == :autodiff
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_h = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_h = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferences
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_h = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :MinAugMatrixBased
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_h = HopfMAProblem(𝐇, MinAugMatrixBased(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, MinAugMatrixBased(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = HopfLinearSolverMinAug()
     end
 
@@ -493,10 +493,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                         )
         end
 
-    prob_h = re_make(prob_h, record_from_solution = _printsol2)
+    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
 
     # eigen solver
-    eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_h)
+    eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_hopf)
 
     # Define event for detecting codim 2 bifurcations.
     # Couple it with user passed events
@@ -520,11 +520,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
     end
 
-    prob_h = re_make(prob_h, record_from_solution = _printsol2)
+    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
 
     # solve the hopf equations
     br = continuation(
-                prob_h, alg,
+                prob_hopf, alg,
                 (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
                 kwargs...,
                 kind = kind,

@@ -363,26 +363,26 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # Jacobian for the Fold problem
     if jacobian_ma == :autodiff
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_f = FoldMAProblem(𝐅, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = DefaultLS()
     elseif jacobian_ma == :finiteDifferencesMF
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_f = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :finiteDifferences
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_f = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     elseif jacobian_ma == :MinAugMatrixBased
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_f = FoldMAProblem(𝐅, MinAugMatrixBased(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, MinAugMatrixBased(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
     else
-        prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
         opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 
-    # this function allows to tackle the case where the two parameters have the same name
+    # Allows to tackle the case where the two parameters have the same name
     lenses = get_lens_symbol(lens1, lens2)
 
     # global variables to save call back
@@ -462,10 +462,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                     _namedrecordfromsol(_printsol(getvec(u), p; kw...))...) 
             end
 
-    prob_f = re_make(prob_f, record_from_solution = _printsol2)
+    prob_fold = re_make(prob_fold, record_from_solution = _printsol2)
 
     # eigen solver
-    eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_f)
+    eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_fold)
 
     # Define event for detecting codim 2 bifurcations.
     # Couple it with user passed events
@@ -477,9 +477,14 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         event = SetOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
     end
 
+    if prob isa AbstractWrapperFDProblem
+        _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = prob.plotSolution)
+        prob_fold = re_make(prob_fold, plot_solution = _plotsol)
+    end
+
     # solve the Fold equations
     br = continuation(
-        prob_f, alg,
+        prob_fold, alg,
         (@set opt_fold_cont.newton_options.eigsolver = eigsolver);
         linear_algo = BorderingBLS(solver = opt_fold_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
