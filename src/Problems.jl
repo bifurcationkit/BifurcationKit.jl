@@ -29,6 +29,7 @@ _getvectortype(::AbstractBifurcationProblem) = Nothing
 isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 
 save_solution_default(x, p) = x
+update_default(args...; kwargs...) = true
 
 const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
 const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
@@ -239,7 +240,7 @@ for (op, at) in (
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
             """
-            struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets} <: AbstractAllJetBifProblem
+            struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)"
                 VF::Tvf
                 "Initial guess"
@@ -254,12 +255,15 @@ for (op, at) in (
                 recordFromSolution::Trec
                 "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (not as a view to `x`). Signature: `save_solution(x, p)`"
                 save_solution::Tgets
+                "Function used to update the problem after each continuation step"
+                update!::Tupdate
             end
 
             _getvectortype(::$op{Tvf, Tu}) where {Tvf, Tu} = Tu
             plot_solution(prob::$op) = prob.plotSolution
             record_from_solution(prob::$op, x, p; k...) = prob.recordFromSolution(x, p; k...)
             save_solution(prob::$op, x, p) = prob.save_solution(x, p)
+            @inline update!(prob::$op, args...; kwargs...) = prob.update!(args...; kwargs...)
         end
     elseif op in (:FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :BTMAProblem)
         @eval begin
@@ -338,6 +342,7 @@ for (op, at) in (
                          delta = convert(eltype(u0), 1e-8),
                          save_solution = save_solution_default,
                          inplace = false,
+                         update! = update_default,
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
@@ -366,7 +371,7 @@ for (op, at) in (
                 # type unstable but simplifies the type a lot
                 jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
                 vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, jet)
-                return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution)
+                return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution, update!)
             end
         end
     end

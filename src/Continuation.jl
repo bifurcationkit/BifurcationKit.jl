@@ -220,6 +220,7 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
+@inline update_prob!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -448,6 +449,7 @@ function Base.iterate(it::ContIterable,
                 printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
             end
         end
+        state.stopcontinuation = ~update_prob!(it, state)
         state.step += 1
     else
         verbose && printstyled("Newton correction failed\n", color = :red)

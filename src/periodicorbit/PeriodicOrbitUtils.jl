@@ -36,6 +36,9 @@ function guess_from_hopf(br, ind_hopf, eigsolver::AbstractEigenSolver, M::Int, a
     return p_hopf, 2π/ωH, orbitguess, hopfpoint, vec_hopf
 end
 ####################################################################################################
+@inline update!(::WrapPOColl, args...; k...) = update_default(args...; k...) 
+@inline update!(::WrapPOSh, args...; k...) = update_default(args...; k...) 
+####################################################################################################
 """
 ($SIGNATURES)
 

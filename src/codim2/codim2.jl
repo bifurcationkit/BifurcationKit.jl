@@ -130,6 +130,9 @@ end
 @inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
 @inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
 
+update!(::FoldMAProblem, args...; k...) = update_default(args...; k...)
+update!(::HopfMAProblem, args...; k...) = update_default(args...; k...)
+################################################################################
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step = 1, kwargs...)
     if detect_codim2_bifurcation > 0
         if update_minaug_every_step == 0

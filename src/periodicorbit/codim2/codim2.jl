@@ -145,6 +145,9 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
     end
 end
 
+@inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
+@inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
+####################################################################################################
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldProblemMinimallyAugmented
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
