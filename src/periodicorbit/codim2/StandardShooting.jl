@@ -1,3 +1,7 @@
+function d2F(wrapsh::WrapPOSh,x,p,dx1,dx2)
+    d2PO(z -> residual(wrapsh.prob, z, p), x,dx1,dx2)
+end
+
 # if the jacobian is matrix based, use transpose
 @inline has_adjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
 @inline has_jvp(wrap::WrapPOSh) = has_jvp(wrap.prob)
