@@ -198,6 +198,7 @@ residual(tw::WrapTW, x, p) = residual(tw.prob, x, p)
 dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0.)
 d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0.)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0.)
+@inline update!(::WrapTW, args...; k...) = update_default(args...; k...)
 
 function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
     jacobian = prob.jacobian
