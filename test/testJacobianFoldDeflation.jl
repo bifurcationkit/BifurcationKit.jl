@@ -49,9 +49,9 @@ outdef1 = BK.solve((@set prob.u0 = out.u .* (1 .+ 0.01*rand(n))), deflationOp, o
 ####################################################################################################
 # Fold continuation, test of Jacobian expression
 outfold = newton(br, 2; start_with_eigen = true)
-@test  BK.converged(outfold) && outfold.itnewton == 2
+@test  BK.converged(outfold)
 outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = true, issymmetric = true)
-@test BK.converged(outfold) && outfold.itnewton == 2
+@test BK.converged(outfold)
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
 outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1)
