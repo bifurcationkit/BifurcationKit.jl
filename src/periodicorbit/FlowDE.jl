@@ -85,7 +85,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     # modify the function which assigns new initial conditions
     # see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
-    _epb = setproperties(fl.prob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
+    _epb = setproperties(fl.odeprob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
@@ -129,7 +129,7 @@ end
 # when no ODEProblem is passed for the monodromy, we use finite differences
 function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
-        return dflow_fdSerial(x, pars, dx, tm, fl.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+        return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
         sol1 = evolve(fl, x .+ δ .* dx, pars, tm; kw...)
         sol2 = evolve(fl, x           , pars, tm; kw...)
