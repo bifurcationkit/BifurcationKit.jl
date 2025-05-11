@@ -30,7 +30,8 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                            Sbd <: AbstractBorderedLinearSolver,
                            Sbda <: AbstractBorderedLinearSolver,
                            Tmass,
-                           Tn} <: AbstractProblemMinimallyAugmented{Tprob}
+                           Tn,
+                           Tnewton} <: AbstractProblemMinimallyAugmented{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
             "close to null vector of Jᵗ"
@@ -75,6 +76,8 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             update_minaug_every_step::Int
             "Compute the PO normal forms with Poincaré Return Map?"
             prm::Bool
+            "Newton options for normal form based on Poincaré Return Map"
+            newton_options::Tnewton
         end
 
         @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
@@ -97,6 +100,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         linbdsolve_adjoint = linbdsolver,
                         _norm = norm,
                         update_minaug_every_step = 0,
+                        newton_options = nothing,
                         prm = false)
             # determine scalar type associated to vectors a and b
             α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
@@ -111,7 +115,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # R2
                         real(one(Ty)),     # R3
                         real(one(Ty)),     # R4
-                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm)
+                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
 
         # empty constructor, mainly used for dispatch
@@ -121,6 +125,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                     massmatrix = LinearAlgebra.I,
                     _norm = norm,
                     update_minaug_every_step = 0,
+                    newton_options = nothing,
                     prm = false)
             a = b = 0.
             α = norm(a) 
@@ -135,7 +140,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # R2
                         real(one(Ty)),     # R3
                         real(one(Ty)),     # R4
-                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm)
+                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
     end
 end

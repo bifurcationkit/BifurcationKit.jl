@@ -24,10 +24,10 @@ prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 200)
 ################################################################################
 using OrdinaryDiffEq
-prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
+prob_de = ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
 alg = Rodas5()
 sol = OrdinaryDiffEq.solve(prob_de, alg)
-prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
+prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abstol = 1e-10)
 sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
@@ -128,7 +128,6 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 ns = get_normal_form(brpo_ns, 1)
 show(ns)
 BK.type(ns)
-
 @test ns isa BifurcationKit.NeimarkSackerPO
 
 # codim 2 NS

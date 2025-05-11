@@ -300,19 +300,20 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
 
-    # options for the Newton Solver inheritated from the ones the user provided
-    options_newton = options_cont.newton_options
+    # options for the Newton solver inheritated from the ones the user provided
+    newton_options = options_cont.newton_options
 
     𝐏𝐝 = PeriodDoublingProblemMinimallyAugmented(
             prob,
             _copy(eigenvec),
             _copy(eigenvec_ad),
-            options_newton.linsolver,
+            newton_options.linsolver,
             # do not change linear solver if user provides it
-            @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+            @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? newton_options.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian,
             _norm = normC,
+            newton_options,
             update_minaug_every_step)
 
     # this is to remove this part from the arguments passed to continuation
@@ -484,7 +485,7 @@ function test_for_gpd_cp(iter, state)
 
     pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
     if pbwrap.prob isa ShootingProblem
-        pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
+        pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
         𝐏𝐝.GPD = pd.nf.nf.b3
     end
     if pbwrap.prob isa PeriodicOrbitOCollProblem

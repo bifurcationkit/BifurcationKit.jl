@@ -273,20 +273,21 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     @assert lens1 == getlens(prob)
 
     # options for the Newton Solver inheritated from the ones the user provided
-    options_newton = options_cont.newton_options
+    newton_options = options_cont.newton_options
     # tolerance for detecting R1 bifurcation and stopping continuation
-    ϵR1 = 100options_newton.tol
+    ϵR1 = 100newton_options.tol
 
     𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
             prob,
             _copy(eigenvec),
             _copy(eigenvec_ad),
-            options_newton.linsolver,
+            newton_options.linsolver,
             # do not change linear solver if user provides it
-            @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
+            @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? newton_options.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian,
             _norm = normC,
+            newton_options,
             update_minaug_every_step)
 
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
@@ -367,18 +368,18 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch
-        pdjump = abs(abs(ω) - pi) < 100options_newton.tol
+        pdjump = abs(abs(ω) - pi) < 100newton_options.tol
 
         isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
 
          # if the frequency is null, this is not a NS point, we halt the process
          stop_R1 = 1-cos(ω) <= ϵR1
          if stop_R1
-            @warn "[Codim 2 NS - Finalizer]\n The NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\n If the R1 point is not detected, try lowering Newton tolerance or dsmax."
+            @warn "[Codim 2 NS - Finalizer]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
         end
 
         if pdjump
-            @warn "[Codim 2 NS - Finalizer] The NS curve seems to jump to a PD curve. Stopping computations at ($p1, $p2). Perhaps it is close to a R2 bifurcation for example."
+            @warn "[Codim 2 NS - Finalizer] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
         end
 
         # call the user-passed finalizer
@@ -456,18 +457,18 @@ function test_ch(iter, state)
     pbwrap = prob_ns.prob_vf
 
     ns0 = NeimarkSacker(copy(x), nothing, p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
-    options_newton = iter.contparams.newton_options
+    newton_options = 𝐍𝐒.newton_options
     # test if we jumped to PD branch
-    pdjump = abs(abs(ω) - pi) < 100options_newton.tol
+    pdjump = abs(abs(ω) - pi) < 100newton_options.tol
     if ~pdjump && pbwrap.prob isa ShootingProblem
-        ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
+        ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(newton_options, verbose = false,))
         prob_ns.l1 = ns.nf.nf.b
         prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
         #############
     end
     if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
         if 𝐍𝐒.prm
-            ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(options_newton, verbose = true))
+            ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = true))
         else
             ns = neimark_sacker_normal_form(pbwrap, ns0)
         end
