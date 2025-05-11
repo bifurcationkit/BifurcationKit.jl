@@ -1,15 +1,7 @@
 """
-    pb = ShootingProblem(flow::Flow, ds, section; parallel = false)
+$(TYPEDEF)
 
-Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
-- `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
-- `ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
-- `section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane.
-- `parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you).
-- `par` parameters of the model
-- `lens` parameter axis.
-- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
+Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
@@ -21,6 +13,9 @@ A functional, hereby called `G`, encodes the shooting problem. For example, the 
 You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. Another accepted guess is of the form `BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
 Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
+
+# Fields
+$(TYPEDFIELDS)
 
 ## Jacobian
 $DocStringJacobianPOSh
@@ -59,14 +54,22 @@ or
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p), dF(x,p)\\cdot y)``.
 """
 @with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractShootingProblem
+    "`ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise."
     M::Int64 = 0                         # number of sections
+    "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
     flow::Tf = Flow()                    # should be a Flow
     ds::Ts = diff(LinRange(0, 1, M + 1)) # difference of times for multiple shooting
+    "`section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane."
     section::Tsection = nothing          # sections for phase condition
+    "`parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you)."
     parallel::Bool = false               # whether we use DE in Ensemble mode for multiple shooting
+    "`par` parameters of the model"
     par::Tpar = nothing
+    "`lens` parameter axis."
     lens::Tlens = nothing
+    "updates the section every `update_section_every_step` step during continuation"
     update_section_every_step::UInt = 1
+    "Describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = AutoDiffDense()
 end
 

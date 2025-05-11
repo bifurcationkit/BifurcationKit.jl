@@ -33,7 +33,7 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
     _, σ, cv, = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "Linear solver for J did not converge."
+    ~cv && @debug "[Fold residual] Linear solver for J did not converge."
     return residual(𝐅.prob_vf, x, par), σ
 end
 
@@ -58,11 +58,11 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     # update parameter
     par0 = set(par, lens, p)
 
-    # we compute the jacobian. It is used at least 3 times below. This avoids doing 3 times the 
+    # The jacobian is used at least 3 times below. This avoids doing 3 times the 
     # (possibly) costly building of J(x, p)
     J_at_xp = jacobian(𝐅.prob_vf, x, par0)
 
-    # we do the following in order to avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
+    # Avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
     if is_symmetric(𝐅.prob_vf)
         JAd_at_xp = J_at_xp
     else
@@ -76,8 +76,8 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
 
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-        w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
-        ~cv && @debug "Bordered linear solver for J' did not converge."
+    w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+    ~cv && @debug "Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐅.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
@@ -110,11 +110,7 @@ end
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
 function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
-                            rhsu, rhsp;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing,
-    # then no debugging mode is entered. If it is AbstractArray, then it is populated
+                            rhsu, rhsp) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
     # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
@@ -159,23 +155,16 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         # dX = @. x1 - dσ * x2
         dX = _copy(x1); axpy!(-dσ, x2, dX)
     end
-
-    if debugArray isa AbstractArray
-        debugArray .= [jacobian(𝐅.prob_vf, x, par0) dₚF ; σₓ' σₚ]
-    end
-
     return dX, dσ, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
+function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = foldMALinearSolver((Jfold.x).u,
                  (Jfold.x).p,
                  Jfold.prob,
                  Jfold.params,
-                 du.u, du.p;
-                 debugArray = debugArray)
-    # this type annotation enforces type stability
+                 du.u, du.p)
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################

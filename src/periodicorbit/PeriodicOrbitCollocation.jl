@@ -152,22 +152,13 @@ end
 ####################################################################################################
 
 """
-    pb = PeriodicOrbitOCollProblem(kwargs...)
+    $(TYPEDEF)
 
 This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
 
-## Arguments
-- `prob` a bifurcation problem
-- `ϕ::AbstractVector` used to set a section for the phase constraint equation
-- `xπ::AbstractVector` used in the section for the phase constraint equation
-- `N::Int` dimension of the state space
-- `mesh_cache::MeshCollocationCache` cache for collocation. See docs of `MeshCollocationCache`
-- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian = DenseAnalytical()` describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()`.
-- `meshadapt::Bool = false` whether to use mesh adaptation
-- `verbose_mesh_adapt::Bool = true` verbose mesh adaptation information
-- `K::Float64 = 500` parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps.
-- `cache_In = true` caches `Array(I(n))` for computing dense functional jacobian. Should be passed as false for large scale problems.
+## Fields
+
+$(TYPEDFIELDS)
 
 ## Methods
 
@@ -196,44 +187,49 @@ Note that you can generate this guess from a function using `generate_solution` 
 - `residual!(pb, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractPODiffProblem
-    # Function F(x, par)
+    "`prob` a bifurcation problem"
     prob_vf::Tprob = nothing
 
-    # variables to define a Section for the phase constraint equation
+    "used to set a section for the phase constraint equation"
     ϕ::vectype = nothing
-    xπ::vectype = nothing
-    ∂ϕ::∂vectype = nothing # we store the derivative of ϕ, no need to recompute it each time.
 
-    # dimension of the problem in case of an AbstractVector
+    "used in the section for the phase constraint equation"
+    xπ::vectype = nothing
+
+    "we store the derivative of ϕ, no need to recompute it each time."
+    ∂ϕ::∂vectype = nothing
+
+    "dimension of the state space"
     N::Int = 0
 
     # whether the problem is nonautonomous
     isautonomous::Bool = true
 
-    # mass matrix
     massmatrix::Tmass = nothing
 
-    # update the section every step
+    "updates the section every `update_section_every_step` step during continuation"
     update_section_every_step::UInt = 1
 
-    # variable to control the way the jacobian of the functional is computed
+    "describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()`."
     jacobian::Tjac = DenseAnalytical()
 
-    # collocation mesh cache
+    "cache for collocation. See docs of `MeshCollocationCache`"
     mesh_cache::MeshCollocationCache{𝒯} = nothing
 
     # cache for allocation free computations
     cache::POCollCache{𝒯} = nothing
 
     #################
-    # mesh adaptation
+    "whether to use mesh adaptation"
     meshadapt::Bool = false
 
     # verbose mesh adaptation information
     verbose_mesh_adapt::Bool = false
 
-    # parameter for mesh adaptation, control maximum mesh step size
+    "parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
+
+    @assert jacobian in (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
 end
 
 # trivial constructor
@@ -924,8 +920,6 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
                         defOp::Union{Nothing, DeflationOperator} = nothing,
                         kwargs...)
     jacobianPO = probPO.jacobian
-    @assert jacobianPO in
-            (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace()) "This jacobian $jacobianPO is not defined. Please chose another one."
 
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> analytical_jacobian(probPO, x, p)

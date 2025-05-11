@@ -243,7 +243,6 @@ function generate_jacobian(probPO::AbstractShootingProblem,
                         pars;
                         δ = convert(eltype(orbitguess), 1e-8))
     jacobianPO = probPO.jacobian
-    @assert jacobianPO in (AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()) "This jacobian is not defined. Please chose another one."
     if jacobianPO isa AutoDiffDenseAnalytical
         _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
         jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));

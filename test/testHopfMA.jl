@@ -69,9 +69,7 @@ Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 n = 10
 par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
 sol0 = vcat(par_bru.α * ones(n), par_bru.β/par_bru.α * ones(n))
-prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
-        J = Jbru_ana,
-        record_from_solution = (x, p; k...) -> norminf(x))
+prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); J = Jbru_ana)
 
 # test that the jacobian is well computed
 @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
@@ -79,30 +77,24 @@ prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
 opt_newton = NewtonPar(tol = 1e-11, verbose = false)
 out = BK.solve(BK.re_make(prob, u0 = sol0 .* (1 .+ 0.01rand(2n))), Newton(), opt_newton)
 
-opts_br0 = ContinuationPar(dsmin = 0.001, dsmax = 0.1, ds= 0.01, p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
+opts_br0 = ContinuationPar(p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
 br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)), PALC(), opts_br0,)
 ###################################################################################################
 # Hopf continuation with automatic procedure
 outhopf = newton(br, 1; start_with_eigen = false)
 outhopf = newton(br, 1; start_with_eigen = true)
-optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 50, detect_bifurcation = 2)
 outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug)
+optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 5, detect_bifurcation = 2)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
-# av = randn(Complex{Float64},2n); av = av./norm(av)
-# bv = randn(Complex{Float64},2n); bv = bv./norm(bv)
 hopfpt = BK.hopf_point(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
 hopfvariable = HopfProblemMinimallyAugmented(
-                    (@set prob.VF.d2F = nothing), # this is for debug array
+                    (@set prob.VF.d2F = nothing),
                     conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
                     (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
-                    # av,
-                    # bv,
                     opts_br0.newton_options.linsolver)
-
-hopfvariable(hopfpt, par_bru) |> norm
 
 Bd2Vec(x) = vcat(x.u, x.p)
 Vec2Bd(x) = BorderedArray(x[1:end-2], x[end-1:end])
@@ -124,22 +116,21 @@ J_ana = BK.jacobian(_hopf_ma_problem, Bd2Vec(hopfpt), par_bru)
 
 # create a linear solver
 hopfls = BK.HopfLinearSolverMinAug()
-tmpVecforσ = zeros(ComplexF64, 2+2n)
-sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]), debugArray = tmpVecforσ)
+sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]))
 
 # we test the expression for σp
 σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end, end-1])
-σp_fd_ana = tmpVecforσ[1]
+σp_fd_ana = Complex(J_ana[end-1,end-1], J_ana[end, end-1])
 @test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
 # we test the expression for σω
 σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end, end])
-σω_fd_ana = tmpVecforσ[2]
+σω_fd_ana = Complex(J_ana[end-1,end], J_ana[end, end])
 @test σω_fd ≈ σω_fd_ana rtol = 1e-4
 
 # we test the expression for σx
 σx_fd = jac_hopf_fd[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fd[end, 1:end-2]
-σx_fd_ana = tmpVecforσ[3:end]
+σx_fd_ana = J_ana[end-1, 1:end-2] + Complex(0,1) * J_ana[end, 1:end-2]
 @test σx_fd ≈ σx_fd_ana rtol = 1e-3
 
 outhopf = newton(br, 1)

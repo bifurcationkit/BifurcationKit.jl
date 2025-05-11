@@ -70,6 +70,8 @@ for _T in (Float64, Float32, Float16)
     @test lastindex(deflationOp) == 1
     @test eltype(deflationOp) == _T
     @test deflationOp(rand(_T, 1)) isa _T
+    show(deflationOp)
+    length(deflationOp)
 end
 
 # the test the value of the deflation factor

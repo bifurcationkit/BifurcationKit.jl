@@ -1,6 +1,11 @@
 using BlockArrays, SparseArrays
 
-# structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps
+"""
+
+$(TYPEDEF)
+
+Structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps effectively yielding a `TimeMesh{Int64}`.
+"""
 struct TimeMesh{T}
     ds::T
 end
@@ -31,21 +36,10 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 - For `jacobian = :FullMatrixFreeAD`, the evaluation map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential.
 """
 
-# method using the Trapezoidal rule (Order 2 in time) and discretisation of the periodic orbit.
 """
+$(TYPEDEF)
 
 This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
-
-## Fields
-- `prob` a bifurcation problem
-- `M::Int` number of time slices
-- `ϕ` used to set a section for the phase constraint equation, of size N*M
-- `xπ` used in the section for the phase constraint equation, of size N*M
-- `linsolver: = DefaultLS()` linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a full matrix-free setting.
-- `ongpu::Bool` whether the computation takes place on the gpu (Experimental)
-- `massmatrix` a mass matrix. You can pass for example a sparse matrix. Default: identity matrix.
-- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
 
 The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one looks for `T = x[end]` such that
 
@@ -56,6 +50,9 @@ with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` an
 where ``h_1 = s_i-s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
 
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
+
+## Fields
+$(TYPEDFIELDS)
 
 ## Constructors
 
@@ -85,34 +82,42 @@ $DocStrjacobianPOTrap
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
 @with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass} <: AbstractPOFDProblem
-    # problem which contains the vector field F(x, par)
+    "a bifurcation problem"
     prob_vf::Tprob = nothing
 
-    # variables to define a Section for the phase constraint equation
+    "used to set a section for the phase constraint equation, of size N*M"
     ϕ::vectype = nothing
+
+    "used in the section for the phase constraint equation, of size N*M"
     xπ::vectype = nothing
 
-    # discretisation of the time interval
+    "number of time slices"
     M::Int = 0
+
+    "Mesh, see `TimeMesh`"
     mesh::TimeMesh{T} = TimeMesh(M)
 
-    # dimension of the problem in case of an AbstractVector
+    "dimension of the problem in case of an `AbstractVector`"
     N::Int = 0
 
-    # linear solver for each slice, i.e. to solve J⋅sol = rhs. This is mainly used for the computation of the Floquet coefficients
+    "linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a full matrix-free setting."
     linsolver::Tls = DefaultLS()
 
-    # whether the computation takes place on the gpu
+    "whether the computation takes place on the gpu (Experimental)"
     ongpu::Bool = false
 
-    # whether the problem is nonautonomous
     isautonomous::Bool = true
 
-    # mass matrix
+    "a mass matrix. You can pass for example a sparse matrix. Default: identity matrix."
     massmatrix::Tmass = nothing
 
+    "updates the section every `update_section_every_step` step during continuation"
     update_section_every_step::UInt = 1
+
+    "symbol which describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Symbol = :Dense
+
+    @assert jacobian in (:FullLU, :FullSparseInplace, :Dense, :DenseAD, :BorderedLU, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree, :FullMatrixFreeAD)
 end
 
 function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)

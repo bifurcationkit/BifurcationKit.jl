@@ -33,7 +33,7 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) whe
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
     _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
-    ~cv && @debug "Linear solver for (J-iω) did not converge."
+    ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
 
@@ -58,10 +58,10 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     # update parameter
     par0 = set(par, lens, p)
 
-    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the possibly costly building of J(x, p)
+    # This avoids doing 3 times the possibly costly building of J(x, p)
     J_at_xp = jacobian(𝐇.prob_vf, x, par0)
 
-    # we do the following to avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
+    # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
     # we use transpose(J_at_xp) because J_at_xp is real
     JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
@@ -119,8 +119,7 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
 """
 function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
-                            duu, dup, duω;
-                            debugArray = nothing) where 𝒯
+                            duu, dup, duω) where 𝒯
     ################################################################################################
     # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
     ################################################################################################
@@ -146,8 +145,8 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dₚF)
     ~cv && @debug "Linear solver for J did not converge"
 
-    # the case of ∂_xσ is a bit more involved
-    # we first need to compute the value of ∂_xσ written σx
+    # the case of ∂ₓσ is a bit more involved
+    # we first need to compute the value of ∂ₓσ written σx
     σx = similar(x, Complex{𝒯})
 
     if 𝐇.usehessian == false || has_hessian(𝐇) == false
@@ -176,23 +175,17 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
     LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
     rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
     dp, dω = LS \ rhs
-
-    if debugArray isa AbstractVector
-        debugArray .= vcat(σₚ, σω, σx)
-    end
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...)  where {vectype, 𝒯}
+function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwargs...)  where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = _hopf_MA_linear_solver((Jhopf.x).u, #!! TODO !! This seems TU
                 (Jhopf.x).p[1],
                 (Jhopf.x).p[2],
                 Jhopf.hopfpb,
                 Jhopf.params,
-                du.u, du.p[1], du.p[2];
-                debugArray = debugArray)
-    # this type annotation enforces type stability
+                du.u, du.p[1], du.p[2])
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################

@@ -228,7 +228,7 @@ Generate a periodic orbit problem from a solution.
 - returns a `ShootingProblem` and an initial guess.
 """
 function generate_ci_problem(shooting::ShootingProblem, 
-                            bifprob::AbstractBifurcationProblem, 
+                            prob_bif::AbstractBifurcationProblem, 
                             prob_de, 
                             sol::AbstractTimeseriesSolution, 
                             tspan::Tuple;
@@ -245,7 +245,7 @@ function generate_ci_problem(shooting::ShootingProblem,
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
     
     # shooting kwargs
-    sh_kw = (lens = getlens(bifprob), 
+    sh_kw = (lens = getlens(prob_bif), 
     jacobian = shooting.jacobian,
     parallel = shooting.parallel,
     update_section_every_step = shooting.update_section_every_step,
@@ -274,4 +274,4 @@ function generate_ci_problem(shooting::ShootingProblem,
     return probsh, cish
 end
 
-generate_ci_problem(pb::ShootingProblem, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, bifprob, prob_de, sol, (zero(period), period); ksh...)
+generate_ci_problem(pb::ShootingProblem, prob_bif::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, prob_bif, prob_de, sol, (zero(period), period); ksh...)

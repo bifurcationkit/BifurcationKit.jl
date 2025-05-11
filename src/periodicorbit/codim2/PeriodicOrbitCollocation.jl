@@ -29,60 +29,26 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     Jns = @set Jac.jacpb = J[1:end-1, 1:end-1]
 end
 
-function continuation(br::AbstractResult{Tkind, Tprob},
-                    ind_bif::Int64,
-                    lens2::AllOpticTypes,
-                    options_cont::ContinuationPar = br.contparams ;
-                    detect_codim2_bifurcation::Int = 0,
-                    update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
-    biftype = br.specialpoint[ind_bif].type
-
-    # options to detect codim2 bifurcations
-    compute_eigen_elements = options_cont.detect_bifurcation > 0
-    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
-
-    if biftype in (:bp, :fold)
-        return continuation_coll_fold(br,
-                                    ind_bif,
-                                    lens2,
-                                    _options_cont; 
-                                    compute_eigen_elements,
-                                    update_minaug_every_step,
-                                    kwargs... )
-    elseif biftype == :pd
-        return continuation_coll_pd(br,
-                                    ind_bif,
-                                    lens2,
-                                    _options_cont; compute_eigen_elements,
-                                    update_minaug_every_step,
-                                    kwargs... )
-    elseif biftype == :ns
-        return continuation_coll_ns(br,
-                                    ind_bif,
-                                    lens2,
-                                    _options_cont; compute_eigen_elements,
-                                    update_minaug_every_step,
-                                    kwargs... )
-    else
-        throw("We continue only Branch Point / Fold / PD / NS points of periodic orbits. Please report this error on the website.")
+for (fname, cdt, err_msg) in (
+                    (:fold_point, (:bp, :nd, :fold),"This should be a Branch Point / Fold / BP point"),
+                    (:pd_point, (:pd,), "This should be a PD point")
+                    ) 
+    @eval begin
+        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+            bptype = br.specialpoint[index].type
+            if ~(bptype in $cdt)
+                error($err_msg)
+            end
+            specialpoint = br.specialpoint[index]
+            if specialpoint.x isa POSolutionAndState
+                # the solution is mesh adapted, we need to restore the mesh.
+                pbwrap = deepcopy(br.prob)
+                update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+                specialpoint = @set specialpoint.x = specialpoint.x.sol
+            end
+            return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+        end
     end
-    nothing
-end
-
-function fold_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
-    bptype = br.specialpoint[index].type
-    if ~(bptype == :bp || bptype == :nd || bptype == :fold)
-        error("This should be a Branch Point / Fold / BP point")
-    end
-    specialpoint = br.specialpoint[index]
-    if specialpoint.x isa POSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
-        specialpoint = @set specialpoint.x = specialpoint.x.sol
-    end
-    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 
 function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
@@ -100,20 +66,32 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     end
     return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
 end
+####################################################################################################
+function continuation(br::AbstractResult{Tkind, Tprob},
+                    ind_bif::Int64,
+                    lens2::AllOpticTypes,
+                    options_cont::ContinuationPar = br.contparams ;
+                    detect_codim2_bifurcation::Int = 0,
+                    update_minaug_every_step = 1,
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+    biftype = br.specialpoint[ind_bif].type
 
-function pd_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
-    bptype = br.specialpoint[index].type
-    if bptype != :pd 
-        error("This should be a PD point")
+    # options to detect codim2 bifurcations
+    compute_eigen_elements = options_cont.detect_bifurcation > 0
+    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
+    # arguments
+    args = (br, ind_bif, lens2, _options_cont)
+    kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)
+    if biftype in (:bp, :fold)
+        return continuation_coll_fold(args...; kw...)
+    elseif biftype == :pd
+        return continuation_coll_pd(args...; kw...)
+    elseif biftype == :ns
+        return continuation_coll_ns(args...; kw...)
+    else
+        throw("We continue only Branch Point / Fold / PD / NS points of periodic orbits. Please report this error on the website.")
     end
-    specialpoint = br.specialpoint[index]
-    if specialpoint.x isa POSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
-        specialpoint = @set specialpoint.x = specialpoint.x.sol
-    end
-    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+    nothing
 end
 
 """
@@ -159,7 +137,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     if get_plot_backend() == BK_Makie()
         plotsol = (ax, x, p; ax1 = nothing, k...) -> br.prob.plotSolution(ax, x.u, p; ax1, k...)
     else
-        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; fromcodim2 = true, k...)
+        plotsol = (x, p;k...) -> br.prob.plotSolution(x.u, p; k...)
     end
 
     coll_fold = BifurcationProblem((x, p) -> residual(coll, x, p), bifpt, getparams(br), getlens(br);

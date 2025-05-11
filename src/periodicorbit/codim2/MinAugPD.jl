@@ -32,9 +32,9 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
 end
 ####################################################################################################
 @inline getvec(x, ::PeriodDoublingProblemMinimallyAugmented) = get_vec_bls(x)
-@inline getp(x, ::PeriodDoublingProblemMinimallyAugmented) = get_par_bls(x)
+@inline   getp(x, ::PeriodDoublingProblemMinimallyAugmented) = get_par_bls(x)
 
-pdtest(JacPD, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
+pdtest(JacPD, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 
 # this function encodes the functional
 function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
@@ -58,7 +58,7 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)⁻¹a>.
     # In the case of collocation, the matrix J is simply Jpo without the phase condition and with PD boundary condition.
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
-    σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)[2]
+    σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
 
@@ -86,25 +86,26 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
     # update parameter
     par0 = set(par, lens, p)
  
-    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
+    # Avoid doing 3 times the (possibly) costly building of J(x, p)
     JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
  
-    # we do the following in order to avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
+    # Avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
     JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
  
     # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolver)
+    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
  
     # # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
+    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
  
     δ = getdelta(POWrap)
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
  
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
-           residual(POWrap, x, set(par, lens, p - ϵₚ))); rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
+               residual(POWrap, x, set(par, lens, p - ϵₚ)))
+    rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
     dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
              apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
     rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
@@ -183,17 +184,8 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         _Jpo = jacobian(POWrap, x, par0)
         dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ, σₜ), σₚ, rhsu, rhsp)
         ~flag && @debug "Linear solver for J did not converge."
-
-        # Jfd = finiteDifferences(z -> 𝐏𝐝(z, par0), vcat(x, p))
-        # _Jpo = jacobian(POWrap, x, par0).jacpb |> copy
-        # Jana = [_Jpo dₚF ; vcat(σₓ, σₜ)' σₚ]
-        #
-        # # @debug "" size(σₓ) σₚ size(dₚF) size(_Jpo)
-        # @infiltrate
-
-        ~flag && @debug "Linear solver for J did not converge."
     else
-        @assert false "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
+        error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
     end
 
     if debugArray isa AbstractArray
@@ -388,11 +380,11 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         n = one(𝒯)
 
         # we solve N[v, σ1] = [0, 1]
-        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n; lsbd = 𝐏𝐝.linbdsolver)
+        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n, 𝐏𝐝.linbdsolver)
         ~cv && @debug "Linear solver for Pd did not converge."
 
         # # we solve Nᵗ[w, σ2] = [0, 1]
-        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n; lsbd = 𝐏𝐝.linbdsolverAdjoint)
+        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n, 𝐏𝐝.linbdsolverAdjoint)
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
 
         copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))
@@ -431,7 +423,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         ζ ./= norm(ζ)
 
         # compute new a
-        ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯); lsbd = 𝐏𝐝.linbdsolverAdjoint)
+        ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
         ~cv && @debug "Linear solver for Pdᵗ did not converge."
         ζ★ ./= norm(ζ★)
         prob_pd.R2 = dot(ζ★, ζ)

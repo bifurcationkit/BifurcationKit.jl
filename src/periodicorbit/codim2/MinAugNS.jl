@@ -28,12 +28,12 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
 end
 ####################################################################################################
 @inline getvec(x, ::NeimarkSackerProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline getp(x, ::NeimarkSackerProblemMinimallyAugmented) = get_par_bls(x, 2)
+@inline   getp(x, ::NeimarkSackerProblemMinimallyAugmented) = get_par_bls(x, 2)
 
 is_symmetric(::NSMAProblem) = false
 
 # test function for NS bifurcation
-nstest(JacNS, v, w, J22, _zero, n; lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
+nstest(JacNS, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
 
 # this function encodes the functional
 function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
@@ -47,7 +47,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯
     # update parameter
     par = set(params, getlens(𝐍𝐒), p)
     J = jacobian_neimark_sacker(𝐍𝐒.prob_vf, x, par, ω)
-    σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)[2]
+    σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
 
@@ -75,18 +75,18 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
     # update parameter
     par0 = set(par, lens, p)
 
-    # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
+    # Avoid doing 3 times the (possibly) costly building of J(x, p)
     JNS = jacobian_neimark_sacker(POWrap, x, par0, ω) # jacobian with period NS boundary condition
 
-    # we do the following in order to avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
+    # Avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
     JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, par0, ω) : adjoint(JNS)
 
     # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
     ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
     # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolverAdjoint)
+    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
     ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
 
     δ = getdelta(POWrap)
@@ -218,7 +218,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         
         return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
     else
-        @assert false "WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false."
+        error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
     end
 
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
@@ -351,12 +351,12 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
         # compute new b
         JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
-        newb,_,cv,it = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolver)
+        newb,_,cv,it = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge. it = $it"
 
         # compute new a
         JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
-        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯); lsbd = 𝐍𝐒.linbdsolverAdjoint)
+        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
         ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
         copyto!(𝐍𝐒.a, newa); rmul!(𝐍𝐒.a, 1/normC(newa))

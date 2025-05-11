@@ -3,19 +3,12 @@
 
 """
 
-`pb = PoincareShootingProblem(flow::Flow, M, sections; δ = 1e-8, interp_points = 50, parallel = false)`
+$(TYPEDEF)
 
-This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as follows
-- `flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref).
-- `M`: the number of Poincaré sections. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise.
-- `sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M == 1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane.
-- `δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead.
-- `interp_points = 50` number of interpolation point used to define the callback (to compute the hitting of the hyperplane section)
-- `parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`.
-- `par` parameters of the model
-- `lens` parameter axis
-- `update_section_every_step` updates the section every `update_section_every_step` step during continuation
-- `jacobian::Symbol` symbol which describes the type of jacobian used in Newton iterations (see below).
+This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
+
+# Fields
+$(TYPEDFIELDS)
 
 ## Jacobian
 $DocStringJacobianPOSh
@@ -55,15 +48,25 @@ Note that you can generate this guess from a function solution using `generate_s
     You can use the function `getperiod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
 @with_kw_noshow struct PoincareShootingProblem{Tf, Tjac <: AbstractJacobianType, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
+    "`M`: the number of Poincaré sections. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise."
     M::Int64 = 0                     # number of Poincaré sections
+    "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
     flow::Tf = Flow()                # should be a Flow
+    "`sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M == 1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane."
     section::Tsection = SectionPS(M) # Poincaré sections
+    "`δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead."
     δ::Float64 = 0e-8                # Numerical value used for the Matrix-Free Jacobian by finite differences.
+    "`parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`."
     parallel::Bool = false           # whether we use DE in Ensemble mode for multiple shooting
+    "`par` parameters of the model"
     par::Tpar = nothing
+    "`lens` parameter axis"
     lens::Tlens = nothing
+    "`update_section_every_step` updates the section every `update_section_every_step` step during continuation"
     update_section_every_step::UInt = 1
+    "Describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = AutoDiffDenseAnalytical()
+    @assert jacobian in [AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()] "This jacobian is not defined. Please chose another one."
 end
 
 @inline isparallel(psh::PoincareShootingProblem) = psh.parallel
