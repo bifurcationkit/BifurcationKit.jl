@@ -31,7 +31,7 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitv
     end
 end
 
-function plot!(ax1, contres::AbstractBranchResult; 
+function plot!(ax1, contres::AbstractResult{Tkind, Tprob}; 
                 plotfold = false,
                 plotstability = true,
                 plotspecialpoints = true,
@@ -43,7 +43,7 @@ function plot!(ax1, contres::AbstractBranchResult;
                 plotcirclesbif = true,
                 branchlabel = nothing,
                 applytoY = identity, 
-                applytoX = identity)
+                applytoX = identity) where {Tkind, Tprob}
 
     # names for axis labels
     ind1, ind2 = get_plot_vars(contres, vars)
@@ -51,6 +51,9 @@ function plot!(ax1, contres::AbstractBranchResult;
 
     # stability linewidth
     linewidth = linewidthunstable
+    if Tkind <: TwoParamCont
+        linewidthstable = 1.0
+    end
     indices = [sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability

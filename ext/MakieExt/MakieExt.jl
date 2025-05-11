@@ -1,6 +1,7 @@
 module MakieExt
     using Makie, BifurcationKit
     import BifurcationKit: _plot_backend,
+                           TwoParamCont,
                            plot, 
                            plot!,
                            hasbranch,
