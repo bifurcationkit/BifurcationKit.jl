@@ -27,7 +27,15 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
     $(FIELDS)
     """
-    mutable struct $op{Tprob <: AbstractBifurcationProblem, vectype, T <: Real, S <: AbstractLinearSolver, Sa <: AbstractLinearSolver, Sbd <: AbstractBorderedLinearSolver, Sbda <: AbstractBorderedLinearSolver, Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
+    mutable struct $op{Tprob <: AbstractBifurcationProblem,
+                       vectype,
+                       T <: Real,
+                       S <: AbstractLinearSolver,
+                       Sa <: AbstractLinearSolver,
+                       Sbd <: AbstractBorderedLinearSolver,
+                       Sbda <: AbstractBorderedLinearSolver,
+                       Tmass,
+                       Tn} <: AbstractProblemMinimallyAugmented{Tprob}
         "Functional F(x, p) - vector field - with all derivatives."
         prob_vf::Tprob
         "close to null vector of Jᵗ."
@@ -58,9 +66,14 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
         usehessian::Bool
         "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I."
         massmatrix::Tmass
+        "norm to normalize vector in update or test"
+        norm::Tn
+        "Update the problem every such step"
+        update_minaug_every_step::Int
     end
 
     @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
+    @inline Base.eltype(pb::$op{Tprob, vectype, T}) where {Tprob, vectype, T} = T
     @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
     @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
     @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -76,7 +89,9 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     linsolve_adjoint = linsolve,
                     usehessian = true,
                     massmatrix = LinearAlgebra.I,
-                    linbdsolve_adjoint = linbdsolver)
+                    linbdsolve_adjoint = linbdsolver,
+                    _norm = norm,
+                    update_minaug_every_step = 0)
         # determine scalar type associated to vectors a and b
         α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         𝒯 = eltype(α)
@@ -86,14 +101,17 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     real(one(𝒯)),     # bt
                     real(one(𝒯)),     # gh
                     1,                # zh
-                    linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
+                    linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix,
+                    _norm, update_minaug_every_step)
     end
 
     # empty constructor, mainly used for dispatch
     function $op(prob ;linsolve = DefaultLS(),
                     linbdsolver = MatrixBLS(),
                     usehessian = true,
-                    massmatrix = LinearAlgebra.I)
+                    massmatrix = LinearAlgebra.I,
+                    _norm = norm,
+                    update_minaug_every_step = 0)
         a = b = 0.
         α = norm(a) 
         𝒯 = eltype(α)
@@ -103,7 +121,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     real(one(𝒯)),     # bt
                     real(one(𝒯)),     # gh
                     1,                # zh
-                    linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+                    linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step)
     end
     end
 end

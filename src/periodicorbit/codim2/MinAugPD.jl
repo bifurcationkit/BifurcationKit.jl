@@ -311,7 +311,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
-            usehessian = usehessian)
+            usehessian,
+            _norm = normC,
+            update_minaug_every_step)
 
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
@@ -397,54 +399,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         return final_result
     end
 
-    function test_for_gpd_cp(iter, state)
-        z = getx(state)
-        x = getvec(z)    # pd point
-        p1 = getp(z)     # first parameter
-        p2 = getp(state) # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        prob_pd = iter.prob.prob
-        pbwrap = prob_pd.prob_vf
-
-        a = prob_pd.a
-        b = prob_pd.b
-
-        # expression of the jacobian
-        JPD = jacobian_period_doubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
-
-        # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-        JPD★ = has_adjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
-
-        # compute new b
-        ζ, _, cv, it = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
-        ~cv && @debug "Linear solver for Pd did not converge."
-        ζ ./= norm(ζ)
-
-        # compute new a
-        ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
-        ~cv && @debug "Linear solver for Pdᵗ did not converge."
-        ζ★ ./= norm(ζ★)
-        prob_pd.R2 = dot(ζ★, ζ)
-
-        pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
-        if pbwrap.prob isa ShootingProblem
-            pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
-            prob_pd.GPD = pd.nf.nf.b3
-        end
-        if pbwrap.prob isa PeriodicOrbitOCollProblem
-            if prm
-                pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
-            else
-                pd = period_doubling_normal_form_iooss(pbwrap, pd0; verbose = false)
-                prob_pd.GPD = pd.nf.nf.b3
-            end
-        end
-
-        return prob_pd.GPD, prob_pd.CP, prob_pd.R2
-    end
-
     # change the user provided functions by passing probPO in its parameters
     _finsol = modify_po_finalise(prob_pd, kwargs, prob.prob.update_section_every_step)
 
@@ -490,4 +444,57 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         finalise_solution = update_min_aug_pd,
         )
     correct_bifurcation(br_pd_po)
+end
+
+function test_for_gpd_cp(iter, state)
+    probma = getprob(iter)
+    lens1, lens2 = get_lenses(probma)
+
+    z = getx(state)
+    x = getvec(z)    # pd point
+    p1 = getp(z)     # first parameter
+    p2 = getp(state) # second parameter
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    𝐏𝐝 = probma.prob
+    𝒯 = eltype(𝐏𝐝)
+    pbwrap = 𝐏𝐝.prob_vf
+
+    a = 𝐏𝐝.a
+    b = 𝐏𝐝.b
+
+    # expression of the jacobian
+    JPD = jacobian_period_doubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
+
+    # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
+    JPD★ = has_adjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
+
+    # compute new b
+    ζ, _, cv, it = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
+    ~cv && @debug "Linear solver for Pd did not converge."
+    ζ ./= norm(ζ)
+
+    # compute new a
+    ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
+    ~cv && @debug "Linear solver for Pdᵗ did not converge."
+    ζ★ ./= norm(ζ★)
+    𝐏𝐝.R2 = dot(ζ★, ζ)
+
+    pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
+    if pbwrap.prob isa ShootingProblem
+        pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(options_newton, verbose = false); verbose = false)
+        𝐏𝐝.GPD = pd.nf.nf.b3
+    end
+    if pbwrap.prob isa PeriodicOrbitOCollProblem
+        if 𝐏𝐝.prm
+            pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
+        else
+            pd = period_doubling_normal_form_iooss(pbwrap, pd0; verbose = false)
+            𝐏𝐝.GPD = pd.nf.nf.b3
+        end
+    end
+
+    return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
 end

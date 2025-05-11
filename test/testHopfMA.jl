@@ -83,8 +83,8 @@ br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)),
 # Hopf continuation with automatic procedure
 outhopf = newton(br, 1; start_with_eigen = false)
 outhopf = newton(br, 1; start_with_eigen = true)
-outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 5, detect_bifurcation = 2)
+outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug)
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1

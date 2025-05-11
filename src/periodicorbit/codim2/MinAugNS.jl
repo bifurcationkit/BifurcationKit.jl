@@ -285,7 +285,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             # do not change linear solver if user provides it
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
-            usehessian = usehessian)
+            usehessian,
+            _norm = normC,
+            update_minaug_every_step)
 
     @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
 
@@ -385,49 +387,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         return ~stop_R1 && isbif && final_result && ~pdjump
     end
 
-    function test_ch(iter, state)
-        z = getx(state)
-        x = getvec(z, 𝐍𝐒)   # NS point
-        p1, ω = getp(z, 𝐍𝐒) # first parameter
-        p2 = getp(state)    # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        prob_ns = iter.prob.prob
-        pbwrap = prob_ns.prob_vf
-
-        ns0 = NeimarkSacker(copy(x), nothing, p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
-        # test if we jumped to PD branch
-        pdjump = abs(abs(ω) - pi) < 100options_newton.tol
-        if ~pdjump && pbwrap.prob isa ShootingProblem
-            ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
-            prob_ns.l1 = ns.nf.nf.b
-            prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
-            #############
-        end
-        if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
-            if prm
-                ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(options_newton, verbose = true))
-            else
-                ns = neimark_sacker_normal_form(pbwrap, ns0)
-            end
-            if ns.prm
-                prob_ns.l1 = ns.nf.nf.b
-                prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
-            else
-                prob_ns.l1 = ns.nf.nf.d
-                prob_ns.l1 = abs(real(prob_ns.l1)) < 1e5 ? real(prob_ns.l1) : state.eventValue[2][2]
-            end
-        end
-        # Witte, Virginie De “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
-        c = cos(ω)
-        𝐍𝐒.R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
-        𝐍𝐒.R2 = c+1  # μ = {1, -1}
-        𝐍𝐒.R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
-        𝐍𝐒.R4 = c    # μ = {1, exp(±iπ/2)}
-        return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
-    end
-
     # change the user provided functions by passing probPO in its parameters
     _finsol = modify_po_finalise(prob_ns, kwargs, prob.prob.update_section_every_step)
 
@@ -478,4 +437,53 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         finalise_solution = update_min_aug_ns,
         )
     correct_bifurcation(br_ns_po)
+end
+
+function test_ch(iter, state)
+    probma = getprob(iter)
+    𝐍𝐒 = probma.prob
+    lens1, lens2 = get_lenses(probma)
+
+    z = getx(state)
+    x = getvec(z, 𝐍𝐒)   # NS point
+    p1, ω = getp(z, 𝐍𝐒) # first parameter
+    p2 = getp(state)    # second parameter
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    prob_ns = iter.prob.prob
+    pbwrap = prob_ns.prob_vf
+
+    ns0 = NeimarkSacker(copy(x), nothing, p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
+    options_newton = iter.contparams.newton_options
+    # test if we jumped to PD branch
+    pdjump = abs(abs(ω) - pi) < 100options_newton.tol
+    if ~pdjump && pbwrap.prob isa ShootingProblem
+        ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(options_newton, verbose = false,))
+        prob_ns.l1 = ns.nf.nf.b
+        prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
+        #############
+    end
+    if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
+        if 𝐍𝐒.prm
+            ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(options_newton, verbose = true))
+        else
+            ns = neimark_sacker_normal_form(pbwrap, ns0)
+        end
+        if ns.prm
+            prob_ns.l1 = ns.nf.nf.b
+            prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
+        else
+            prob_ns.l1 = ns.nf.nf.d
+            prob_ns.l1 = abs(real(prob_ns.l1)) < 1e5 ? real(prob_ns.l1) : state.eventValue[2][2]
+        end
+    end
+    # Witte, Virginie De “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
+    c = cos(ω)
+    𝐍𝐒.R1 = ω    # μ = {1, 1} this is basically a BT using Iooss normal form
+    𝐍𝐒.R2 = c+1  # μ = {1, -1}
+    𝐍𝐒.R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
+    𝐍𝐒.R4 = c    # μ = {1, exp(±iπ/2)}
+    return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
 end

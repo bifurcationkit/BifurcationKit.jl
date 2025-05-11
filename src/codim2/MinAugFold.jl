@@ -357,7 +357,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options_newton.linsolver : bdlinsolver.solver);
             linbdsolve_adjoint = bdlinsolver_adjoint,
             usehessian,
-            )
+            _norm = normC,
+            update_minaug_every_step)
 
     # Jacobian for the Fold problem
     if jacobian_ma == :autodiff
@@ -441,50 +442,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             return finaliseUser(z, tau, step, contResult; prob = 𝐅, kUP...)
         end
         return true
-    end
-
-    function test_bt_cusp(iter, state)
-        z = getx(state)
-        x = getvec(z)    # fold point
-        p1 = getp(z)     # first parameter
-        p2 = getp(state) # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        probfold = iter.prob.prob
-
-        a = probfold.a
-        b = probfold.b
-
-        # expression of the jacobian
-        J_at_xp = jacobian(probfold.prob_vf, x, newpar)
-
-        # compute new b
-        ζ, _, cv, it = probfold.linbdsolver(J_at_xp, a, b, zero(𝒯), probfold.zero, one(𝒯))
-        ~cv && @debug "[FOLD test] Bordered linear solver for J did not converge. it = $(it). This is to update ζ"
-        rmul!(ζ, 1 / normC(ζ))
-
-        # compute new a
-        JAd_at_xp = has_adjoint(probfold) ? jad(probfold, x, newpar) : transpose(J_at_xp)
-        ζstar, _, cv, it = probfold.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), probfold.zero, one(𝒯))
-        ~cv && @debug "[FOLD test] Bordered linear solver for J' did not converge. it = $(it). This is to update ζstar"
-        rmul!(ζstar, 1 / normC(ζstar))
-
-        probfold.BT = dot(ζstar, ζ)
-        probfold.CP = getp(state.τ)
-
-        return probfold.BT, probfold.CP
-    end
-
-    function test_zh(iter, state)
-        if isnothing(state.eigvals)
-            iter.prob.prob.ZH = 1
-        else
-            ϵ = iter.contparams.tol_stability
-            ρ = minimum(abs ∘ real, state.eigvals)
-            iter.prob.prob.ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
-        end
-        return iter.prob.prob.ZH
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
@@ -608,6 +565,57 @@ function continuation_fold(prob,
             bdlinsolver,
             bdlinsolver_adjoint,
             kwargs...)
+end
+
+# Zero-Hopf test function for the Fold functional
+function test_zh(iter, state)
+    if isnothing(state.eigvals)
+        iter.prob.prob.ZH = 1
+    else
+        ϵ = iter.contparams.tol_stability
+        ρ = minimum(abs ∘ real, state.eigvals)
+        iter.prob.prob.ZH = mapreduce(x -> ((real(x) > ρ) & (imag(x) > ϵ)), +, state.eigvals)
+    end
+    return iter.prob.prob.ZH
+end
+
+# Bogdanov-Takens/Cusp test function for the Fold functional
+function test_bt_cusp(iter, state)
+    probma = getprob(iter)
+    lens1, lens2 = get_lenses(probma)
+
+    z = getx(state)
+    x = getvec(z)    # fold point
+    p1 = getp(z)     # first parameter
+    p2 = getp(state) # second parameter
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    𝐅 = probma.prob
+    𝒯 = eltype(𝐅)
+
+    a = 𝐅.a
+    b = 𝐅.b
+
+    # expression of the jacobian
+    J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
+
+    # compute new b
+    ζ, _, cv, it = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
+    ~cv && @debug "[FOLD test] Bordered linear solver for J did not converge. it = $(it). This is to update ζ"
+    rmul!(ζ, 1 / 𝐅.norm(ζ))
+
+    # compute new a
+    JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅, x, newpar) : transpose(J_at_xp)
+    ζstar, _, cv, it = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+    ~cv && @debug "[FOLD test] Bordered linear solver for J' did not converge. it = $(it). This is to update ζstar"
+    rmul!(ζstar, 1 / 𝐅.norm(ζstar))
+
+    𝐅.BT = dot(ζstar, ζ)
+    𝐅.CP = getp(state.τ)
+
+    return 𝐅.BT, 𝐅.CP
 end
 
 # structure to compute eigen-elements along branch of Fold points

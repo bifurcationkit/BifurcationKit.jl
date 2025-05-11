@@ -375,7 +375,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         linsolve_adjoint = linsolve_adjoint,
         linbdsolve_adjoint = bdlinsolver_adjoint,
         usehessian,
-        massmatrix)
+        massmatrix,
+        _norm = normC,
+        update_minaug_every_step
+        )
 
     # Jacobian for the Hopf problem
     if jacobian_ma == :autodiff
@@ -466,53 +469,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         final_result = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
 
         return abs(ω) >= threshBT && isbt && final_result
-    end
-
-    function test_bt_gh(iter, state)
-        z = getx(state)
-        x = getvec(z, 𝐇)   # hopf point
-        p1, ω = getp(z, 𝐇) # first parameter
-        p2 = getp(state)   # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        probhopf = iter.prob.prob
-
-        a = probhopf.a
-        b = probhopf.b
-
-        # expression of the jacobian
-        J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
-
-        # compute new b
-        T = typeof(p1)
-        n = T(1)
-        ζ, _, cv, it = probhopf.linbdsolver(J_at_xp, a, b, T(0), probhopf.zero, n; shift = Complex{T}(0, -ω))
-        ~cv && @debug "[Hopf test] Bordered linear solver for (J-iω) did not converge. it = $it. This is to compute ζ"
-
-        ζ ./= normC(ζ)
-
-        # compute new a
-        JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-        ζ★, _, cv, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, T(0), 𝐇.zero, n; shift = Complex{T}(0, ω))
-        ~cv && @debug "[Hopf test] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate ζ★"
-
-        # test function for Bogdanov-Takens
-        probhopf.BT = ω
-        BT2 = real( dot(ζ★ ./ normC(ζ★), ζ) )
-        ζ★ ./= dot(ζ, ζ★)
-        @debug "Hopf normal form computation"
-        hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{T}), b = zero(Complex{T})), :hopf)
-        hp = hopf_normal_form(prob_vf, hp0, options_newton.linsolver, verbose = false) # CA ALLOUE DANS hp !!!
-        @debug "" hp.nf.a hp.nf.b
-
-        # lyapunov coefficient
-        probhopf.l1 = hp.nf.b
-        # test for Bautin bifurcation.
-        # If GH is too large, we take the previous value to avoid spurious detection
-        # GH will be large close to BR points
-        probhopf.GH = abs(real(hp.nf.b)) < 1e5 ? real(hp.nf.b) : state.eventValue[2][2]
-        return probhopf.BT, probhopf.GH
     end
 
     # the following allows to append information specific to the codim 2 continuation to the user data
@@ -656,6 +612,57 @@ function continuation_hopf(prob,
                     bdlinsolver,
                     bdlinsolver_adjoint,
                     kwargs...)
+end
+
+function test_bt_gh(iter, state)
+    probma = getprob(iter)
+    𝐇 = probma.prob
+    lens1, lens2 = get_lenses(probma)
+
+    z = getx(state)
+    x = getvec(z, 𝐇)   # hopf point
+    p1, ω = getp(z, 𝐇) # first parameter
+    p2 = getp(state)   # second parameter
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    probhopf = iter.prob.prob
+
+    a = probhopf.a
+    b = probhopf.b
+
+    # expression of the jacobian
+    J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
+
+    # compute new b
+    𝒯 = typeof(p1)
+    n = one(𝒯)
+    ζ, _, cv, it = probhopf.linbdsolver(J_at_xp, a, b, zero(𝒯), probhopf.zero, n; shift = Complex{𝒯}(0, -ω))
+    ~cv && @debug "[Hopf test] Bordered linear solver for (J-iω) did not converge. it = $it. This is to compute ζ"
+
+    ζ ./= 𝐇.norm(ζ)
+
+    # compute new a
+    JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
+    ζ★, _, cv, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, n; shift = Complex{𝒯}(0, ω))
+    ~cv && @debug "[Hopf test] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate ζ★"
+
+    # test function for Bogdanov-Takens
+    probhopf.BT = ω
+    BT2 = real( dot(ζ★ ./ 𝐇.norm(ζ★), ζ) )
+    ζ★ ./= dot(ζ, ζ★)
+    @debug "Hopf normal form computation"
+    hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
+    hp = hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # on met autodiff = false, on fait comment? => dans BifProblem
+
+    # lyapunov coefficient
+    probhopf.l1 = hp.nf.b
+    # test for Bautin bifurcation.
+    # If GH is too large, we take the previous value to avoid spurious detection
+    # GH will be large close to BR points
+    probhopf.GH = abs(real(hp.nf.b)) < 1e5 ? real(hp.nf.b) : state.eventValue[2][2]
+    return probhopf.BT, probhopf.GH
 end
 
 # structure to compute the eigenvalues along the Hopf branch

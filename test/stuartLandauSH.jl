@@ -39,8 +39,8 @@ show(br)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
-BK._getVectorField(ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
-BK._getVectorField(EnsembleProblem(ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
+BK._apply_vector_field(ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
+BK._apply_vector_field(EnsembleProblem(ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
 ####################################################################################################
 sol = OrdinaryDiffEq.solve(prob, KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
@@ -57,7 +57,7 @@ section(x, T, dx, dT) = dx[1] #* x[end]
 M = 1
 dM = 1
 _pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol = 1e-10, reltol=1e-9)
-BifurcationKit.has_mono_DE(_pb.flow)
+BifurcationKit.has_monodromy_DE(_pb.flow)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
@@ -82,7 +82,7 @@ resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
 _pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@optic _.r))
 res = _pb(initpo, par_hopf)
 res = _pb(initpo, par_hopf, initpo)
-@test _pb.flow.prob.p == _pb.par
+@test _pb.flow.odeprob.p == _pb.par
 
 # test the jacobian of the functional in the case M=1
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
@@ -93,7 +93,7 @@ _pb2 = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo
 res = _pb2(initpo, par_hopf)
 res = _pb2(initpo, par_hopf, initpo)
 @test BK.issimple(_pb2)
-@test _pb2.flow.prob.p == _pb2.par
+@test _pb2.flow.odeprob.p == _pb2.par
 
 # we test this using Newton - Continuation
 optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 20)

@@ -29,7 +29,8 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                            Sa <: AbstractLinearSolver,
                            Sbd <: AbstractBorderedLinearSolver,
                            Sbda <: AbstractBorderedLinearSolver,
-                           Tmass} <: AbstractProblemMinimallyAugmented{Tprob}
+                           Tmass,
+                           Tn} <: AbstractProblemMinimallyAugmented{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
             "close to null vector of Jᵗ"
@@ -68,9 +69,16 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             usehessian::Bool
             "wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
             massmatrix::Tmass
+            "norm to normalize vector in update or test"
+            norm::Tn
+            "Update the problem every such step"
+            update_minaug_every_step::Int
+            "Compute the PO normal forms with Poincaré Return Map?"
+            prm::Bool
         end
 
         @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
+        @inline Base.eltype(pb::$op{Tprob, vectype, T}) where {Tprob, vectype, T} = T
         @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
         @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
         @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -86,7 +94,10 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         linsolve_adjoint = linsolve,
                         usehessian = true, 
                         massmatrix = LinearAlgebra.I,
-                        linbdsolve_adjoint = linbdsolver)
+                        linbdsolve_adjoint = linbdsolver,
+                        _norm = norm,
+                        update_minaug_every_step = 0,
+                        prm = false)
             # determine scalar type associated to vectors a and b
             α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
             Ty = eltype(α)
@@ -100,14 +111,17 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # R2
                         real(one(Ty)),     # R3
                         real(one(Ty)),     # R4
-                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix)
+                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm)
         end
 
         # empty constructor, mainly used for dispatch
         function $op(prob ;linsolve = DefaultLS(), 
                     linbdsolver = MatrixBLS(), 
                     usehessian = true, 
-                    massmatrix = LinearAlgebra.I)
+                    massmatrix = LinearAlgebra.I,
+                    _norm = norm,
+                    update_minaug_every_step = 0,
+                    prm = false)
             a = b = 0.
             α = norm(a) 
             Ty = eltype(α)
@@ -121,7 +135,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         real(one(Ty)),     # R2
                         real(one(Ty)),     # R3
                         real(one(Ty)),     # R4
-                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix)
+                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm)
         end
     end
 end
@@ -216,8 +230,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     else
         _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probPO))), kwargs, probPO.update_section_every_step)
     end
-    _recordsol = modify_po_record(probPO, kwargs, getparams(probPO), getlens(probPO))
-    _plotsol = modify_po_plot(probPO, kwargs)
+    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
+    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
@@ -334,8 +348,8 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
 
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, _kwargs, getparams(probPO), getlens(probPO))
-    _plotsol = modify_po_plot(probPO, _kwargs)
+    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
