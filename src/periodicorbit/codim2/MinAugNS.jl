@@ -144,12 +144,7 @@ end
 struct NSLinearSolverMinAug <: AbstractLinearSolver; end
 
 function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
-                            duu, dup, duω;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. 
-	# If debugArray = nothing, then no debugging mode is entered. 
-	# If it is AbstractArray, then it is populated
+                            duu, dup, duω) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
     # where σ(x,p) is computed in the above functions and F is the periodic orbit
@@ -200,39 +195,30 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         σxx1 = dot(vcat(σx,σt), x1)
         σxx2 = dot(vcat(σx,σt), x2)
 
-         # We need to be careful here because the dot produces conjugates. 
-        # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
-        LS = Matrix{𝒯}(undef, 2, 2);
-        rhs = Vector{𝒯}(undef, 2);
-        LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
-        LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
-        rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
-        dp, dω = LS \ rhs
-
-        if debugArray isa AbstractArray
-            Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
-            Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
-            Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
-            debugArray .= Jns
-        end
-        
-        return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
     else
         error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
     end
 
-    return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
+    # We need to be careful here because the dot produces conjugates. 
+    # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
+    LS = Matrix{𝒯}(undef, 2, 2);
+    rhs = Vector{𝒯}(undef, 2);
+    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
+    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
+    dp, dω = LS \ rhs
+
+    return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
+function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = NSMALinearSolver((Jns.x).u,
                 (Jns.x).p[1],
                 (Jns.x).p[2],
                 Jns.nspb,
                 Jns.params,
-                rhs.u, rhs.p[1], rhs.p[2];
-                debugArray = debugArray)
+                rhs.u, rhs.p[1], rhs.p[2])
     # this type annotation enforces type stability
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end

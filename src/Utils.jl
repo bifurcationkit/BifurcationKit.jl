@@ -57,11 +57,8 @@ function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
 end 
 
 @inline _print_line(step::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", step, residual, itlinear[1], itlinear[2])
-
 @inline _print_line(step::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", step, residual, itlinear)
-
 @inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
-
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
 function compute_eigenvalues(iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kwargs...)

@@ -121,8 +121,6 @@ This function solves the linear problem associated with a linearization of the m
 function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
                             duu, dup, duω) where 𝒯
     ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. If debugArray = nothing, then no debugging mode is entered. If it is AbstractVector, then it is populated
-    ################################################################################################
     # N = length(du) - 2
     # The Jacobian J of the vector field is expressed at (x, p)
     # the jacobian expression Jhopf of the hopf problem is

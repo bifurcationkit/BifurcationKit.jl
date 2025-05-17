@@ -142,12 +142,7 @@ end
 struct PDLinearSolverMinAug <: AbstractLinearSolver; end
 
 function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, par,
-                            rhsu, rhsp;
-                            debugArray = nothing) where 𝒯
-    ################################################################################################
-    # debugArray is used as a temp to be filled with values used for debugging. 
-    # If debugArray = nothing, then no debugging mode is entered. 
-    # If it is AbstractArray, then it is populated
+                            rhsu, rhsp) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
     # where σ(x,p) is computed in the above functions and F is the periodic orbit
@@ -188,21 +183,16 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
     end
 
-    if debugArray isa AbstractArray
-        debugArray .= [_Jpo.jacpb dₚF ; vcat(σₓ, σₜ)' σₚ]
-    end
-
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; debugArray = nothing, kwargs...) where {vectype, 𝒯}
+function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = PDMALinearSolver((Jpd.x).u,
                  (Jpd.x).p,
                  Jpd.prob,
                  Jpd.params,
-                 rhs.u, rhs.p;
-                 debugArray = debugArray)
+                 rhs.u, rhs.p)
     # this type annotation enforces type stability
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end

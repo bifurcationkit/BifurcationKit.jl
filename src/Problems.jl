@@ -201,7 +201,7 @@ for (op, at) in (
                 (:BTMAProblem, AbstractMABifurcationProblem),
                 (:WrapPOTrap, AbstractWrapperFDProblem),
                 (:WrapPOSh, AbstractWrapperShootingProblem),
-                (:WrapPOColl, AbstractWrapperPOProblem),
+                (:WrapPOColl, AbstractWrapperFDProblem),
                 (:WrapTW, AbstractWrapperFDProblem),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
