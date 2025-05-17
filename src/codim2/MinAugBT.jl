@@ -285,14 +285,14 @@ function newton_bt(prob::AbstractBifurcationProblem,
                 eigenvec, eigenvec_ad,
                 options::NewtonPar;
                 normN = norm,
-                jacobian_ma::Symbol = :autodiff,
+                jacobian_ma::AbstractJacobianType = AutoDiff(),
                 usehessian = false,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
                 bdlinsolver_block::AbstractBorderedLinearSolver = bdlinsolver,
                 kwargs...)
 
-    @assert jacobian_ma in (:autodiff, :finitedifferences, :minaug)
+    @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug())
 
     𝐁𝐓 = BTProblemMinimallyAugmented(
         prob,
@@ -308,7 +308,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
 
     Ty = eltype(btpointguess)
 
-    if jacobian_ma == :autodiff
+    if jacobian_ma == AutoDiff()
         if btpointguess isa BorderedArray
             brpoint_v = vcat(btpointguess.u, btpointguess.p[1:2]...)
         else
@@ -316,7 +316,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
         end
         prob_bt = BifurcationProblem(𝐁𝐓, brpoint_v, par)
         optn_bt = @set options.linsolver = DefaultLS()
-    elseif jacobian_ma == :finitedifferences
+    elseif jacobian_ma == FiniteDifferences()
         if btpointguess isa BorderedArray
             brpoint_v = vcat(btpointguess.u, btpointguess.p[1:2]...)
         else

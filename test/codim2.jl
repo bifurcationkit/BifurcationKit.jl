@@ -68,7 +68,7 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 6
 
-for eigen_start in (true, false), _jac in (:autodiff, :finiteDifferences, :MinAugMatrixBased, :minaug)
+for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.FiniteDifferences(), BK.MinAugMatrixBased(), BK.MinAug())
     # @info "" eigen_start _jac
     sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), 
             bdlinsolver = MatrixBLS(), 
@@ -138,7 +138,7 @@ hp = newton(br, 2;
 
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
 
-for eigen_start in (true, false), _jac in (:autodiff, :MinAugMatrixBased, :minaug)
+for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.MinAugMatrixBased(), BK.MinAug())
     # @info "" eigen_start _jac
     hp_br = continuation(br, 2, (@optic _.k), 
             ContinuationPar(opts_br, ds = -0.001, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), bdlinsolver = MatrixBLS(), 

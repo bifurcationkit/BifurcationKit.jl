@@ -105,7 +105,7 @@ plotsol!(x::BorderedArray, args...; k...) = plotsol!(x.u, args...; k...)
 brfold = continuation(br, 1, (@optic _.ν), optfold;
     verbosity = 3, plot = true,
     bdlinsolver = MatrixBLS(),
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAugMatrixBased(),
     start_with_eigen = false,
     detect_codim2_bifurcation = 0,
     bothside = true,

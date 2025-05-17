@@ -290,7 +290,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
 
-                jacobian_ma::Symbol = :autodiff,
+                jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm = false,
@@ -320,19 +320,19 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
 
     # Jacobian for the PD problem
-    if jacobian_ma == :autodiff
+    if jacobian_ma == AutoDiff()
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
         prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == :finiteDifferences
+    elseif jacobian_ma == FiniteDifferences()
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p...)
         prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :finiteDifferencesMF
+    elseif jacobian_ma == FiniteDifferencesMF()
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
         prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :MinAugMatrixBased
+    elseif jacobian_ma == MinAugMatrixBased()
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
         prob_pd = PDMAProblem(𝐏𝐝, MinAugMatrixBased(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver

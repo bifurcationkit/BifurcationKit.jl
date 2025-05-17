@@ -119,7 +119,7 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 20, p_min = 0.01, p_max = 1.2)
 @reset opts_posh_fold.newton_options.tol = 1e-9
 
-# use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
+# use this option for jacobian_ma = BK.FiniteDifferencesMF(), otherwise do not
 @reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
 # fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
 #     verbosity = 2, plot = true,
@@ -152,14 +152,14 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 # codim 2 PD
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 3, max_steps = 40, p_min = -1.)
 @reset opts_posh_pd.newton_options.tol = 1e-8
-# use this option for jacobian_ma = :finiteDifferencesMF, otherwise do not
+# use this option for jacobian_ma = BK.FiniteDifferencesMF(), otherwise do not
 # @reset opts_posh_pd.newton_options.linsolver.solver.N = opts_posh_pd.newton_options.linsolver.solver.N+1
 pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
     verbosity = 2, plot = false,
     detect_codim2_bifurcation = 0,
     usehessian = false,
-    jacobian_ma = :minaug,
-    # jacobian_ma = :finiteDifferencesMF,
+    jacobian_ma = BK.MinAug(),
+    # jacobian_ma = BK.FiniteDifferencesMF(),
     bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
     start_with_eigen = false,
     bothside = true,
@@ -205,7 +205,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
         normC = norminf,

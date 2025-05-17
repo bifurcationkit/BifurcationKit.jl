@@ -262,7 +262,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                         bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
 
-                        jacobian_ma::Symbol = :autodiff,
+                        jacobian_ma::AbstractJacobianType = AutoDiff(),
                         compute_eigen_elements = false,
                         kind = NSCont(),
                         usehessian = false,
@@ -290,22 +290,22 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             newton_options,
             update_minaug_every_step)
 
-    @assert jacobian_ma in (:autodiff, :finiteDifferences, :minaug, :finiteDifferencesMF, :MinAugMatrixBased)
+    @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug(), FiniteDifferencesMF(), MinAugMatrixBased())
 
     # Jacobian for the NS problem
-    if jacobian_ma == :autodiff
+    if jacobian_ma == AutoDiff()
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == :finiteDifferences
+    elseif jacobian_ma == FiniteDifferences()
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :finiteDifferencesMF
+    elseif jacobian_ma == FiniteDifferencesMF()
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :MinAugMatrixBased
+    elseif jacobian_ma == MinAugMatrixBased()
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
         prob_ns = NSMAProblem(𝐍𝐒, MinAugMatrixBased(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver

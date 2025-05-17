@@ -65,9 +65,7 @@ argspo = (record_from_solution = recordFromSolution,
     plot_solution = plotSolution
     )
 ################################################################################
-probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, update_section_every_step = 0), prob, sol, 2.)
-
-plot(sol)
+probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, update_section_every_step = 0), prob_bif, sol, 2.)
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 
@@ -103,7 +101,11 @@ opts_potrap_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 0,
 
 # plot(fold_po_trap1)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 3), prob, sol, 2.; optimal_period = false)
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 4;
+            jacobian = BK.DenseAnalyticalInplace(),
+            # meshadapt = true,
+            ),
+            prob_bif, sol, 2.; optimal_period = false, )
 plot(sol)
 
 solpo = BK.newton(probcoll, ci, NewtonPar(verbose = true));
@@ -149,7 +151,9 @@ fold_po_coll1 = continuation(brpo_fold, 1, (@optic _.ϵ), opts_pocoll_fold;
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         bothside = true,
-        jacobian_ma = :minaug,
+        usehessian = true,
+        jacobian_ma = BK.MinAug(),
+        # jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -161,7 +165,8 @@ fold_po_coll2 = @time continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold
         update_minaug_every_step = 1,
         start_with_eigen = false,
         bothside = true,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
+        # jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -176,9 +181,8 @@ pd_po_coll = @time continuation(brpo_pd, 1, (@optic _.b0), opts_pocoll_pd;
         update_minaug_every_step = 1,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        # jacobian_ma = BK.MinAug(),
+        jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
@@ -194,7 +198,7 @@ fold_po_coll2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold;
         update_minaug_every_step = 1,
         start_with_eigen = false,
         bothside = true,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
@@ -234,11 +238,10 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
-        usehessian = false,
-        jacobian_ma = :minaug,
+        usehessian = true,
         update_minaug_every_step = 1,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        # jacobian_ma = BK.MinAug(),
+        jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(1),
         bothside = true,
@@ -258,9 +261,8 @@ ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         detect_codim2_bifurcation = 1,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        # jacobian_ma = BK.MinAug(),
+        jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
@@ -294,9 +296,7 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,
@@ -309,12 +309,7 @@ plot!(fold_po_coll2)
 plot!(pd_po_coll2, vars = (:ϵ, :b0))
 ################################################################################
 ######    Shooting ########
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
-
-solpo = newton(probsh, cish, NewtonPar(verbose = true))
-
-_sol = BK.get_periodic_orbit(probsh, solpo.u, sol.prob.p)
-plot(_sol.t, _sol[1:2,:]')
+probsh, cish = generate_ci_problem( ShootingProblem(M=5), prob_bif, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
 
 opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3)
 @reset opts_po_cont.newton_options.verbose = false
@@ -334,21 +329,23 @@ pt = get_normal_form(brpo_pd_sh, 1)
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 3, max_steps = 200, p_min = 0.01, p_max = 1.2)
 @error "it fails if the tolerance tol is too high"
 @reset opts_posh_fold.newton_options.tol = 1e-12
-fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
-        verbosity = 2, plot = true,
+fold_po_sh1 = continuation(deepcopy(br_fold_sh), 2, (@optic _.ϵ), opts_posh_fold;
+        verbosity = 2, plot = false,
         detect_codim2_bifurcation = 2,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         start_with_eigen = false,
+        usehessian = false,
         bothside = true,
         callback_newton = BK.cbMaxNorm(1),
         )
 
-fold_po_sh2 = continuation(br_fold_sh, 1, (@optic _.ϵ), opts_posh_fold;
-        verbosity = 2, plot = true,
+fold_po_sh2 = continuation(deepcopy(br_fold_sh), 1, (@optic _.ϵ), opts_posh_fold;
+        verbosity = 2, plot = false,
         detect_codim2_bifurcation = 2,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         start_with_eigen = false,
         bothside = true,
+        usehessian = false,
         callback_newton = BK.cbMaxNorm(1),
         )
 
@@ -381,7 +378,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob_bif, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 0, plot = true,
@@ -401,9 +398,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        jacobian_ma = BK.MinAug(),
         normC = norminf,
         bothside = false,
         callback_newton  = BK.cbMaxNorm(1),
@@ -421,7 +416,7 @@ sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), 
 sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob_bif, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
 
 prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -439,9 +434,7 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
         usehessian = false,
-        jacobian_ma = :minaug,
-        # jacobian_ma = :autodiff,
-        # jacobian_ma = :finiteDifferences,
+        jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
         bothside = true,

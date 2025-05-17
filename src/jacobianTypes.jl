@@ -72,3 +72,8 @@ struct MatrixFree <: AbstractJacobianMatrix end
 The jacobian for Minimally Augmented problem is based on an analytical formula and is matrix based.
 """
 struct MinAugMatrixBased <: AbstractJacobianMatrix end
+
+"""
+The jacobian for Minimally Augmented problem is based on an analytical formula.
+"""
+struct MinAug <: AbstractJacobianType end

@@ -84,7 +84,7 @@ br = continuation(BK.re_make(prob; u0 = out.u, params = (@set par_bru.l = 0.3)),
 outhopf = newton(br, 1; start_with_eigen = false)
 outhopf = newton(br, 1; start_with_eigen = true)
 optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 5, detect_bifurcation = 2)
-outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = :minaug)
+outhopfco = continuation(br, 1, (@optic _.β), optconthopf; start_with_eigen = true, update_minaug_every_step = 1, jacobian_ma = BK.MinAug())
 
 # Continuation of the Hopf Point using Dense method
 ind_hopf = 1
@@ -159,11 +159,11 @@ outhopf = newton(br_d2f, 1)
 
 br_hopf = continuation(br, ind_hopf, (@optic _.β),
             ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
-            jacobian_ma = :minaug)
+            jacobian_ma = BK.MinAug())
 
 br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), 
             ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
-            jacobian_ma = :minaug)
+            jacobian_ma = BK.MinAug())
 ####################################################################################################
 ind_hopf = 1
 hopfpt = BK.hopf_point(br, ind_hopf)

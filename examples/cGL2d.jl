@@ -120,7 +120,7 @@ br_hopf = continuation(br, 1, (@optic _.γ),
     start_with_eigen = true, bothside = false,
     detect_codim2_bifurcation = 2,
     verbosity = 3, normC = norminf,
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAug(),
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false))
 
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
@@ -129,7 +129,7 @@ plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 get_normal_form(br_hopf, 2; autodiff = false)
 
 # improve estimation of BT point
-btsol = BK.newton(br_hopf, 2; jacobian_ma = :minaug,)
+btsol = BK.newton(br_hopf, 2; jacobian_ma = BK.MinAug(),)
 
 # find the index of the BT point
 indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
@@ -140,7 +140,7 @@ brfold = continuation(br_hopf, indbt,
                 detect_codim2_bifurcation = 2,
                 callback_newton = BK.cbMaxNorm(1e5),
                 bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-                jacobian_ma = :minaug,
+                jacobian_ma = BK.MinAug(),
                 bothside = true, normC = norminf)
 
 br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
@@ -155,7 +155,7 @@ hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_b
     callback_newton = BK.cbMaxNorm(1e5),
     start_with_eigen = true,
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAug(),
     bothside = false, normC = norminf)
 
 plot!(hopf_from_zh)
@@ -367,7 +367,7 @@ optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 40.
 outfoldco = @time BK.continuation_fold(probFold,
     br_po, indfold, (@optic _.c5),
     optcontfold;
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAug(),
     bdlinsolver = BorderingBLS(solver = ls, check_precision = false),
     plot = true, verbosity = 2)
 

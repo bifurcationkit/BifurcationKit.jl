@@ -145,7 +145,7 @@ testEV(hp_codim2_test)
 ####################################################################################################
 @reset opts_br.newton_options.verbose = false
 sn_codim2 = nothing
-for _jac in (:autodiff, :minaug, :finiteDifferences, :MinAugMatrixBased)
+for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrixBased())
     # be careful here, Bordered predictor not good for Fold continuation
     sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
         normC = norminf,
@@ -186,13 +186,13 @@ for _jac in (:autodiff, :minaug, :finiteDifferences, :MinAugMatrixBased)
     # locate BT point with newton algorithm and compute the normal form
     _bt = BK.bt_point(sn_codim2, 1) # does nothing
 
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = :finitedifferences)
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.FiniteDifferences())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = :minaug)
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.MinAug())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = false, jacobian_ma = :autodiff)
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = false, jacobian_ma = BK.AutoDiff())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = :autodiff)
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.AutoDiff())
     @test BK.converged(solbt)
     @test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8
 
@@ -257,7 +257,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     update_minaug_every_step = 1,
     start_with_eigen = true,
     bothside = false,
-    jacobian_ma = :autodiff,
+    jacobian_ma = BK.AutoDiff(),
     # jacobian_ma = :minaug,
     event = SaveAtEvent((-0.05,.0)),
     record_from_solution = recordFromSolutionLor,
@@ -284,7 +284,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     update_minaug_every_step = 1,
     start_with_eigen = true,
     bothside = true,
-    jacobian_ma = :autodiff,
+    jacobian_ma = BK.AutoDiff(),
     # jacobian_ma = :minaug,
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
@@ -391,7 +391,7 @@ for probPO in (
             normC = norminf,
             δp = 0.02,
             update_minaug_every_step = 0,
-            jacobian_ma = :minaug,
+            jacobian_ma = BK.MinAug(),
             # callback_newton =  BK.cbMaxNormAndΔp(1e1, 0.025),
             # verbosity = 2, plot = true,
             )
@@ -413,7 +413,7 @@ for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), 
         δp = 0.02,
         update_minaug_every_step = 1,
         whichns = 2,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         # verbosity = 3, plot = true,
         )
     # test that the Floquet coefficients equal     ns_po.ωₙₛ

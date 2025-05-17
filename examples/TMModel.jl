@@ -98,7 +98,6 @@ br_posh = @time continuation(
 plot(br_posh, br, markersize=3)
 ####################################################################################################
 # idem with Poincaré shooting
-
 opts_po_cont = ContinuationPar(opts_br, dsmax = 0.02, ds= 0.0001, max_steps = 50, newton_options = NewtonPar(tol = 1e-9, max_iterations=15), tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 5)
 
 br_popsh = @time continuation(

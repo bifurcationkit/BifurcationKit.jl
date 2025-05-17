@@ -65,7 +65,7 @@ BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at Î
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=false, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 foldbranch = @time continuation(br, indfold, (@optic _.Î²),
     plot = false, verbosity = 0,
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAug(),
     start_with_eigen = true,
     optcontfold)
 plot(foldbranch, label = "")

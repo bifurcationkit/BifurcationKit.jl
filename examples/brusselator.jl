@@ -123,7 +123,7 @@ if 1==1
         ContinuationPar(opts_br_eq; dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 10.5, p_min = 5.1, detect_bifurcation = 0, newton_options = optnew);
         update_minaug_every_step = 1,
         detect_codim2_bifurcation = 2,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         # plot = true,
         verbosity = 2, normC = norminf, 
         # bothside = true

@@ -71,7 +71,7 @@ fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_p
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
         bothside = true,
-        jacobian_ma = :minaug,
+        jacobian_ma = BK.MinAug(),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
@@ -83,14 +83,14 @@ opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max
 pd_po_colls = [ continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
-                    detect_codim2_bifurcation = jma == :minaug ? 1 : 0,
+                    detect_codim2_bifurcation = jma == BK.MinAug() ? 1 : 0,
                     start_with_eigen = false,
                     usehessian = false,
                     jacobian_ma = jma,
                     normC = norminf,
                     callback_newton = BK.cbMaxNorm(10),
                     bothside = true,
-                    ) for jma in (:minaug, :MinAugMatrixBased, )]
+                    ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
 @test all(x->x.kind isa BK.PDPeriodicOrbitCont, pd_po_colls)
 ################################################################################
 # find the NS case
@@ -119,11 +119,11 @@ ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
             start_with_eigen = false,
             usehessian = false,
 
-            jacobian_ma = :minaug,
+            jacobian_ma = jma,
             normC = norminf,
             callback_newton = BK.cbMaxNorm(10),
             bothside = true,
-            ) for jma in (:minaug, :MinAugMatrixBased, )]
+            ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
 @test all(x->x.kind isa BK.NSPeriodicOrbitCont, ns_po_colls)
 ################################################################################
 # test of the implementation of the jacobian for the PD case

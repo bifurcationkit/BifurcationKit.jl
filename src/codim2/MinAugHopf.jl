@@ -350,7 +350,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
 
-                jacobian_ma::Symbol = :autodiff,
+                jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
                 usehessian = true,
                 kind = HopfCont(),
@@ -381,19 +381,19 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         )
 
     # Jacobian for the Hopf problem
-    if jacobian_ma == :autodiff
+    if jacobian_ma == AutoDiff()
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_hopf = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == :finiteDifferencesMF
+    elseif jacobian_ma == FiniteDifferencesMF()
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_hopf = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :finiteDifferences
+    elseif jacobian_ma == FiniteDifferences()
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_hopf = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == :MinAugMatrixBased
+    elseif jacobian_ma == MinAugMatrixBased()
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
         prob_hopf = HopfMAProblem(𝐇, MinAugMatrixBased(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver

@@ -1,5 +1,5 @@
 function d2PO(f, x, dx1, dx2)
-   return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0.), 0.)
+   return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
 struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver

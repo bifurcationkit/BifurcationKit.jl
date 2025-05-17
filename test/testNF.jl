@@ -310,7 +310,7 @@ BK.jacobian(br.prob, prob.u0, prob.params)
 sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
     update_minaug_every_step = 1,
     bdlinsolver = MatrixBLS(),
-    jacobian_ma = :minaug,
+    jacobian_ma = BK.MinAug(),
     )
 # find the cusp point
 ind = findall(map(x->x.type == :cusp, sn_codim2.specialpoint))
@@ -411,7 +411,7 @@ let
         # plot(sn_codim2, hp_fromBT)
 
         # update the BT point using newton and MA formulation
-        solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = :autodiff)
+        solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = BK.AutoDiff())
         @assert BK.converged(solbt)
     end
 end
