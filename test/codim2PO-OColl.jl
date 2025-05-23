@@ -140,13 +140,11 @@ _param = @set _param.ϵ = _p2
 _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 # _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
-_Jma = zero(_Jpdad)
 _duu = rand(length(_x.u))
 𝐏𝐝 = _probpd.prob
-_sol = BK.PDMALinearSolver(_solpo, _p1, 𝐏𝐝, _param, _duu, 1.; debugArray = _Jma )
+_sol = BK.PDMALinearSolver(_solpo, _p1, 𝐏𝐝, _param, _duu, 1.)
 _solfd = _Jpdad \ vcat(_duu, 1)
 
-@test norminf(_Jpdad - _Jma) < 1e-8
 @test norminf(_solfd[1:end-1] - _sol[1]) < 1e-3 # it comes from FD in σₓ
 @test abs(_solfd[end] - _sol[2]) < 5e-3
 
@@ -168,13 +166,11 @@ _param = @set _param.ϵ = _p2
 _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 # _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
-_Jma = zero(_Jnsad)
 _duu = rand(317)
 _dp = rand()
-_sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _dp, 1.; debugArray = _Jma )
+_sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _dp, 1.)
 _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
-@test norminf(_Jnsad - _Jma) < 1e-8
 @test norminf(_solfd[1:end-2] - _sol[1]) < 1e-2
 @test abs(_solfd[end-1] - _sol[2]) < 1e-2
 @test abs(_solfd[end] - _sol[3]) < 1e-2

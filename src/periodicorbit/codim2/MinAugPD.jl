@@ -125,6 +125,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     (;dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0) = _get_bordered_terms(𝐏𝐝, x, p, par)
 
+    # TODO!! This is only finite differences
     u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
     u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
     σₓ = minus(u2, u1); rmul!(σₓ, 1 / (2ϵₓ))
@@ -266,7 +267,7 @@ function newton_pd(prob::AbstractBifurcationProblem,
     opt_pd = deepcopy(options)
 
     # solve the PD equations
-    return newton(prob_f, opt_pd; normN = normN, kwargs...)
+    return newton(prob_f, opt_pd; normN, kwargs...)
 end
 ###################################################################################################
 function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
@@ -413,7 +414,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
     # change the plotter
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
-    _plotsol = modify_po_plot(prob_pd, getparams(prob_pd), getlens(prob_pd);_kwargs...)
+    _plotsol = modify_po_plot(prob_pd, getparams(prob_pd), getlens(prob_pd); _kwargs...)
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
     # Define event for detecting codim 2 bifurcations.
@@ -421,7 +422,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
-
 
     # solve the PD equations
     br_pd_po = continuation(

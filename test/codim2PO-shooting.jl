@@ -166,10 +166,11 @@ _param = @set _param.ϵ = _p2
 
 _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
-_Jma = zero(_Jnsad)
-BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.; debugArray = _Jma )
+BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.)
 
-@test norm(_Jnsad - _Jma, Inf) < 1e-6
+_probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
+J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
+@test norminf(_Jnsad - J_ns_mat) < 1e-7
 #########
 
 # find the PD case
@@ -222,7 +223,7 @@ _param = @set _param.ϵ = _p2
 
 _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
-_Jma = zero(_Jpdad)
-BK.PDMALinearSolver(_solpo, _p1, _probpd.prob, _param, copy(_x.u), 1.; debugArray = _Jma )
+_probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
+J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_x.u, _x.p), _param)
 
-@test norm(_Jpdad - _Jma, Inf) < 1e-6
+@test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
