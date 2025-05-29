@@ -94,6 +94,8 @@ module BifurcationKit
     include("periodicorbit/codim2/StandardShooting.jl")
     include("periodicorbit/codim2/MinAugPD.jl")
     include("periodicorbit/codim2/MinAugNS.jl")
+    include("periodicorbit/codim2/BifurcationPoints.jl")
+    include("periodicorbit/codim2/NormalForms.jl")
 
     # wave problem
     include("wave/WaveProblem.jl")
