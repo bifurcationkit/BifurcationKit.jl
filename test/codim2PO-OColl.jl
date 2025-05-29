@@ -77,7 +77,7 @@ fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_p
 @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 3, p_min = -1., dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 20, p_min = -1., dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-12
 
 pd_po_colls = [ continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
@@ -91,7 +91,8 @@ pd_po_colls = [ continuation(deepcopy(brpo_pd), 1, (@optic _.b0),
                     callback_newton = BK.cbMaxNorm(10),
                     bothside = true,
                     ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
-@test all(x->x.kind isa BK.PDPeriodicOrbitCont, pd_po_colls)
+@test all(x -> x.kind isa BK.PDPeriodicOrbitCont, pd_po_colls)
+get_normal_form(pd_po_colls[1], 2)
 ################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
@@ -124,7 +125,8 @@ ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
             callback_newton = BK.cbMaxNorm(10),
             bothside = true,
             ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
-@test all(x->x.kind isa BK.NSPeriodicOrbitCont, ns_po_colls)
+@test all(x -> x.kind isa BK.NSPeriodicOrbitCont, ns_po_colls)
+get_normal_form(ns_po_colls[1], 2)
 ################################################################################
 # test of the implementation of the jacobian for the PD case
 using ForwardDiff
