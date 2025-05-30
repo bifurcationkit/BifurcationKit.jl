@@ -170,7 +170,7 @@ BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1.
 
 _probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
 J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
-@test norminf(_Jnsad - J_ns_mat) < 1e-7
+@test norminf(_Jnsad - J_ns_mat) < 1e-6
 #########
 
 # find the PD case

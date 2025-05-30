@@ -220,6 +220,11 @@ end
 MatrixBLS() = MatrixBLS(nothing)
 
 # case of a scalar additional linear equation
+# solve in dX, dl
+# ┌                           ┐┌  ┐   ┌   ┐
+# │ (shift⋅I + J)     dR      ││dX│ = │ R │
+# │   ξu * dzu'   ξp * dzp    ││dl│   │ n │
+# └                           ┘└  ┘   └   ┘
 function (lbs::MatrixBLS)(J, dR,
                           dzu, dzp::𝒯, 
                           R::AbstractVecOrMat, n::𝒯,

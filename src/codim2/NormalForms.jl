@@ -367,8 +367,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     function EigenVec(s)
         x = getx(s)
         # the jacobian is [0 1; 2x*a b*X+β2] with b*X+β2 = 0
-        A = [0 1; 2x*a 0]
-        F = eigen(A)
+        F = eigen([0 1; 2x*a 0])
         ind = findall(imag.(F.values) .> 0)
         hopfvec = F.vectors[:, ind]
         return bt.ζ[1] .* hopfvec[1] .+ bt.ζ[2] .* hopfvec[2]
@@ -377,8 +376,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     function EigenVecAd(s)
         x = getx(s)
         # the jacobian is [0 1; 2x*a b*X+β2] with b*X+β2 = 0
-        A = [0 1; 2x*a 0]'
-        F = eigen(A)
+        F = eigen([0 1; 2x*a 0]')
         ind = findall(imag.(F.values) .< 0)
         hopfvec = F.vectors[:, ind]
         return bt.ζ★[1] .* hopfvec[1] .+ bt.ζ★[2] .* hopfvec[2]

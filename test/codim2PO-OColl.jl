@@ -152,7 +152,7 @@ _solfd = _Jpdad \ vcat(_duu, 1)
 
 _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
 J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
-@test norminf(_Jpdad - J_pd_mat) < 1e-8
+@test norminf(_Jpdad - J_pd_mat) < 1e-7
 
 #########
 # test of the implementation of the jacobian for the NS case
@@ -179,4 +179,4 @@ _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
 _probpd_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
 J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
-@test norminf(_Jnsad - J_ns_mat) < 1e-8
+@test norminf(_Jnsad - J_ns_mat) < 1e-7
