@@ -104,7 +104,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
  
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
-               residual(POWrap, x, set(par, lens, p - ϵₚ)))
+                residual(POWrap, x, set(par, lens, p - ϵₚ)))
     rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
     dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
              apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));

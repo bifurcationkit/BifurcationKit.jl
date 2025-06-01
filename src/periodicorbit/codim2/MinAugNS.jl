@@ -77,7 +77,6 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
 
     # Avoid doing 3 times the (possibly) costly building of J(x, p)
     JNS = jacobian_neimark_sacker(POWrap, x, par0, ω) # jacobian with period NS boundary condition
-
     # Avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
     JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, par0, ω) : adjoint(JNS)
 

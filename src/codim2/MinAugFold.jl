@@ -71,12 +71,12 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
 
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
-    v, σ1, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
+    v, _, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge. it = $(itv)"
 
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, σ2, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+    w, _, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
 
     δ = getdelta(𝐅.prob_vf)
@@ -634,11 +634,11 @@ function (eig::FoldEig)(Jma, nev; kwargs...)
     # il ne faut pas mettre a jour les deux params?
     n = min(nev, length(getvec(Jma.x)))
     J = jacobian(Jma.prob.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.prob), getp(Jma.x)))
-    eigenelts = eig.eigsolver(J, n; kwargs...)
+    return eig.eigsolver(J, n; kwargs...)
 end
 
 @views function (eig::FoldEig)(Jma::AbstractMatrix, nev; kwargs...)
-    eigenelts = eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
+    return eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
 end
 
 geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

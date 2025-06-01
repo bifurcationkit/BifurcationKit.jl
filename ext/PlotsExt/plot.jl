@@ -1,5 +1,7 @@
 """
-Plot the branch of solutions during the continuation
+$(SIGNATURES)
+
+Plot the branch of solutions during the continuation. It is called internally.
 """
 function plot_branch_cont(contres::ContResult, 
                         state, 
@@ -44,6 +46,11 @@ end
 ####################################################################################################
 plotAllDCBranch(branches) = display(plot(branches..., label = ""))
 
+"""
+$(SIGNATURES)
+
+Plot the branch of solutions during the continuation. It is called internally.
+"""
 function plot_DCont_branch(::Union{BK_Plots, BK_NoPlot},
                             branches, 
                             nbrs::Int, 
@@ -100,6 +107,14 @@ function plot_periodic_shooting(x, M; kwargs...)
     plot_periodic_shooting!(x, M; kwargs...)
 end
 ####################################################################################################
+"""
+$(SIGNATURES)
+
+Plot the eigenvalues contained in the branch.
+
+## Arguments
+- `with_param::Bool` use parameter index or `Int`
+"""
 function plot_eigenvals(br::AbstractResult, with_param = true; plot_imag = false, var = :param, k...)
     p = getproperty(br.branch, var)
     data = mapreduce(x -> x.eigenvals, hcat, br.eig)

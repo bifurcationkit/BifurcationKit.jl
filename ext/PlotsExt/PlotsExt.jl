@@ -1,5 +1,5 @@
 module PlotsExt
-    using Plots, BifurcationKit
+    using Plots, BifurcationKit, DocStringExtensions
     import BifurcationKit: _plot_backend,
                            plot_branch_cont,
                            plot_periodic_potrap,

@@ -54,11 +54,12 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
     if Tkind <: TwoParamCont
         linewidthstable = 1.0
     end
-    indices = [sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
+    indices = Int[sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
         linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
     end
+
     xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
     ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
     lines!(ax1, xbranch, ybranch, linewidth = linewidth, label = branchlabel)

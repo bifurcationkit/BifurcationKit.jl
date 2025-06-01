@@ -66,11 +66,11 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
-    v, σ1, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    v, _, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
-    w, σ2, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
+    w, _, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
     ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
     δ = getdelta(𝐇.prob_vf)
@@ -455,7 +455,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         𝐇.b .= newb ./ normC(newb)
 
         # we stop continuation at Bogdanov-Takens points
-        # CA NE DEVRAIT PAS ETRE ISSNOT?
         isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
 
         # if the frequency is null, this is not a Hopf point, we halt the process
