@@ -31,6 +31,16 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitv
     end
 end
 
+"""
+$(SIGNATURES)
+
+Plot the branch of solutions.
+
+# Arguments
+- `plotcirclesbif = true`, indicates the special points well determined by bisection (cirlce) versus not well determined (square).
+- `branchlabel` example `["Fold", "Hopf"]` assigns label to branch.
+- `branchcolor` assign color to a branch without affecting the color of the special points.
+"""
 function plot!(ax1, contres::AbstractResult{Tkind, Tprob}; 
                 plotfold = false,
                 plotstability = true,
@@ -42,6 +52,7 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
                 linewidthstable = 3.0linewidthunstable,
                 plotcirclesbif = true,
                 branchlabel = nothing,
+                branchcolor = nothing,
                 applytoY = identity, 
                 applytoX = identity) where {Tkind, Tprob}
 
@@ -62,14 +73,18 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
 
     xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
     ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
-    lines!(ax1, xbranch, ybranch, linewidth = linewidth, label = branchlabel)
+    if isnothing(branchcolor)
+        lines!(ax1, xbranch, ybranch; linewidth = linewidth, label = branchlabel)
+    else
+        lines!(ax1, xbranch, ybranch; linewidth = linewidth, label = branchlabel, color = branchcolor)
+    end
     ax1.xlabel = xlab
     ax1.ylabel = ylab
 
     # display bifurcation points
     bifpt = filter(x -> (x.type != :none) && (x.type != :endpoint) && (plotfold || x.type != :fold) && (x.idx <= length(contres) - 1), contres.specialpoint)
     if length(bifpt) >= 1 && plotspecialpoints #&& (ind1 == :param)
-        if filterspecialpoints == true
+        if filterspecialpoints
             bifpt = filterBifurcations(bifpt)
         end
         scatter!(ax1, 

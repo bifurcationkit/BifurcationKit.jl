@@ -1,5 +1,5 @@
 module MakieExt
-    using Makie, BifurcationKit
+    using Makie, BifurcationKit, DocStringExtensions
     import BifurcationKit: _plot_backend,
                            TwoParamCont,
                            plot, 

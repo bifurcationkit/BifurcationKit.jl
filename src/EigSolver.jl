@@ -218,8 +218,9 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
     else
         N = length(l.x₀)
         𝒯 = eltype(l.x₀)
-        isnothing(l.sigma) == false &&
-        @warn "Shift-Invert strategy not implemented for maps"
+        if isnothing(l.sigma) == false
+            @warn "Shift-Invert strategy not implemented for maps"
+        end
         Jmap = LinearMaps.LinearMap{𝒯}(J, N, N; ismutating = false)
         decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                      l.kwargs...)
