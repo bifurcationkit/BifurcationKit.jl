@@ -73,25 +73,11 @@ end
     return vcat(res[1], res[2])
 end
 ###################################################################################################
-function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, JPD, JPD★)
     a = 𝐏𝐝.a
     b = 𝐏𝐝.b
+    𝒯 = eltype(𝐏𝐝)
 
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
-    POWrap = 𝐏𝐝.prob_vf
-
-    # parameter axis
-    lens = getlens(𝐏𝐝)
-
-    # update parameter
-    par0 = set(par, lens, p)
- 
-    # Avoid doing 3 times the (possibly) costly building of J(x, p)
-    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
- 
-    # Avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
-    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
- 
     # we solve N[v, σ1] = [0, 1]
     v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
@@ -99,6 +85,23 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
     # # we solve Nᵗ[w, σ2] = [0, 1]
     w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
+    return (; v, itv, w, itw)
+end
+
+function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    POWrap = 𝐏𝐝.prob_vf
+
+    # update parameter
+    lens = getlens(𝐏𝐝)
+    par0 = set(par, lens, p)
+ 
+    # Avoid doing 3 times the (possibly) costly building of J(x, p)
+    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
+    # Avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
+    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
+
+    (;v, w, itv, itw) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
  
     δ = getdelta(POWrap)
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
@@ -361,29 +364,16 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
 
-        a = 𝐏𝐝.a
-        b = 𝐏𝐝.b
-
         POWrap = 𝐏𝐝.prob_vf
         JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
-
         # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
         JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, newpar) : transpose(JPD)
 
         # normalization
-        n = one(𝒯)
-
-        # we solve N[v, σ1] = [0, 1]
-        newb, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, n, 𝐏𝐝.linbdsolver)
-        ~cv && @debug "Linear solver for Pd did not converge."
-
-        # # we solve Nᵗ[w, σ2] = [0, 1]
-        newa, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, n, 𝐏𝐝.linbdsolverAdjoint)
-        ~cv && @debug "Linear solver for Pdᵗ did not converge."
-
-        copyto!(𝐏𝐝.a, newa); rmul!(𝐏𝐝.a, 1/normC(newa))
+        (;v, w) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
+        copyto!(𝐏𝐝.a, w); rmul!(𝐏𝐝.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
-        copyto!(𝐏𝐝.b, newb); rmul!(𝐏𝐝.b, 1/normC(newb))
+        copyto!(𝐏𝐝.b, v); rmul!(𝐏𝐝.b, 1/normC(v))
 
         # call the user-passed finalizer
         final_result = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)

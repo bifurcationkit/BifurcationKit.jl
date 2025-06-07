@@ -62,10 +62,23 @@ end
     return vcat(res[1], res[2], res[3])
 end
 ###################################################################################################
-function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, JNS, JNS★, ω)
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
+    𝒯 = eltype(𝐍𝐒)
 
+    # we solve N[v, σ1] = [0, 1]
+    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
+    ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
+
+    # we solve Nᵗ[w, σ2] = [0, 1]
+    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
+    ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
+
+    return (; v, w, itv, itw)
+end
+
+function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
 
@@ -80,13 +93,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
     # Avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
     JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, par0, ω) : adjoint(JNS)
 
-    # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
-    ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
-
-    # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
-    ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
 
     δ = getdelta(POWrap)
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
@@ -331,25 +338,16 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
 
-        a = 𝐍𝐒.a
-        b = 𝐍𝐒.b
-
         # get the PO functional
         POWrap = 𝐍𝐒.prob_vf
 
-        # compute new b
         JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
-        newb,_,cv,it = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
-        ~cv && @debug "[codim2 NS] Linear solver for N did not converge. it = $it"
-
-        # compute new a
         JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
-        newa,_,cv,it = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
-        ~cv && @debug "[codim2 NS] Linear solver for N★ did not converge. it = $it"
 
-        copyto!(𝐍𝐒.a, newa); rmul!(𝐍𝐒.a, 1/normC(newa))
+        (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
+        copyto!(𝐍𝐒.a, w); rmul!(𝐍𝐒.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        copyto!(𝐍𝐒.b, newb); rmul!(𝐍𝐒.b, 1/normC(newb))
+        copyto!(𝐍𝐒.b, v); rmul!(𝐍𝐒.b, 1/normC(v))
 
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch

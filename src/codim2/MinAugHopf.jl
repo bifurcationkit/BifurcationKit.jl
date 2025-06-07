@@ -48,24 +48,12 @@ end
     return vcat(res[1], res[2], res[3])
 end
 ###################################################################################################
-function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _compute_bordered_vectors(𝐇::HopfProblemMinimallyAugmented, J_at_xp, JAd_at_xp, ω)
     a = 𝐇.a
     b = 𝐇.b
+    𝒯 = eltype(𝐇)
 
-    # parameter axis
-    lens = getlens(𝐇)
-
-    # update parameter
-    par0 = set(par, lens, p)
-
-    # This avoids doing 3 times the possibly costly building of J(x, p)
-    J_at_xp = jacobian(𝐇.prob_vf, x, par0)
-
-    # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
-    # we use transpose(J_at_xp) because J_at_xp is real
-    JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
-
-    # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
+     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
     v, _, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
@@ -73,20 +61,36 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     w, _, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
     ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
+    return (; v, w, itv, itw)
+end
+
+function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+    # update parameter
+    lens = getlens(𝐇)
+    par0 = set(par, lens, p)
+
+    # This avoids doing 3 times the possibly costly building of J(x, p)
+    J_at_xp = jacobian(𝐇.prob_vf, x, par0)
+    # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
+    JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
+
+    (; v, w, itv, itw) = @time "--> bd_vec" _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+
     δ = getdelta(𝐇.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
+    # TODO!! This is only finite differences
     dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
-    dJvdp = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
+    dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
              apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
-    σₚ = -dot(w, dJvdp)
+    σₚ = -dot(w, dₚJv)
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
     σω = Complex{𝒯}(0, 1) * dot(w, v)
 
-    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw, σω)
+    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
 end
 ###################################################################################################
 # since this is matrix based, it requires X to ba an AbstractVector
@@ -432,29 +436,18 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
 
-        a = 𝐇.a
-        b = 𝐇.b
-
         # expression of the jacobian
         J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-
-        # compute new b
-        T = typeof(p1)
-        local n = one(T)
-        newb, _, cv, it = 𝐇.linbdsolver(J_at_xp, a, b, zero(T), 𝐇.zero, n; shift = Complex{T}(0, -ω))
-        ~cv && @debug "[Hopf update] Bordered linear solver for (J-iω) did not converge. it = $it. This is to upate 𝐇.b"
-
-        # compute new a
         JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-        newa, _, cv, it = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(T), 𝐇.zero, n; shift = Complex{T}(0, ω))
-        ~cv && @debug "[Hopf upate] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate 𝐇.a"
 
-        𝐇.a .= newa ./ normC(newa)
+        bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
+        𝐇.a .= bd_vec.w ./ normC(bd_vec.w)
         # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
-        𝐇.b .= newb ./ normC(newb)
+        𝐇.b .= bd_vec.v ./ normC(bd_vec.v)
 
         # we stop continuation at Bogdanov-Takens points
+        # CA NE DEVRAIT PAS ETRE ISSNOT?
         isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
 
         # if the frequency is null, this is not a Hopf point, we halt the process
@@ -614,6 +607,7 @@ end
 function test_bt_gh(iter, state)
     probma = getprob(iter)
     𝐇 = probma.prob
+    𝒯 = eltype(𝐇) 
     lens1, lens2 = get_lenses(probma)
 
     z = getx(state)
@@ -631,19 +625,16 @@ function test_bt_gh(iter, state)
 
     # expression of the jacobian
     J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
+    JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
+
+    bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
     # compute new b
-    𝒯 = typeof(p1)
-    n = one(𝒯)
-    ζ, _, cv, it = probhopf.linbdsolver(J_at_xp, a, b, zero(𝒯), probhopf.zero, n; shift = Complex{𝒯}(0, -ω))
-    ~cv && @debug "[Hopf test] Bordered linear solver for (J-iω) did not converge. it = $it. This is to compute ζ"
-
+    ζ = bd_vec.v
     ζ ./= 𝐇.norm(ζ)
 
     # compute new a
-    JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
-    ζ★, _, cv, it = probhopf.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, n; shift = Complex{𝒯}(0, ω))
-    ~cv && @debug "[Hopf test] Bordered linear solver for (J+iω)' did not converge. it = $it. This is to upate ζ★"
+    ζ★ = bd_vec.w
 
     # test function for Bogdanov-Takens
     probhopf.BT = ω

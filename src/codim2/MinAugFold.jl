@@ -48,26 +48,24 @@ end
     return vcat(res[1], res[2])
 end
 ###################################################################################################
-function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+"""
+$(SIGNATURES)
+
+Compute the solution of 
+
+```
+┌            ┐┌  ┐   ┌   ┐
+│ J     a'   ││v │ = │ 0 │
+│ b     0    ││σ │   │ 1 │
+└            ┘└  ┘   └   ┘
+```
+
+and the same for the adjoint system.
+"""
+function _compute_bordered_vectors(𝐅::FoldProblemMinimallyAugmented, J_at_xp, JAd_at_xp)
     a = 𝐅.a
     b = 𝐅.b
-
-    # parameter axis
-    lens = getlens(𝐅)
-
-    # update parameter
-    par0 = set(par, lens, p)
-
-    # The jacobian is used at least 3 times below. This avoids doing 3 times the 
-    # (possibly) costly building of J(x, p)
-    J_at_xp = jacobian(𝐅.prob_vf, x, par0)
-
-    # Avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
-    if is_symmetric(𝐅.prob_vf)
-        JAd_at_xp = J_at_xp
-    else
-        JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
-    end
+    𝒯 = eltype(𝐅)
 
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
@@ -78,6 +76,27 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
     w, _, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
+
+    return (; v, w, itv, itw, JAd_at_xp)
+end
+
+function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+    # update parameter
+    lens = getlens(𝐅)
+    par0 = set(par, lens, p)
+
+    # The jacobian is used at least 3 times below. This avoids doing 3 times the 
+    # (possibly) costly building of J(x, p)
+    J_at_xp = jacobian(𝐅.prob_vf, x, par0)
+    # Avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
+    if is_symmetric(𝐅.prob_vf)
+        JAd_at_xp = J_at_xp
+    else
+        JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
+    end
+
+
+    (;v, w, itv, itw, JAd_at_xp) = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
     δ = getdelta(𝐅.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
@@ -413,29 +432,20 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         newpar = set(par, lens1, p1)
         newpar = set(newpar, lens2, p2)
 
-        a = 𝐅.a
-        b = 𝐅.b
-
         # expression of the jacobian
         J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
-
-        # compute new b, close to right null vector
-        newb, _, cv, it = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-        ~cv && @debug "[FOLD Fin] Bordered linear solver for J did not converge. it = $(it). This is to update 𝐅.b"
-
-        # compute new a, close to left null vector
-        if is_symmetric(𝐅)
+         if is_symmetric(𝐅)
             JAd_at_xp = J_at_xp
         else
             JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
-        newa, _, cv, it = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
-        ~cv && @debug "[FOLD Fin] Bordered linear solver for J' did not converge. it = $(it). This is to update 𝐅.a"
 
-        copyto!(𝐅.a, newa); rmul!(𝐅.a, 1 / normC(newa))
 
+        bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
+
+        copyto!(𝐅.a, bd_vec.w); rmul!(𝐅.a, 1 / normC(bd_vec.w))
         # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
-        copyto!(𝐅.b, newb); rmul!(𝐅.b, 1 / normC(newb))
+        copyto!(𝐅.b, bd_vec.v); rmul!(𝐅.b, 1 / normC(bd_vec.v))
 
         # call the user-passed finalizer
         if isnothing(finaliseUser) == false
@@ -598,21 +608,18 @@ function test_bt_cusp(iter, state)
     𝐅 = probma.prob
     𝒯 = eltype(𝐅)
 
-    a = 𝐅.a
-    b = 𝐅.b
-
     # expression of the jacobian
     J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
+    JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅, x, newpar) : transpose(J_at_xp)
+
+    bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
     # compute new b
-    ζ, _, cv, it = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "[FOLD test] Bordered linear solver for J did not converge. it = $(it). This is to update ζ"
+    ζ = bd_vec.v
     rmul!(ζ, 1 / 𝐅.norm(ζ))
 
     # compute new a
-    JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅, x, newpar) : transpose(J_at_xp)
-    ζstar, _, cv, it = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "[FOLD test] Bordered linear solver for J' did not converge. it = $(it). This is to update ζstar"
+    ζstar = bd_vec.w
     rmul!(ζstar, 1 / 𝐅.norm(ζstar))
 
     𝐅.BT = dot(ζstar, ζ)
