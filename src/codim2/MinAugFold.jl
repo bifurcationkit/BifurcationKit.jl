@@ -281,12 +281,12 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        ζstar, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver; nev = nev, verbose = false)
+        ζstar, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec .= real.(ζstar)
 
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
-        ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev = nev, verbose = false)
+        ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         rmul!(eigenvec_ad, 1 / normN(eigenvec_ad))
     end
@@ -439,7 +439,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         else
             JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
-
 
         bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
