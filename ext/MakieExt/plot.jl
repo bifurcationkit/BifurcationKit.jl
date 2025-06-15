@@ -48,8 +48,8 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
                 putspecialptlegend = true,
                 filterspecialpoints = false,
                 vars = nothing,
-                linewidthunstable = 1.0,
-                linewidthstable = 3.0linewidthunstable,
+                linewidthunstable = 1,
+                linewidthstable = 3linewidthunstable,
                 plotcirclesbif = true,
                 branchlabel = nothing,
                 branchcolor = nothing,
@@ -63,12 +63,12 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
     # stability linewidth
     linewidth = linewidthunstable
     if Tkind <: TwoParamCont
-        linewidthstable = 1.0
+        linewidthstable = 1
     end
     indices = Int[sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
-        linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
+        linewidth = isplit(map(identity ? linewidthstable : linewidthunstable, contres.stable), indices, false)
     end
 
     xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)

@@ -81,7 +81,7 @@ getdot(it::ContIterable) = getdot(it.alg)
 getθ(it::ContIterable) = getθ(it.alg)
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internal_adaptation!(alg::PALC, onoroff::Bool) = internal_adaptation!(alg.tangent, onoroff)
+internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)
 
 function Base.empty!(alg::PALC)
     empty!(alg.tangent)
@@ -104,7 +104,7 @@ function initialize!(state::AbstractContinuationState,
                      iter::AbstractContinuationIterable,
                      alg::PALC,
                      nrm = false)
-    # for the initialisation step, we do not use a Bordered predictor which 
+    # for the initialization step, we do not use a Bordered predictor which 
     # fails at bifurcation points. Instead, we start with a Secant predictor
     gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
@@ -175,7 +175,7 @@ end
 """
 struct Secant <: AbstractTangentComputation end
 
-# This function is used for initialisation in iterate_from_two_points
+# This function is used for initialization in iterate_from_two_points
 function _secant_tangent!(τ::M, 
                           z₁::M, 
                           z₀::M, 

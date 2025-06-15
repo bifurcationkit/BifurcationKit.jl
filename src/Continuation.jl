@@ -108,15 +108,10 @@ Mutable structure containing the state of the continuation procedure. The fields
 !!! danger
     If you mutate these fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
 
-# Arguments
-- `z_pred` current solution on the branch
-- `converged` Boolean for newton correction
-- `τ` tangent predictor
-- `z` previous solution
-- `itnewton` Number of newton iteration (in corrector)
-- `step` current continuation step
-- `ds` step size
-- `stopcontinuation` Boolean to stop continuation
+# Fields
+
+$(TYPEDFIELDS)
+
 
 # Useful functions
 - `copy(state)` returns a copy of `state`
@@ -132,32 +127,47 @@ Mutable structure containing the state of the continuation procedure. The fields
 - `is_stable(state)` whether the current state is stable
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
-    z_pred::Tv                               # predictor
-    τ::Tv                                    # tangent to the curve
-    z::Tv                                    # current solution
-    z_old::Tv                                # previous solution
+    "predictor"
+    z_pred::Tv
+    "tangent to the curve, predictor"
+    τ::Tv
+    "current solution"
+    z::Tv
+    "previous solution"
+    z_old::Tv
 
-    converged::Bool                          # boolean for newton correction
-    itnewton::Int64 = 0                      # number of newton iteration (in corrector)
-    itlinear::Int64 = 0                      # number of linear iteration (in newton corrector)
-
-    step::Int64 = 0                          # current continuation step
-    ds::T                                    # step size
-
-    stopcontinuation::Bool = false           # boolean to stop continuation
-    stepsizecontrol::Bool = true             # perform step size adaptation
+    "Boolean for newton correction"
+    converged::Bool
+    "Number of newton iteration (in corrector)"
+    itnewton::Int64 = 0
+    "number of linear iteration (in newton corrector)"
+    itlinear::Int64 = 0
+    "current continuation step"
+    step::Int64 = 0
+    "current step size"
+    ds::T
+    "boolean to stop continuation"
+    stopcontinuation::Bool = false
+    "perform step size adaptation"
+    stepsizecontrol::Bool = true
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
-    n_unstable::Tuple{Int64, Int64}  = (-1, -1)    # (current, previous)
-    n_imag::Tuple{Int64, Int64}      = (-1, -1)    # (current, previous)
+    "number of unstable eigenvalues (current, previous)"
+    n_unstable::Tuple{Int64, Int64}  = (-1, -1)
+    "number of imaginary eigenvalues (current, previous)"
+    n_imag::Tuple{Int64, Int64}      = (-1, -1)
+    "boolean for eigen solver computation"
     convergedEig::Bool               = true
 
-    eigvals::Teigvals = nothing               # current eigenvalues
-    eigvecs::Teigvec  = nothing               # current eigenvectors
-
-    eventValue::Tcb = nothing                 # store the current event values
-    in_bisection::Bool = false                # whether the state is in bisection for locating special points
+    "current eigenvalues"
+    eigvals::Teigvals = nothing
+    "current eigenvectors"
+    eigvecs::Teigvec  = nothing
+    "store the current event values"
+    eventValue::Tcb = nothing
+    "whether the state is in bisection for locating special points"
+    in_bisection::Bool = false
 end
 
 function Base.copy(state::ContState)
@@ -184,10 +194,10 @@ function Base.copy(state::ContState)
 end
 
 function Base.copyto!(dest::ContState, src::ContState)
-        copyto!(dest.z_pred , src.z_pred)
-        copyto!(dest.τ , src.τ)
-        copyto!(dest.z , src.z)
-        copyto!(dest.z_old , src.z_old)
+        copyto!(dest.z_pred, src.z_pred)
+        copyto!(dest.τ, src.τ)
+        copyto!(dest.z, src.z)
+        copyto!(dest.z_old, src.z_old)
         dest.converged        = src.converged
         dest.itnewton         = src.itnewton
         dest.itlinear         = src.itlinear
@@ -207,12 +217,12 @@ end
 
 # getters
 @inline converged(::Nothing) = false
-@inline converged(state::AbstractContinuationState) = state.converged
-@inline gettangent(state::AbstractContinuationState)    = state.τ
-@inline getsolution(state::AbstractContinuationState)   = state.z
-@inline getpredictor(state::AbstractContinuationState)  = state.z_pred
-@inline getx(state::AbstractContinuationState)          = state.z.u
-@inline getp(state::AbstractContinuationState)          = state.z.p
+@inline converged(state::AbstractContinuationState)    = state.converged
+@inline gettangent(state::AbstractContinuationState)   = state.τ
+@inline getsolution(state::AbstractContinuationState)  = state.z
+@inline getpredictor(state::AbstractContinuationState) = state.z_pred
+@inline getx(state::AbstractContinuationState)         = state.z.u
+@inline getp(state::AbstractContinuationState)         = state.z.p
 @inline get_previous_solution(state::AbstractContinuationState) = state.z_old
 @inline getpreviousx(state::AbstractContinuationState) = state.z_old.u
 @inline getpreviousp(state::AbstractContinuationState) = state.z_old.p
@@ -338,10 +348,10 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
 
     # we pass additional kwargs to newton so that it is sent to the newton callback
     sol₀ = solve(prob, Newton(), newton_options; 
-                    normN = it.normC,
-                    callback = callback(it),
-                    iterationC = 0,
-                    p = p₀)
+                 normN = it.normC,
+                 callback = callback(it),
+                 iterationC = 0,
+                 p = p₀)
     if  ~converged(sol₀)
         printstyled("\nNewton failed to converge for the initial guess on the branch. Residuals:\n", color=:red)
         display(sol₀.residuals)
@@ -355,19 +365,19 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     end
 
     sol₁ = solve(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
-                            Newton(),
-                            newton_options; 
-                            normN = it.normC,
-                            callback = callback(it),
-                            iterationC = 0,
-                            p = p₀ + ds / η)
+                         Newton(),
+                         newton_options; 
+                         normN = it.normC,
+                         callback = callback(it),
+                         iterationC = 0,
+                         p = p₀ + ds / η)
     if ~converged(sol₁) 
         error("Newton failed to converge. Required for the computation of the initial tangent.")
     end
     if verbose
         print("\n──▶ convergence of the initial guess = ")
         printstyled("OK\n\n", color = :green)
-        println("──▶ parameter = ", p₀ + ds/η, ", initial step (bis)")
+        println("──▶ parameter = ", p₀ + ds / η, ", initial step (bis)")
     end
     return iterate_from_two_points(it, sol₀.u, p₀, 
                                        sol₁.u, p₀ + ds / η; 
@@ -381,7 +391,7 @@ function iterate_from_two_points(it::ContIterable,
                                     _verbosity = it.verbosity) where T
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
-    # compute eigenvalues to get the type. Necessary to give a ContResult
+    # Compute eigenvalues to get the eigenvecs type. Necessary for creating a ContResult.
     eigvals = eigvecs = nothing
     cveig::Bool = true
     if compute_eigenelements(it)

@@ -28,7 +28,13 @@ end
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::Natural; kwargs...)
-    sol = _newton(it.prob, state.z_pred.u, setparam(it, clamp_predp(state.z_pred.p, it)), it.contparams.newton_options; normN = it.normC, callback = it.callback_newton, kwargs...)
+    sol = _newton(it.prob,
+                state.z_pred.u,
+                setparam(it, clamp_predp(state.z_pred.p, it)), 
+                it.contparams.newton_options; 
+                normN = it.normC, 
+                callback = it.callback_newton, 
+                kwargs...)
 
     # update solution
     copyto!(state.z.u, sol.u)

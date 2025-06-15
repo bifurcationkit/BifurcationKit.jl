@@ -37,7 +37,7 @@ function Base.empty(alg::AbstractContinuationAlgorithm)
     alg2
 end
 
-# this is called during initialisation of the continuation method. Can be used to adjust the algo.
+# this is called during initialization of the continuation method. Can be used to adjust the algo.
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
 # helper functions to update ::ContState when calling the corrector
