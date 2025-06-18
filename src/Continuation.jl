@@ -439,7 +439,7 @@ function Base.iterate(it::ContIterable,
     if verbose
         printstyled("━"^55*"\nContinuation step $step \n", bold = true);
         @printf("Step size = %2.4e\n", ds); print("Parameter ", get_lens_symbol(it))
-        @printf(" = %2.4e ⟶  %2.4e [guess]\n", getp(state), clamp_predp(state.z_pred.p, it))
+        @printf(" = %2.4e ──▶  %2.4e [guess]\n", getp(state), clamp_predp(state.z_pred.p, it))
     end
 
     # for PALC, z_pred contains the previous solution
@@ -449,7 +449,7 @@ function Base.iterate(it::ContIterable,
         if verbose
             verbose1 && printstyled("──▶ Step Converged in $(state.itnewton) Nonlinear Iteration(s)\n", color = :green)
             print("Parameter ", get_lens_symbol(it))
-            @printf(" = %2.4e ⟶  %2.4e\n", state.z_old.p, getp(state))
+            @printf(" = %2.4e ──▶  %2.4e\n", state.z_old.p, getp(state))
         end
 
         if compute_eigenelements(it)

@@ -10,7 +10,6 @@ Structure which holds the parameters specific to Deflated continuation.
 # Fields
 
 $(TYPEDFIELDS)
-
 """
 @with_kw_noshow struct DefCont{Tdo, Talg, Tps, Tas, Tud, Tk} <: AbstractContinuationAlgorithm
     "Deflation operator, `::DeflationOperator`"
@@ -50,7 +49,6 @@ end
 end
 
 """
-
 $(TYPEDEF)
 
 Structure holding the result from deflated continuation.
@@ -137,7 +135,7 @@ function updatebranch!(dcIter::DefContIterable,
         (it.verbosity > 0) && printstyled(color=:green,"├─ Computed ", length(state.eigvals), " eigenvalues, #unstable = ", state.n_unstable[1], "\n")
 
         if it.contparams.detect_bifurcation > 1 && detect_bifurcation(state)
-            # we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
+            # we double-check that the previous line, which mutated `state`, did not remove the bifurcation point
             if detect_bifurcation(state)
                 _, bifpt = get_bifurcation_type(it, state, :guess, getinterval(current_param, current_param-ds))
                 if bifpt.type != :none; push!(contResult.specialpoint, bifpt); end

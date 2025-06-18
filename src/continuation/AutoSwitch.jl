@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Continuation algorithm which switches automatically between Natural continuation and PALC depending on the stiffness of the branch being continued.
+Continuation algorithm which switches automatically between Natural continuation and PALC (or other if specified) depending on the stiffness of the branch being continued.
 
 $(TYPEDFIELDS)
 
@@ -61,7 +61,7 @@ function corrector!(state::AbstractContinuationState,
     dotθ = getdot(alg.alg)
     @debug "" (1-θ)*abs(λ) dotθ(τ, θ)
     if (1-θ)*abs(λ) > alg.tol_param
-        @debug "NATU" λ
+        @debug "NATURAL" λ
         corrector!(state, it, Natural(); kwargs...)
     else
         @debug "PALC" λ

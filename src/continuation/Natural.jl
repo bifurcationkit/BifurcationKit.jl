@@ -36,10 +36,14 @@ function corrector!(state::AbstractContinuationState,
                 callback = it.callback_newton, 
                 kwargs...)
 
-    # update solution
-    copyto!(state.z.u, sol.u)
-    state.z.p = state.z_pred.p
-
     # update fields
     _update_field_but_not_sol!(state, sol)
+
+    # update solution
+    if converged(sol)
+        copyto!(state.z.u, sol.u)
+        state.z.p = state.z_pred.p
+    end
+
+    return true
 end
