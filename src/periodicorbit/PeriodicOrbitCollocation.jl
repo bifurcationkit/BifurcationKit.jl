@@ -327,7 +327,7 @@ function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`. Used also in `generate_ci_problem`.
 """
@@ -344,12 +344,12 @@ end
 
 using SciMLBase: AbstractTimeseriesSolution
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Generate a periodic orbit problem from a solution.
 
 ## Arguments
-- `pb` a `PeriodicOrbitOCollProblem` which provides basic information, like the number of time slices `M`
+- `pb` a `PeriodicOrbitOCollProblem`
 - `bifprob` a bifurcation problem to provide the vector field
 - `sol` basically an `ODEProblem` or a function `t -> sol(t)`
 - `period` estimate of the period of the periodic orbit
@@ -1164,7 +1164,7 @@ References:
 function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯};
                         normE = norminf,
                         verbosity::Bool = false,
-                        K = Inf,
+                        K = 𝒯(Inf),
                         par = nothing,
                         kw...) where 𝒯
     n, m, Ntst = size(coll) # recall that m = ncol
@@ -1232,10 +1232,10 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     if verbosity
         h = maximum(diff(newmesh))
         printstyled(color = :magenta, 
-          "   ┌─ Mesh adaptation, new mesh hi = time steps",
-        "\n   ├─── min(hi)       = ", minimum(diff(newmesh)),
-        "\n   ├─── h = max(hi)   = ", h,
-        "\n   ├─── K = max(h/hi) = ", maximum(h ./ diff(newmesh)),
+          "   ┌─ Mesh adaptation, new mesh hᵢ = time steps",
+        "\n   ├─── min(hᵢ)       = ", minimum(diff(newmesh)),
+        "\n   ├─── h = max(hᵢ)   = ", h,
+        "\n   ├─── K = max(h/hᵢ) = ", maximum(h ./ diff(newmesh)),
         "\n   ├─── min(ϕ)        = ", minimum(ϕ),
         "\n   ├─── max(ϕ)        = ", maximum(ϕ),
         "\n   └─── θ             = ", θ,

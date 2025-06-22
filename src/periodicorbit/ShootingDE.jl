@@ -209,12 +209,11 @@ end
 ####################################################################################################
 using SciMLBase: AbstractTimeseriesSolution
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Generate a periodic orbit problem from a solution.
 
 ## Arguments
-- `pb` a `ShootingProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically an `ODEProblem` or a function `t -> sol(t)`

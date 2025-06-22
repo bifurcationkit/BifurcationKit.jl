@@ -497,10 +497,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         (@set opt_fold_cont.newton_options.eigsolver = eigsolver);
         linear_algo = BorderingBLS(solver = opt_fold_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
-        kind = kind,
-        normC = normC,
+        kind,
+        normC,
         finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_fold,
-        event = event
+        event
         )
     @assert ~isnothing(br) "Empty branch!"
     return correct_bifurcation(br)

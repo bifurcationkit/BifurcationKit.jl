@@ -40,7 +40,7 @@ function applyJ(pb, dest, x, p, dx)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`.
 """
@@ -75,22 +75,38 @@ POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
 save_solution(::WrapPOSh, x, p) = x
 
 """
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case of mesh adaptation or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
+$(TYPEDEF)
+
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
+
+## Fields
+$(TYPEDFIELDS)
 """
 struct POSolutionAndState{T1, T2, T3, T4}
+    "Initial mesh."
     mesh::T1
+    "Solution on time mesh."
     sol::T2
+    "Adapted mesh."
     _mesh::T3
+    "Phase condition."
     ϕ::T4
 end
 @inline _getsolution(x) = x
 @inline _getsolution(pb::POSolutionAndState) = pb.sol
 ####################################################################################################
 """
+$(TYPEDEF)
+
 This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
+
+## Fields
+$(TYPEDFIELDS)
 """
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
+    "Time mesh."
     t::Ts
+    "Solution discretized on time mesh."
     u::Tu
 end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)

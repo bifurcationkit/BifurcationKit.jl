@@ -430,13 +430,13 @@ function re_make(prob::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, p
 end
 
 using SciMLBase: AbstractTimeseriesSolution
+
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Generate a periodic orbit problem from a solution.
 
 ## Arguments
-- `pb` a `PoincareShootingProblem` which provides basic information, like the number of time slices `M`
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically, and `ODEProblem
