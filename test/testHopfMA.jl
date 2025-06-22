@@ -225,13 +225,13 @@ floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[
 
 # continuation of periodic orbits using :BorderedLU linear algorithm
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, p_max = 2.3, max_steps = 3, newton_options = NewtonPar(verbose = false), detect_bifurcation = 1)
-br_pok2 = continuation((@set poTrap.jacobian = :BorderedLU), orbitguess_f, PALC(), opts_po_cont)
+br_pok2 = continuation((@set poTrap.jacobian = BK.BorderedLU()), orbitguess_f, PALC(), opts_po_cont)
 
 # test of simple calls to newton / continuation
 deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
 # opt_po = NewtonPar(tol = 1e-8, verbose = false, max_iterations = 15)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, p_max = 3.0, max_steps = 3, newton_options = (@set opt_po.verbose = false), nev = 2, tol_stability = 1e-8, detect_bifurcation = 1)
-for linalgo in [:FullLU, :BorderedLU, :FullSparseInplace]
+for linalgo in [BK.FullLU(), BK.BorderedLU(), BK.FullSparseInplace()]
     @show linalgo
     # with deflation
     @time newton((@set poTrap.jacobian = linalgo),

@@ -53,7 +53,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps 
 
 lsdef = DefaultLS()
 lsit = GMRESKrylovKit()
-for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFree, :FullMatrixFreeAD, :BorderedMatrixFree))
+for (ind, jacobianPO) in enumerate((BK.Dense(), BK.DenseAD(), BK.FullLU(), BK.BorderedLU(), BK.FullSparseInplace(), BK.BorderedSparseInplace(), BK.MatrixFree(), BK.AutoDiffMF(), BK.BorderedMatrixFree()))
     _ls = ind > 6 ? lsit : lsdef
     @info jacobianPO, ind, _ls
     outpo_f = newton((@set poTrap.jacobian = jacobianPO),
@@ -75,7 +75,7 @@ for (ind, jacobianPO) in enumerate((:Dense, :DenseAD, :FullLU, :BorderedLU, :Ful
 end
 
 let
-    outpo_f = @time newton((@set poTrap.jacobian = :Dense), orbitguess_f, optn_po);
+    outpo_f = @time newton((@set poTrap.jacobian = BK.Dense()), orbitguess_f, optn_po);
     outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
 
     # computation of the Jacobian at out_pof

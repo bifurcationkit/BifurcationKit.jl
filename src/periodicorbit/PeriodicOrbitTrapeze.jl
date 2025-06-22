@@ -81,7 +81,7 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass} <: AbstractPOFDProblem
+@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFDProblem
     "a bifurcation problem"
     prob_vf::Tprob = nothing
 
@@ -115,9 +115,9 @@ $DocStrjacobianPOTrap
     update_section_every_step::UInt = 1
 
     "symbol which describes the type of jacobian used in Newton iterations (see below)."
-    jacobian::Symbol = :Dense
+    jacobian::Tjac = Dense()
 
-    @assert jacobian in (:FullLU, :FullSparseInplace, :Dense, :DenseAD, :BorderedLU, :BorderedSparseInplace, :FullMatrixFree, :BorderedMatrixFree, :FullMatrixFreeAD)
+    @assert jacobian in (FullLU(), FullSparseInplace(), Dense(), DenseAD(), BorderedLU(), BorderedSparseInplace(), MatrixFree(), BorderedMatrixFree(), AutoDiffMF())
 end
 
 function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
@@ -187,7 +187,7 @@ function PeriodicOrbitTrapProblem(prob_vf,
                                     ongpu = false,
                                     massmatrix = nothing,
                                     update_section_every_step::Int = 0,
-                                    jacobian::Symbol = :Dense) where {vectype}
+                                    jacobian = Dense()) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
     prob = PeriodicOrbitTrapProblem(;prob_vf,
@@ -820,24 +820,24 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = probPO.jacobian
-    @assert jacobianPO in (:Dense, :DenseAD, :FullLU, :BorderedLU, :FullMatrixFree, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please choose another one."
+    @assert jacobianPO in (Dense(), DenseAD(), FullLU(), BorderedLU(), MatrixFree(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()) "This jacobian is not defined. Please choose another one."
     M, N = size(probPO)
 
-    if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
-        if jacobianPO == :FullLU
+    if jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), FullSparseInplace(), AutoDiffMF())
+        if jacobianPO == FullLU()
             jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
-        elseif jacobianPO == :FullSparseInplace
+        elseif jacobianPO == FullSparseInplace()
             # sparse matrix to hold the jacobian
             _J =  probPO(Val(:JacFullSparse), orbitguess, getparams(probPO.prob_vf))
             _indx = get_blocks(_J, N, M)
             # inplace modification of the jacobian _J
             jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p, _indx)
-        elseif jacobianPO == :Dense
+        elseif jacobianPO == Dense()
             _J =  probPO(Val(:JacFullSparse), orbitguess, getparams(probPO.prob_vf)) |> Array
             jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
-        elseif jacobianPO == :DenseAD
+        elseif jacobianPO == DenseAD()
             jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
-        elseif jacobianPO == :FullMatrixFreeAD
+        elseif jacobianPO == AutoDiffMF()
             jac = (x, p) -> dx -> ForwardDiff.derivative(t -> residual(probPO, x .+ t .* dx, p), 0)
         else 
              jac = (x, p) -> ( dx -> probPO(x, p, dx))
@@ -852,11 +852,11 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
             return solve(prob, defOp, options; kwargs...)
         end
     else # bordered linear solvers
-        if jacobianPO == :BorderedLU
+        if jacobianPO == BorderedLU()
             Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = probPO)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
-        elseif jacobianPO == :BorderedSparseInplace
+        elseif jacobianPO == BorderedSparseInplace()
             _J =  probPO(Val(:JacCyclicSparse), orbitguess, getparams(probPO.prob_vf))
             _indx = get_blocks(_J, N, M-1)
             # inplace modification of the jacobian _J
@@ -942,7 +942,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = prob.jacobian
-    @assert jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD) "This jacobian is not defined. Please chose another one among (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :BorderedLU, :BorderedMatrixFree, :FullSparseInplace, :BorderedSparseInplace, :FullMatrixFreeAD)."
+    @assert jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), BorderedLU(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()) "This jacobian is not defined. Please chose another one among (Dense, DenseAD, FullLU, MatrixFree, BorderedLU, BorderedMatrixFree, FullSparseInplace, BorderedSparseInplace, AutoDiffMF)."
 
     M, N = size(prob)
     options = contParams.newton_options
@@ -959,21 +959,21 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     _recordsol = modify_po_record(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
     _plotsol = modify_po_plot(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
 
-    if jacobianPO in (:Dense, :DenseAD, :FullLU, :FullMatrixFree, :FullSparseInplace, :FullMatrixFreeAD)
-        if jacobianPO == :FullLU
+    if jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), FullSparseInplace(), AutoDiffMF())
+        if jacobianPO == FullLU()
             jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
-        elseif jacobianPO == :FullSparseInplace
+        elseif jacobianPO == FullSparseInplace()
             # sparse matrix to hold the jacobian
             _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf))
             _indx = get_blocks(_J, N, M)
             # inplace modification of the jacobian _J
             jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p, _indx); FloquetWrapper(prob, _J, x, p));
-        elseif jacobianPO == :Dense
+        elseif jacobianPO == Dense()
             _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf)) |> Array
             jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
-        elseif jacobianPO == :DenseAD
+        elseif jacobianPO == DenseAD()
             jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> residual(prob, z, p), x), x, p)
-        elseif jacobianPO == :FullMatrixFreeAD
+        elseif jacobianPO == AutoDiffMF()
             jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->residual(prob, x .+ t .* dx, p), 0), x, p)
         else
              jac = (x, p) -> FloquetWrapper(prob, x, p)
@@ -993,18 +993,18 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             finalise_solution = _finsol,
             )
     else
-        if jacobianPO == :BorderedLU
+        if jacobianPO == BorderedLU()
             Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
-        elseif jacobianPO == :BorderedSparseInplace
+        elseif jacobianPO == BorderedSparseInplace()
             _J =  prob(Val(:JacCyclicSparse), orbitguess, getparams(prob.prob_vf))
             _indx = get_blocks(_J, N, M-1)
             # inplace modification of the jacobian _J
             Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = lu(_J), prob = prob, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
 
-        else # :BorderedMatrixFree
+        else # BorderedMatrixFree
             Aγ = AγOperatorMatrixFree(prob = prob, orbitguess = zeros(N * M + 1), par = getparams(prob.prob_vf))
             # linear solver
             lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), check_precision = false))
@@ -1101,7 +1101,7 @@ Generate a periodic orbit problem from a solution.
 ## Arguments
 - `bifprob` a bifurcation problem to provide the vector field
 - `sol` basically, and `ODEProblem`
-- `tspan = (0,1.)` estimate of the time span (period) of the periodic orbit
+- `tspan = (0, 1)` estimate of the time span (period) of the periodic orbit
 
 ## Output
 - returns a `PeriodicOrbitTrapProblem` and an initial guess.
