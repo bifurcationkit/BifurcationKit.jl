@@ -68,6 +68,14 @@ The jacobian is computed using Jacobian-Free method, namely a jacobian vector pr
 """
 struct MatrixFree <: AbstractJacobianMatrix end
 
+struct BorderedLU <: AbstractJacobianMatrix end
+struct FullLU <: AbstractJacobianMatrix end
+struct DenseAD <: AbstractJacobianMatrix end
+struct Dense <: AbstractJacobianMatrix end
+struct BorderedMatrixFree <: AbstractJacobianMatrix end
+struct BorderedSparseInplace <: AbstractJacobianMatrix end
+
+################################################################################################
 """
 The jacobian for Minimally Augmented problem is based on an analytical formula and is matrix based.
 """

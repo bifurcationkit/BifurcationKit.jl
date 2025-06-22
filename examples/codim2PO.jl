@@ -203,11 +203,12 @@ pd_po_coll = @time continuation(deepcopy(brpo_pd), 1, (@optic _.b0), opts_pocoll
 
 f,ax = BK.plot(pd_po_coll, vars = (:ϵ, :b0));f
 
-f,ax = BK.plot(pd_po_coll, fold_po_coll1, fold_po_coll2, vars = (:ϵ, :b0), branchlabel = ["Fold1", "Fold2", "PD"]);f
+f,ax = BK.plot(pd_po_coll, fold_po_coll1, fold_po_coll2, vars = (:ϵ, :b0), branchlabel = ["PD", "Fold1", "Fold2"]);f
 
+nf = get_normal_form(fold_po_coll1, 2)
 nf = get_normal_form(fold_po_coll2, 2)
-
 nf = get_normal_form(pd_po_coll, 2)
+pd = get_normal_form(brpo_pd, 2)
 
 #####
 fold_po_coll2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold;
@@ -286,7 +287,6 @@ ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         bothside = true,
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
-
 f,ax=BK.plot(ns_po_coll, pd_po_coll2, vars = (:ϵ, :b0)); f
 
 #####
