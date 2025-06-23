@@ -1093,10 +1093,11 @@ function re_make(prob::PeriodicOrbitTrapProblem,
 end
 
 using SciMLBase: AbstractTimeseriesSolution
+
 """
 $(TYPEDSIGNATURES)
 
-Generate a periodic orbit problem from a solution.
+Generate a guess and a periodic orbit problem from a solution.
 
 ## Arguments
 - `bifprob` a bifurcation problem to provide the vector field

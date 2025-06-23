@@ -346,13 +346,15 @@ using SciMLBase: AbstractTimeseriesSolution
 """
 $(TYPEDSIGNATURES)
 
-Generate a periodic orbit problem from a solution.
+Generate a guess and a periodic orbit problem from a solution.
 
 ## Arguments
 - `pb` a `PeriodicOrbitOCollProblem`
 - `bifprob` a bifurcation problem to provide the vector field
 - `sol` basically an `ODEProblem` or a function `t -> sol(t)`
 - `period` estimate of the period of the periodic orbit
+- `cache_In = false` for caching in `MeshCollocationCache`
+- `optimal_period = true` optimizes the period
 
 ## Output
 - returns a `PeriodicOrbitOCollProblem` and an initial guess.
@@ -372,13 +374,13 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     n, m, Ntst = size(pb)
     n_unknowns = N * (1 + m * Ntst)
 
-    par = sol_ode.prob.p
-    prob_vf = re_make(bifprob, params = par)
+    params = sol_ode.prob.p
+    prob_vf = re_make(bifprob, params = params)
 
     coll = setproperties(pb;
                             N,
                             prob_vf,
-                            ϕ = zeros(𝒯, n_unknowns),
+                            ϕ  = zeros(𝒯, n_unknowns),
                             xπ = zeros(𝒯, n_unknowns),
                             ∂ϕ = zeros(𝒯, N, Ntst * m),
                             cache = POCollCache(eltype(pb), Ntst, N, m, cache_In))
@@ -1083,7 +1085,7 @@ end
 @views function updatesection!(coll::PeriodicOrbitOCollProblem, 
                                 x::AbstractVector, 
                                 par)
-    @debug "Update section Collocation"
+    @debug "[collocation] update section"
     # update the reference point
     coll.xπ .= 0
 
@@ -1094,7 +1096,6 @@ end
     ϕ = coll.ϕ
     L, ∂L = get_Ls(coll.mesh_cache)
     n, m, Ntst = size(coll)
-    # uc = get_time_slices(coll, x)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
     pϕ = get_tmp(coll.cache.∂gj, ϕc) #zeros(𝒯, n, m)
     rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
@@ -1104,7 +1105,7 @@ end
         rg = rg .+ m
     end
 
-    #update ∇phase
+    # update ∇phase
     ω = coll.mesh_cache.gauss_weight
     rg = 1:n
     coll.cache.∇phase .= 0
@@ -1118,7 +1119,7 @@ end
             end
         end
     end
-    @debug "[coll] updatesection! done"
+    @debug "[collocation] update section: done"
     return true
 end
 ####################################################################################################

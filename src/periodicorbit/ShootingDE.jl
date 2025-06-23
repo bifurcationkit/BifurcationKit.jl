@@ -211,12 +211,13 @@ using SciMLBase: AbstractTimeseriesSolution
 """
 $(TYPEDSIGNATURES)
 
-Generate a periodic orbit problem from a solution.
+Generate a guess and a periodic orbit problem from a solution.
 
 ## Arguments
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
 - `sol` basically an `ODEProblem` or a function `t -> sol(t)`
+- `optimal_period = true` optimizes the period
 - `tspan::Tuple` estimate of the period of the periodic orbit
 - `alg` algorithm for solving the Cauchy problem
 - `prob_mono` problem for monodromy
@@ -231,25 +232,32 @@ function generate_ci_problem(shooting::ShootingProblem,
                             prob_de, 
                             sol::AbstractTimeseriesSolution, 
                             tspan::Tuple;
+                            optimal_period::Bool = true,
                             prob_mono = nothing,
                             alg = sol.alg,
                             alg_mono = sol.alg,
                             use_bordered_array = false, 
                             ksh...)
-    t0 = sol.t[begin]
-    u0 = sol(t0)
+    u0 = sol(sol.t[begin])
     M = shooting.M
+
+    # find best period candidate
+    if optimal_period
+        _times = LinRange(tspan[1], tspan[2], 1000)
+        period = _times[argmin(norm(sol(t) - sol(tspan[1])) for t in _times[2:end])]
+        @reset tspan[2] = tspan[1] + period
+    end
     
     # points for the sections
     centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
     
     # shooting kwargs
     sh_kw = (lens = getlens(prob_bif), 
-    jacobian = shooting.jacobian,
-    parallel = shooting.parallel,
-    update_section_every_step = shooting.update_section_every_step,
+            jacobian = shooting.jacobian,
+            parallel = shooting.parallel,
+            update_section_every_step = shooting.update_section_every_step,
     )
-    
+
     # do we provide an ODE alg for computing the monodromy?
     if isnothing(prob_mono)
         probsh = ShootingProblem(prob_de, alg, centers; 
@@ -273,4 +281,4 @@ function generate_ci_problem(shooting::ShootingProblem,
     return probsh, cish
 end
 
-generate_ci_problem(pb::ShootingProblem, prob_bif::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, prob_bif, prob_de, sol, (zero(period), period); ksh...)
+generate_ci_problem(pb::ShootingProblem, prob_bif::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; ksh...) = generate_ci_problem(pb, prob_bif, prob_de, sol, (zero(period), 1.5period); ksh...)
