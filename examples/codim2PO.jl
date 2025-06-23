@@ -68,7 +68,7 @@ argspo = (record_from_solution = recordFromSolution,
     plot_solution = plotSolution
     )
 ################################################################################
-probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = :DenseAD, update_section_every_step = 0), prob_bif, sol, 2.)
+probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = BK.DenseAD(), update_section_every_step = 0), prob_bif, sol, 2.)
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 

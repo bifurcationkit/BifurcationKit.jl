@@ -138,7 +138,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, p_max = 2.2, max_ste
     plot_every_step = 1, nev = 11, tol_stability = 1e-6,
     detect_bifurcation = 3, max_bisection_steps = 15, n_inversion = 4)
 
-probPO = PeriodicOrbitTrapProblem(M = 51; N = 2n, jacobian = :BorderedSparseInplace)
+probPO = PeriodicOrbitTrapProblem(M = 51; N = 2n, jacobian = BK.BorderedSparseInplace())
 br_po = continuation(
     # arguments for branch switching
     br, 1,

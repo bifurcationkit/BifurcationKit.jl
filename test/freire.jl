@@ -63,7 +63,7 @@ br_po_bp = continuation(deepcopy(br_po), 2;
 ##################################################################################
 br_po = continuation(br, 1, 
             ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-            PeriodicOrbitTrapProblem(M = 100; jacobian = :Dense);
+            PeriodicOrbitTrapProblem(M = 100; jacobian = BK.Dense());
             δp = 0.001, 
             )
 

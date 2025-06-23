@@ -26,7 +26,12 @@ br = @time continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false,
 
 plot(br, plotfold = false)
 ####################################################################################################
-br_fold = BK.continuation(br, 2, (@optic _.α), ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.), bothside = true)
+br_fold = BK.continuation(br, 2, (@optic _.α),
+        ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
+        detect_codim2_bifurcation = 2,
+        jacobian_ma = BK.MinAug(),
+        usehessian = true,
+        bothside = true,)
 plot(br_fold)
 ####################################################################################################
 # continuation parameters
@@ -67,8 +72,8 @@ opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 90
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
     PeriodicOrbitOCollProblem(50, 4; meshadapt = false, jacobian = BK.DenseAnalyticalInplace());
-    verbosity = 3,
-    plot = true,
+    # verbosity = 3,
+    # plot = true,
     args_po...,
     linear_algo = BK.COPBLS(),
     )
@@ -81,7 +86,7 @@ using DifferentialEquations
 # this is the ODEProblem used with `DiffEqBase.solve`
 prob_ode = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-11, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-6, max_iterations = 7), tol_stability = 1e-8, detect_bifurcation = 2, plot_every_step = 10, save_sol_every_step=1)
+opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7, verbose = false), tol_stability = 1e-7, detect_bifurcation = 3, plot_every_step = 10)
 
 br_posh = @time continuation(
     br, 4,
@@ -90,7 +95,7 @@ br_posh = @time continuation(
     # this is where we tell that we want Standard Shooting
     ShootingProblem(15, prob_ode, Rodas4P(), parallel = true,);
     linear_algo = MatrixBLS(),
-    verbosity = 2,
+    # verbosity = 2,
     plot = true,
     args_po...,
     )

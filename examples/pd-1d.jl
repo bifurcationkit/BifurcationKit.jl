@@ -61,7 +61,7 @@ u0 = cos.(2X)
 solc0 = vcat(u0, u0)
 
 probBif = BifurcationProblem(Fbr!, solc0, par_br, (@optic _.C) ;J = Jbr,
-    record_from_solution = (x, p; k...) -> norm(x, Inf),
+    record_from_solution = (x, p; k...) -> norminf(x),
     plot_solution = (x, p; kwargs...) -> plot!(x[1:end÷2];label="",ylabel ="u", kwargs...))
 ####################################################################################################
 # eigls = DefaultEig()
@@ -93,7 +93,7 @@ br_po = @time continuation(
     br, 1,
     # arguments for continuation
     optcontpo,
-    PeriodicOrbitTrapProblem(M = M, jacobian = :FullSparseInplace);
+    PeriodicOrbitTrapProblem(M = M, jacobian = BK.FullSparseInplace());
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess

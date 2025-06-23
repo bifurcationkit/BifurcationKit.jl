@@ -168,7 +168,7 @@ r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = :FullMatrixFree)
+poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = BK.MatrixFree())
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
@@ -316,7 +316,7 @@ ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ)
 poTrapMFi = PeriodicOrbitTrapProblem(
             probInp,
             real.(vec_hopf), hopfpt.u,
-            M, 2n, ls0; jacobian = :FullMatrixFree)
+            M, 2n, ls0; jacobian = BK.MatrixFree())
 
 # ca ne devrait pas allouer!!!
 out_po = copy(orbitguess_f)

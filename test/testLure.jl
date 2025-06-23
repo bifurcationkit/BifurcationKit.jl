@@ -43,7 +43,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, dsmin = 1e-4, p_max = 1.1, max_step
 Mt = 120 # number of time sections
 br_po = continuation(
         br, 2, opts_po_cont,
-        PeriodicOrbitTrapProblem(M = Mt; update_section_every_step = 1, jacobian = :Dense);
+        PeriodicOrbitTrapProblem(M = Mt; update_section_every_step = 1, jacobian = BK.Dense());
         ampfactor = 1., δp = 0.01,
         verbosity = 0, plot = false,
         record_from_solution = recordPO,
