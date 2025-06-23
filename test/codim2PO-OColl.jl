@@ -38,6 +38,7 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
+probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.; use_adapted_mesh = true)
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.)
 
 solpo = newton(probcoll, ci, NewtonPar(verbose = false))

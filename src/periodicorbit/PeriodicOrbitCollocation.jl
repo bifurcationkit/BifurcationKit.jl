@@ -355,6 +355,7 @@ Generate a guess and a periodic orbit problem from a solution.
 - `period` estimate of the period of the periodic orbit
 - `cache_In = false` for caching in `MeshCollocationCache`
 - `optimal_period = true` optimizes the period
+- `use_adapted_mesh = false` adapt the mesh to minimize error. Should be used with mesh adaptation `meshadapt = true`.
 
 ## Output
 - returns a `PeriodicOrbitOCollProblem` and an initial guess.
@@ -364,7 +365,11 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             sol_ode::AbstractTimeseriesSolution,
                             period;
                             cache_In = false,
-                            optimal_period::Bool = true)
+                            optimal_period::Bool = true,
+                            use_adapted_mesh::Bool = false)
+    if use_adapted_mesh || ~pb.meshadapt
+        @warn "You initialize an adapted mesh but do not use mesh adaptation in the collocation problem!"
+    end
     t0 = sol_ode.t[begin]
     u0 = sol_ode(t0)
     @assert u0 isa AbstractVector
@@ -390,8 +395,13 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
         _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
         period = _times[argmin(norm(sol_ode(t + t0) - sol_ode(t0)) for t in _times)]
     end
-
-    ci = generate_solution(coll, t -> sol_ode(t0 + t), period)
+    ci = copy(generate_solution(coll, t -> sol_ode(t0 + t), period))
+    if use_adapted_mesh
+        for _ = 1:10
+        compute_error!(coll, ci, verbosity = pb.verbose_mesh_adapt)
+        ci = generate_solution(coll, t -> sol_ode(t0 + t), period)
+        end
+    end
     updatesection!(coll, ci, nothing)
     return coll, ci
 end
