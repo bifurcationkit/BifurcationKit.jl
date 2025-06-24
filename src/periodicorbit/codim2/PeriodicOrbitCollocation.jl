@@ -20,6 +20,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     J = copy(_get_matrix(Jac))
     J[end-N:end-1, 1:N] .= I(N)
     @set Jac.jacpb = J[1:end-1, 1:end-1]
+    # J[1:end-1, 1:end-1]
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
@@ -115,7 +116,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
-    biftype = br.specialpoint[ind_bif].type
     bifpt = br.specialpoint[ind_bif]
     ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
@@ -124,10 +124,12 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         @warn("You should pass `usehessian = true`.")
     end
 
+    # wrap of collocation functional
+    pbwrap = deepcopy(br.prob)
+
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
         if br.prob.prob.meshadapt
             update_mesh!(pbwrap.prob, bifpt.x._mesh )
         end
@@ -139,7 +141,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     # updatesection!(coll, ϕ, nothing)
 
     # this updates the section
-    coll = br.prob.prob
+    coll = deepcopy(pbwrap.prob)
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
     options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
@@ -177,20 +179,31 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
     bifpt = br.specialpoint[ind_bif]
-    biftype = bifpt.type
+    biftype = br.specialpoint[ind_bif].type
 
     @assert biftype == :pd "Please open an issue on BifurcationKit website"
 
+    par = setparam(br, bifpt.param)
     pdpointguess = pd_point(br, ind_bif)
 
+    # wrap of collocation functional
+    pbwrap = deepcopy(br.prob)
+
+    # if mesh adaptation, we need to extract the solution specifically
+    if bifpt.x isa POSolutionAndState
+        # the solution is mesh adapted, we need to restore the mesh.
+        update_mesh!(pbwrap.prob, bifpt.x._mesh)
+        updatesection!(pbwrap.prob, bifpt.x.ϕ, par)
+        pdpointguess.u .= bifpt.x.sol
+    end
+
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(br.prob.prob)
+    coll = deepcopy(pbwrap.prob)
     N, m, Ntst = size(coll)
 
     # get the PD eigenvectors
-    par = setparam(br, bifpt.param)
-    jac = jacobian(br.prob, pdpointguess.u, par)
-    J = _get_matrix(jac)
+    jac = jacobian(pbwrap, pdpointguess.u, par)
+    J = copy(_get_matrix(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
@@ -201,9 +214,10 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
 
+    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, pdpointguess.u, par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation
-    continuation_pd(br.prob, alg,
-        pdpointguess, setparam(br, pdpointguess.p),
+    continuation_pd(pbwrap, alg,
+        pdpointguess, par,
         getlens(br), lens2,
         p, q,
         options_cont;
@@ -247,7 +261,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, nspointguess.u, par)
-    J = Complex.(copy(_get_matrix(jac)))
+    J = Complex.(copy(_get_matrix(jac))) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace
     J[:, end] .= rand(nj)

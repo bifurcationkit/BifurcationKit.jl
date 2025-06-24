@@ -71,7 +71,7 @@ struct POSolution{Tpb, Tx, Tp}
 end
 POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
 ####################################################################################################
-# structure to save solution on the branch
+# method to save solution on the branch
 save_solution(::WrapPOSh, x, p) = x
 
 """
@@ -115,7 +115,7 @@ Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 """
 $(TYPEDEF)
 
-Define a structure to interface the jacobian of the periodic orbits functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell to the eigensolver that it should use the monodromy matrix instead of the jacobian.
+Structure to interface the jacobian of a periodic orbit functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver that it should use the monodromy matrix instead of the jacobian.
 
 ## Methods
 - `_get_matrix(::FloquetWrapper)`
@@ -124,10 +124,14 @@ Define a structure to interface the jacobian of the periodic orbits functional w
 ## Fields
 $(TYPEDFIELDS)
 """
-mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}
+mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp} # REMOVE BY DISPATCH?
+    "Periodic orbit functional."
     pb::Tpb
+    "Jacobian (MF, AbstractArray, etc)."
     jacpb::Tjacpb
+    "Current orbit."
     x::Torbitguess
+    "Current parameters."
     par::Tp
 end
 FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
@@ -144,7 +148,7 @@ apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
 """
 $(TYPEDEF)
 
-Define a structure to interface the linear solver with the type `FloquetWrapper`.
+Structure to interface the linear solver with the type `FloquetWrapper`.
 
 ## Methods
 - `LinearAlgebra.hcat(::FloquetWrapper, dR)`
@@ -153,6 +157,7 @@ Define a structure to interface the linear solver with the type `FloquetWrapper`
 $(TYPEDFIELDS)
 """
 struct FloquetWrapperLS{T} <: AbstractLinearSolver
+    "Linear solver."
     solver::T # the use of field `solver` is good for BLS
 end
 # this constructor prevents from having FloquetWrapperLS(FloquetWrapperLS(ls))
