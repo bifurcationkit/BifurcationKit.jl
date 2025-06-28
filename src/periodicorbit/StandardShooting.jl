@@ -356,12 +356,12 @@ function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, peri
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
-
+    section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section
     # update the problem but not the section if the user passed one
-    probSh = setproperties(prob, section = 
-        isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section, 
-        par = getparams(prob_vf), 
-        lens = getlens(prob_vf))
+    probSh = setproperties(prob, 
+                            section = section, 
+                            par = getparams(prob_vf), 
+                            lens = getlens(prob_vf))
     probSh.section.normal ./= norm(probSh.section.normal)
 
     # be sure that the vector field is correctly inplace in the Flow structure

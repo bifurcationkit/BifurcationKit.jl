@@ -555,13 +555,13 @@ function continuation_fold(prob,
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), 0*a, one(𝒯))
         ~cv && @debug "Bordered linear solver for J did not converge."
 
-        @debug "EIGENVECTORS" cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L, newb), Inf)
+        @debug "EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, newb))
 
         L★ = has_adjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), 0*a, one(𝒯))
         ~cv && @debug "Bordered linear solver for J' did not converge."
 
-        @debug "EIGENVECTORS" cv it norm(residual(prob, bifpt.x, parbif), Inf) norm(apply(L★, newa), Inf)
+        @debug "EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, newa))
 
         ζad = newa; rmul!(ζad, 1 / normC(ζad))
         ζ   = newb; rmul!(ζ,   1 / normC(ζ))

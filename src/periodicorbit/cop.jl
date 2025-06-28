@@ -612,7 +612,7 @@ function (ls::COPLS)(Jc, rhs)
     return res, true, 1
 end
 
-# There is. See https://github.com/JuliaLang/julia/pull/56657, which might improve the performance considerably. Unfortunately this seemed to increase allocations in certain cases, and I haven't got to looking into these.
+# There is see https://github.com/JuliaLang/julia/pull/56657, which might improve the performance considerably. Unfortunately this seemed to increase allocations in certain cases, and I haven't got to looking into these.
 function _fast_copy_bordered!(x, y)
     for (xcol, ycol) ∈ zip(eachcol(x), eachcol(y))
         @views xcol[1:end - 1] .= ycol
@@ -656,6 +656,7 @@ function (ls::COPBLS)(_Jc, dR,
     if isnothing(applyξu!) == false
         applyξu!(@view(ls.J[end, begin:end-1]))
     end
+
     res = solve_cop(ls.cache.coll, ls.J, rhs, ls.cache)
     return (@view res[begin:end-1]), res[end], true, 1
 end
