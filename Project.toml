@@ -1,7 +1,7 @@
 name = "BifurcationKit"
 uuid = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
 authors = ["Romain Veltz <rveltz@salk.edu>"]
-version = "0.4.16"
+version = "0.5.1"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -50,7 +50,7 @@ FastGaussQuadrature = "^0.4, ^0.5, 1"
 ForwardDiff = "^0.10, 1"
 IterativeSolvers = "0.8.4, 0.8.5, ^0.9"
 JLD2 = "0.4, 0.5"
-Krylov = "0.10"
+Krylov = "^0.10"
 KrylovKit = "^0.7, ^0.8.2, 0.9"
 LinearMaps = "2.7, ^3.0"
 Makie = "^0.21, ^0.22, 0.23, 0.24"
