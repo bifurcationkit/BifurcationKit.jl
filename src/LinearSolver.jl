@@ -327,20 +327,25 @@ The Krylov space is pre-allocated. This is really great for GPU but also for CPU
 $(TYPEDFIELDS)
 """
 mutable struct KrylovLSInplace{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
-    "Can be Krylov.GmresWorkspace for example"
+    "Can be Krylov.GmresWorkspace for example."
     workspace::F
-    "Krylov method"
+    "Krylov method."
     KrylovAlg::Symbol
-    "Arguments passed to the linear solver"
+    "Arguments passed to the linear solver."
     kwargs::K
-    "Left preconditioner"
+    "Left preconditioner."
     Pl::Tl
-    "Right preconditioner"
+    "Right preconditioner."
     Pr::Tr
-    "Is the linear mapping inplace"
+    "Is the linear mapping inplace."
     is_inplace::Bool
 end
 
+"""
+$(SIGNATURES)
+
+Constructor for `KrylovLSInplace`.
+"""
 function KrylovLSInplace(args...;
                         n = 10,
                         m = 10,
