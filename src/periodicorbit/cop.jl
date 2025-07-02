@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Cache for the linear solver based on condensation of parameters [1].
+Cache for the linear solver based on condensation of parameters (COP) [1].
 
 ## Fields
 
@@ -10,7 +10,7 @@ $(TYPEDFIELDS)
 ## Constructor
 
 ```
-COPCACHE(coll::PeriodicOrbitOCollProblem, δn = 0)
+COPCACHE(coll::PeriodicOrbitOCollProblem, Val(0))
 ```
 
 ## Reference(s)
@@ -33,13 +33,13 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     last_row_𝐅𝐬::Matrix{𝒯}
     "cache to hold the factorized form of the matrix collocation matrix J"
     Jcoll::Matrix{𝒯}
-    "cache to hold the linear operator for the external variables"
+    "cache to hold the linear system for the external variables"
     Jext::Matrix{𝒯}
     "collocation problem. It is needed here because linear solver requires it."
     coll::Tp
-    "rhs of external problem"
+    "r.h.s. of external problem."
     rhs_ext::Vector{𝒯}
-    "solution of external problem"
+    "solution of external problem."
     sol_ext::Vector{𝒯}
 
     function COPCACHE(coll::PeriodicOrbitOCollProblem, ::Val{dim0} = Val(0); 𝒯 = eltype(coll)) where {dim0}
@@ -189,8 +189,7 @@ Solve the linear system associated with the collocation problem for computing pe
     N, m, Ntst = size(coll)
     nbcoll = N * m
     # size of the periodic orbit problem counting the phase condition.
-    # We use this to tackle the case where size(J, 1) > Npo
-    Npo = length(coll) + 1
+    Npo = length(coll) + 1 # We use this to tackle the case where size(J, 1) > Npo
     nⱼ = size(J, 1)
     δn =  nⱼ - Npo # this allows to compute the border side
     @assert δn >= 0

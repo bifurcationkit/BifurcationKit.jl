@@ -98,6 +98,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
     δ = getdelta(POWrap)
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
+    # TODO!! This is only finite differences
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
                 residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p + ϵ3), ω), v),

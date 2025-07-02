@@ -278,7 +278,8 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
     options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-    @assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step"
+    @assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step."
+    @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     ζ ./= normN(ζ)
     ζad = LinearAlgebra.conj.(ζ)

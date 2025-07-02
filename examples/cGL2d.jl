@@ -117,7 +117,8 @@ BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at
 br_hopf = continuation(br, 1, (@optic _.γ),
     ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15); plot = true,
     update_minaug_every_step = 1,
-    start_with_eigen = true, bothside = false,
+    start_with_eigen = false, 
+    bothside = false,
     detect_codim2_bifurcation = 2,
     verbosity = 3, normC = norminf,
     jacobian_ma = BK.MinAug(),
@@ -135,13 +136,13 @@ btsol = BK.newton(br_hopf, 2; jacobian_ma = BK.MinAug(),)
 indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
 # branch from the BT point
 brfold = continuation(br_hopf, indbt, 
-                setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
-                update_minaug_every_step = 1,
-                detect_codim2_bifurcation = 2,
-                callback_newton = BK.cbMaxNorm(1e5),
-                bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-                jacobian_ma = BK.MinAug(),
-                bothside = true, normC = norminf)
+                    setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
+                    update_minaug_every_step = 1,
+                    detect_codim2_bifurcation = 2,
+                    callback_newton = BK.cbMaxNorm(1e5),
+                    bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
+                    jacobian_ma = BK.MinAug(),
+                    bothside = true, normC = norminf)
 
 br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
 plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
@@ -156,7 +157,8 @@ hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_b
     start_with_eigen = true,
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
     jacobian_ma = BK.MinAug(),
-    bothside = false, normC = norminf)
+    bothside = false, 
+    normC = norminf)
 
 plot!(hopf_from_zh)
 ####################################################################################################

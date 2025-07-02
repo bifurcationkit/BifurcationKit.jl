@@ -151,8 +151,10 @@ function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     # note that there is no need to order the eigen-elements. KrylovKit does it
     # with the option `which`, by decreasing order.
     kw = (verbosity = l.verbose,
-            krylovdim = l.dim, maxiter = l.maxiter,
-            tol = l.tol, issymmetric = l.issymmetric,
+            krylovdim = l.dim, 
+            maxiter = l.maxiter,
+            tol = l.tol, 
+            issymmetric = l.issymmetric,
             ishermitian = l.ishermitian)
     if J isa AbstractMatrix && isnothing(l.x₀)
         nev = min(_nev, size(J, 1))

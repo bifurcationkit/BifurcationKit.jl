@@ -203,8 +203,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
     𝒯 = typeof(ds)
-    pred = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose = verbose, ampfactor = 𝒯(ampfactor))
-    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont), 0; verbose = verbose, ampfactor = 𝒯(ampfactor))
+    pred = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
+    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont), 0; verbose, ampfactor = 𝒯(ampfactor))
 
     M = get_mesh_size(probPO)
     ϕ = 0

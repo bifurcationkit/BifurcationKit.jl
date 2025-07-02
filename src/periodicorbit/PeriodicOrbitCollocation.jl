@@ -749,7 +749,7 @@ end
         # put the jacobian of the vector field
         for l in 1:m
             if TransposeBool == false
-                jacobian!(VF, J0, pj[:, l], pars) # TDODO All the allocations come from here, they disappear for J0=zeros(n,n), what is going on???
+                jacobian!(VF, J0, pj[:, l], pars)
             else
                 J0 .= transpose(jacobian(VF, pj[:, l], pars))
             end

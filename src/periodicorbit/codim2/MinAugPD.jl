@@ -97,7 +97,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
     par0 = set(par, lens, p)
  
     # Avoid doing 3 times the (possibly) costly building of J(x, p)
-    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition
+    JPD = jacobian_period_doubling(POWrap, x, par0) # jacobian with period doubling boundary condition but without phase condition
     # Avoid computing the jacobian twice in case 𝐏𝐝.Jadjoint is not provided
     JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, par0) : transpose(JPD)
 
