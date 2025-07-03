@@ -3,6 +3,25 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.5.0]
+- add `ShiftInvert`, new general composite eigen solver
+- add option `use_adapted_mesh` to `generate_ci_problem(pb::PeriodicOrbitOCollProblem`
+- add option `optimal_period` to `generate_ci_problem(shooting::ShootingProblem`
+- 🚦🚦🚦 change jacobian parameter in PeriodicOrbitTrapProblem from Symbol to custom type. See `?PeriodicOrbitTrapProblem` for more information
+- correct bug in `Natural` which improves `AutoSwitch`
+- remove (some) closures from codim1 continuation
+- add structures/normal form for CuspPO, R1, R2, etc
+
+## [0.4.16]
+- make `WrapPOColl` a `AbstractWrapperFDProblem`
+- 🚦🚦🚦 change `jacobian_ma` argument from Symbol to type. See docs for codim 2 continuation. For example, `continuation(br ,1; jacobian_ma = :minaug)` becomes  `continuation(br ,1; jacobian_ma = MinAug())`
+- 🚦🚦🚦 add `update!` function to `BifurcationProblem`. This allows to adapt the problem during continuation
+
+## [0.4.15]
+- solve compile time issue for continuation of Fold of periodic orbits
+- move test functions out of continuation function for `MinAug`
+- emove the saving of AD generated BifFunction. Rely on dispatch instead.
+
 ## [0.4.4]
 - change type parameters in AbstractCodim2EigenSolver
 - add Krylov.jl as possible linear solver

@@ -1,6 +1,6 @@
 # using Revise, Plots
 using Test
-using BifurcationKit, ForwardDiff, LinearAlgebra
+using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 # ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
@@ -13,23 +13,23 @@ N = 3
 const _al = I + 10. .* rand(N, N)
 # prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> I(N))
 prob_ana = BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
-prob_col = PeriodicOrbitOCollProblem(Ntst, m; 
+coll = PeriodicOrbitOCollProblem(Ntst, m; 
                                     prob_vf = prob_ana, 
-                                    N = N, 
+                                    N,
                                     ϕ = rand(N*( 1 + m * Ntst)), 
                                     xπ = rand(N*( 1 + m * Ntst)))
-_ci = generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
+_ci = generate_solution(coll, t->cos(t) .* ones(N), 2pi);
 #####################################################
-Jcofd = ForwardDiff.jacobian(z->BK.residual(prob_col,z, par_sl), _ci);
-Jco = BK.analytical_jacobian(prob_col, _ci, par_sl);
+Jco = BK.analytical_jacobian(coll, _ci, par_sl);
+@test size(Jco, 1) == length(coll) + 1
 
 _rhs = rand(size(Jco, 1))
 sol_bs = Jco \ _rhs;
 
 Jco_tmp = zero(Jco)
 Jext_tmp= zeros(Ntst*N+N+1, Ntst*N+N+1)
-cop_cache = BK.COPCACHE(prob_col)
-sol_cop = BK.solve_cop(prob_col, Jco, _rhs, cop_cache; _USELU = Val(true));
+cop_cache = BK.COPCACHE(coll)
+sol_cop = BK.solve_cop(coll, copy(Jco), copy(_rhs), cop_cache; _USELU = Val(true));
 @test sol_bs ≈ sol_cop
 
 # test case of a bordered system to test PALC like linear problem
