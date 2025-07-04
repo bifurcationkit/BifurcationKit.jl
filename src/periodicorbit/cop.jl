@@ -45,8 +45,10 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     "solution of external problem."
     sol_ext::Vector{𝒯}
 
-    function COPCACHE(coll::PeriodicOrbitOCollProblem, ::Val{dim0} = Val(0); 𝒯 = eltype(coll)) where {dim0}
-        @assert dim0 isa Int64 #ensure type stability
+    function COPCACHE(coll::PeriodicOrbitOCollProblem, 
+                        ::Val{dim0} = Val(0); 
+                        𝒯 = eltype(coll)) where {dim0}
+        @assert dim0 isa Int64
         dim::Int = dim0
         N, m, Ntst = size(coll)
         n = N
@@ -478,11 +480,14 @@ end
 
         # rhs_tmp = rhs[rsol] - left_part * sol_ext[rN] - right_part * sol_ext[rN .+ N] - ΔT * Jcond[r1, end]
         if δn == 0
-            rhs_tmp .= @. rhs[rsol] -  ΔT * Jcond[r1, end] 
+            rhs_tmp .= @. rhs[rsol] - ΔT * Jcond[r1, end] 
         elseif δn == 1
-            rhs_tmp .= @. rhs[rsol] -  ΔT * Jcond[r1, end-1] - Δp * Jcond[r1, end] 
+            rhs_tmp .= @. rhs[rsol] - ΔT * Jcond[r1, end-1] - Δp * Jcond[r1, end] 
         elseif δn == 2
-            rhs_tmp .= @. rhs[rsol] -  Δp * Jcond[r1, end] - sol_ext[end-1] * Jcond[r1, end-1] - sol_ext[end-2] * Jcond[r1, end-2]
+            rhs_tmp .= @. rhs[rsol] - 
+                          sol_ext[end] * Jcond[r1, end] - 
+                        sol_ext[end-1] * Jcond[r1, end-1] - 
+                        sol_ext[end-2] * Jcond[r1, end-2]
         else
             throw("This version of the current function is not yet implemented. δn = $δn")
         end
