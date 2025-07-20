@@ -615,7 +615,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 @views function analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector{𝒯},
-                                    pars; 
+                                    pars;
                                     _transpose::Val{TransposeBool} = Val(false),
                                     ρD = one(𝒯),
                                     ρF = one(𝒯),

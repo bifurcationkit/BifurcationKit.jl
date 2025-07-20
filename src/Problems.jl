@@ -31,8 +31,8 @@ isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
 save_solution_default(x, p) = x
 update_default(args...; kwargs...) = true
 
-const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
+const _type_jet  = [ Symbol("T", i, j)        for i=0:7, j=0:3 if i+j != 0 && i+j<=7] |> vec
+const _field_jet = [(Symbol('R', i, j), i, j) for i=0:7, j=0:3 if i+j != 0 && i+j<=7] |> vec 
 
 @eval begin
     """
