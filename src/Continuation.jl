@@ -650,7 +650,7 @@ function continuation(prob::AbstractBifurcationProblem,
 
         resfwd = continuation(itfwd)
         resbwd = continuation(itbwd)
-        contresult = _merge(resfwd, resbwd)
+        contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?
 
         # we have to update the branch if saved on a file
         itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)

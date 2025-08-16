@@ -82,7 +82,7 @@ function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
  
-    # # we solve Nᵗ[w, σ2] = [0, 1]
+    # we solve Nᵗ[w, σ2] = [0, 1]
     w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
     return (; v, itv, w, itw)
@@ -110,7 +110,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
                 residual(POWrap, x, set(par, lens, p - ϵₚ)))
     rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
     dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
-             apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
+                  apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
     rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
     σₚ = -dot(w, dJvdp)
 

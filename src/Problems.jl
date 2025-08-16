@@ -81,6 +81,7 @@ $(TYPEDFIELDS)
 
 ## Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
+- `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o,x,p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
 - `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x,p,dx)`
 - `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other jet functions.
