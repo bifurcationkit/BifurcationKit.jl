@@ -21,19 +21,7 @@ COPCACHE(coll::PeriodicOrbitOCollProblem, Val(0))
 [1] Govaerts, Willy, Yuri A. Kuznetsov, and Annick Dhooge. “Auto94p.” SIAM Journal on Scientific Computing 27, no. 1 (January 1, 2005): 231–52. https://doi.org/10.1137/030600746.
 
 """
-struct COPCACHE{dim, 𝒯, TL, TU, Tp}
-    "cache of size (N x m + 1 + dim, N x m)"
-    blockⱼ::Matrix{𝒯}
-    "cache of size (N x m + 1 + dim, N)"
-    blockₙ::Matrix{𝒯}
-    "cache of size (N x m + 1 + dim, N)"
-    blockₙ₂::Matrix{𝒯}
-    "Lower triangular matrix of size N x m"
-    Lₜ::TL
-    "Upper triangular matrix of size N x m"
-    Uₜ::TU
-    last_row_𝐅𝐬⁻¹_analytical::Matrix{𝒯}
-    last_row_𝐅𝐬::Matrix{𝒯}
+struct COPCACHE{dim, 𝒯, Tp}
     "cache to hold the factorized form of the matrix collocation matrix J"
     Jcoll::Matrix{𝒯}
     "cache to hold the linear system for the external variables"
@@ -57,34 +45,19 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
         nbcoll = n * m
         Npo = length(coll) + 1
 
-        blockⱼ  = zeros(𝒯, nbcoll + 1 + dim, nbcoll)
-        blockₙ  = zeros(𝒯, nbcoll, n)
-        blockₙ₂ = zeros(𝒯, nbcoll, n)
-
-        Lₜ = LowerTriangular(zeros(𝒯, nbcoll, nbcoll))
-        Uₜ = UpperTriangular(zeros(𝒯, nbcoll, nbcoll))
-
         Jcoll_tmp = zeros(𝒯, Npo + dim, Npo + dim)
         Jext_tmp  = zeros(𝒯, Ntst * N  + N + 1 + dim, Ntst * N  + N + 1 + dim)
 
         nⱼ = size(Jcoll_tmp, 1)
-        last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, dim + 1, nⱼ) # last row of 𝐅𝐬⁻¹
-        last_row_𝐅𝐬 = zeros(𝒯, dim + 1, nⱼ)              # last row of 𝐅𝐬
 
-        new{dim, 𝒯, typeof(Lₜ), typeof(Uₜ), typeof(coll)}(blockⱼ,
-                                                    blockₙ,
-                                                    blockₙ₂,
-                                                    Lₜ,
-                                                    Uₜ,
-                                                    last_row_𝐅𝐬⁻¹_analytical,
-                                                    last_row_𝐅𝐬,
-                                                    Jcoll_tmp,
-                                                    Jext_tmp,
-                                                    coll,
-                                                    zeros(𝒯, size(Jext_tmp, 1)),
-                                                    zeros(𝒯, size(Jext_tmp, 1)),
-                                                    zeros(𝒯, N * m)
-                                                    )
+        new{dim, 𝒯, typeof(coll)}(
+                                    Jcoll_tmp,
+                                    Jext_tmp,
+                                    coll,
+                                    zeros(𝒯, size(Jext_tmp, 1)),
+                                    zeros(𝒯, size(Jext_tmp, 1)),
+                                    zeros(𝒯, N * m)
+                                    )
     end
 end
 _getdim(::COPCACHE{dim}) where {dim} = dim
@@ -107,8 +80,8 @@ $TYPEDFIELDS
 
 See `solve_cop`.
 """
-struct COPLS{dim, 𝒯, TL, TU, Tp} <: AbstractDirectLinearSolver
-    cache::COPCACHE{dim, 𝒯, TL, TU, Tp}
+struct COPLS{dim, 𝒯, Tp} <: AbstractDirectLinearSolver
+    cache::COPCACHE{dim, 𝒯, Tp}
 end
 
 """
@@ -129,19 +102,19 @@ $TYPEDFIELDS
 
 See `solve_cop`.
 """
-struct COPBLS{dim, 𝒯, TL, TU, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
+struct COPBLS{dim, 𝒯, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
     "Cache for the COP method. It is a subtype of COPCACHE."
-    cache::COPCACHE{dim, 𝒯, TL, TU, Tp}
+    cache::COPCACHE{dim, 𝒯, Tp}
     "Linear solver. Defaults to `nothing`."
     solver::Ts
     "Cache for the bordered jacobian matrix."
     J::Tj
 
     function COPBLS(coll = PeriodicOrbitOCollProblem(2, 2; N = 0);
-                    cache::COPCACHE{dim, 𝒯, TL, TU, Tp} = COPCACHE(coll, Val(1)), 
+                    cache::COPCACHE{dim, 𝒯, Tp} = COPCACHE(coll, Val(1)), 
                     solver::Ts = nothing, 
-                    J::Tj = nothing) where {dim, 𝒯, TL, TU, Tp, Ts, Tj}
-        new{dim, 𝒯, TL, TU, Tp, Ts, Tj}(cache, solver, J)
+                    J::Tj = nothing) where {dim, 𝒯, Tp, Ts, Tj}
+        new{dim, 𝒯, Tp, Ts, Tj}(cache, solver, J)
     end
 end
 @inline _getdim(cop::COPBLS{dim}) where {dim} = _getdim(cop.cache)
@@ -149,29 +122,6 @@ end
 COPLS(coll::PeriodicOrbitOCollProblem) = COPLS(COPCACHE(coll, Val(0)))
 COPBLS(coll::PeriodicOrbitOCollProblem) = COPBLS(; cache = COPCACHE(coll, Val(1)))
 COPLS() = COPLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
-
-# inplace version of LinearAlgebra.ipiv2perm
-function _ipiv2perm!(p, v, maxi::Integer)
-    LinearAlgebra.require_one_based_indexing(v)
-    p .= 1:maxi
-    @inbounds for i in 1:length(v)
-        p[i], p[v[i]] = p[v[i]], p[i]
-    end
-    return p
-end
-
-function _invperm!(b, a::AbstractVector)
-    LinearAlgebra.require_one_based_indexing(a)
-    b .= 0 # similar vector of zeros
-    n = length(a)
-    @inbounds for (i, j) in enumerate(a)
-        ((1 <= j <= n) && b[j] == 0) ||
-            throw(ArgumentError("argument is not a permutation"))
-        b[j] = i
-    end
-    b
-end
-
 
 """
 $(SIGNATURES)
@@ -217,10 +167,6 @@ Solve the linear system associated with the collocation problem for computing pe
         Jtmp = zeros(𝒯, nbcoll + δn + 1, nbcoll)
         Fₚ = lu(P); Jcop = Fₚ \ J; rhs = Fₚ \ rhs0
     end
-
-    # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
-    # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
-    (; last_row_𝐅𝐬⁻¹_analytical) = cop_cache
 
     # we build the linear system for the external variables in Jext and rhs_ext
     rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, In, Ntst, nbcoll, Npo, δn, N, m)
