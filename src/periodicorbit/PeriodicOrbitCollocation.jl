@@ -1007,7 +1007,9 @@ function generate_jacobian(coll::PeriodicOrbitOCollProblem,
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
     elseif jacobianPO isa DenseAnalyticalInplace
-        floquet_wrap = FloquetWrapper(coll, analytical_jacobian(coll, orbitguess, par), orbitguess, par)
+        # we reduce allocations to the minimum here
+        _Jcoll_matrix = isnothing(Jcoll_matrix) ? analytical_jacobian(coll, orbitguess, par) : Jcoll_matrix
+        floquet_wrap = FloquetWrapper(coll, _Jcoll_matrix, orbitguess, par)
         function jac(x, p)
             analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
             floquet_wrap.x .= x
@@ -1048,25 +1050,35 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     record_from_solution = nothing,
                     plot_solution = nothing,
                     kwargs...)
-    jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
+    options = _contParams.newton_options
+
     if linear_algo isa COPBLS
+        Nbls = length(coll) + 2 #+1 for phase condition and +1 for PALC
         _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
-        linear_algo = COPBLS(coll)
-        Nbls = length(coll) + 2
-        floquet_wrap = jacPO(orbitguess, getparams(coll))
+        cache = COPCACHE(coll, Val(1))
         linear_algo = COPBLS(
-                        cache = linear_algo.cache,
-                        solver = FloquetWrapperLS(linear_algo.solver),
-                        J = similar(_Jcoll, Nbls, Nbls), 
+                        cache = cache,
+                        solver = FloquetWrapperLS(nothing),
+                        J = similar(_Jcoll, Nbls, Nbls)
                         )
+        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); 
+                        δ,
+                        Jcoll_matrix = @view linear_algo.J[1:end-1, 1:end-1]
+                        )
+
         linear_algo.J .= 0
+        lspo = COPLS(COPCACHE(coll, Val(0)))
+        @reset options.linsolver = lspo
+        if eigsolver isa FloquetColl
+            @reset eigsolver.cache = COPCACHE(coll, Val(0))
+        end
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
+        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
     end
-    options = _contParams.newton_options
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+    # we have to change the Bordered linear solver to cope with our type FloquetWrapper
     alg = update(alg, contParams, linear_algo)
 
     if compute_eigenelements(contParams)
@@ -1094,7 +1106,7 @@ end
 # this function updates the section during the continuation run
 @views function updatesection!(coll::PeriodicOrbitOCollProblem, 
                                 x::AbstractVector, 
-                                par)
+                                par) # (2 allocations: 96 bytes)
     @debug "[collocation] update section"
     # update the reference point
     coll.xπ .= 0
@@ -1106,8 +1118,8 @@ end
     ϕ = coll.ϕ
     L, ∂L = get_Ls(coll.mesh_cache)
     n, m, Ntst = size(coll)
-    ϕc = get_time_slices(coll.ϕ, size(coll)...)
-    pϕ = get_tmp(coll.cache.∂gj, ϕc) #zeros(𝒯, n, m)
+    ϕc = get_time_slices(coll.ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
+    pϕ = get_tmp(coll.cache.∂gj, ϕc) # zeros(𝒯, n, m)
     rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
     @inbounds for j in 1:Ntst
         mul!(pϕ, ϕc[:, rg], ∂L)

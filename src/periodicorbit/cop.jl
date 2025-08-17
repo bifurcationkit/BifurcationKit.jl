@@ -44,6 +44,8 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
     rhs_ext::Vector{𝒯}
     "solution of external problem."
     sol_ext::Vector{𝒯}
+    "alpha values, buffer used in COP."
+    α_values::Vector{𝒯}
 
     function COPCACHE(coll::PeriodicOrbitOCollProblem, 
                         ::Val{dim0} = Val(0); 
@@ -81,6 +83,7 @@ struct COPCACHE{dim, 𝒯, TL, TU, Tp}
                                                     coll,
                                                     zeros(𝒯, size(Jext_tmp, 1)),
                                                     zeros(𝒯, size(Jext_tmp, 1)),
+                                                    zeros(𝒯, N * m)
                                                     )
     end
 end
@@ -206,7 +209,7 @@ Solve the linear system associated with the collocation problem for computing pe
     𝒯 = eltype(coll)
     In = coll.cache.In
 
-    rhs = condensation_of_parameters!(cop_cache, coll, J, In, rhs0)
+    rhs = condensation_of_parameters2!(cop_cache, coll, J, In, rhs0)
     Jcop = cop_cache.Jcoll
 
     if debug === true
@@ -217,29 +220,7 @@ Solve the linear system associated with the collocation problem for computing pe
 
     # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
     # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
-    (;last_row_𝐅𝐬⁻¹_analytical) = cop_cache
-
-    if dim === 0 
-        d = dot(last_row_𝐅𝐬⁻¹_analytical, 
-                J[eachindex(last_row_𝐅𝐬⁻¹_analytical), end]) +
-                J[end, end]
-        rhs[end] = dot(last_row_𝐅𝐬⁻¹_analytical, 
-                rhs0[eachindex(last_row_𝐅𝐬⁻¹_analytical)]) +
-                rhs0[end]
-        Jcop[end-δn:end, end-δn:end] .= d
-    else
-        # d = last_row_𝐅𝐬⁻¹_analytical * 
-        #     J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end] .+ 
-        #     J[end-δn:end, end-δn:end]
-        # Jcop[end-δn:end, end-δn:end] .= d
-
-        Jcop[end-δn:end, end-δn:end] .= J[end-δn:end, end-δn:end]
-        mul!(Jcop[end-δn:end, end-δn:end], last_row_𝐅𝐬⁻¹_analytical, J[axes(last_row_𝐅𝐬⁻¹_analytical, 2), end-δn:end], true, true)
-        
-        rhs[end-δn:end] .= last_row_𝐅𝐬⁻¹_analytical *
-            rhs0[axes(last_row_𝐅𝐬⁻¹_analytical, 2)] .+
-            rhs0[end-δn:end]
-    end
+    (; last_row_𝐅𝐬⁻¹_analytical) = cop_cache
 
     # we build the linear system for the external variables in Jext and rhs_ext
     rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, In, Ntst, nbcoll, Npo, δn, N, m)
@@ -256,154 +237,141 @@ Solve the linear system associated with the collocation problem for computing pe
     return _solve_for_internal_variables(coll, Jcop, rhs, sol_ext, Val(dim))
 end
 
-@views function condensation_of_parameters!(cop_cache::COPCACHE{dim}, 
-                                            coll::PeriodicOrbitOCollProblem, 
-                                            J, 
-                                            In, 
-                                            rhs0::Vector) where {dim}
+"""
+$(SIGNATURES)
+
+Copy the matrix J into 𝑱.
+"""
+@views function _copy_to_coll!(coll, 𝑱, J, ::Val{dim}) where {dim}
+    nj = size(J, 1)
+    if dim === 0
+        𝑱[1:nj, 1:nj] .= J
+        return
+    end
     N, m, Ntst = size(coll)
-    n = N
     nbcoll = N * m
-    Npo = length(coll) + 1
-    nⱼ = size(J, 1)
-    is_bordered = nⱼ == Npo
-    δn =  nⱼ - Npo # this allows to compute the border side
-    # δn = 0 for newton
-    # δn = 1 for palc
-    @assert δn >= 0
-    @assert δn == dim "We found instead: δn = $δn == dim = $dim"
-
-    𝒯 = eltype(coll)
-
-    # cache to hold the factorized form of the matrix J
-    Jcop = cop_cache.Jcoll
-    # cache to hold the linear operator for the external variables
-    Jext = cop_cache.Jext
-    @assert size(Jext, 1) == size(Jext, 2) == Ntst*n+n+1+δn "Error with matrix of external variables. Please report this issue on the website of BifurcationKit. δn = $δn"
-
-    Jcop[end, :] .= 0
-    Jcop[:, end] .= 0
-    Jcop[end, end] = J[end, end]
+    In = coll.cache.In
+    rgᵢ = 1:(nbcoll+N)
+    @inbounds for iₜ = 1:Ntst
+        𝑱[rgᵢ, rgᵢ] .= J[rgᵢ, rgᵢ]
+        rgᵢ = rgᵢ .+ nbcoll 
+    end
+    𝑱[:, end-dim:end] .= J[:, end-dim:end]
+    𝑱[end-dim:end, :] .= J[end-dim:end, :]
 
     # put periodic boundary condition
-    Jcop[end-N-δn:end-1-δn, end-N-δn:end-1-δn] .= In
-    Jcop[end-N-δn:end-1-δn, 1:N] .= (-1) .* In
+    𝑱[end-N-dim:end-1-dim, end-N-dim:end-1-dim] .= In
+    𝑱[end-N-dim:end-1-dim, 1:N] .= (-1) .* In
+    return
+end
 
-    rg = 1:nbcoll
-    rN = 1:N
-
-    # the goal of the condensation of the parameters method is to remove the internal variables
-    # by using gaussian elimination in each collocation block while removing the internal constraints
-    # as well. 
-
-    # recall that if F = lu(J) then
-    # F.L * F.U = F.P * J
-    # hence 𝐅𝐬⁻¹ = (P⁻¹ * L)⁻¹ = L⁻¹ * P
-    # Now 𝐅𝐬 is with shape
-    # ┌     ┐
-    # │ A 0 │
-    # │ c 1 │
-    # └     ┘
-    # This makes it easy to identify 𝐅𝐬⁻¹ which is also lower triangular by blocks. In particular c⁻¹ = c * A⁻¹, (computed with c' \ A)
-    # Writing Jpo as
-    # ┌       ┐
-    # │ J  bⱼ │
-    # │ cⱼ dⱼ │
-    # └       ┘
-    # we can identify 𝐅𝐬⁻¹⋅Jpo and the last row of this product, namely
-    # c * A⁻¹ * J + cⱼ
-    # last_row_𝐅𝐬⁻¹_analytical = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬⁻¹
-    # last_row_𝐅𝐬 = zeros(𝒯, δn + 1, nⱼ) # last row of 𝐅𝐬
-
-    (; blockⱼ,
-        blockₙ,
-        blockₙ₂,
-        Lₜ,
-        Uₜ,
-        last_row_𝐅𝐬⁻¹_analytical,
-        last_row_𝐅𝐬) = cop_cache
-    
-    rhs = zero(rhs0)
-    p = zeros(Int, nbcoll + 1 + δn)
-    pinv = zeros(Int, nbcoll + 1 + δn)
-
-    d = zero(𝒯)
-    for k in 1:Ntst
-        blockⱼ[1:nbcoll, :] .= J[rg, rg .+ n]
-        blockⱼ[nbcoll+1:(nbcoll + 1 + δn), :] .= J[Npo:(Npo+δn), rg .+ n]
-
-        # the pivoting strategy is to ensure that the constraints 
-        # get not mixed up with the collocation blocks
-        F = lu!(blockⱼ, RowNonZero())
-        @assert issuccess(F) "Failed LU factorization! Please report to the website of BifurcationKit."
-
-        # get p .= F.p and pinv = invperm(p)
-        _ipiv2perm!(p, F.ipiv, size(F, 1))
-        _invperm!(pinv, p)
-
-        @assert p[nbcoll+1] == nbcoll+1 "Pivoting strategy failed!! Please report to the website of BifurcationKit. You may try the default linear solver `defaultLS` as a backup."
-        if dim > 0
-            @assert p[nbcoll+2] == nbcoll+2 "Pivoting strategy failed!! Please report to the website of BifurcationKit. You may try the default linear solver `defaultLS` as a backup."
-        end
-
-        # Lₜ = LowerTriangular(F.L) # zero allocation?
-        Lₜ.data .= blockⱼ[1:nbcoll, :]
-        Uₜ.data .= Lₜ.data
-        for i in axes(Lₜ, 1); Lₜ[i, i] = one(𝒯); end
-
-        # we put the blocks in Jcop
-        Jcop[rg, rg .+ N] .= Uₜ #UpperTriangular(F.factors[1:nbcoll, 1:nbcoll])
-
-        # Jcop[rg, rN] .= P[rg, rg] \ J[rg, rN]
-        # we have: P[rg, rg] = F.L[pinv[1:end-1-δn],:]
-        # when δn = 0, we have blockₙ[1:nbcoll, 1:N] .= J[rg, rN][p_free,:]
-        blockₙ[1:nbcoll, 1:N] .= J[rg[p[1:nbcoll]], rN]
-        ldiv!(blockₙ₂, Lₜ, blockₙ)
-        copyto!(Jcop[rg, rN], blockₙ₂)
-
-        # last_row_𝐅𝐬[:, rg] .= F.L[pinv[end-δn:end], :] #!!! Allocates a lot !!!
-        copyto!(last_row_𝐅𝐬[end, rg], F.factors[pinv[end], :])
-        if dim == 1
-            last_row_𝐅𝐬[end-1, rg] .= F.factors[pinv[end-δn], :]
-        else
-            # TODO!! We must improve this !! All allocations happens here
-            last_row_𝐅𝐬[:, rg] .= F.L[pinv[end-δn:end], :]
-            # last_row_𝐅𝐬[:, rg] .= F.factors[pinv[end-δn:end], :]
-        end
-
-        # condense RHS
-        ldiv!(rhs[rg], Lₜ, rhs0[rg[p[1:nbcoll]]])
-
-        # Jcop[end-δn:end, rg] .= -(last_row_𝐅𝐬[end-δn:end, rg] * Jcop[rg, rg]) .+ J[end-δn:end, rg]
-        Jcop[end-δn:end, rg] .= J[end-δn:end, rg]
-        mul!(Jcop[end-δn:end, rg], 
-            last_row_𝐅𝐬[end-δn:end, rg], 
-            Jcop[rg, rg], -1, 1)
-
-        # ldiv!(Jcop[rg, end-δn:end] , Lₜ, F.P[1:end-1-δn,1:end-1-δn] * J[rg, end-δn:end])
-        ldiv!(Jcop[rg, end-δn:end], 
-                Lₜ, 
-                J[rg[p[1:end-1-δn]], end-δn:end])
-
-        ###
-        # last_row_𝐅𝐬⁻¹_analytical[:, rg] .= -F.L[pinv[end-δn:end], :] / ( F.P'*F.L)[1:end-1-δn, :]
-        LinearAlgebra._rdiv!(last_row_𝐅𝐬⁻¹_analytical[:, rg], 
-                                last_row_𝐅𝐬[:, rg], 
-                                Lₜ)
-        last_row_𝐅𝐬⁻¹_analytical[:, rg] .*= -1
-        ###
-
-        if k>=2
-            # correction = P[Npo, rg .- nbcoll]' * Jcop[rg .- nbcoll, rN]
-            mul!(Jcop[end-δn:end, rN], 
-                last_row_𝐅𝐬[:, rg .- nbcoll], 
-                Jcop[rg .- nbcoll, rN], -1, 1)
-        end
-
-        rg = rg .+ nbcoll
-        rN = rN .+ nbcoll
+function condensation_of_parameters2!(cop_cache::COPCACHE{dim}, 
+                                coll::PeriodicOrbitOCollProblem, 
+                                J, 
+                                In, # identify
+                                rhs0) where {dim}
+    rhs = rhs0
+    𝑱 = cop_cache.Jcoll
+    α_values = cop_cache.α_values
+    n𝑱 = size(𝑱, 1)
+    nj = size(J, 1)
+    # for newton (dim == 0), we copy the matrix with a fast method TODO REMOVE. Otherwise (dim>0), the cache already contains the matrix J
+    if true#dim === 0
+        _copy_to_coll!(coll, 𝑱, J, Val(dim))
     end
-    rhs[end-N-δn:end-1, :] .= rhs0[end-N-δn:end-1, :]
+
+    N, m, Ntst = size(coll)
+    nbcoll = N * m
+    Npo = length(coll) + 1
+
+    δn =  n𝑱 - Npo
+
+    rgₖ = 1:nbcoll
+    rgᵢ = 1:(nbcoll + N)
+    for iₜ = 1:Ntst
+        @inbounds for k = rgₖ
+            colₖ = k + N
+            rglast = Iterators.flatten((rgᵢ, Npo:Npo+dim))
+            ##########
+            # pivoting step
+            Jmax = abs(𝑱[k, colₖ])
+            iₚ = k
+            @inbounds for l = k+1:last(rgₖ)
+                absl = abs(𝑱[l, colₖ])
+                if absl > Jmax
+                    iₚ = l
+                    Jmax = absl
+                end
+            end
+
+            # Swap rows k and p if needed
+            if iₚ != k && true
+                @inbounds for jj in rglast
+                    𝑱[k, jj], 𝑱[iₚ, jj] = 𝑱[iₚ, jj], 𝑱[k, jj]
+                end
+                rhs[k], rhs[iₚ] = rhs[iₚ], rhs[k]
+            end
+            ##########
+
+            𝑱ₖ = 𝑱[k, colₖ]
+            inv𝑱 = inv(𝑱ₖ)
+
+            # scale column
+            @inbounds for i = k:last(rgₖ)
+                𝑱[i, colₖ] *= inv𝑱
+            end
+            @inbounds 𝑱[end, colₖ] *= inv𝑱
+            if dim >= 1
+                @inbounds 𝑱[end-1, colₖ] *= inv𝑱
+            end
+            if dim >= 2
+                @inbounds 𝑱[end-2, colₖ] *= inv𝑱
+            end
+
+            # last column
+            @inbounds α = 𝑱[end, colₖ]
+            @inbounds β = 𝑱[end-1, colₖ]
+            @inbounds γ = 𝑱[end-2, colₖ]
+
+            @inbounds for j in rglast
+                    𝑱[end,   j] -= α * 𝑱[k, j] # EVERYTHING IS HERE 6%
+                if dim >= 1
+                    𝑱[end-1, j] -= β * 𝑱[k, j]
+                end
+                if dim >= 2
+                    𝑱[end-2, j] -= γ * 𝑱[k, j]
+                end
+            end
+
+            rhsk = rhs[k]
+            rhs[end] -= α * rhsk
+            if dim >= 1
+                rhs[end-1] -= β * rhsk
+            end
+            if dim >= 2
+                rhs[end-2] -= γ * rhsk
+            end
+
+            # precompute α for all i
+            @inbounds for i=k+1:last(rgₖ)
+                α_values[i - k] = 𝑱[i, colₖ]
+                rhs[i] -= α_values[i - k] * rhsk
+            end
+
+            # Loop over j first, then i
+            for j = Iterators.flatten((rgᵢ, Npo:Npo+dim))
+                @inbounds 𝑱kj = 𝑱[k, j]
+                for i = k+1:last(rgₖ)
+                    @inbounds 𝑱[i, j] -= α_values[i - k] * 𝑱kj  # EVERYTHING IS HERE 10%
+                end
+            end
+            𝑱[k, colₖ] = 𝑱ₖ
+        end
+        
+        rgₖ = rgₖ  .+ nbcoll
+        rgᵢ = rgᵢ .+ nbcoll
+    end
+
     return rhs
 end
 
@@ -585,7 +553,6 @@ end
     ΔT = sol_ext_gauss[end-δn]
     Δp = sol_ext_gauss[end]
 
-    sol_ext = zero(rhs_ext)
     sol_ext[1:n] .= x₀
     sol_ext[end-δn-n:end] .= sol_ext_gauss[end-δn-n:end]
 
