@@ -190,10 +190,6 @@ Copy the matrix J into 𝑱.
 """
 @views function _copy_to_coll!(coll, 𝑱, J, ::Val{dim}) where {dim}
     nj = size(J, 1)
-    if dim === 0
-        𝑱[1:nj, 1:nj] .= J
-        return
-    end
     N, m, Ntst = size(coll)
     nbcoll = N * m
     In = coll.cache.In
@@ -202,8 +198,11 @@ Copy the matrix J into 𝑱.
         𝑱[rgᵢ, rgᵢ] .= J[rgᵢ, rgᵢ]
         rgᵢ = rgᵢ .+ nbcoll 
     end
-    𝑱[:, end-dim:end] .= J[:, end-dim:end]
-    𝑱[end-dim:end, :] .= J[end-dim:end, :]
+
+    if dim >= 0
+        𝑱[:, end-dim:end] .= J[:, end-dim:end]
+        𝑱[end-dim:end, :] .= J[end-dim:end, :]
+    end
 
     # put periodic boundary condition
     𝑱[end-N-dim:end-1-dim, end-N-dim:end-1-dim] .= In

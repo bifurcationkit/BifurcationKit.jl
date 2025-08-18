@@ -173,7 +173,7 @@ _ci = generate_solution(coll, t->cos(t) .* ones(N), 2pi);
 #####################################################
 Jco = BK.analytical_jacobian(coll, _ci, par_sl);
 @test size(Jco, 1) == length(coll) + 1
-
+#####################################################
 _rhs = rand(size(Jco, 1))
 sol_bs = Jco \ _rhs;
 
@@ -186,6 +186,10 @@ cop_cache = BK.COPCACHE(coll)
 @test BK._getdim(cop_cache) == 0
 sol_cop = BK.solve_cop(coll, copy(Jco), copy(_rhs), cop_cache; _USELU = Val(false));
 @test sol_bs ≈ sol_cop
+# test _copy_to_coll!
+cop_cache.Jcoll .= 0
+BK._copy_to_coll!(coll, cop_cache.Jcoll, Jco, Val(0)) # 10.833 μs (1 allocation: 448 bytes)
+@test cop_cache.Jcoll ≈ Jco
 
 # test case of a bordered system to test PALC like linear problem
 _t1 = rand(size(Jco, 1)); _t2 = rand(size(Jco, 1)+1)'; _t1[end-N:end-1] .= 0
@@ -197,6 +201,10 @@ cop_cache = BK.COPCACHE(coll, Val(1))
 cop_cache.Jcoll .= Jco_bd # the cache is updated inplace in normal use
 sol_cop_bd = BK.solve_cop(coll, copy(Jco_bd), copy(_rhs_bd), cop_cache; _USELU = Val(false));
 @test sol_bs_bd ≈ sol_cop_bd
+# test _copy_to_coll!
+cop_cache.Jcoll .= 0
+BK._copy_to_coll!(coll, cop_cache.Jcoll, Jco_bd, Val(1)) # 11.334 μs (1 allocation: 448 bytes)
+@test cop_cache.Jcoll ≈ Jco_bd
 
 # test case of a bordered system with dim = 2
 dim = 2
@@ -209,3 +217,7 @@ cop_cache = BK.COPCACHE(coll, Val(dim))
 cop_cache.Jcoll .= Jco_bd # the cache is updated inplace in normal use
 sol_cop_bd = BK.solve_cop(coll, copy(Jco_bd), copy(_rhs_bd), cop_cache; _USELU = Val(false));
 @test sol_bs_bd ≈ sol_cop_bd
+# test _copy_to_coll!
+cop_cache.Jcoll .= 0
+BK._copy_to_coll!(coll, cop_cache.Jcoll, Jco_bd, Val(2)) # 12.041 μs (1 allocation: 448 bytes)
+@test cop_cache.Jcoll ≈ Jco_bd

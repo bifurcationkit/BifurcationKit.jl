@@ -590,7 +590,6 @@ end
 
         # @error "" size(blockₙ₂) size(F.U) typeof(F.U)
 
-
         rg = rg .+ nbcoll
         rN = rN .+ nbcoll
     end
