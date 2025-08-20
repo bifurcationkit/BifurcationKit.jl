@@ -439,7 +439,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     verbose && print_nonlinear_step(step, res)
     line_step = true
 
-    compute = callback((;x, res_f, residual=res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    compute = callback((;x, res_f, residual = res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)

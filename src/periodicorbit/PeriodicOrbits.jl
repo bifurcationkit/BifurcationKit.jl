@@ -382,7 +382,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
+- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intended.
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.

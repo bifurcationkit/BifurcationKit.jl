@@ -657,7 +657,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 
             for l2 in 1:m+1
                 J[_rgX, rgNy .+ (l2-1)*n ] .= @. (-α * L[l2, l] * ρF) * J0 +
-                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
+                                                (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
             residual!(VF, J[_rgX, nJ], pj[:, l], pars)
@@ -756,7 +756,7 @@ end
 
             for l2 in 1:m+1
                 view(J, Block(l + (j-1)*m, l2 + (j-1)*m)) .= @. (-α * L[l2, l] * ρF) * J0 +
-                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
+                                                (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
             residual!(VF, view(J, Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
