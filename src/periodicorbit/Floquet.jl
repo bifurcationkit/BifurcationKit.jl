@@ -380,15 +380,15 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 end
 ####################################################################################################
 """
-    eigfloquet = BifurcationKit.FloquetGEV()
+ $(TYPEDEF)
 
-Computation of Floquet coefficients. The method is based on a formulation through a generalised eigenvalue problem (GEV) of large dimension. Relatively slow but quite precise. Use `FloquetColl()` instead when possible.
+Computation of Floquet exponents. The method is based on a formulation through a generalised eigenvalue problem (GEV) of large dimension. Relatively slow but quite precise. Use `FloquetColl()` instead when possible.
 
 This is a simplified version of [1].
 
-## Arguments
+## Fields
 - `eigls` an eigensolver
-- `ntot` total number of unknowns (without counting the period), ie `length(::PeriodicOrbitOCollProblem)`
+- `ntot` total number of unknowns (without counting the period), ie `length(::PeriodicOrbitOCollProblem)` for example.
 - `n` space dimension
 - `array_zeros` useful for sparse matrices
 
@@ -443,9 +443,12 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
 end
 
 """
-    eigfloquet = BifurcationKit.FloquetColl()
+$(TYPEDEF)
 
-Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3] in which we form the monodromy matrix with a product of `Ntst` matrices.
+Computation of Floquet exponents for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3] in which we form the monodromy matrix with a product of `Ntst` matrices.
+
+# Fields
+$(TYPEDFIELDS)
 
 ## References
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
