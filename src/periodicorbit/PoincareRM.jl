@@ -65,7 +65,7 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
     T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
-    tₘ = extract_period(x)    # estimate of the last bit for the return time
+    tₘ = _extract_period(x)    # estimate of the last bit for the return time
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
     poc = get_time_slices(sh, Π.po)
@@ -129,7 +129,7 @@ function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
     sh = Π.probpo.prob
     # we get the return time
     T⁰ = getperiod(sh, Π.po)
-    tₘ = extract_period(solΠ)
+    tₘ = _extract_period(solΠ)
     tᵣ = getperiod(sh, Π.po) + (tₘ - sh.ds[end]) * T⁰
     # we get the return point
     M = get_mesh_size(sh)
@@ -177,7 +177,7 @@ function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
     coll = Π.probpo.prob
     N,_,_ = size(coll)
     T⁰ = getperiod(coll, Π.po)
-    tₘ = extract_period(solΠ)
+    tₘ = _extract_period(solΠ)
     tᵣ = tₘ
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end

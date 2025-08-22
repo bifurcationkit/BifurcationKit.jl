@@ -86,7 +86,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
         include("stuartLandauSH.jl")
     end
 
-    @testset "Periodic orbits function SH4" begin
+    @testset "Periodic orbits function SH4 - and Collocation" begin
         # for testing period doubling aBS
         @info "Entry in testLure.jl"
         include("testLure.jl")

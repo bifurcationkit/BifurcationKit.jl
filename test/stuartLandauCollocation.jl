@@ -286,7 +286,7 @@ let
                     δp = 0.1,
                     use_normal_form = use_nf,
                     usedeflation = true,
-                    eigsolver = useGEV ? BK.FloquetCollGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
+                    eigsolver = useGEV ? BK.FloquetGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
                     )
                 issorted(br_po_gev.eig[1].eigenvals, by = real)
             end

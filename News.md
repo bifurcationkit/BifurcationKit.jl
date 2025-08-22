@@ -3,6 +3,9 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+- `FloquetCollGEV` is now called `FloquetGEV`
+- `extract_period` is now called `_extract_period`
+- the struct `COPCACHE` has been changed a lot.
 ## [0.5.0]
 - add `ShiftInvert`, new general composite eigen solver
 - add option `use_adapted_mesh` to `generate_ci_problem(pb::PeriodicOrbitOCollProblem`

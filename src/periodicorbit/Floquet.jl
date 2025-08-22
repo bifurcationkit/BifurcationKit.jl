@@ -380,8 +380,9 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 end
 ####################################################################################################
 """
+    eigfloquet = BifurcationKit.FloquetGEV()
 
-Computation of Floquet coefficients for the orthogonal collocation method. The method is based on a formulation through a generalised eigenvalue problem (GEV). Relatively slow but quite precise.
+Computation of Floquet coefficients. The method is based on a formulation through a generalised eigenvalue problem (GEV) of large dimension. Relatively slow but quite precise. Use `FloquetColl()` instead when possible.
 
 This is a simplified version of [1].
 
@@ -395,31 +396,31 @@ This is a simplified version of [1].
 
 You can create such solver like this (here `n = 2`):
 
-    eigfloquet = BifurcationKit.FloquetCollGEV(DefaultEig(), (30 * 4 + 1) * 2, 2))
+    eigfloquet = BifurcationKit.FloquetGEV(DefaultEig(), (30 * 4 + 1) * 2, 2))
 
 ## References
 [1] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
 """
-struct FloquetCollGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
+struct FloquetGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     eigsolver::E
     B::Tb
-    function FloquetCollGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
+    function FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
         eigls2 = check_floquet_options(eigls)
         # build the mass matrix
         B = array_zeros(ntot, ntot)
         B[end-n+1:end, end-n+1:end] .= I(n)
         return new{typeof(eigls2), typeof(B)}(eigls2, B)
     end
-    FloquetCollGEV(eigls::FloquetCollGEV) = eigls
+    FloquetGEV(eigls::FloquetGEV) = eigls
 end
 
-geteigenvector(fl::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(fl.eigsolver, vecs, n)
+geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(fl.eigsolver, vecs, n)
 
-@views function (fl::FloquetCollGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+@views function (fl::FloquetGEV)(JacColl::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: PeriodicOrbitOCollProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
     prob = JacColl.pb
     _J = _get_matrix(JacColl)
     n = get_state_dim(prob)
-    J = copy(_J[1:end-1, 1:end-1]) # we cannot mess-up with the linear solver
+    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)
     J[end-n+1:end, 1:n] .= I(n)
     # case of v(1)
@@ -433,7 +434,7 @@ geteigenvector(fl::FloquetCollGEV, vecs, n::Union{Int, AbstractVector{Int64}}) =
     μ = @. Complex(1 / (1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetCollGEV`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`"
     end
     Ind = sortperm(log.(μ); by = real, rev = true)
     nev2 = min(nev, length(Ind))
@@ -445,8 +446,6 @@ end
     eigfloquet = BifurcationKit.FloquetColl()
 
 Computation of Floquet coefficients for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3] in which we form the monodromy matrix with a product of `Ntst` matrices.
-
-This is much faster than `FloquetCollGEV` but less precise. The best version uses a Periodic Schur decomposition instead of the product of `Ntst` matrices. This is provided in the package `PeriodicSchurBifurcationKit.jl`.
 
 ## References
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.

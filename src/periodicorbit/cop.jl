@@ -250,7 +250,7 @@ function condensation_of_parameters2!(cop_cache::COPCACHE{dim},
             end
 
             # Swap rows k and p if needed
-            if iₚ != k && true
+            if iₚ != k
                 @inbounds for jj in rglast
                     𝑱[k, jj], 𝑱[iₚ, jj] = 𝑱[iₚ, jj], 𝑱[k, jj]
                 end

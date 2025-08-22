@@ -6,12 +6,12 @@ $(SIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = extract_period(x)
+@inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = _extract_period(x)
 @inline getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
 @inline getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
 
-@inline extract_period(x::AbstractVector) = x[end]
-@inline extract_period(x::BorderedArray)  = x.p
+@inline _extract_period(x::AbstractVector) = x[end]
+@inline _extract_period(x::BorderedArray)  = x.p
 
 # next method only used just in the file. Allows to set the parameters, like during aBS
 _set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
@@ -57,12 +57,17 @@ function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
 end
 
 """
+$(TYPEDEF)
+
 Structure to encode the solution associated to a functional like `::PeriodicOrbitOCollProblem` or `::ShootingProblem`. In the particular case of `::PeriodicOrbitOCollProblem`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
 
     sol = BifurcationKit.POSolution(prob_coll, x)
     sol(t)
 
 on any time `t`.
+
+## Fields
+$(TYPEDFIELDS)
 """
 struct POSolution{Tpb, Tx, Tp}
     pb::Tpb
@@ -340,11 +345,11 @@ end
 """
 $(SIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
+This is the continuation routine for computing a periodic orbit.
 
 # Arguments
 
-Similar to [`continuation`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
+Similar to [`continuation`](@ref) except that `prob::AbstractPeriodicOrbitProblem`.
 
 # Optional argument
 - `linear_algo::AbstractBorderedLinearSolver`
