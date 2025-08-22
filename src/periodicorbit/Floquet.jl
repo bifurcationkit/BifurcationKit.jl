@@ -458,25 +458,74 @@ $(TYPEDFIELDS)
 [3] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
 """
 struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
+    "Which eigen solver. Defaults to `DefaultEig`"
     eigsolver::E
+    "Cache, defaults to `nothing`"
     cache::C
-    function FloquetColl(eigls::AbstractEigenSolver = DefaultEig(), cache = nothing)
-        eigls2 = check_floquet_options(eigls)
-        return new{typeof(eigls2), typeof(cache)}(eigls2, cache)
-    end
-    FloquetColl(eigls::FloquetColl) = eigls
+    "Whether to use optimized COP to compute the Floquet exponents. Defaults to `true`."
+    small_n::Bool
 end
+
+function FloquetColl(;eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_n = true)
+    eigls2 = check_floquet_options(eigls)
+    return FloquetColl(eigls2, cache, small_n)
+end
+FloquetColl(eigls::FloquetColl) = eigls
 
 function (eig::FloquetColl)(JacColl::FloquetWrapper, nev; kwargs...)
     coll = JacColl.pb
     J = _get_matrix(JacColl)
     n, m, Ntst = size(coll)
-    _eig_floquet_col(J, n, m, Ntst, nev)
+    if eig.small_n && ~isnothing(eig.cache)
+        return _eig_floquet_coll_small_n(J, n, m, Ntst, nev, eig.cache)
+    else
+        return _eig_floquet_coll(J, n, m, Ntst, nev, eig.cache)
+    end
 end
 
-@views function _eig_floquet_col(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cache = nothing) where {𝒯}
+@views function _eig_floquet_coll_small_n(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cop_cache::COPCACHE{dim}) where {𝒯, dim}
+    coll = cop_cache.coll
     nbcoll = n * m
-    N = n
+    Npo = length(coll) + 1
+    nⱼ = size(J, 1)
+    δn =  nⱼ - Npo
+    rhs0 = zeros(size(J, 1))
+
+    Jext = cop_cache.Jext
+    rhs = condensation_of_parameters2!(cop_cache, coll, J, coll.cache.In, rhs0)
+    rhs_ext = build_external_system!(Jext, cop_cache.Jcoll, rhs, cop_cache.rhs_ext, coll.cache.In, Ntst, nbcoll, Npo, δn, n, m)
+    _gaussian_elimination_external_pivoted!(Jext, rhs_ext, n, Ntst, δn)
+    Jext_gauss = hcat(Jext[end-2n-δn:end, 1:n], Jext[end-2n-δn:end, end-n-δn:end])
+
+    # we follow Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
+    P1 = Jext_gauss[1:n, 1:n]
+    P0 = Jext_gauss[1:n, n+1:2n]
+
+    vals_b = eigvals(P0, -P1)
+    logvals = Complex{𝒯}[]
+
+    for ev in vals_b
+        if true#isfinite(ev)
+            push!(logvals, -log(Complex(ev)))
+        end
+    end
+
+    nev = min(n, nev, length(logvals))
+    I = sortperm(logvals, by = real, rev = true)[1:nev]
+
+    # floquet exponents
+    σ = logvals[I]
+    # give indications on the precision on the Floquet coefficients
+    vp0 = minimum(abs, σ)
+    if vp0 > 1e-9
+        @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
+    end
+
+    return σ, nothing, true, 1
+end
+
+@views function _eig_floquet_coll(J::AbstractMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where {𝒯}
+    nbcoll = N * m
     In = LinearAlgebra.I(N)
 
     # condensation of parameters
@@ -538,7 +587,7 @@ end
     return _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 end
 
-@views function _eig_floquet_col(J::AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
+@views function _eig_floquet_coll(J::AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
     nbcoll = N * m
     In = LinearAlgebra.I(N)
 

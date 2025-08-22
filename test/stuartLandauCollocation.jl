@@ -215,7 +215,9 @@ newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
 ## test Floquet computation for sparse eigenvalues
 Jw = @time (BK.jacobian(br_po.prob, br_po.sol[17].x, @set par_sl.r = br_po.sol[17].p))
 J = BK._get_matrix(Jw) |> copy
-@test  BK._eig_floquet_col((J),2,4,50,2)[1] ≈ BK._eig_floquet_col(sparse(J),2,4,50,2)[1] atol=1e-10
+@test BK._eig_floquet_coll((J),2,4,50,2)[1] ≈ BK._eig_floquet_coll(sparse(J),2,4,50,2)[1] atol=1e-10
+@test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ BK._eig_floquet_coll((J),2,4,50,2)[1] atol=1e-10
+@test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ FloquetGEV(DefaultEig(),size(J,1)-1,2)((Jw),2)[1]
 ####################################################################################################
 # test analytical jacobian
 Ntst = 10
