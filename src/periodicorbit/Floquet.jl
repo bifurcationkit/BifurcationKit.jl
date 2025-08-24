@@ -518,8 +518,6 @@ end
 
     # give indications on the precision on the Floquet coefficients
     _display_floquet_cv_info(σ)
-    end
-
     return σ, nothing, true, 1
 end
 
@@ -690,6 +688,5 @@ function _display_floquet_cv_info(σ)
     if vp0 > 1e-9
         @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
     end
-    return σ, nothing, true, 1
 end
 

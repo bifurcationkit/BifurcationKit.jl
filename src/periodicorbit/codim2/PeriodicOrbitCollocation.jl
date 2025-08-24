@@ -298,11 +298,11 @@ end
 @views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
-    eigenelts = _eig_floquet_col(Jma[1:end-1, 1:end-1], n, m, Ntst, nev)
+    eigenelts = _eig_floquet_coll(Jma[1:end-1, 1:end-1], n, m, Ntst, nev)
 end
 
 @views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
-    eigenelts = _eig_floquet_col(Jma[1:end-2, 1:end-2], n, m, Ntst, nev)
+    eigenelts = _eig_floquet_coll(Jma[1:end-2, 1:end-2], n, m, Ntst, nev)
 end
