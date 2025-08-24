@@ -229,7 +229,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
         decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
                                                      l.kwargs...)
     end
-    λ, ϕ = partialeigen(decomp)
+    λ, ϕ = ArnoldiMethod.partialeigen(decomp)
     # shift and invert
     if isnothing(l.sigma) == false
         λ .= @. l.sigma - 1 / λ
@@ -252,7 +252,7 @@ function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
         L = LinearMaps.LinearMap{𝒯}((y, x) -> ldiv!(y, P, B * x), size(A, 1), ismutating = true)
         decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
                                                          l.kwargs...)
-        vals, ϕ = partialeigen(decomp)
+        vals, ϕ = ArnoldiMethod.partialeigen(decomp)
         values = @. 1/vals + σ
     else
         throw("Not defined yet. Please open an issue or make a Pull Request")
