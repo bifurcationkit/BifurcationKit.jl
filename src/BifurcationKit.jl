@@ -170,7 +170,7 @@ module BifurcationKit
     export PeriodicOrbitOCollProblem, COPBLS, COPLS
 
     # Floquet multipliers computation
-    export FloquetQaD
+    export FloquetQaD, FloquetColl, FloquetGEV
 
     # waves
     export TWProblem
