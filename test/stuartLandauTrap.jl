@@ -87,7 +87,7 @@ let
 end
 ####################################################################################################
 # tests for constructor of Floquet routines
-BK.check_floquet_options(EigArpack())
-BK.check_floquet_options(EigArnoldiMethod())
-BK.check_floquet_options(EigKrylovKit())
+for eig in (EigArpack(), EigArnoldiMethod(), EigKrylovKit())
+    BK.check_floquet_options(eig)
+end
 FloquetQaD(EigKrylovKit()) |> FloquetQaD

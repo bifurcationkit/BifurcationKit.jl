@@ -1,6 +1,9 @@
 # using Revise
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack
 const BK = BifurcationKit
+
+# test that the top eigenvalues are sorted by decrasing real part
+_test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
 BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))
@@ -540,9 +543,6 @@ let
 end
 ####################################################################################################
 # test the eigen solvers for matrix free formulations
-# test that the top eigenvalues are sorted by decrasing real part
-_test_sorted(x) = issorted(x, by = real, rev = true)
-
 # test ordering of eigenvalues
 let 
     J0 = [0.688714  0.363181   0.956579  0.967328  0.950136

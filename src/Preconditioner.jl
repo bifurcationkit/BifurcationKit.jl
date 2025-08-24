@@ -1,5 +1,6 @@
+using LinearAlgebra
 import KrylovKit
-using ArnoldiMethod, LinearMaps, LinearAlgebra, RecursiveArrayTools
+import ArnoldiMethod, RecursiveArrayTools
 
 struct PrecPartialSchur{Ts, Tu, Tsm1, Teigen}
     S::Ts
@@ -44,7 +45,7 @@ Builds a preconditioner based on deflation of `nev` eigenvalues chosen according
 function PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0, kwargs...)
     H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, KrylovKit.Arnoldi(;krylovdim = krylovdim, verbosity = verbosity, kwargs...))
     Q, S = qr(H)
-    U = convert(Array, VectorOfArray(V)) * Matrix(Q) # (m, nev) * (nev, nev) = (m, nev)
+    U = convert(Array, RecursiveArrayTools.VectorOfArray(V)) * Matrix(Q) # (m, nev) * (nev, nev) = (m, nev)
     return PrecPartialSchur(S, U, inv(S), vals)
 end
 
@@ -63,4 +64,4 @@ function PrecPartialSchurArnoldiMethod(J, N, nev, which = ArnoldiMethod.LM(); to
     return PrecPartialSchur(decomp.R, decomp.Q, inv(decomp.R), decomp.eigenvalues)
 end
 
-PrecPartialSchurArnoldiMethod(J::AbstractArray, nev, which = LM(); tol = 1e-9, kwargs...) = PrecPartialSchurArnoldiMethod(J, size(J)[1], nev, which ; tol = tol, kwargs...)
+PrecPartialSchurArnoldiMethod(J::AbstractArray, nev, which = LM(); tol = 1e-9, kwargs...) = PrecPartialSchurArnoldiMethod(J, size(J)[1], nev, which ; tol, kwargs...)

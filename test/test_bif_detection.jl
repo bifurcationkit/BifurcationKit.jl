@@ -16,9 +16,8 @@ function displayBr(contRes)
 end
 
 function testBranch(br)
-    # test if stability works
+    # test if stability method works
     # test that stability corresponds
-    out = true
     for ii in eachindex(br.branch)
         @test br.eig[ii].eigenvals == eigenvals(br, br.eig[ii].step, false)
         # compute number of unstable eigenvalues
@@ -49,12 +48,12 @@ end
 
 NL(x) = -x^3
 dNL(x) = -3x^2
-Ftb(x,p) = -x .+ (p.L * x) .* p.λ .+ NL.(x)
+Ftb(x, p) = -x .+ (p.L * x) .* p.λ .+ NL.(x)
 
 function Jtb(x, p)
     J = copy(p.L .* p.λ)
     for i in eachindex(x)
-        J[i,i] += dNL(x[i]) - 1
+        J[i, i] += dNL(x[i]) - 1
     end
     return J
 end
