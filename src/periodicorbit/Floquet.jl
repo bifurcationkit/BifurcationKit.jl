@@ -515,10 +515,9 @@ end
 
     # floquet exponents
     σ = logvals[I]
+
     # give indications on the precision on the Floquet coefficients
-    vp0 = minimum(abs, σ)
-    if vp0 > 1e-9
-        @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
+    _display_floquet_cv_info(σ)
     end
 
     return σ, nothing, true, 1
@@ -682,6 +681,11 @@ function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     σ = logvals[I]
 
     # give indications on the precision on the Floquet coefficients
+    _display_floquet_cv_info(σ)
+    return σ, nothing, true, 1
+end
+
+function _display_floquet_cv_info(σ)
     vp0 = minimum(abs, σ)
     if vp0 > 1e-9
         @debug "The precision on the Floquet multipliers is $vp0.\n It may be not enough to allow for precise bifurcation detection.\n Either decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetColl` for computing Floquet coefficients."
