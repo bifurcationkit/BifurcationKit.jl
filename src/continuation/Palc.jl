@@ -287,13 +287,13 @@ mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <:
     tangent::Ttg
 
     "Vector of solutions"
-    solutions::CircularBuffer{Tvec}
+    solutions::DataStructures.CircularBuffer{Tvec}
 
     "Vector of parameters"
-    parameters::CircularBuffer{T}
+    parameters::DataStructures.CircularBuffer{T}
 
     "Vector of arclengths"
-    arclengths::CircularBuffer{T}
+    arclengths::DataStructures.CircularBuffer{T}
 
     "Coefficients for the polynomials for the solution"
     coeffsSol::Vector{Tvec}
@@ -309,10 +309,10 @@ internal_adaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"
-    Polynomial(n,k,zeros(eltype(v0), k, n+1), pred,
-        CircularBuffer{typeof(v0)}(k),  # solutions
-        CircularBuffer{eltype(v0)}(k),  # parameters
-        CircularBuffer{eltype(v0)}(k),  # arclengths
+    Polynomial(n, k, zeros(eltype(v0), k, n+1), pred,
+        DataStructures.CircularBuffer{typeof(v0)}(k),  # solutions
+        DataStructures.CircularBuffer{eltype(v0)}(k),  # parameters
+        DataStructures.CircularBuffer{eltype(v0)}(k),  # arclengths
         Vector{typeof(v0)}(undef, n+1), # coeffsSol
         Vector{eltype(v0)}(undef, n+1), # coeffsPar
         true)
