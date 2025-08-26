@@ -263,7 +263,7 @@ end
 """
 $(TYPEDEF)
 
-Create an eigensolver based on Shift-Invert strategy. Basically, one compute the eigen-elements of (J - σ⋅I)⁻¹.
+Create an eigensolver based on Shift-Invert strategy. Basically, one computes the eigen-elements of (J - σ⋅I)⁻¹.
 
 ## Fields
 

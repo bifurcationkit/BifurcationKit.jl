@@ -32,12 +32,12 @@ struct FiniteDifferences <: AbstractJacobianType end
 """
 For periodic orbits. The jacobian is a sparse matrix which is expressed with a custom analytical formula.
 """
-struct FullSparse <: AbstractJacobianType end
+struct FullSparse <: AbstractJacobianSparseMatrix end
 
 """
 Same as FullSparse but the Jacobian is allocated only once and updated inplace. This is much faster than FullSparse but the sparsity pattern of the vector field must be constant.
 """
-struct FullSparseInplace <: AbstractJacobianType end
+struct FullSparseInplace <: AbstractJacobianSparseMatrix end
 
 
 # different jacobian types which parametrize the way jacobians of PO are computed

@@ -199,7 +199,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, dx_ba
         E!(psh.section,  xc,  view(x_barc, :, ii), ii)
         dE!(psh.section, outc, outbar, ii)
         outc .= diff_poincare_map(psh, xc, p, outc, ii)
-        # check to <outc, normals[ii]> = 0
+        # check that <outc, normals[ii]> = 0
         # println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
         dR!(psh.section, outbar, outc, ii)
     end

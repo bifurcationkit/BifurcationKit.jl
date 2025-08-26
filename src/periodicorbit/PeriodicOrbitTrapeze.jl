@@ -762,7 +762,7 @@ end
 function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltype(u0), 1e-9))
     T = _extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
-    # TODO REMOVE CE vcat!
+    # TODO REMOVE vcat!
     @views J.∂TGpo .= (residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- residual(J.Aγ.prob, u0, par)) ./ δ
 
     J.Aγ(u0, par) # update Aγ
@@ -1023,7 +1023,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
         probwp = WrapPOTrap(prob, jacPO, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
 
         br = continuation(probwp, alg,
-            contParams;#, linear_algo;
+            contParams;
             kwargs...,
             kind = PeriodicOrbitCont(),
             finalise_solution = _finsol)
