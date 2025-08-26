@@ -229,7 +229,7 @@ Note that you can generate this guess from a function using `generate_solution` 
     "parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
 
-    @assert jacobian in (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one."
+    @assert jacobian in (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
 end
 
 # trivial constructor
