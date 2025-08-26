@@ -8,9 +8,7 @@ function Fsl!(f, u, p, t = 0)
     (;r, μ, ν, c3, c5) = p
     u1 = u[1]
     u2 = u[2]
-
     ua = u1^2 + u2^2
-
     f[1] = r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2) - c5 * ua^2 * u1
     f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1) - c5 * ua^2 * u2
     return f
@@ -33,9 +31,8 @@ u0 = [.001, .001]
 
 prob_vf = BifurcationKit.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
 
-optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
+optconteq = ContinuationPar(ds = -0.01, p_min = -0.5, n_inversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
-show(br)
 ####################################################################################################
 prob = ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
@@ -63,7 +60,7 @@ initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
 
 # test the flowDE interface
-_pb_par = ShootingProblem(prob, KenCarp4(), 1, section; abstol =1e-10, reltol=1e-9, parallel = true)
+_pb_par = ShootingProblem(prob, KenCarp4(), 1, section; abstol=1e-10, reltol=1e-9, parallel = true)
 _flow = _pb_par.flow; @reset _flow.vjp = (args...; kw...) -> nothing
 BK.vjp(_flow, initpo, par_hopf, initpo, 0.1)
 BK.jvp(_pb_par.flow, initpo, par_hopf, initpo, 0.1)

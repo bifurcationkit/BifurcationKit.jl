@@ -212,8 +212,8 @@ br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo
 newton(prob_col2, _ci, NewtonPar())
 newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
 ####################################################################################################
-## test Floquet computation for sparse eigenvalues
-Jw = @time (BK.jacobian(br_po.prob, br_po.sol[17].x, @set par_sl.r = br_po.sol[17].p))
+## test of the computation of the Floquet exponents
+Jw = @time (BK.jacobian(br_po.prob, br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
 J = BK._get_matrix(Jw) |> copy
 @test BK._eig_floquet_coll((J),2,4,50,2)[1] ≈ BK._eig_floquet_coll(sparse(J),2,4,50,2)[1] atol=1e-10
 @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ BK._eig_floquet_coll((J),2,4,50,2)[1] atol=1e-10

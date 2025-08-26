@@ -243,7 +243,7 @@ function PeriodicOrbitOCollProblem(Ntst::Int,
                                     cache = POCollCache(𝒯, Ntst, N, m, cache_In),
                                     kwargs...)
     if ~isnothing(coll.ϕ)
-        coll = set_collocation_size(coll,  Ntst, m)
+        coll = set_collocation_size(coll, Ntst, m)
         updatesection!(coll, coll.ϕ, nothing)
     end
     coll

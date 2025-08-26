@@ -113,7 +113,6 @@ end
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 function (sh::ShootingProblem)(x::AbstractVector, pars)
-    # Sundials does not like @views :(
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
@@ -128,14 +127,12 @@ function (sh::ShootingProblem)(x::AbstractVector, pars)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            # we can use views but Sundials will complain
             outc[:, ii] .= evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
         end
     else
         solOde = evolve(sh.flow, xc, pars, sh.ds .* T)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            # we can use views but Sundials will complain
             outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]
         end
     end
@@ -159,7 +156,6 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 
     if ~isparallel(sh)
         for ii in 1:M
-            # we can use views but Sundials will complain
             ip1 = (ii == M) ? 1 : ii+1
             copyto!(out.u[ii], evolve(sh.flow, xc[ii], pars, sh.ds[ii] * T).u .- xc[ip1])
         end
@@ -175,7 +171,6 @@ end
 # jacobian of the shooting functional
 function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
     # period of the cycle
-    # Sundials does not like @views :(
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -291,10 +286,9 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode
     xc = reshape(xv, N, M)
     Th = eltype(x)
 
-    # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(prob)
         sol = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
-        time = sol[1].t; u = VectorOfArray(sol[1].u)
+        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
         # we could also use Matrix(sol[1])
         for ii in 2:M
             append!(time, sol[ii].t .+ time[end])
@@ -304,7 +298,7 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode
 
     else # threaded version
         sol = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
-        time = sol[1].t; u = VectorOfArray(sol[1].u)
+        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
         for ii in 2:M
             append!(time, sol[ii].t .+ time[end])
             append!(u.u, sol[ii].u)
@@ -321,7 +315,6 @@ function get_po_solution(prob::ShootingProblem, x, pars; kode...)
     xv = @view x[1:end-1]
     xc = reshape(xv, N, M)
 
-    # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(prob)
         sol_ode = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
     else # threaded version

@@ -190,7 +190,7 @@ function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = 0, a₁ =
         if ~((a₀ == 0) && (a₁ == 1))
             error("Perturbed inplace linear problem not done yet!")
         end
-        Jmap = J isa AbstractArray ? J : LinearMap{𝒯}(J, l.N, l.N; ismutating = true)
+        Jmap = J isa AbstractArray ? J : LinearMaps.LinearMap{𝒯}(J, l.N, l.N; ismutating = true)
     else
         J_map = v -> _axpy_op(J, v, a₀, a₁)
         Jmap = LinearMaps.LinearMap{𝒯}(J_map, length(rhs), length(rhs); ismutating = false)

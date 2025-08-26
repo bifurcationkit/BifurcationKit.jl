@@ -241,7 +241,7 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
     return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), history.converged, 1
 end
 
-# GEV, useful for computation of Floquet exponents based on collocation
+# GEV useful for computation of Floquet exponents based on collocation
 function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
     if A isa AbstractMatrix
         # Solve Ax = λBx using Shift-invert method 

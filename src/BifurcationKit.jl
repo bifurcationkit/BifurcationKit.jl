@@ -1,13 +1,12 @@
 module BifurcationKit
-    using Printf, Dates, BlockArrays, StructArrays
-    import LinearMaps
+    using Printf, Dates
+    import BlockArrays, StructArrays, LinearMaps
     using Reexport
     @reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
     using Parameters: @with_kw, @with_kw_noshow
     using PreallocationTools: DiffCache, get_tmp
-    using RecursiveArrayTools: VectorOfArray
     using DocStringExtensions
-    using DataStructures: CircularBuffer # used for Polynomial predictor
+    import DataStructures # used for Polynomial predictor
     using ForwardDiff
     import Random: randn!
 

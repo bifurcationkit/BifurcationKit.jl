@@ -426,7 +426,7 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
     # case of v(1)
     J[end-n+1:end, end-n+1:end] .= -I(n)
     # solve generalized eigenvalue problem
-    values, vecs = gev(fl.eigsolver, J, fl.B, nev;)
+    values, vecs = gev(fl.eigsolver, J, fl.B, nev)
     # remove infinite eigenvalues
     indvalid = findall(x -> abs(x) < 1e9, values)
     vals = values[indvalid]

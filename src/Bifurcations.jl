@@ -35,7 +35,7 @@ end
 function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
     branch = contres.branch
     n_br = length(branch)
-    lazy_params = LazyRows(branch)
+    lazy_params = StructArrays.LazyRows(branch)
 
     # Fold point detection based on continuation parameter monotony
     if iter.contparams.detect_fold &&

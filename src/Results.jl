@@ -1,6 +1,5 @@
 abstract type AbstractBranchResult end
 abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
-
 ####################################################################################################
 # functions used in record_from_solution
 """
@@ -78,7 +77,7 @@ julia> br.param
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
   - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)"
-    branch::StructArray{Tbr}
+    branch::StructArrays.StructArray{Tbr} # TODO remove StructArray makes it type stable
 
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
@@ -141,7 +140,7 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline _hasstability(br::AbstractBranchResult) = _hasstability(br.branch)
-@inline _hasstability(::StructArray{T,N,C,I}) where {T,N,C,I} = fieldtype(T, fieldcount(T) - 1) == Bool
+@inline _hasstability(::StructArrays.StructArray{T,N,C,I}) where {T,N,C,I} = fieldtype(T, fieldcount(T) - 1) == Bool
 
 _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectortype(br::AbstractBranchResult) = _getvectortype(eltype(br.specialpoint))
@@ -307,7 +306,7 @@ function _contresult(iter,
     eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
     _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
     return ContResult(
-                    branch = StructArray([br]),
+                    branch = StructArrays.StructArray([br]),
                     specialpoint = Vector{typeof(bif0)}(undef, 0),
                     eig = compute_eigenelements(iter) ? [_evvectors] : empty([_evvectors]),
                     sol = sol,
@@ -372,7 +371,7 @@ function _reverse(br0::ContResult)
     nb = length(br.branch)
     if ~isnothing(br.branch)
         @reset br.branch =
-            StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
+            StructArrays.StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
     end
 
     if ~isnothing(br.specialpoint)
