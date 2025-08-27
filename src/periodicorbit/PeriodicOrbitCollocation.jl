@@ -679,12 +679,21 @@ function analytical_jacobian(coll::PeriodicOrbitOCollProblem,
                             u::AbstractArray, 
                             pars; 
                             𝒯 = eltype(u), 
-                            k...) 
-    analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
+                            k...)
+    if coll.jacobian isa AbstractJacobianSparseMatrix
+        return analytical_jacobian_sparse( 
+                        coll, 
+                        u, 
+                        pars;
+                        𝒯, 
+                        k...)
+    else
+        return analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
                         coll, 
                         u, 
                         pars; 
                         k...)
+    end
 end
 
 function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
@@ -698,17 +707,18 @@ end
 function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector,
                                 pars;
+                                𝒯 = eltype(u),
                                 array_zeros = zeros,
                                 kwargs...) 
     n, m, Ntst = size(coll)
     blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)
-    J = BlockArray(array_zeros(length(u), length(u)), blocks,  blocks)
+    J = BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
     jacobian_poocoll_block!(J, coll, u, pars; kwargs...)
     return J
 end
 
-@views function jacobian_poocoll_block!(J,
+@views function jacobian_poocoll_block!(J::BlockArray,
                                 coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
                                 pars;
