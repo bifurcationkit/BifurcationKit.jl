@@ -312,7 +312,13 @@ end
 function (l::KrylovLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
     J_map = v -> _axpy_op(J, v, a₀, a₁)
     Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
-    sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    if l.KrylovAlg in (:cg, :car, :minres, :symmlq)
+        # symmetric solvers
+        # we only pass centered preconditioner
+        sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl)
+    else # non-symmetric solvers
+        sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    end
     return sol, stats.solved, stats.niter
 end
 
@@ -371,6 +377,12 @@ function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
         J_map = v -> _axpy_op(J, v, a₀, a₁)
         Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     end
-    Krylov.krylov_solve!(l.workspace, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    if l.KrylovAlg in (:cg, :car, :minres, :symmlq)
+        # symmetric solvers
+        # we only pass centered preconditioner
+        Krylov.krylov_solve!(l.workspace, Jmap, rhs; l.kwargs..., M = l.Pl)
+    else
+        Krylov.krylov_solve!(l.workspace, Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
+    end
     return Krylov.solution(l.workspace), Krylov.issolved(l.workspace), Krylov.iteration_count(l.workspace)
 end

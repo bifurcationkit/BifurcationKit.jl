@@ -8,7 +8,7 @@ _test_sorted(x) = issorted(x, by = real, rev = true)
 BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))
 BK.print_ev(rand(2))
-BK._print_line(1,nothing,1)
+BK._print_line(1, nothing, 1)
 ####################################################################################################
 # test VectorInterface
 # x0 = rand(5)
@@ -92,6 +92,25 @@ let
     o2 = map_bls(x_bd_v)
     @test o1.u ≈ o2[begin:end-1]
     @test o1.p ≈ o2[end]
+end
+####################################################################################################
+# test symmetric solvers
+let
+    J0 = Symmetric(rand(100,100) * 0.01 - I)
+    rhs = rand(100)
+    sol_explicit = J0 \ rhs
+
+    ls = KrylovLS(KrylovAlg = :minres)
+    _sol, = ls(J0, rhs)
+    @test _sol ≈ sol_explicit
+
+    ls = KrylovLS(KrylovAlg = :cg)
+    _sol, = ls(J0, rhs)
+    @test _sol ≈ sol_explicit
+
+    ls = KrylovLSInplace(Pl = I, m = 100, n = 100, KrylovAlg = :minres)
+    _sol, = ls(J0, rhs)
+    @test _sol ≈ sol_explicit
 end
 ####################################################################################################
 let
