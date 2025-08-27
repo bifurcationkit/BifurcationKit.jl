@@ -94,13 +94,18 @@ br_po = @time continuation(
     # arguments for continuation
     optcontpo,
     PeriodicOrbitTrapProblem(M = M, jacobian = BK.FullSparseInplace());
+    # PeriodicOrbitOCollProblem(30, 4, jacobian = BK.FullSparseInplace());
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess
     verbosity = 2,
     plot = true,
     callback_newton = BK.cbMaxNorm(1e2),
-    plot_solution = (x, p;kwargs...) ->  (heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...);plot!(br, subplot=1)),
+    plot_solution = (x, p;kwargs...) ->  begin
+        xtt = get_periodic_orbit(p.prob, x, p.p)
+        heatmap!(1:n, xtt.t, xtt.u'; ylabel="time", color=:viridis, kwargs...)
+        plot!(br, subplot=1)
+    end,
     record_from_solution = (u, p; k...) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)
 
@@ -118,12 +123,10 @@ br_po_pd = @time continuation(
     verbosity = 3,
     plot = true,
     callback_newton = BK.cbMaxNorm(1e2),
-    # jacobianPO = :FullSparseInplace,
-    # jacobianPO = :BorderedSparseInplace,
     plot_solution = (x, p;kwargs...) ->  begin
-        M = p.prob.M
-        heatmap!(reshape(x[1:end-1], 2*N, M)'; ylabel="time", color=:viridis, kwargs...)
-        plot!(br_po, subplot=1)
+        xtt = get_periodic_orbit(p.prob, x, p.p)
+        heatmap!(1:n, xtt.t, xtt.u'; ylabel="time", color=:viridis, kwargs...)
+        plot!(br, subplot=1)
     end,
     record_from_solution = (u, p; k...) -> (max = maximum(u[1:end-1]), period = u[end]),#BK.maximumPOTrap(u, N, M; ratio = 2),
     normC = norminf)

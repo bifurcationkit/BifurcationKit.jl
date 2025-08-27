@@ -180,7 +180,7 @@ function _randn(y::BorderedArray{T,V}) where {T <: AbstractArray, V}
     x = _copy(y)
     randn!(x.u)
     if V <: Number
-        x.p = randn()
+        x.p = randn(V)
     elseif T <: AbstractArray
         randn!(x.p)
     end

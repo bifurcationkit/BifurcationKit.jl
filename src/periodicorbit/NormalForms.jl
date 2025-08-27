@@ -276,7 +276,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     J[end, 1:end-1] .= Fu₀
     J[:, end] .= randn(nj)
     J[end,end] = 0
-    rhs = zeros(nj); rhs[end] = 1
+    rhs = zeros(𝒯, nj); rhs[end] = 1
     
     q = J  \ rhs; #q = q[begin:end-1]
     p = J' \ rhs; #p = p[begin:end-1]
@@ -286,12 +286,12 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     J[1:end-1, end] .= p[begin:end-1]
     
     # the matrix L₀ = 0
-    Jbd = zeros(nj+1, nj+1)
+    Jbd = similar(J, nj+1, nj+1) # carefull for sparse matrices
     Jbd[1:nj,1:nj] .= J
     Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[1:end-1]
     Jbd[end,1:nj-1] .= randn(nj-1)
     Jbd[end-1:end,end-1:end] .= 0
-    rhs = zeros(nj+1,2); rhs[end-1:end,end-1:end] .= I(2)
+    rhs = zeros(𝒯, nj+1, 2); rhs[end-1:end,end-1:end] .= I(2)
     sols   = Jbd  \ rhs
     sols_t = Jbd' \ rhs
 
@@ -528,6 +528,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     T = getperiod(coll, pd.x0, par)
     lens = getlens(coll)
     δ = getdelta(coll)
+    𝒯 = eltype(coll)
 
     # identity matrix for collocation problem
     Icoll = I(coll, _getsolution(pd.x0), par)
@@ -542,7 +543,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
     C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
 
-    _rand(n, r = 2) = r .* (rand(n) .- 1/2)         # centered uniform random variables
+    _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)         # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     # we first compute the floquet eigenvector for μ = -1
@@ -559,7 +560,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end-N:end-1, 1:N] .= I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
 
-    rhs = zeros(nj); rhs[end] = 1;
+    rhs = zeros(𝒯, nj); rhs[end] = 1;
     k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) #≈ ker(J)
     l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
@@ -583,7 +584,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     J★[end-N:end-1, 1:N] .= I(N)
     J★[end-N:end-1, end-N:end-1] .= I(N)
 
-    rhs = zeros(nj); rhs[end] = 1;
+    rhs = zeros(𝒯, nj); rhs[end] = 1;
     k = J★  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
     l = J★' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
@@ -946,6 +947,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     N, m, Ntst = size(coll)
     par = ns.params
     T = getperiod(coll, ns.x0, par)
+    𝒯 = eltype(coll)
     # identity matrix for collocation problem
     Icoll = I(coll, ns.x0, par)
 
@@ -955,7 +957,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     C(u, p, du1, du2, du3) = TrilinearMap((dx1, dx2, dx3) -> d3F(coll.prob_vf, u, p, dx1, dx2, dx3))(du1, du2, du3)
 
     _plot(x; k...) = (_sol = get_periodic_orbit(coll, x, 1);display(plot(_sol.t, _sol.u'; k...)))
-    _rand(n, r = 2) = r .* (rand(n) .- 1/2)        # centered uniform random variables
+    _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)        # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
 
     #########
@@ -964,13 +966,13 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # we use an extended linear system for this
      # J = D  -  T*A(t) + iθ/T
     θ = abs(ns.ω)
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = ComplexF64)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯})
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
     J[end, end] = 0
 
-    rhs = zeros(nj); rhs[end] = 1;
+    rhs = zeros(𝒯, nj); rhs[end] = 1
     k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
     l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
@@ -1031,14 +1033,14 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     #########
     # compute v1star
     # J = D  +  T*Aᵗ(t) + iθ/T
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = ComplexF64, _transpose = Val(true), ρF = -1)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯}, _transpose = Val(true), ρF = -1)
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
     J[:, end] .= _rand(nj)
     J[end, end] = 0
 
-    rhs = zeros(nj); rhs[end] = 1;
+    rhs = zeros(𝒯, nj); rhs[end] = 1
     k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
     l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
 
@@ -1066,12 +1068,12 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
     end
     rhs = vcat(vec(Bₛ), 0)
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = ComplexF64)
+    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = Complex{𝒯})
     # h₂₀ = J \ (rhs)
 
     h₂₀= J[1:end-1,1:end-1] \ rhs[1:end-1];h₂₀ = vcat(vec(h₂₀), 0)
     # h₂₀ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
-    h₂₀ = Icoll * h₂₀;@reset h₂₀[end]=0
+    h₂₀ = Icoll * h₂₀; @reset h₂₀[end] = 0
     h₂₀ₛ = get_time_slices(coll, h₂₀)
                 # a cause de Icoll
                 h₂₀ₛ[:, end] .= h₂₀ₛ[:,1]
@@ -1088,9 +1090,9 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
     rhs = vcat(vec(rhsₛ), 0)
     border_ϕ1 = ForwardDiff.gradient(x -> ∫( reshape(x, size(ϕ₁★ₛ)), ϕ₁★ₛ),
-                                     zeros(length(ϕ₁★ₛ))
+                                     zeros(𝒯, length(ϕ₁★ₛ))
                                     )
-    J = analytical_jacobian(coll, ns.x0, par;  𝒯 = ComplexF64)
+    J = analytical_jacobian(coll, ns.x0, par;  𝒯 = Complex{𝒯})
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
