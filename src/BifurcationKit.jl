@@ -3,6 +3,7 @@ module BifurcationKit
     import BlockArrays, StructArrays, LinearMaps
     using Reexport
     @reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
+    @reexport using ArnoldiMethod: LM, LR, LI, SR, SI
     using Parameters: @with_kw, @with_kw_noshow
     using PreallocationTools: DiffCache, get_tmp
     using DocStringExtensions
