@@ -338,9 +338,14 @@ function newton_bt(prob::AbstractBifurcationProblem,
     pbt = get_par_bls(sol.u, 2)
     parbt = set(par, getlens(prob), pbt[1])
     parbt = set(parbt, lens2, pbt[2])
-    bt = BogdanovTakens(x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), ζ = 𝐁𝐓.b, ζ★ = 𝐁𝐓.a, type = :none, nf = (a = missing, b = missing ),
-    nfsupp = (K2 = zero(Ty),))
-    @set sol.u = bt
+    bt = BogdanovTakens(
+        x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), 
+        ζ = 𝐁𝐓.b, 
+        ζ★ = 𝐁𝐓.a, 
+        nf = (a = missing, b = missing ),
+        type = :none, 
+        nfsupp = (K2 = zero(Ty),))
+    return @set sol.u = bt
 end
 
 """

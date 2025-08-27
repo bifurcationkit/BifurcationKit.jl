@@ -173,7 +173,7 @@ Here are some useful methods you can apply to `pb`
 - `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
 
 # Orbit guess
-You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period ``T`` of the limit cycle.
+You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
 
 Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
 

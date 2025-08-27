@@ -169,8 +169,6 @@ function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
 end
 
 geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
-
-
 ####################################################################################################
 # Solvers for ArnoldiMethod
 ####################################################################################################
