@@ -44,7 +44,7 @@ $(SIGNATURES)
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function get_normal_form1d(prob::AbstractBifurcationProblem,
-                    br::ContResult,
+                    br::AbstractBranchResult,
                     ind_bif::Int;
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     verbose = false,
@@ -489,7 +489,7 @@ Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` t
 
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
-                        br::ContResult,
+                        br::AbstractBranchResult,
                         id_bif::Int ;
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
@@ -535,7 +535,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
 end
 
 function get_normal_formNd(prob::AbstractBifurcationProblem,
-                            br::ContResult,
+                            br::AbstractBranchResult,
                             id_bif::Int;
                             ζs = nothing,
                             ζs_ad = nothing,
@@ -713,9 +713,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a = dgidp, b1 = d2gidxjdpk, b2 = d2gidxjdxk, b3 = d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
-get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(get_contresult(br), id_bif; kwargs...)
-
-get_normal_form(br::ContResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
+get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
 
 
 """

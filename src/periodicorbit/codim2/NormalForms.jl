@@ -1,5 +1,5 @@
 function get_normal_form(prob::AbstractBifurcationProblem,
-                        br::ContResult{ <: TwoParamPeriodicOrbitCont}, id_bif::Int ;
+                        br::AbstractResult{ <: TwoParamPeriodicOrbitCont}, id_bif::Int ;
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,

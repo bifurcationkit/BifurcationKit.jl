@@ -20,8 +20,9 @@ Compute the normal form (NF) of periodic orbits. We detail the additional keywor
 
 For collocation, the default method to compute the NF of Period-doubling and Neimark-Sacker bifurcations is Iooss' method.
 """
-function get_normal_form(prob::AbstractBifurcationProblem,
-                        br::ContResult{ <: PeriodicOrbitCont}, id_bif::Int ;
+function get_normal_form(prob::AbstractPeriodicOrbitProblem,
+                        br::AbstractResult{ <: PeriodicOrbitCont}, 
+                        id_bif::Int ;
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,
@@ -812,6 +813,30 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     return PeriodDoublingPO(pd0.x0, pd0.x0[end], v₁, v₁★, pd, coll, true)
 end
 ####################################################################################################
+function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
+                                br::AbstractBranchResult,
+                                ind_bif::Int;
+                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                verbose = false,
+                                lens = getlens(br),
+                                Teigvec = vectortype(br),
+                                scaleζ = norminf,
+                                kwargs_nf...)
+    pb = pbwrap.prob
+    bifpt = br.specialpoint[ind_bif]
+    bptype = bifpt.type
+    pars = setparam(br, bifpt.param)
+    period = getperiod(pb, bifpt.x, pars)
+
+    # get the eigenvalue
+    eigRes = br.eig
+    λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+    ωₙₛ = imag(λₙₛ)
+
+    ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
+    return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
+end
+
 function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                 br::AbstractBranchResult,
                                 ind_bif::Int;
@@ -854,29 +879,6 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     # method based on Iooss method
     # nf = PeriodDoubling(bifpt.x, period, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     neimark_sacker_normal_form(pbwrap, ns0; verbose, nev, kwargs_nf...)
-end
-
-function neimark_sacker_normal_form(pbwrap,
-                            br,
-                            ind_bif::Int;
-                            nev = length(eigenvalsfrombif(br, ind_bif)),
-                            verbose = false,
-                            lens = getlens(br),
-                            Teigvec = vectortype(br),
-                            kwargs_nf...)
-    pb = pbwrap.prob
-    bifpt = br.specialpoint[ind_bif]
-    bptype = bifpt.type
-    pars = setparam(br, bifpt.param)
-    period = getperiod(pb, bifpt.x, pars)
-
-    # get the eigenvalue
-    eigRes = br.eig
-    λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
-    ωₙₛ = imag(λₙₛ)
-
-    ns0 =  NeimarkSacker(bifpt.x, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
-    return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
 end
 
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
