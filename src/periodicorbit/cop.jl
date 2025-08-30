@@ -561,12 +561,17 @@ function (ls::COPBLS)(_Jc, dR,
     rhs = vcat(R, n)
     coll = ls.cache.coll
 
-    # we improve on the following situation.
-    # ls.J[1:end-1,1:end-1] .= A 
-    # is quite slow, it would be 8x faster to do ls.J .= A
-    # hence the following situation
-    _fast_copy_bordered!(ls.J, A)
+    # the copy is necessary in all cases except DenseAnalyticalInplace()
+    # which is full inplace. Indeed, in this case pointer(Jc) == pointer(ls.J)
+    if ~(coll.jacobian == DenseAnalyticalInplace())
+        # we improve on the following situation.
+        # ls.J[begin:end-1,begin:end-1] .= A 
+        # is quite slow, it would be 8x faster to do ls.J .= A
+        # hence we made the following function
+        _fast_copy_bordered!(ls.J, A)
+    end
 
+    # why not use ls.cache.Jcoll? Because aliasing is dangerous
     ls.J[begin:end-1, end] .= dR
     ls.J[end, begin:end-1] .= conj.(dzu .* ξu)
     ls.J[end, end] = dzp * ξp
