@@ -845,9 +845,8 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
             jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
         elseif jacobianPO == AutoDiffMF()
             jac = (x, p) -> dx -> ForwardDiff.derivative(t -> residual(probPO, x .+ t .* dx, p), 0)
-        else 
-             jac = (x, p) -> ( dx -> probPO(x, p, dx))
         else # FullMatrixFree()
+             jac = (x, p) -> ( dx -> probPO(x, p, dx))
         end
 
         # define a problem to call newton
