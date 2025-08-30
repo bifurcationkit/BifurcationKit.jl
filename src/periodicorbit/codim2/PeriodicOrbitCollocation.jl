@@ -224,7 +224,6 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         options_cont;
         kwargs...,
         prm,
-        # detect_codim2_bifurcation = detect_codim2_bifurcation,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = PDPeriodicOrbitCont(),
         )
@@ -283,7 +282,6 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
         options_cont;
         kwargs...,
         prm,
-        # detect_codim2_bifurcation = detect_codim2_bifurcation,
         bdlinsolver = FloquetWrapperBLS(bdlinsolver),
         kind = NSPeriodicOrbitCont(),
         )

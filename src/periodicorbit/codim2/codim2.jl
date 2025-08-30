@@ -88,7 +88,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         @inline has_adjoint_MF(pb::$op) = has_adjoint_MF(pb.prob_vf)
         @inline isinplace(pb::$op) = isinplace(pb.prob_vf)
         @inline getlens(pb::$op) = getlens(pb.prob_vf)
-        jad(pb::$op, args...) = jad(pb.prob_vf, args...)
+        jacobian_adjoint(pb::$op, args...) = jacobian_adjoint(pb.prob_vf, args...)
 
         # constructors
         function $op(prob, a, b, 

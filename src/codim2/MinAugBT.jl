@@ -40,7 +40,7 @@ end
 @inline isinplace(pb::BTProblemMinimallyAugmented) = isinplace(pb.prob_vf)
 @inline getlens(pb::BTProblemMinimallyAugmented) = getlens(pb.prob_vf)
 @inline _getlenses(pb::BTProblemMinimallyAugmented) = (getlens(pb.prob_vf), pb.lens2)
-jad(pb::BTProblemMinimallyAugmented, args...) = jad(pb.prob_vf, args...)
+jacobian_adjoint(pb::BTProblemMinimallyAugmented, args...) = jacobian_adjoint(pb.prob_vf, args...)
 
 # constructor
 function BTProblemMinimallyAugmented(prob, a, b,
@@ -154,7 +154,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
     if is_symmetric(𝐁𝐓.prob_vf)
         JAd_at_xp = J_at_xp
     else
-        JAd_at_xp = has_adjoint(𝐁𝐓) ? jad(𝐁𝐓.prob_vf, x, par0) : transpose(J_at_xp)
+        JAd_at_xp = has_adjoint(𝐁𝐓) ? jacobian_adjoint(𝐁𝐓.prob_vf, x, par0) : transpose(J_at_xp)
     end
 
     # normalization
@@ -247,7 +247,7 @@ end
 @inline is_symmetric(BTpb::BTMAProblem) = is_symmetric(BTpb.prob)
 residual(BTpb::BTMAProblem, x, p) = BTpb.prob(x, p)
 jacobian(BTpb::BTMAProblem, x, p) = (x = x, params = p, fldpb = BTpb.prob)
-jad(BTpb::BTMAProblem, args...) = jad(BTpb.prob, args...)
+jacobian_adjoint(BTpb::BTMAProblem, args...) = jacobian_adjoint(BTpb.prob, args...)
 ################################################################################################### Newton functions
 """
 $(SIGNATURES)
@@ -414,7 +414,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         rmul!(ζ, 1/normN(ζ))
 
         # computation of adjoint eigenvector
-        Lt = has_adjoint(prob_ma.prob_vf) ? jad(prob_ma.prob_vf, x0, parbif) : transpose(L)
+        Lt = has_adjoint(prob_ma.prob_vf) ? jacobian_adjoint(prob_ma.prob_vf, x0, parbif) : transpose(L)
         ζstar, = get_adjoint_basis(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         ζad .= real.(ζstar)
         rmul!(ζad, 1/normN(ζad))
@@ -431,7 +431,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯))
         ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J did not converge."
 
-        L★ = ~has_adjoint(prob_ma.prob_vf) ? transpose(L) : jad(prob_ma.prob_vf, x0, parbif)
+        L★ = ~has_adjoint(prob_ma.prob_vf) ? transpose(L) : jacobian_adjoint(prob_ma.prob_vf, x0, parbif)
         n = length(a)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯))
         ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J' did not converge."

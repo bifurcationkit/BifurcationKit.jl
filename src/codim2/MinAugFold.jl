@@ -92,7 +92,7 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     if is_symmetric(𝐅.prob_vf)
         JAd_at_xp = J_at_xp
     else
-        JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
+        JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
     end
 
 
@@ -192,7 +192,7 @@ end
 @inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
 residual!(foldpb::FoldMAProblem, out, x, p) = (copyto!(out, foldpb.prob(x, p)); out)
-jad(foldpb::FoldMAProblem, args...) = jad(foldpb.prob, args...)
+jacobian_adjoint(foldpb::FoldMAProblem, args...) = jacobian_adjoint(foldpb.prob, args...)
 save_solution(::FoldMAProblem, x, p) = x
 
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = foldpb.prob)
@@ -285,7 +285,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         eigenvec .= real.(ζstar)
 
         # computation of adjoint eigenvector
-        _Jt = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+        _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
         ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         rmul!(eigenvec_ad, 1 / normN(eigenvec_ad))
@@ -437,7 +437,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
          if is_symmetric(𝐅)
             JAd_at_xp = J_at_xp
         else
-            JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
+            JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
         end
 
         bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
@@ -540,7 +540,7 @@ function continuation_fold(prob,
         end
 
         # jacobian adjoint at bifurcation point
-        L★ = has_adjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
+        L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
 
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
@@ -557,7 +557,7 @@ function continuation_fold(prob,
 
         @debug "EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, newb))
 
-        L★ = has_adjoint(prob) ? jad(prob, bifpt.x, parbif) : transpose(L)
+        L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), 0*a, one(𝒯))
         ~cv && @debug "Bordered linear solver for J' did not converge."
 
@@ -609,7 +609,7 @@ function test_bt_cusp(iter, state)
 
     # expression of the jacobian
     J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅, x, newpar) : transpose(J_at_xp)
+    JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅, x, newpar) : transpose(J_at_xp)
 
     bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 

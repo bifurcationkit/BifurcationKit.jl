@@ -450,7 +450,7 @@ function test_for_gpd_cp(iter, state)
     JPD = jacobian_period_doubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
 
     # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-    JPD★ = has_adjoint(𝐏𝐝) ? jad(pbwrap, x, newpar) : transpose(JPD)
+    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint(pbwrap, x, newpar) : transpose(JPD)
 
     # compute new b
     ζ, _, cv, it = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯))

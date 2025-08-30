@@ -139,8 +139,13 @@ function jacobian!(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, Nothing}, J,
     J .= jacobian(pb, x, p)
 end
 #####
-jad(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
-dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx)
+"""
+$(SIGNATURES)
+
+Return the adjoint `dx -> dFᵗ(x,p)⋅dx`
+"""
+jacobian_adjoint(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
+dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx) #vpj change name!!
 #####
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
 
@@ -400,7 +405,7 @@ residual(pb::AbstractAllJetBifProblem, x, p) = residual(pb.VF, x, p)
 residual!(pb::AbstractAllJetBifProblem, o, x, p) = residual!(pb.VF, o, x, p)
 jacobian(pb::AbstractAllJetBifProblem, x, p) = jacobian(pb.VF, x, p)
 jacobian!(pb::AbstractAllJetBifProblem, J, x, p) = jacobian!(pb.VF, J, x, p)
-jad(pb::AbstractAllJetBifProblem, x, p) = jad(pb.VF, x, p)
+jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p) = jacobian_adjoint(pb.VF, x, p)
 dF(pb::AbstractAllJetBifProblem, x, p, dx) = dF(pb.VF, x, p, dx)
 d2F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)
 d2Fc(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2Fc(pb.VF, x, p, dx1, dx2)
@@ -453,7 +458,7 @@ function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_ja
             return dF(pb, x, par, dx)
         else
             if has_adjoint(pb)
-                return apply(jad(pb, x, par), dx)
+                return apply(jacobian_adjoint(pb, x, par), dx)
             else
                 return apply(transpose(jacobian(pb, x, par)), dx)
             end

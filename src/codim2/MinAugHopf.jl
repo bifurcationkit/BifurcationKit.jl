@@ -72,7 +72,7 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     # This avoids doing 3 times the possibly costly building of J(x, p)
     J_at_xp = jacobian(𝐇.prob_vf, x, par0)
     # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
-    JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
+    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
     (; v, w, itv, itw) = @time "--> bd_vec" _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
@@ -294,7 +294,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of adjoint eigenvector
-        _Jt = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+        _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
         ζstar, λstar = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
         ζad .= ζstar ./ dot(ζstar, ζ)
@@ -439,7 +439,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
 
         # expression of the jacobian
         J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-        JAd_at_xp = has_adjoint(𝐇) ? jad(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
+        JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
 
         bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
@@ -518,11 +518,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 prob_hopf, alg,
                 (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
                 kwargs...,
-                kind = kind,
+                kind ,
                 linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
-                normC = normC,
+                normC,
                 finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
-                event = event
+                event
             )
     @assert ~isnothing(br) "Empty branch!"
     return correct_bifurcation(br)
@@ -566,9 +566,9 @@ function continuation_hopf(prob,
         L = jacobian(prob, bifpt.x, parbif)
 
         # jacobian adjoint at bifurcation point
-        L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
+        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
         axpby!(1 / dot(ζ★, ζ), ζ★, 0, ζad)
     else
         # we use a minimally augmented formulation to set the initial vectors
@@ -584,7 +584,7 @@ function continuation_hopf(prob,
 
         @debug "EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,newb) - complex(0,ω)*newb) norminf(apply(L,newb) + complex(0,ω)*newb)
 
-        L★ = ~has_adjoint(prob) ? adjoint(L) : jad(prob, bifpt.x, parbif)
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, ω))
         ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
@@ -626,7 +626,7 @@ function test_bt_gh(iter, state)
 
     # expression of the jacobian
     J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(probhopf) ? jad(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
+    JAd_at_xp = has_adjoint(probhopf) ? jacobian_adjoint(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
 
     bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
@@ -670,7 +670,7 @@ function (eig::HopfEig)(Jma, nev; k...)
 end
 
 @views function (eig::HopfEig)(Jma::AbstractMatrix, nev; k...)
-    eigenelts = eig.eigsolver(Jma[1:end-2, 1:end-2], nev; k...)
+    eigenelts = eig.eigsolver(Jma[begin:end-2, begin:end-2], nev; k...)
 end
 
 geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

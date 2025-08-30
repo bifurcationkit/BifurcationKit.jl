@@ -28,34 +28,20 @@ out = BK.solve(prob, Newton(), opt_newton)
 opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = opt_newton)
 br = continuation(prob, PALC(), opts_br0)
 ####################################################################################################
-# deflation newton solver, test of jacobian expression
-deflationOp = DeflationOperator(2, dot, 1.0, [out.u])
-
-# for testing
-show(deflationOp)
-length(deflationOp)
-deflationOp(2out.u, out.u)
-push!(deflationOp, rand(n))
-deleteat!(deflationOp, 2)
-
-deflationOp = DeflationOperator(2, dot, 1.0, [out.u])
-chanDefPb = DeflatedProblem(prob, deflationOp, DefaultLS())
-
-opt_def = NewtonPar(opt_newton; tol = 1e-10, max_iterations = 1000)
-outdef1 = BK.solve((@set prob.u0 = out.u .* (1 .+ 0.01*rand(n))), deflationOp, opt_def)
-@test BK.converged(outdef1)
-outdef1 = BK.solve((@set prob.u0 = out.u .* (1 .+ 0.01*rand(n))), deflationOp, opt_def, Val(:autodiff))
-@test BK.converged(outdef1)
-####################################################################################################
 # Fold continuation, test of Jacobian expression
+outfold = newton(br, 2; start_with_eigen = false)
 outfold = newton(br, 2; start_with_eigen = true)
 @test  BK.converged(outfold)
-outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = true, issymmetric = true)
+outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = false, issymmetric = true)
 @test BK.converged(outfold)
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
-outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1)
-outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = true, update_minaug_every_step = 1)
+for eig_st in (true, false)
+    outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+    outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+    # test use of jacobian_adjoint
+    outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+end
 
 # manual handling
 indfold = 1

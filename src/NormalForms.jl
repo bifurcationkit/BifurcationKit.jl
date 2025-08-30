@@ -108,7 +108,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         ζ★ = copy(ζ)
     else
-        _Lt = has_adjoint(prob) ? jad(prob, x0, parbif) : adjoint(L)
+        _Lt = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
         ζ★, λ★ = get_adjoint_basis(_Lt, conj(λ), options.eigsolver; nev, verbose)
     end
 
@@ -607,7 +607,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         λ★s = copy(λs)
         ζ★s = copy.(ζs)
     else
-        _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
+        _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
         ζ★s, λ★s = get_adjoint_basis(_Jt, conj.(λs), options.eigsolver; nev, verbose)
     end
     ζ★s = real.(ζ★s); λ★s = real.(λ★s)
@@ -981,7 +981,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    _Jt = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
@@ -1326,7 +1326,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob) ? jad(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    _Jt = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)

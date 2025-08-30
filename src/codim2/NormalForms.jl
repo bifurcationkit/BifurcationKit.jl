@@ -83,7 +83,7 @@ function cusp_normal_form(_prob,
         λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         ζ★ = copy(ζ)
     else
-        _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+        _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
         ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), eigsolver; nev, verbose)
     end
 
@@ -584,7 +584,7 @@ function bogdanov_takens_normal_form(_prob,
     # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
     ###########################
     vr = real.(ζs[1])
-    Lᵗ = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : transpose(L)
+    Lᵗ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
     if isnothing(ζs_ad) # do we have a basis for the kernel of the adjoint?
         _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
         Ivp = sortperm(_λ★, by = abs)
@@ -709,7 +709,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
@@ -1047,7 +1047,7 @@ function zero_hopf_normal_form(_prob,
     cq1 = conj(q1)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
     p0, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
     p1, λ★1 = get_adjoint_basis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
@@ -1408,7 +1408,7 @@ function hopf_hopf_normal_form(_prob,
     ω1 = imag(λ1); ω2 = imag(λ2);
 
     # left eigen-elements
-    _Jt = has_adjoint(prob_vf) ? jad(prob_vf, x0, parbif) : adjoint(L)
+    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
     p1, λ★1 = get_adjoint_basis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
     p2, λ★2 = get_adjoint_basis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
