@@ -23,6 +23,8 @@ Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
 Base.collect(ms::TimeMesh) = ms.ds
 Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([get_time_step(ms, 1)], ms.ds)
 ####################################################################################################
+const _trapezoid_jacobian_type = [Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), BorderedLU(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()]
+
 const DocStrjacobianPOTrap = """
 Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `[FullLU(), FullSparseInplace(), Dense(), DenseAD(), BorderedLU(), BorderedSparseInplace(), FullMatrixFree(), BorderedMatrixFree(), FullMatrixFreeAD]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
 - For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
@@ -117,7 +119,7 @@ $DocStrjacobianPOTrap
     "symbol which describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = Dense()
 
-    @assert jacobian in (FullLU(), FullSparseInplace(), Dense(), DenseAD(), BorderedLU(), BorderedSparseInplace(), MatrixFree(), BorderedMatrixFree(), AutoDiffMF())
+    @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `PeriodicOrbitTrapProblem`. Pick one in $_trapezoid_jacobian_type"
 end
 
 function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
@@ -133,7 +135,7 @@ end
 @inline isinplace(pb::PeriodicOrbitTrapProblem) = isnothing(pb.prob_vf) ? false : isinplace(pb.prob_vf)
 @inline get_time_step(pb::AbstractPOFDProblem, i::Int) = get_time_step(pb.mesh, i)
 get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
-@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem) = ~isnothing(pb.massmatrix)
+@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
 @inline getparams(pb::PeriodicOrbitTrapProblem) = getparams(pb.prob_vf)
 @inline getlens(pb::PeriodicOrbitTrapProblem) = getlens(pb.prob_vf)
 @inline getdelta(pb::PeriodicOrbitTrapProblem) = getdelta(pb.prob_vf)
@@ -142,8 +144,8 @@ setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
 @inline length(pb::PeriodicOrbitTrapProblem) = pb.M * get_state_dim(pb)
 
 # type unstable!
-@inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, returnArray = false)
-    if returnArray == false
+@inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, return_type_Array = false)
+    if return_type_Array == false
         return hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(pb.N))
     else
         return hasmassmatrix(pb) ? pb.massmatrix : LinearAlgebra.I(pb.N)
@@ -231,8 +233,10 @@ function potrap_scheme!(pb::AbstractPOFDProblem,
                         linear::Bool = true; 
                         applyf::Bool = true)
     # this function implements the basic implicit scheme used for the time integration
-    # because this function is called in a cyclic manner, we save the value of F(u2) in the variable tmp in order to avoid recomputing it in a subsequent call
+    # because this function is called in a cyclic manner, we save the value of F(u2) 
+    # in the variable tmp in order to avoid recomputing it in a subsequent call
     # basically tmp is F(u2)
+    # applyf: if true use F and dF otherwise
     if linear
         dest .= tmp
         if applyf
@@ -246,14 +250,14 @@ function potrap_scheme!(pb::AbstractPOFDProblem,
         else
             @. dest = (du1 - du2) - h * (dest + tmp)
         end
-    else
+    else # used for jvp
         dest .-= h .* tmp
         # tmp <- pb.F(u1, par)
         residual!(pb.prob_vf, tmp, u1, par)
         dest .-= h .* tmp
     end
 end
-potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool = true; applyf::Bool = true) = potrap_scheme!(pb, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf = applyf)
+potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool = true; applyf::Bool = true) = potrap_scheme!(pb, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf)
 
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
@@ -291,9 +295,9 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
 end
 
 """
-Matrix free expression of the Jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
+Matrix free expression (jvp) of the Jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
 """
-function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
+function jvp!(pb::PeriodicOrbitTrapProblem, out, u, par, du)
     M, N = size(pb)
     T  = _extract_period_fdtrap(pb, u)
     dT = _extract_period_fdtrap(pb, du)
@@ -332,7 +336,8 @@ end
 
 
 residual(pb::PeriodicOrbitTrapProblem, u::AbstractVector, par) = residual!(pb, similar(u), u, par)
-(pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par, du) = potrap_functional_jac!(pb, similar(du), u, par, du)
+jvp(pb::PeriodicOrbitTrapProblem, u::AbstractVector, par, du) = jvp!(pb, similar(du), u, par, du)
+(pb::PeriodicOrbitTrapProblem)(u::AbstractVector, par, du) = jvp!(pb, similar(du), u, par, du)
 
 ####################################################################################################
 # Matrix free expression of matrices related to the Jacobian Matrix of the PO functional
@@ -403,9 +408,9 @@ function jacobian_potrap_block(pb::PeriodicOrbitTrapProblem, u0::AbstractVector,
     Aγ = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
     cylic_potrap_block!(pb, u0, par, Aγ)
 
-    In = spdiagm( 0 => ones(N))
-    Aγ[Block(M, 1)] = (-γ) * In
-    Aγ[Block(M, M)] = In
+    Iₙ = spdiagm( 0 => ones(N))
+    Aγ[Block(M, 1)] = (-γ) * Iₙ
+    Aγ[Block(M, M)] = Iₙ
     return Aγ
 end
 
@@ -417,7 +422,7 @@ function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, p
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
 
-    In = get_mass_matrix(pb)
+    Iₙ = get_mass_matrix(pb)
 
     u0c = get_time_slices(pb, u0)
     outc = similar(u0c)
@@ -425,21 +430,21 @@ function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, p
     tmpJ = @views jacobian(pb.prob_vf, u0c[:, 1], par)
 
     h = T * get_time_step(pb, 1)
-    Jn = In - (h/2) .* tmpJ
+    Jn = Iₙ - (h/2) .* tmpJ
     Jc[Block(1, 1)] = Jn
 
     # we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
-    Jn = @views -In - (h/2) .* jacobian(pb.prob_vf, u0c[:, M-1], par)
+    Jn = @views -Iₙ - (h/2) .* jacobian(pb.prob_vf, u0c[:, M-1], par)
     Jc[Block(1, M-1)] = Jn
 
     for ii in 2:M-1
         h = T * get_time_step(pb, ii)
-        Jn = -In - (h/2) .* tmpJ
+        Jn = -Iₙ - (h/2) .* tmpJ
         Jc[Block(ii, ii-1)] = Jn
 
         tmpJ = @views jacobian(pb.prob_vf, u0c[:, ii], par)
 
-        Jn = In - (h/2) .* tmpJ
+        Jn = Iₙ - (h/2) .* tmpJ
         Jc[Block(ii, ii)] = Jn
     end
     return Jc
@@ -483,7 +488,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         M, N = size(pb)
         T = _extract_period_fdtrap(pb, u0)
 
-        In = get_mass_matrix(pb, ~(Tj <: SparseMatrixCSC))
+        Iₙ = get_mass_matrix(pb, ~(Tj <: SparseMatrixCSC))
 
         u0c = get_time_slices(pb, u0)
         outc = similar(u0c)
@@ -491,34 +496,34 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         tmpJ = jacobian(pb.prob_vf, u0c[:, 1], par)
 
         h = T * get_time_step(pb, 1)
-        Jn = In - (h/2) .* tmpJ
+        Jn = Iₙ - (h/2) .* tmpJ
         # setblock!(Jc, Jn, 1, 1)
         J0[1:N, 1:N] .= Jn
 
-        Jn .= -In .- (h/2) .* jacobian(pb.prob_vf, u0c[:, M-1], par)
+        Jn .= -Iₙ .- (h/2) .* jacobian(pb.prob_vf, u0c[:, M-1], par)
         # setblock!(Jc, Jn, 1, M-1)
         J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
         for ii in 2:M-1
             h = T * get_time_step(pb, ii)
-            @. Jn = -In - h/2 * tmpJ
+            @. Jn = -Iₙ - h/2 * tmpJ
             # the next lines cost the most
             # setblock!(Jc, Jn, ii, ii-1)
             J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
 
             tmpJ .= jacobian(pb.prob_vf, u0c[:, ii], par)
 
-            @. Jn = In - h/2 * tmpJ
+            @. Jn = Iₙ - h/2 * tmpJ
             # setblock!(Jc, Jn, ii, ii)
             J0[(ii-1)*N+1:(ii)*N, (ii-1)*N+1:(ii)*N] .= Jn
         end
 
-        # setblock!(Aγ, -γ * In, M, 1)
+        # setblock!(Aγ, -γ * Iₙ, M, 1)
         # useless to update:
-            # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -In
-        # setblock!(Aγ,  In,     M, M)
+            # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -Iₙ
+        # setblock!(Aγ,  Iₙ,     M, M)
         # useless to update:
-            # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
+            # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
 
         # we now set up the last line / column
         ∂TGpo = (residual(pb,vcat(u0[begin:end-1], T + δ), par) .- residual(pb,u0, par)) ./ δ
@@ -531,11 +536,11 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
 end
 
 
-@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder = true)
+@views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder::Bool = true)
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
 
-    In = get_mass_matrix(pb)
+    Iₙ = get_mass_matrix(pb)
 
     u0c = get_time_slices(pb, u0)
     outc = similar(u0c)
@@ -543,35 +548,35 @@ end
     tmpJ = jacobian(pb.prob_vf, u0c[:, 1], par)
 
     h = T * get_time_step(pb, 1)
-    Jn = In - tmpJ * (h/2)
+    Jn = Iₙ - tmpJ * (h/2)
 
     # setblock!(Jc, Jn, 1, 1)
     J0.nzval[indx[1, 1]] .= Jn.nzval
 
-    Jn .= -In .- jacobian(pb.prob_vf, u0c[:, M-1], par) .* (h/2)
+    Jn .= -Iₙ .- jacobian(pb.prob_vf, u0c[:, M-1], par) .* (h/2)
     # setblock!(Jc, Jn, 1, M-1)
     J0.nzval[indx[1, M-1]] .= Jn.nzval
 
     for ii in 2:M-1
         h = T * get_time_step(pb, ii)
-        @. Jn = -In - tmpJ * (h/2)
+        @. Jn = -Iₙ - tmpJ * (h/2)
         # the next lines cost the most
         # setblock!(Jc, Jn, ii, ii-1)
         J0.nzval[indx[ii, ii-1]] .= Jn.nzval
 
         tmpJ .= jacobian(pb.prob_vf, u0c[:, ii], par)# * (h/2)
 
-        @. Jn = In -  tmpJ * (h/2)
+        @. Jn = Iₙ -  tmpJ * (h/2)
         # setblock!(Jc, Jn, ii, ii)
         J0.nzval[indx[ii, ii]] .= Jn.nzval
     end
 
-    # setblock!(Aγ, -γ * In, M, 1)
+    # setblock!(Aγ, -γ * Iₙ, M, 1)
     # useless to update:
-        # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -In
-    # setblock!(Aγ,  In,     M, M)
+        # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -Iₙ
+    # setblock!(Aγ,  Iₙ,     M, M)
     # useless to update:
-        # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
+        # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
 
     if updateborder
         # we now set up the last line / column
@@ -820,10 +825,11 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(probPO, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = probPO.jacobian
-    @assert jacobianPO in (Dense(), DenseAD(), FullLU(), BorderedLU(), MatrixFree(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()) "This jacobian is not defined. Please choose another one."
+    @assert jacobianPO in _trapezoid_jacobian_type "This jacobian is not defined. Please choose another one."
     M, N = size(probPO)
 
-    if jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), FullSparseInplace(), AutoDiffMF())
+
+    if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         if jacobianPO == FullLU()
             jac = (x, p) -> probPO(Val(:JacFullSparse), x, p)
         elseif jacobianPO == FullSparseInplace()
@@ -835,12 +841,13 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
         elseif jacobianPO == Dense()
             _J =  probPO(Val(:JacFullSparse), orbitguess, getparams(probPO.prob_vf)) |> Array
             jac = (x, p) -> probPO(Val(:JacFullSparseInplace), _J, x, p)
-        elseif jacobianPO == DenseAD()
+        elseif jacobianPO == AutoDiffDense()
             jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
         elseif jacobianPO == AutoDiffMF()
             jac = (x, p) -> dx -> ForwardDiff.derivative(t -> residual(probPO, x .+ t .* dx, p), 0)
         else 
              jac = (x, p) -> ( dx -> probPO(x, p, dx))
+        else # FullMatrixFree()
         end
 
         # define a problem to call newton
@@ -863,7 +870,7 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
             Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = lu(_J), prob = probPO, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
 
-        else # :BorderedMatrixFree
+        else # BorderedMatrixFree()
             Aγ = AγOperatorMatrixFree(prob = probPO, orbitguess = zeros(N * M + 1), par = getparams(probPO.prob_vf))
             # linear solver
             lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), check_precision = false))
@@ -942,7 +949,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = prob.jacobian
-    @assert jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), BorderedLU(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()) "This jacobian is not defined. Please chose another one among (Dense, DenseAD, FullLU, MatrixFree, BorderedLU, BorderedMatrixFree, FullSparseInplace, BorderedSparseInplace, AutoDiffMF)."
+    @assert jacobianPO in _trapezoid_jacobian_type "This jacobian is not defined. Please chose another one among $_trapezoid_jacobian_type."
 
     M, N = size(prob)
     options = contParams.newton_options
@@ -959,7 +966,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     _recordsol = modify_po_record(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
     _plotsol = modify_po_plot(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
 
-    if jacobianPO in (Dense(), DenseAD(), FullLU(), MatrixFree(), FullSparseInplace(), AutoDiffMF())
+    if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         if jacobianPO == FullLU()
             jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
         elseif jacobianPO == FullSparseInplace()
@@ -971,7 +978,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
         elseif jacobianPO == Dense()
             _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf)) |> Array
             jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
-        elseif jacobianPO == DenseAD()
+        elseif jacobianPO == AutoDiffDense()
             jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> residual(prob, z, p), x), x, p)
         elseif jacobianPO == AutoDiffMF()
             jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->residual(prob, x .+ t .* dx, p), 0), x, p)

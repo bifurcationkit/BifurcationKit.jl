@@ -157,9 +157,9 @@ Solve the linear system associated with the collocation problem for computing pe
     Jext = cop_cache.Jext
     @assert size(Jext, 1) == size(Jext, 2) == (Ntst+1)*N+1+δn "Error with matrix of external variables. Please report this issue on the website of BifurcationKit.\nδn = $δn\nsize(Jext) = $(size(Jext))\n(Ntst+1)*N+1+δn = $((Ntst+1)*N+1+δn)\n\n"
     𝒯 = eltype(coll)
-    In = coll.cache.In
+    Iₙ = coll.cache.In
 
-    rhs = condensation_of_parameters2!(cop_cache, coll, J, In, rhs0)
+    rhs = condensation_of_parameters2!(cop_cache, coll, J, Iₙ, rhs0)
     Jcop = cop_cache.Jcoll
 
     if debug === true
@@ -169,7 +169,7 @@ Solve the linear system associated with the collocation problem for computing pe
     end
 
     # we build the linear system for the external variables in Jext and rhs_ext
-    rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, In, Ntst, nbcoll, Npo, δn, N, m)
+    rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, Iₙ, Ntst, nbcoll, Npo, δn, N, m)
 
     if uselu
         F = lu(Jext)

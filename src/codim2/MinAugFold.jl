@@ -256,7 +256,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
     opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
 
     # solve the Fold equations
-    return solve(prob_f, Newton(), opt_fold; normN = normN, kwargs...)
+    return solve(prob_f, Newton(), opt_fold; normN, kwargs...)
 end
 
 function newton_fold(br::AbstractBranchResult, ind_fold::Int;

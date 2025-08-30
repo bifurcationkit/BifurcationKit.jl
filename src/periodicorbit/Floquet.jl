@@ -445,7 +445,7 @@ end
 """
 $(TYPEDEF)
 
-Computation of Floquet exponents for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3] in which we form the monodromy matrix with a product of `Ntst` matrices.
+Computation of Floquet exponents for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3].
 
 # Fields
 $(TYPEDFIELDS)
@@ -460,7 +460,7 @@ $(TYPEDFIELDS)
 struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     "Which eigen solver. Defaults to `DefaultEig`"
     eigsolver::E
-    "Cache, defaults to `nothing`"
+    "Cache, defaults to `nothing`. It should be set to `COPCACHE`. When used with `COPBLS`, it is automatically set up."
     cache::C
     "Whether to use optimized COP to compute the Floquet exponents. Defaults to `true`."
     small_n::Bool

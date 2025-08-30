@@ -51,31 +51,58 @@ push!(orbitguess_f, 2pi)
 optn_po = NewtonPar()
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 1)
 
-lsdef = DefaultLS()
-lsit = GMRESKrylovKit()
-for (ind, jacobianPO) in enumerate((BK.Dense(), BK.DenseAD(), BK.FullLU(), BK.BorderedLU(), BK.FullSparseInplace(), BK.BorderedSparseInplace(), BK.MatrixFree(), BK.AutoDiffMF(), BK.BorderedMatrixFree()))
-    _ls = ind > 6 ? lsit : lsdef
-    @info jacobianPO, ind, _ls
-    outpo_f = newton((@set poTrap.jacobian = jacobianPO),
-        orbitguess_f, (@set optn_po.linsolver = _ls);
-        normN = norminf)
-    @test BK.converged(outpo_f)
+let
+    lsdef = DefaultLS()
+    lsit = GMRESKrylovKit()
+    for (ind, jacobianPO) in enumerate((BK.Dense(),
+                                        BK.AutoDiffDense(),
+                                        BK.FullLU(),
+                                        BK.BorderedLU(),
+                                        BK.FullSparseInplace(),
+                                        BK.BorderedSparseInplace(),
+                                        BK.FullMatrixFree(),
+                                        BK.AutoDiffMF(),
+                                        BK.BorderedMatrixFree()))
+        _ls = ind > 6 ? lsit : lsdef
+        @info jacobianPO, ind, _ls
+        outpo_f = newton((@set poTrap.jacobian = jacobianPO),
+            orbitguess_f, (@set optn_po.linsolver = _ls);
+            normN = norminf)
+        @test BK.converged(outpo_f)
 
-    br_po = continuation(
-        (@set poTrap.jacobian = jacobianPO), 
-        outpo_f.u,
-        PALC(),
-        (@set opts_po_cont.newton_options.linsolver = _ls);
-        verbosity = 0, plot = false,
-        linear_algo = BorderingBLS(solver = _ls, check_precision = false),
-        normC = norminf)
-
-    BK.get_periodic_orbit(br_po, 1)
-    @test _test_sorted(BK.eigenvals(br_po, 1))
+        for eig in (FloquetQaD(optn_po.eigsolver),)
+            br_po = continuation(
+                (@set poTrap.jacobian = jacobianPO), 
+                outpo_f.u,
+                PALC(),
+                (@set opts_po_cont.newton_options.linsolver = _ls);
+                # verbosity = 0, plot = false,
+                eigsolver = eig,
+                linear_algo = BorderingBLS(solver = _ls, check_precision = false),
+                normC = norminf)
+            BK.get_periodic_orbit(br_po, 1)
+            @test _test_sorted(BK.eigenvals(br_po, 1))
+        end
+    end
 end
 
-let
-    outpo_f = @time newton((@set poTrap.jacobian = BK.Dense()), orbitguess_f, optn_po);
+let poTrap = poTrap
+    @reset poTrap.jacobian = BK.Dense()
+    outpo_f = newton(poTrap,
+            orbitguess_f, (@set optn_po.linsolver = DefaultLS());
+            normN = norminf)
+    br_po = continuation(
+                poTrap, 
+                outpo_f.u,
+                PALC(),
+                (@set opts_po_cont.newton_options.linsolver = DefaultLS());
+                # verbosity = 2, plot = false,
+                # eigsolver = FloquetGEV(optn_po.eigsolver, length(poTrap), 2),
+                linear_algo = BorderingBLS(solver = DefaultLS(), check_precision = false),
+                normC = norminf)
+
+
+    outpo_f = @time newton(poTrap, orbitguess_f, optn_po);
     outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
 
     # computation of the Jacobian at out_pof
@@ -84,10 +111,14 @@ let
 
     # test of the jacobian against automatic differentiation
     @test norm(_Jfd - Array(_J1), Inf) < 1e-7
+
+    # tests for constructor of Floquet routines
+    for eig in (EigArpack(), EigArnoldiMethod(), EigKrylovKit())
+        BK.check_floquet_options(eig)
+    end
+    FloquetQaD(EigKrylovKit()) |> FloquetQaD
+
+    # test of the Floquet exponents
+    eig = FloquetQaD(DefaultEig())
+    # eig(Array(_J1), 2)
 end
-####################################################################################################
-# tests for constructor of Floquet routines
-for eig in (EigArpack(), EigArnoldiMethod(), EigKrylovKit())
-    BK.check_floquet_options(eig)
-end
-FloquetQaD(EigKrylovKit()) |> FloquetQaD

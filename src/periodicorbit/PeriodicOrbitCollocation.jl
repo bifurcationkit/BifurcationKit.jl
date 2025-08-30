@@ -151,8 +151,10 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
 end
 ####################################################################################################
 
+const _pocoll_jacobian_types = (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace(), FullSparseInplace())
+
 """
-    $(TYPEDEF)
+$(TYPEDEF)
 
 This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
 
@@ -229,7 +231,7 @@ Note that you can generate this guess from a function using `generate_solution` 
     "parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
 
-    @assert jacobian in (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace(), FullSparseInplace()) "This jacobian is not defined. Please chose another one."
+    @assert jacobian in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one in $_pocoll_jacobian_types."
 end
 
 # trivial constructor
@@ -935,7 +937,6 @@ const DocStringJacobianPOColl = """
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
-
 function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
                         orbitguess,
                         options::NewtonPar;
@@ -1002,17 +1003,17 @@ function newton(probPO::PeriodicOrbitOCollProblem,
                 defOp::DeflationOperator,
                 options::NewtonPar;
                 kwargs...)
-    _newton_pocoll(probPO, orbitguess, options; defOp = defOp, kwargs...)
+    _newton_pocoll(probPO, orbitguess, options; defOp, kwargs...)
 end
 
-function generate_jacobian(coll::PeriodicOrbitOCollProblem, 
+function _generate_jacobian(coll::PeriodicOrbitOCollProblem, 
                         orbitguess, 
                         par; 
                         δ = convert(eltype(orbitguess), 1e-8),
                         Jcoll_matrix = nothing
                         )
     jacobianPO = coll.jacobian
-    @assert jacobianPO in (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()) "This jacobian is not defined. Please chose another one among (AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace())."
+    @assert jacobianPO in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one among $_pocoll_jacobian_types."
 
     if jacobianPO isa DenseAnalytical
         jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
@@ -1063,15 +1064,15 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     options = _contParams.newton_options
 
     if linear_algo isa COPBLS
-        Nbls = length(coll) + 2 #+1 for phase condition and +1 for PALC
+        Nbls = length(coll) + 2 # +1 for phase condition and +1 for PALC
         _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
         cache = COPCACHE(coll, Val(1))
-        linear_algo = COPBLS(
-                        cache = cache,
+        linear_algo = COPBLS(;
+                        cache,
                         solver = FloquetWrapperLS(nothing),
                         J = similar(_Jcoll, Nbls, Nbls)
                         )
-        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); 
+        jacPO = _generate_jacobian(coll, orbitguess, getparams(coll); 
                         δ,
                         Jcoll_matrix = @view linear_algo.J[begin:end-1, begin:end-1]
                         )
@@ -1084,7 +1085,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
         end
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
-        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
+        jacPO = _generate_jacobian(coll, orbitguess, getparams(coll); δ)
     end
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 

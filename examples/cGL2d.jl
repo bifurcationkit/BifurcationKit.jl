@@ -94,7 +94,6 @@ sol0 = zeros(2Nx, Ny)
 prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@optic _.r); J = Jcgl)
 
 eigls = EigArpack(1.0, :LM)
-# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
 ####################################################################################################
@@ -112,10 +111,11 @@ hopfpoint = newton(br, ind_hopf;
                     options = optnew, 
                     normN = norminf, 
                     start_with_eigen = true)
-BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
+BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from guess l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf = continuation(br, 1, (@optic _.γ),
-    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15); plot = true,
+    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15, save_eigenvectors = false); 
+    plot = true,
     update_minaug_every_step = 1,
     start_with_eigen = false, 
     bothside = false,
@@ -155,11 +155,13 @@ hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_b
     detect_codim2_bifurcation = 2,
     callback_newton = BK.cbMaxNorm(1e5),
     start_with_eigen = true,
+    plot = true,
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
     jacobian_ma = BK.MinAug(),
     bothside = false, 
     normC = norminf)
 
+plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 plot!(hopf_from_zh)
 ####################################################################################################
 ind_hopf = 1
@@ -170,7 +172,7 @@ r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt
 orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 
-poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = BK.MatrixFree())
+poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = BK.FullMatrixFree())
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
@@ -187,11 +189,11 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 #                                     slow version DO NOT RUN!!!
 #
 ####################################################################################################
-# opt_po = (@set opt_po.eigsolver = eig_MF_KrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
+# opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
 opt_po = (@set opt_po.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
 @assert 1==0 "Too much memory will be used!"
-br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = :FullLU),
+br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
             orbitguess_f, PALC(),
             opts_po_cont;
             verbosity = 2,    plot = true,
@@ -318,7 +320,7 @@ ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ)
 poTrapMFi = PeriodicOrbitTrapProblem(
             probInp,
             real.(vec_hopf), hopfpt.u,
-            M, 2n, ls0; jacobian = BK.MatrixFree())
+            M, 2n, ls0; jacobian = BK.FullMatrixFree())
 
 # ca ne devrait pas allouer!!!
 out_po = copy(orbitguess_f)
@@ -326,7 +328,6 @@ out_po = copy(orbitguess_f)
 @time BK.potrap_functional_jac!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f)
 opt_po_inp = @set opt_po.linsolver = ls
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
-
 
 lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
 opt_po_inp_kl = @set opt_po.linsolver = lsi
@@ -344,7 +345,7 @@ end
 
 # we look at the second fold point
 indfold = 1
-foldpt = BK.foldpoint(br_po, indfold)
+foldpt = BK.fold_point(br_po, indfold)
 
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.1));
 Precilu = @time ilu(Jpo, τ = 0.005);

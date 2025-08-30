@@ -452,7 +452,7 @@ function test_ch(iter, state)
         if 𝐍𝐒.prm
             ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = true))
         else
-            ns = neimark_sacker_normal_form(pbwrap, ns0)
+            ns = neimark_sacker_normal_form_iooss(pbwrap, ns0)
         end
         if ns.prm
             prob_ns.l1 = ns.nf.nf.b
