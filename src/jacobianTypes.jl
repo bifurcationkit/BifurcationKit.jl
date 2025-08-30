@@ -3,7 +3,7 @@ abstract type AbstractNonLinearSolver end
 struct Newton <: AbstractNonLinearSolver end
 ################################################################################################
 abstract type AbstractJacobianType end
-abstract type AbstractJacobianFree <: AbstractJacobianType end
+abstract type AbstractJacobianMatrixFree <: AbstractJacobianType end
 abstract type AbstractJacobianMatrix <: AbstractJacobianType end
 abstract type AbstractJacobianSparseMatrix <: AbstractJacobianMatrix end
 
@@ -17,12 +17,12 @@ struct AutoDiff <: AbstractJacobianType end
 """
 Singleton type to trigger the computation of the jacobian vector product (jvp) using ForwardDiff.jl. It can be used for example in newton, in deflated newton or in continuation.
 """
-struct AutoDiffMF <: AbstractJacobianFree end
+struct AutoDiffMF <: AbstractJacobianMatrixFree end
 
 """
 Singleton type to trigger the computation of the jacobian vector product (jvp) using finite differences. It can be used for example in newton or in deflated newton.
 """
-struct FiniteDifferencesMF <: AbstractJacobianFree end
+struct FiniteDifferencesMF <: AbstractJacobianMatrixFree end
 
 """
 Singleton type to trigger the computation of the jacobian using finite differences. It can be used for example in newton or in deflated newton.
@@ -66,13 +66,35 @@ struct AutoDiffDenseAnalytical <: AbstractJacobianMatrix end
 """
 The jacobian is computed using Jacobian-Free method, namely a jacobian vector product (jvp).
 """
-struct MatrixFree <: AbstractJacobianMatrix end
+struct MatrixFree <: AbstractJacobianMatrixFree end
 
+"""
+Specific to trapezoid method. The sparse jacobian is inverted with bordered LU solve.
+"""
 struct BorderedLU <: AbstractJacobianMatrix end
+"""
+Specific to trapezoid method. The sparse jacobian is inverted with LU solve.
+"""
 struct FullLU <: AbstractJacobianMatrix end
-struct DenseAD <: AbstractJacobianMatrix end
+
+"""
+Dense jacobian. See trapezoid method.
+"""
 struct Dense <: AbstractJacobianMatrix end
-struct BorderedMatrixFree <: AbstractJacobianMatrix end
+
+"""
+Specific to trapezoid method. The jacobian is computed using Jacobian-Free method, namely a jacobian vector product (jvp).
+"""
+struct FullMatrixFree <: AbstractJacobianMatrixFree end
+
+"""
+Specific to trapezoid method. The jacobian is computed using Jacobian-Free method, namely a jacobian vector product (jvp) interpreted as bordered jacobian.
+"""
+struct BorderedMatrixFree <: AbstractJacobianMatrixFree end
+
+"""
+Specific to trapezoid method.
+"""
 struct BorderedSparseInplace <: AbstractJacobianMatrix end
 
 ################################################################################################
