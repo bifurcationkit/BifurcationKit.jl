@@ -244,12 +244,12 @@ function generate_ci_problem(shooting::ShootingProblem,
     # find best period candidate
     if optimal_period
         _times = LinRange(tspan[1], tspan[2], 1000)
-        period = _times[argmin(norm(sol(t) - sol(tspan[1])) for t in _times[2:end])]
+        period = _times[argmin(norm(sol(t) - sol(tspan[1])) for t in _times[begin+1:end])]
         @reset tspan[2] = tspan[1] + period
     end
     
     # points for the sections
-    centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[1:end-1]]
+    centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[begin:end-1]]
     
     # shooting kwargs
     sh_kw = (lens = getlens(prob_bif), 

@@ -451,16 +451,16 @@ end
 LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), check_precision = false))
 
 function (l::LSFromBLS)(J, rhs)
-    F = factorize(J[1:end-1, 1:end-1])
-    x1, x2, flag, it = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs[1:end-1]), rhs[end])
+    F = factorize(J[begin:end-1, begin:end-1])
+    x1, x2, flag, it = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs[begin:end-1]), rhs[end])
     return vcat(x1, x2), flag, sum(it)
 end
 
 function  (l::LSFromBLS)(J, rhs1, rhs2)
-    F = factorize(J[1:end-1,1:end-1])
-    x1, x2, flag1, it1 = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs1[1:end-1]), rhs1[end])
+    F = factorize(J[begin:end-1,begin:end-1])
+    x1, x2, flag1, it1 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs1[begin:end-1]), rhs1[end])
 
-    y1, y2, flag2, it2 = l.solver(F, Array(J[1:end-1,end]), Array(J[end,1:end-1]), J[end, end], (@view rhs2[1:end-1]), rhs2[end])
+    y1, y2, flag2, it2 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs2[begin:end-1]), rhs2[end])
 
     return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end

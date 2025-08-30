@@ -94,7 +94,7 @@ probBif = BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         )
 ####################################################################################################
 eigls = EigArpack(1.1, :LM)
-opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, p_max = 1.7, detect_bifurcation = 3, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), n_inversion = 4)
+opts_br_eq = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.005, p_max = 1.7, nev = 21, plot_every_step = 50, newton_options = NewtonPar(eigsolver = eigls, tol = 1e-9), n_inversion = 4)
 
 br = @time continuation(
     probBif, PALC(),
@@ -282,7 +282,7 @@ br_po = continuation(
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,
-    record_from_solution = (x, p) -> (period = getperiod(p.prob, x, p.p),),
+    record_from_solution = (x, p;  k...) -> (period = getperiod(p.prob, x, p.p),),
     finalise_solution = (z, tau, step, contResult; k...) -> begin
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
         return true

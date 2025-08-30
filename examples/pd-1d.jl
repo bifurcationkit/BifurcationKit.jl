@@ -110,6 +110,8 @@ br_po = @time continuation(
     normC = norminf)
 
 plot(br, br_po, label = "")
+
+get_normal_form(br_po, 2, verbose = true)
 ####################################################################################################
 # branching from PD using aBS
 br_po_pd = @time continuation(
@@ -132,6 +134,8 @@ br_po_pd = @time continuation(
     normC = norminf)
 
 plot(br, br_po, br_po_pd, label = "")
+
+get_normal_form(br_po_pd, 5, verbose = true)
 ####################################################################################################
 # shooting
 par_br_hopf = @set par_br.C = -0.86

@@ -458,7 +458,7 @@ function generate_ci_problem(pb::PoincareShootingProblem,
     N = length(u0)
     M = pb.M
 
-    ts = LinRange(tspan[1], tspan[2], M+1)[1:end-1]
+    ts = LinRange(tspan[1], tspan[2], M+1)[begin:end-1]
     centers = [copy(sol(t)) for t in ts]
     normals = [residual(bifprob, c, sol.prob.p) for c in centers]
     # normals = [sol(t, Val{1}) for t in ts]

@@ -19,8 +19,8 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     # put the PD boundary condition
     J = copy(_get_matrix(Jac))
     J[end-N:end-1, 1:N] .= I(N)
-    @set Jac.jacpb = J[1:end-1, 1:end-1]
-    # J[1:end-1, 1:end-1]
+    @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    # J[begin:end-1, begin:end-1]
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
@@ -29,7 +29,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     # put the NS boundary condition
     J = Complex.(_get_matrix(Jac))
     J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ω))(N)
-    Jns = @set Jac.jacpb = J[1:end-1, 1:end-1]
+    Jns = @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
 
 for (fname, cdt, err_msg) in (
@@ -211,8 +211,9 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     # enforce PD boundary condition
     J[end-N:end-1, 1:N] .= I(N)
     rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
-    p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+    q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
+    p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
+
 
     @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, pdpointguess.u, par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation
@@ -271,8 +272,8 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     J[end-N:end-1, end-N:end-1] .= UniformScaling(exp(λₙₛ))(N)
 
     rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q) # ≈ ker(J)
-    p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+    q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
+    p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
     # perform continuation
     continuation_ns(br.prob, alg,
@@ -292,17 +293,17 @@ end
 @views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
-    eigenelts = _eig_floquet_col(Jma[1:end-2, 1:end-2], n, m, Ntst, nev)
+    eigenelts = _eig_floquet_col(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)
 end
 
 @views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
-    eigenelts = _eig_floquet_coll(Jma[1:end-1, 1:end-1], n, m, Ntst, nev)
+    eigenelts = _eig_floquet_coll(Jma[begin:end-1, begin:end-1], n, m, Ntst, nev)
 end
 
 @views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
-    eigenelts = _eig_floquet_coll(Jma[1:end-2, 1:end-2], n, m, Ntst, nev)
+    eigenelts = _eig_floquet_coll(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)
 end

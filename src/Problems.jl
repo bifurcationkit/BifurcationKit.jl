@@ -21,7 +21,7 @@ abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
 abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
 ################################################################################
-using SciMLBase: numargs
+import SciMLBase
 
 const OpticType = Union{Nothing, AllOpticTypes}
 
@@ -63,7 +63,7 @@ end
 Determine if the vector field is of the form `f!(out, z, p)`.
 """
 function _isinplace(f)
-    m = minimum(numargs(f))
+    m = minimum(SciMLBase.numargs(f))
     if ~(1 < m < 4) 
         error("You have too many/few arguments in your vector field F. It should be of the form `F(x,p)` or `F!(x,p)`.")
     end
@@ -194,6 +194,7 @@ plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 for (op, at) in (
                 (:BifurcationProblem, AbstractBifurcationProblem),
                 (:ODEBifProblem, AbstractBifurcationProblem),
+                (:DAEBifProblem, AbstractBifurcationProblem),
                 (:PDEBifProblem, AbstractBifurcationProblem),
                 (:FoldMAProblem, AbstractMABifurcationProblem),
                 (:HopfMAProblem, AbstractMABifurcationProblem),
@@ -205,7 +206,7 @@ for (op, at) in (
                 (:WrapPOColl, AbstractWrapperFDProblem),
                 (:WrapTW, AbstractWrapperFDProblem),
            )
-    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
+    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin
             """
             $(TYPEDEF)
@@ -246,17 +247,17 @@ for (op, at) in (
                 VF::Tvf
                 "Initial guess"
                 u0::Tu
-                "parameters"
+                "Parameters"
                 params::Tp
-                "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])`. For more information, we refer to `Accessors.jl`."
+                "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1.78)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])`. For more information, we refer to `Accessors.jl`."
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
-                "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::ContResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
+                "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "function to save the full solution on the branch. Some problem are mutable (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (not as a view to `x`). Signature: `save_solution(x, p)`"
+                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (not as a view to `x`). Signature: `save_solution(x, p)`"
                 save_solution::Tgets
-                "Function used to update the problem after each continuation step"
+                "Function to update the problem after each continuation step"
                 update!::Tupdate
             end
 
@@ -318,7 +319,7 @@ for (op, at) in (
     end
 
     # forward getters
-    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
+    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin
             """
             ($SIGNATURES)

@@ -534,7 +534,7 @@ end
 # There is see https://github.com/JuliaLang/julia/pull/56657, which might improve the performance considerably. Unfortunately this seemed to increase allocations in certain cases, and I haven't got to looking into these.
 function _fast_copy_bordered!(x, y)
     for (xcol, ycol) ∈ zip(eachcol(x), eachcol(y))
-        @views xcol[1:end - 1] .= ycol
+        @views xcol[begin:end - 1] .= ycol
     end
     x
 end
@@ -567,8 +567,8 @@ function (ls::COPBLS)(_Jc, dR,
     # hence the following situation
     _fast_copy_bordered!(ls.J, A)
 
-    ls.J[1:end-1, end] .= dR
-    ls.J[end, 1:end-1] .= conj.(dzu .* ξu)
+    ls.J[begin:end-1, end] .= dR
+    ls.J[end, begin:end-1] .= conj.(dzu .* ξu)
     ls.J[end, end] = dzp * ξp
 
     # apply a linear operator to ξu

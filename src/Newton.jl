@@ -9,7 +9,7 @@ $(TYPEDFIELDS)
 # Arguments for line search (Armijo)
 - `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
 - `α = 1.0`: initial value of α (damping) parameter for line search algorithm
-- `αmin  = 0.001 `: minimal value of the damping `alpha`
+- `αmin  = 0.001`: minimal value of the damping `alpha`
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Accessors.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.

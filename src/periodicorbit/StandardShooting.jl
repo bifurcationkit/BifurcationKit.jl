@@ -17,10 +17,10 @@ Note that you can generate this guess from a function solution using `generate_s
 # Fields
 $(TYPEDFIELDS)
 
-## Jacobian
+# Jacobian
 $DocStringJacobianPOSh
 
-## Simplified constructors
+# Simplified constructors
 - The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points:
 
 
@@ -104,7 +104,7 @@ end
 @views function get_time_slices(sh::ShootingProblem, x::AbstractVector)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
-    return reshape(x[1:end-1], N, M)
+    return reshape(x[begin:end-1], N, M)
 end
 @inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
@@ -112,7 +112,7 @@ end
 @inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
-function (sh::ShootingProblem)(x::AbstractVector, pars)
+@views function (sh::ShootingProblem)(x::AbstractVector, pars)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
@@ -169,7 +169,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 end
 
 # jacobian of the shooting functional
-function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
+@views function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
     # period of the cycle
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
@@ -187,7 +187,7 @@ function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ =
             ip1 = (ii == M) ? 1 : ii+1
             tmp = jvp(sh.flow, xc[:, ii], pars, dxc[:, ii], sh.ds[ii] * T)
             # call jacobian of the flow, jacobian-vector product
-            outc[:, ii] .= @views tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     else
         solOde = jvp(sh.flow, xc, pars, dxc, sh.ds .* T)
@@ -282,7 +282,7 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode
     T = getperiod(prob, x)
     M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
-    xv = @view x[1:end-1]
+    xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
     Th = eltype(x)
 
@@ -312,7 +312,7 @@ function get_po_solution(prob::ShootingProblem, x, pars; kode...)
     T = getperiod(prob, x)
     M = get_mesh_size(prob)
     N = div(length(x) - 1, M)
-    xv = @view x[1:end-1]
+    xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
 
     if ~isparallel(prob)
@@ -351,7 +351,7 @@ function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, peri
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
     section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section
     # update the problem but not the section if the user passed one
-    probSh = setproperties(prob, 
+    probSh = setproperties(prob; 
                             section = section, 
                             par = getparams(prob_vf), 
                             lens = getlens(prob_vf))

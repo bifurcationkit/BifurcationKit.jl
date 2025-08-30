@@ -479,7 +479,7 @@ function continuation(br::AbstractBranchResult,
 
         # find the bifurcated branch using deflation
         if ~(probPO isa PoincareShootingProblem)
-            deflationOp = DeflationOperator(2, (x, y) -> dot(x[1:end-1], y[1:end-1]), one(𝒯), [sol0.u]; autodiff = true)
+            deflationOp = DeflationOperator(2, (x, y) -> dot(x[begin:end-1], y[begin:end-1]), one(𝒯), [sol0.u]; autodiff = true)
         else
             deflationOp = DeflationOperator(2, (x, y) -> dot(x, y) / M, one(𝒯), [sol0.u]; autodiff = true)
         end

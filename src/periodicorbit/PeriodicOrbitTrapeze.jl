@@ -152,7 +152,7 @@ end
 # these functions extract the last component of the periodic orbit guess
 @inline _extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
 # these functions extract the time slices components
-get_time_slices(x::AbstractVector, N, M) = @views reshape(x[1:end-1], N, M)
+get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
 get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
 
 """
@@ -303,7 +303,7 @@ function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
     duc = get_time_slices(pb, du)
 
     # compute the cyclic part
-    @views Jc(pb, outc, u[1:end-1-N], par, T, du[1:end-N-1], outc[:, M])
+    @views Jc(pb, outc, u[begin:end-1-N], par, T, du[begin:end-N-1], outc[:, M])
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop
     tmp = @view outc[:, M]
@@ -323,9 +323,9 @@ function potrap_functional_jac!(pb::AbstractPOFDProblem, out, u, par, du)
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
     if on_gpu(pb)
-        return @views vcat(out[1:end-1], dot(du[1:end-1], pb.ϕ))
+        return @views vcat(out[begin:end-1], dot(du[begin:end-1], pb.ϕ))
     else
-        out[end] = @views dot(du[1:end-1], pb.ϕ)
+        out[end] = @views dot(du[begin:end-1], pb.ϕ)
         return out
     end
 end
@@ -390,7 +390,7 @@ function Jc(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractV
     out  = similar(du)
     outc = reshape(out, N, M-1)
     tmp  = similar(view(outc, :, 1))
-    return @views Jc(pb, outc, u0[1:end-1-N], par, T, du, tmp)
+    return @views Jc(pb, outc, u0[begin:end-1-N], par, T, du, tmp)
 end
 ####################################################################################################
 """
@@ -461,7 +461,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
     # extraction of various constants
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
-    AγBlock = jacobian_potrap_block(pb, u0, par; γ = γ)
+    AγBlock = jacobian_potrap_block(pb, u0, par; γ)
 
     # we now set up the last line / column
     @views ∂TGpo = (residual(pb, vcat(u0[begin:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
@@ -521,7 +521,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
             # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= In
 
         # we now set up the last line / column
-        ∂TGpo = (residual(pb,vcat(u0[1:end-1], T + δ), par) .- residual(pb,u0, par)) ./ δ
+        ∂TGpo = (residual(pb,vcat(u0[begin:end-1], T + δ), par) .- residual(pb,u0, par)) ./ δ
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
@@ -575,7 +575,7 @@ end
 
     if updateborder
         # we now set up the last line / column
-        ∂TGpo = (residual(pb, vcat(u0[1:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
+        ∂TGpo = (residual(pb, vcat(u0[begin:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
@@ -593,7 +593,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacCyclicSparse}, u0::AbstractVec
     # this is bad for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
     # the following line is bad but still less costly than the previous one
-    return Aγ[1:end-N, 1:end-N]
+    return Aγ[begin:end-N, begin:end-N]
 end
 
 function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVector, par)
@@ -707,8 +707,8 @@ end
 @views function apply(A::AγOperatorSparseInplace, dx)
     out = similar(dx)
     M, N = size(A.prob)
-    out1 = apply(A.Jc, dx[1:end-N])
-    return vcat(out1, -dx[1:N] .+ dx[end-N+1:end])
+    out1 = apply(A.Jc, dx[begin:end-N])
+    return vcat(out1, -dx[begin:N] .+ dx[end-N+1:end])
 end
 
 # linear solvers designed specifically for AbstractPOTrapAγOperator
@@ -720,8 +720,8 @@ end
 
 @views function _combine_solution_Aγ_linearsolver(rhs, xbar, N)
     x = similar(rhs)
-    x[1:end-N] .= xbar
-    x[end-N+1:end] .= x[1:N] .+ rhs[end-N+1:end]
+    x[begin:end-N] .= xbar
+    x[end-N+1:end] .= x[begin:N] .+ rhs[end-N+1:end]
     return x
 end
 
@@ -729,7 +729,7 @@ end
     # dimension of a time slice
     N = A.prob.N
     # we invert the cyclic part Jc of Aγ
-    xbar, flag, numiter = ls.linsolver(dx -> Jc(A.prob, A.orbitguess, A.par, dx), rhs[1:end - N])
+    xbar, flag, numiter = ls.linsolver(dx -> Jc(A.prob, A.orbitguess, A.par, dx), rhs[begin:end - N])
     !flag && @warn "Matrix Free solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
@@ -792,9 +792,9 @@ end
 # Linear solver associated to POTrapJacobianBordered
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
-    dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[1:end-1],
+    dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
                                              J.Aγ.prob.ϕ, J.∂TGpo[end],
-                                           rhs[1:end-1], rhs[end])
+                                           rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end
 

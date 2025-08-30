@@ -642,7 +642,7 @@ function (eig::FoldEig)(Jma, nev; kwargs...)
 end
 
 @views function (eig::FoldEig)(Jma::AbstractMatrix, nev; kwargs...)
-    return eig.eigsolver(Jma[1:end-1,1:end-1], nev; kwargs...)
+    return eig.eigsolver(Jma[begin:end-1, begin:end-1], nev; kwargs...)
 end
 
 geteigenvector(eig::FoldEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

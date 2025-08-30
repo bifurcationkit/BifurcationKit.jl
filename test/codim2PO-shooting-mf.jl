@@ -18,14 +18,10 @@ function Pop!(du, X, p, t = 0)
 end
 
 par_pop = ComponentArray( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
-
-z0 = [0.1,0.1,1,0]
-
+z0 = [0.1, 0.1, 1, 0]
 prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p) -> (x = x[1], y = x[2], u = x[3]))
-
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4)
 @reset opts_br.newton_options.verbose = true
-
 ################################################################################
 using OrdinaryDiffEq
 prob_de = ODEProblem(Pop!, z0, (0, 600.), par_pop)
@@ -46,14 +42,16 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 # @info "import Zygote"
 # using Zygote, SciMLSensitivity
 
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; alg = Rodas5(),
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
+    alg = Rodas5(),
     jacobian = BK.AutoDiffMF(),
-    # jacobian = BK.FiniteDifferencesMF()
+    # jacobian = BK.FiniteDifferencesMF(),
+    # parallel = true,
     )
 
 function flow(x0, prob0, tm, p = prob0.p)
     prob = remake(prob0, u0 = x0, tspan = (0, tm), p = p)
-    sol = solve(prob, Rodas5())
+    sol = OrdinaryDiffEq.solve(prob, Rodas5())
     return sol[end]
 end
 
@@ -71,7 +69,7 @@ br_fold_sh = continuation(probsh, cish, PALC(tangent = Bordered()), opts_po_cont
     # verbosity = 3, plot = true,
     linear_algo = MatrixFreeBLS(lspo),
     argspo...)
-# pt = get_normal_form(br_fold_sh, 1)
+pt = get_normal_form(br_fold_sh, 1)
 
 probsh2 = @set probsh.lens = @optic _.ϵ
 brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
@@ -80,7 +78,7 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), opts_po_cont;
     linear_algo = MatrixFreeBLS(lspo),
     argspo...
     )
-# pt = get_normal_form(brpo_pd_sh, 1)
+pt = get_normal_form(brpo_pd_sh, 1)
 
 # codim 2 Fold
 opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, max_steps = 0, p_min = 0.01, p_max = 1.2)
@@ -104,10 +102,10 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 opts_posh_pd = ContinuationPar(brpo_pd_sh.contparams, detect_bifurcation = 0, max_steps = 4, p_min = -1.)
 @reset opts_posh_pd.newton_options.tol = 1e-8
 pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
-    verbosity = 0, #plot = true,
+    # verbosity = 3, #plot = true,
     detect_codim2_bifurcation = 0,
     usehessian = false,
-    # jacobian_ma = :minaug,
+    # jacobian_ma = BK.MinAug(),
     jacobian_ma = BK.FiniteDifferencesMF(),
     # bdlinsolver = BorderingBLS(@set lspo.N=12),
     bdlinsolver = MatrixFreeBLS(lspo),

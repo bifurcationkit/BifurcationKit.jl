@@ -604,11 +604,11 @@ end
     rg = 1:nbcoll
     rN = 1:N
 
-    Jcop = copy(J)
-    Jcop[:, rN] .= 0
-    Jcop[end-N:end-1,end-N:end-1] .= In
-    Jcop[end-N:end-1,1:N] .= (-1) .* In
-    Jcop[end, end] = J[end, end]
+    # Jcop = copy(J)
+    # Jcop[:, rN] .= 0
+    # Jcop[end-N:end-1,end-N:end-1] .= In
+    # Jcop[end-N:end-1,1:N] .= (-1) .* In
+    # Jcop[end, end] = J[end, end]
     Lₜ = LowerTriangular(copy(blockⱼ))
 
     first_column_block = Matrix{𝒯}[]
@@ -635,8 +635,6 @@ end
         blockₙ₂ = Lₜ \ Array(blockₙ)
         # Jcop[rg, rN] .= blockₙ₂
         push!(first_column_block, blockₙ₂)
-
-        # @error "" size(blockₙ₂) size(F.U) typeof(F.U)
 
         rg = rg .+ nbcoll
         rN = rN .+ nbcoll

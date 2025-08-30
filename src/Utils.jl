@@ -200,7 +200,7 @@ function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = tr
     N::Int = length(br)
     printstyled(color = :magenta, "\n    ┌─ Entry in detect_loop, rtol = $(convert(T, rtol))\n")
     out::Bool = false
-    for bp in br.specialpoint[1:end-1]
+    for bp in br.specialpoint[begin:end-1]
         printstyled(color = :magenta, "    ├─ bp type = ", Symbol(bp.type),
                     ", ||δx|| = ", norminf(minus(bp.x, x))::T, 
                     ", |δp| = ", abs(bp.param - p)::T,

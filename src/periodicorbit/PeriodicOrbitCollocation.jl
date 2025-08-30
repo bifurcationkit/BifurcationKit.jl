@@ -294,7 +294,7 @@ getperiod(pb::PeriodicOrbitOCollProblem, x::POSolutionAndState, par = nothing) =
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
 # array of size Ntst ⋅ (m+1) ⋅ n
-get_time_slices(pb::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[1:end-1], size(pb)...)
+get_time_slices(pb::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[begin:end-1], size(pb)...)
 get_time_slices(pb::PeriodicOrbitOCollProblem, x::POSolutionAndState) = get_time_slices(pb, x.sol)
 get_times(pb::PeriodicOrbitOCollProblem) = get_times(pb.mesh_cache)
 """
@@ -670,7 +670,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
         rgNy = rgNy .+ (m * n)
     end
 
-    J[end, 1:end-1] .= coll.cache.∇phase ./ period
+    J[end, begin:end-1] .= coll.cache.∇phase ./ period
     J[nJ, nJ] = -phase / period^2
     return J
 end
@@ -846,7 +846,7 @@ end
         rgNx = rgNx .+ (m * n)
     end
 
-    J[end, 1:end-1] .= coll.cache.∇phase ./ period
+    J[end, begin:end-1] .= coll.cache.∇phase ./ period
     J[end, end] = -phase / period^2
     return J
 end
@@ -1073,7 +1073,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                         )
         jacPO = generate_jacobian(coll, orbitguess, getparams(coll); 
                         δ,
-                        Jcoll_matrix = @view linear_algo.J[1:end-1, 1:end-1]
+                        Jcoll_matrix = @view linear_algo.J[begin:end-1, begin:end-1]
                         )
 
         linear_algo.J .= 0
@@ -1141,7 +1141,7 @@ end
     ω = coll.mesh_cache.gauss_weight
     rg = 1:n
     coll.cache.∇phase .= 0
-    for j = 1:Ntst
+    @inbounds for j = 1:Ntst
         for k₁ = 1:m+1
             for l = 1:m
                 coll.cache.∇phase[rg] .+= (L[k₁, l] * ω[l]) .* coll.∂ϕ[:, (j-1)*m + l]

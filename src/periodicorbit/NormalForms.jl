@@ -274,7 +274,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     jac = jacobian(pbwrap, bp0.x0, pars)
     J = copy(_get_matrix(jac))
     nj = size(J, 1)
-    J[end, 1:end-1] .= Fu₀
+    J[end, begin:end-1] .= Fu₀
     J[:, end] .= randn(nj)
     J[end,end] = 0
     rhs = zeros(𝒯, nj); rhs[end] = 1
@@ -283,13 +283,13 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     p = J' \ rhs; #p = p[begin:end-1]
     
     # doing this again makes p[end] ≈ 0
-    J[end, 1:end-1] .= q[begin:end-1]
-    J[1:end-1, end] .= p[begin:end-1]
+    J[end, begin:end-1] .= q[begin:end-1]
+    J[begin:end-1, end] .= p[begin:end-1]
     
     # the matrix L₀ = 0
     Jbd = similar(J, nj+1, nj+1) # carefull for sparse matrices
     Jbd[1:nj,1:nj] .= J
-    Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[1:end-1]
+    Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[begin:end-1]
     Jbd[end,1:nj-1] .= randn(nj-1)
     Jbd[end-1:end,end-1:end] .= 0
     rhs = zeros(𝒯, nj+1, 2); rhs[end-1:end,end-1:end] .= I(2)
@@ -301,7 +301,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     p₀ = sols_t[1:nj-1,1]
     p₁ = sols_t[1:nj-1,2]
 
-    Jbd[1:nj-1,end] .= q₀# ∂(coll, vcat(Fu₀,period), pars)[1:end-1]
+    Jbd[1:nj-1,end] .= q₀# ∂(coll, vcat(Fu₀,period), pars)[begin:end-1]
     Jbd[end,1:nj-1] .= p₀
 
     sols   = Jbd  \ rhs
@@ -312,7 +312,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     p₀ = sols_t[1:nj-1,1]
     p₁ = sols_t[1:nj-1,2]
 
-    J0 = J[1:end-1,1:end-1]
+    J0 = J[begin:end-1,begin:end-1]
 
     _ps = (dot(q₀, Fu₀), dot(q₁, Fu₀))
     ind = argmin(abs.(_ps))
@@ -562,17 +562,17 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end-N:end-1, end-N:end-1] .= I(N)
 
     rhs = zeros(𝒯, nj); rhs[end] = 1;
-    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) #≈ ker(J)
-    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    k = J  \ rhs; k = k[begin:end-1]; k ./= norm(k) #≈ ker(J)
+    l = J' \ rhs; l = l[begin:end-1]; l ./= norm(l)
 
     # update the borders to have less singular matrix J
-    J[end, 1:end-1] .= k
-    J[1:end-1, end] .= l
+    J[end, begin:end-1] .= k
+    J[begin:end-1, end] .= l
 
     # right Floquet eigenvectors
     vr = J \ rhs
 
-    v₁  = @view vr[1:end-1]
+    v₁  = @view vr[begin:end-1]
     v₁ ./= sqrt(∫(vr, vr)) # this modifies v₁ by reference
 
     #########
@@ -586,11 +586,11 @@ function period_doubling_normal_form_iooss(pbwrap,
     J★[end-N:end-1, end-N:end-1] .= I(N)
 
     rhs = zeros(𝒯, nj); rhs[end] = 1;
-    k = J★  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
-    l = J★' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    k = J★  \ rhs; k = k[begin:end-1]; k ./= norm(k) # ≈ ker(J)
+    l = J★' \ rhs; l = l[begin:end-1]; l ./= norm(l)
 
     vl = J★ \ rhs
-    v₁★ = @view vl[1:end-1]
+    v₁★ = @view vl[begin:end-1]
     v₁★ ./= 2∫(vl, vr)
 
     # convention notation. We use the ₛ to indicates time slices which
@@ -631,10 +631,10 @@ function period_doubling_normal_form_iooss(pbwrap,
     Jψ[end, end] = 0
 
     # update the borders to have less singular matrix Jψ
-    k = Jψ  \ rhs; k = k[1:end-1]; k ./= norm(k)
-    l = Jψ' \ rhs; l = l[1:end-1]; l ./= norm(l)
-    Jψ[end, 1:end-1] .= k
-    Jψ[1:end-1, end] .= l
+    k = Jψ  \ rhs; k = k[begin:end-1]; k ./= norm(k)
+    l = Jψ' \ rhs; l = l[begin:end-1]; l ./= norm(l)
+    Jψ[end, begin:end-1] .= k
+    Jψ[begin:end-1, end] .= l
 
     ψ₁★ = Jψ \ rhs
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
@@ -661,7 +661,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
-    J[end, 1:end-1] .= border_ψ₁ # integral condition
+    J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
     J[end, end] = 0
     h₂ = J \ (Icoll * rhs)
@@ -710,7 +710,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
-    J[end, 1:end-1] .= border_ψ₁ # integral condition
+    J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
     J[end, end] = 0
     h₀₁ = J \ (Icoll * rhs)
@@ -798,17 +798,17 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     # enforce PD boundary condition
     J[end-N:end-1, 1:N] .= I(N)
     rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[1:end-1]; q ./= norm(q)
-    p = J' \ rhs; p = p[1:end-1]; p ./= norm(p)
+    q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q)
+    p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-    J[end, 1:end-1] .= q
-    J[1:end-1, end] .= p
+    J[end, begin:end-1] .= q
+    J[begin:end-1, end] .= p
 
     vl = J' \ rhs
     vr = J  \ rhs
 
-    v₁  = @view vr[1:end-1]
-    v₁★ = @view vl[1:end-1]
+    v₁  = @view vr[begin:end-1]
+    v₁★ = @view vl[begin:end-1]
 
     return PeriodDoublingPO(pd0.x0, pd0.x0[end], v₁, v₁★, pd, coll, true)
 end
@@ -975,16 +975,16 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     J[end, end] = 0
 
     rhs = zeros(𝒯, nj); rhs[end] = 1
-    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
-    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    k = J  \ rhs; k = k[begin:end-1]; k ./= norm(k) # ≈ ker(J)
+    l = J' \ rhs; l = l[begin:end-1]; l ./= norm(l)
 
     # update the borders to have less singular matrix J
-    J[end, 1:end-1] .= k
-    J[1:end-1, end] .= l
+    J[end, begin:end-1] .= k
+    J[begin:end-1, end] .= l
 
     # Floquet eigenvectors
     vr = J  \ rhs
-    v₁  = @view vr[1:end-1]
+    v₁  = @view vr[begin:end-1]
     v₁ ./= sqrt(∫(vr, vr))
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
 
@@ -1007,10 +1007,10 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     Jϕ[end, end] = 0
 
     # update the borders to have less singular matrix Jψ
-    k = Jϕ  \ rhs; k = k[1:end-1]; k ./= norm(k)
-    l = Jϕ' \ rhs; l = l[1:end-1]; l ./= norm(l)
-    Jϕ[end, 1:end-1] .= k
-    Jϕ[1:end-1, end] .= l
+    k = Jϕ  \ rhs; k = k[begin:end-1]; k ./= norm(k)
+    l = Jϕ' \ rhs; l = l[begin:end-1]; l ./= norm(l)
+    Jϕ[end, begin:end-1] .= k
+    Jϕ[begin:end-1, end] .= l
 
     ϕ₁★ = Jϕ \ rhs
     ϕ₁★ₛ = get_time_slices(coll, ϕ₁★)
@@ -1043,16 +1043,16 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     J[end, end] = 0
 
     rhs = zeros(𝒯, nj); rhs[end] = 1
-    k = J  \ rhs; k = k[1:end-1]; k ./= norm(k) # ≈ ker(J)
-    l = J' \ rhs; l = l[1:end-1]; l ./= norm(l)
+    k = J  \ rhs; k = k[begin:end-1]; k ./= norm(k) # ≈ ker(J)
+    l = J' \ rhs; l = l[begin:end-1]; l ./= norm(l)
 
     # update the borders to have less singular matrix J
-    J[end, 1:end-1] .= k
-    J[1:end-1, end] .= l
+    J[end, begin:end-1] .= k
+    J[begin:end-1, end] .= l
 
     # left / right Floquet eigenvectors
     vr = J  \ rhs
-    v₁★  = @view vr[1:end-1]
+    v₁★  = @view vr[begin:end-1]
     v₁★ₛ = get_time_slices(coll, vcat(v₁★, 1))
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
                 if _NRMDEBUG; v₁★ₛ .*= (-1.0388609772214439 - 4.170067699081798im)/v₁★ₛ[1,1];end
@@ -1073,7 +1073,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = Complex{𝒯})
     # h₂₀ = J \ (rhs)
 
-    h₂₀= J[1:end-1,1:end-1] \ rhs[1:end-1];h₂₀ = vcat(vec(h₂₀), 0)
+    h₂₀= J[begin:end-1,begin:end-1] \ rhs[begin:end-1];h₂₀ = vcat(vec(h₂₀), 0)
     # h₂₀ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
     h₂₀ = Icoll * h₂₀; @reset h₂₀[end] = 0
     h₂₀ₛ = get_time_slices(coll, h₂₀)
@@ -1098,7 +1098,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     J[end-N:end-1, 1:N] .= -I(N)
     J[end-N:end-1, end-N:end-1] .= I(N)
     # add borders
-    J[end, 1:end-1] .= border_ϕ1 # integral condition
+    J[end, begin:end-1] .= border_ϕ1 # integral condition
     J[:, end] .= ϕ₁★
     J[end, end] = 0
     h₁₁ = J \ rhs
@@ -1253,7 +1253,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
     orbitguess0c = get_time_slices(pb, nf.po)
     ζc = reshape(nf.ζ, N, M)
     orbitguess_c = orbitguess0c .+ ampfactor .*  ζc
-    orbitguess_c = hcat(orbitguess_c[:,1:end-1], orbitguess0c .- ampfactor .*  ζc, orbitguess_c[:,1])
+    orbitguess_c = hcat(orbitguess_c[:,begin:end-1], orbitguess0c .- ampfactor .*  ζc, orbitguess_c[:,1])
         # orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
     # we append twice the period
     orbitguess = vcat(vec(orbitguess_c), 2nf.T)

@@ -37,7 +37,7 @@ function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }
     @set Jac.jacpb = copy(Jac.jacpb)
     J = Jac.jacpb
     J[end-N:end-1, 1:N] .= I(N)
-    @set Jac.jacpb = J[1:end-1, 1:end-1]
+    @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
@@ -136,7 +136,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} },
     # put the NS boundary condition
     J = Complex.(copy(Jac.jacpb))
     J[end-N:end-1, 1:N] .*= cis(ω)
-    @set Jac.jacpb = J[1:end-1, 1:end-1]
+    @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem
@@ -242,9 +242,9 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
         verbose && print("├─ computing nullspace of Periodic orbit problem...")
         ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-        # we normalize it by the sup norm because it could be too small/big in L2 norm
+        # we normalize it by the sup norm because it could be too small / big in L2 norm
         # TODO: user defined scaleζ
-        ζ ./= norm(ζ, Inf)
+        ζ ./= norminf(ζ)
         verbose && println(" Done!")
 
         # # compute the full eigenvector
@@ -311,7 +311,7 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
 
     # compute the eigenspace
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    ωₙₛ = λₙₛ/1im
+    ωₙₛ = λₙₛ / 1im
 
     J = jacobian_neimark_sacker(pbwrap, bifpt.x, par_ns, ωₙₛ)
     nj = length(bifpt.x) - 1

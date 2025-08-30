@@ -1433,7 +1433,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
 
     bp_args = (x0, bp.τ, p, parbif, lens, ζ, ζ★, (;a, b1, b2, b3, Ψ01, wst), :NA)
     if abs(a) < tol_fold
-        return 100abs(b2/2) < abs(b3/6) ? PitchforkMap(bp_args[1:end-1]...) : TranscriticalMap(bp_args...)
+        return 100abs(b2/2) < abs(b3/6) ? PitchforkMap(bp_args[begin:end-1]...) : TranscriticalMap(bp_args...)
     else
         return Fold(bp_args...)
     end
