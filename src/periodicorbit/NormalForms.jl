@@ -440,7 +440,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     # eigenvector(P) = E ∘ eigenvector(M)
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
 
-    _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
+    _nrm = norminf(Π(xₛ, pars).u - xₛ)
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
 
     # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
@@ -877,8 +877,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
         return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
     end
     # method based on Iooss method
-    # nf = PeriodDoubling(bifpt.x, period, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
-    neimark_sacker_normal_form(pbwrap, ns0; verbose, nev, kwargs_nf...)
+    neimark_sacker_normal_form_iooss(pbwrap, ns0; verbose, nev, kwargs_nf...)
 end
 
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
@@ -933,7 +932,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     return NeimarkSackerPO(ns0.x0, T, ns0.p, ns0.ω, ev, nothing, ns, coll, true)
 end
 
-function neimark_sacker_normal_form(pbwrap::WrapPOColl,
+function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
                                         ns::NeimarkSacker;
                                         nev = 3,
                                         verbose = false,
@@ -1193,7 +1192,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     Π = PoincareMap(pbwrap, ns0.x0, pars, optn)
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
-    _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
+    _nrm = norminf(Π(xₛ, pars).u - xₛ)
     _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
 
     dΠ = jacobian(Π, xₛ, pars)

@@ -1,6 +1,11 @@
 """
+$(TYPEDEF)
+
 Construct a Poincaré return map `Π` to an hyperplane `Σ` from a `AbstractPeriodicOrbitProblem`.
 If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
+
+## Fields
+$(TYPEDFIELDS)
 """
 struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
     "periodic orbit problem"
@@ -38,7 +43,7 @@ function PoincareMap(wrap::WrapPOSh, po, par, optn)
     sh = wrap.prob
     Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
     poc = get_time_slices(sh, po)
-    @views update!(Π.Σ, vf(sh.flow, poc[:, 1], par), poc[:, 1])
+    @views update!(Π.Σ, vf(sh.flow, poc[:, begin], par), poc[:, begin])
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
 end
@@ -196,6 +201,12 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     return (u = out, t = ∂th)
 end
 
+"""
+$(SIGNATURES)
+
+Compute the monodromy matrix of the Poincaré Return Map. It yields a `Matrix{𝒯}`
+
+"""
 function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
     sh = Π.probpo.prob
     normal = Π.Σ.normal

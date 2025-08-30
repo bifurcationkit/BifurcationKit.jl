@@ -14,7 +14,7 @@ function lur!(dz, u, p, t = 0)
     dz
 end
 
-prob = BifurcationProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
+prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false

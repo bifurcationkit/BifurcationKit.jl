@@ -74,7 +74,7 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
-    (; v, w, itv, itw) = @time "--> bd_vec" _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
     δ = getdelta(𝐇.prob_vf)
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
