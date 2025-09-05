@@ -1006,7 +1006,8 @@ function newton(probPO::PeriodicOrbitOCollProblem,
     _newton_pocoll(probPO, orbitguess, options; defOp, kwargs...)
 end
 
-function _generate_jacobian(coll::PeriodicOrbitOCollProblem, 
+# function used in _continuation(gh::Bautin
+function generate_jacobian(coll::PeriodicOrbitOCollProblem, 
                         orbitguess, 
                         par; 
                         δ = convert(eltype(orbitguess), 1e-8),
@@ -1072,7 +1073,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                         solver = FloquetWrapperLS(nothing),
                         J = similar(_Jcoll, Nbls, Nbls)
                         )
-        jacPO = _generate_jacobian(coll, orbitguess, getparams(coll); 
+        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); 
                         δ,
                         Jcoll_matrix = @view linear_algo.J[begin:end-1, begin:end-1]
                         )
@@ -1085,7 +1086,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
         end
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
-        jacPO = _generate_jacobian(coll, orbitguess, getparams(coll); δ)
+        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
     end
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 

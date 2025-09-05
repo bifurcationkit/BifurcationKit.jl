@@ -44,7 +44,7 @@ resi = pbi(orbitguess_f, par, orbitguess_f)
 @test res == resg
 
 BK.residual!(pbi, resi, orbitguess_f, par)
-BK.potrap_functional_jac!(pbi, resi, orbitguess_f, par, orbitguess_f)
+BK.jvp!(pbi, resi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 
 # @code_warntype BK.potrap_functional!(pbi, resi, orbitguess_f)
@@ -55,7 +55,7 @@ BK.potrap_functional_jac!(pbi, resi, orbitguess_f, par, orbitguess_f)
 # @btime pb($orbitguess_f, $par, $orbitguess_f)                 # 28.427 ms (122 allocations: 51.50 MiB)
 # @btime pbi($orbitguess_f, $par, $orbitguess_f)                # 14.170 ms (2 allocations: 17.17 MiB)
 # @btime BK.potrap_functional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
-# @btime BK.potrap_functional_jac!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) #  13.117 ms (0 allocations: 0 bytes)
+# @btime BK.jvp!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) #  13.117 ms (0 allocations: 0 bytes)
 
 #
 # using IterativeSolvers, LinearMaps
