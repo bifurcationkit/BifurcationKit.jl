@@ -26,6 +26,8 @@ prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
     # Slicing should still work when not evey sol/eig is saved
     opt = BK.ContinuationPar(opt; detect_bifurcation=1, save_sol_every_step=2, save_eig_every_step=3)
     contres = BK.continuation(prob, PALC(), opt)
+    contres[end]
+    contres[begin]
     @assert length(contres) != length(contres.sol) != length(contres.eig)
     @test length(contres[1:end]) == length(contres)
     @test length(contres[1:end].sol) == length(contres.sol)

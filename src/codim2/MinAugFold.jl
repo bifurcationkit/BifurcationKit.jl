@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a Fold bifurcation point located in ContResult.specialpoint, returns a point which can can refined using `newtonFold`.
+For an initial guess from the index of a Fold bifurcation point located in `ContResult.specialpoint`, returns a point which can can refined using `newtonFold`.
 """
 function fold_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
@@ -54,10 +54,10 @@ $(SIGNATURES)
 Compute the solution of 
 
 ```
-┌            ┐┌  ┐   ┌   ┐
-│ J     a'   ││v │ = │ 0 │
-│ b     0    ││σ │   │ 1 │
-└            ┘└  ┘   └   ┘
+┌              ┐┌  ┐   ┌   ┐
+│ J     𝐅.a    ││v │ = │ 0 │
+│ 𝐅.b'   0     ││σ │   │ 1 │
+└              ┘└  ┘   └   ┘
 ```
 
 and the same for the adjoint system.
@@ -102,16 +102,16 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     dₚF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵ1)),
-                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
+                residual(𝐅.prob_vf, x, set(par, lens, p - ϵ1))); VI.scale!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
                   apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
-    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
+    VI.scale!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -dot(w, dJvdp)
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw)
 end
 ###################################################################################################
-function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
     𝐅 = pdpb.prob
     x = @view X[begin:end-1]
     p = X[end]
@@ -120,7 +120,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X, par) where {
 
     u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
     u2 = apply(JAd_at_xp, w) # TODO we know u2!!
-    σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
+    σₓ = minus(u2, u1); VI.scale!(σₓ, 1 / ϵ2)
 
     [_get_matrix(J_at_xp) dₚF ; σₓ' σₚ]
 end
@@ -130,7 +130,6 @@ struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
 function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
                             rhsu, rhsp) where 𝒯
-    ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
     # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
     # We solve Jfold⋅res = rhs := [rhsu, rhsp]
@@ -151,7 +150,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         # apply Jacobian adjoint
         u1 = apply_jacobian(𝐅.prob_vf, x + ϵ2 * v, par0, w, true)
         u2 = apply(JAd_at_xp, w) # TODO ON CONNAIT u2!!
-        σₓ = minus(u2, u1); rmul!(σₓ, 1 / ϵ2)
+        σₓ = minus(u2, u1); VI.scale!(σₓ, 1 / ϵ2)
         ########## Resolution of the bordered linear system ########
         # we invert Jfold
         dX, dσ, cv, it = 𝐅.linbdsolver(J_at_xp, dₚF, σₓ, σₚ, rhsu, rhsp)
@@ -269,7 +268,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                 kwargs...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    eigenvec = bifpt.τ.u; rmul!(eigenvec, 1 / normN(eigenvec))
+    eigenvec = bifpt.τ.u; VI.scale!(eigenvec, 1 / normN(eigenvec))
     eigenvec_ad = _copy(eigenvec)
 
     if start_with_eigen
@@ -288,7 +287,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
         ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
-        rmul!(eigenvec_ad, 1 / normN(eigenvec_ad))
+        VI.scale!(eigenvec_ad, 1 / normN(eigenvec_ad))
     end
 
     # solve the Fold equations
@@ -317,7 +316,7 @@ Codim 2 continuation of Fold points. This function turns an initial guess for a 
 - `options_cont` arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
-- `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
+- `jacobian_ma = AutoDiff()`, how the linear system of the Fold problem is solved. Can be `AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAug(), MinAugMatrixBased`.
 - `bdlinsolver` bordered linear solver for the constraint equation with top-left block J. Required in the linear solver for the Minimally Augmented Fold functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block J^*. Required in the linear solver for the Minimally Augmented Fold functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a, b` in Minimally Formulation every `update_minaug_every_step` steps
@@ -442,9 +441,9 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
         bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
-        copyto!(𝐅.a, bd_vec.w); rmul!(𝐅.a, 1 / normC(bd_vec.w))
+        copyto!(𝐅.a, bd_vec.w); VI.scale!(𝐅.a, 1 / normC(bd_vec.w))
         # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
-        copyto!(𝐅.b, bd_vec.v); rmul!(𝐅.b, 1 / normC(bd_vec.v))
+        copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / normC(bd_vec.v))
 
         # call the user-passed finalizer
         if isnothing(finaliseUser) == false
@@ -521,7 +520,7 @@ function continuation_fold(prob,
                 kwargs...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    ζ = bifpt.τ.u; rmul!(ζ, 1 / norm(ζ))
+    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / norm(ζ))
     ζad = _copy(ζ)
 
     p = bifpt.param
@@ -534,7 +533,7 @@ function continuation_fold(prob,
         # computation of zero eigenvector
         if bifpt.ind_ev > 0 && haseigenvector(br)
             ζ .= real.( geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
-            rmul!(ζ, 1/normC(ζ))
+            VI.scale!(ζ, 1/normC(ζ))
         else
             error("No index for the eigenvalue has been saved.\nPlease open an issue on the website of BifurcationKit.")
         end
@@ -545,27 +544,28 @@ function continuation_fold(prob,
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
-        rmul!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
+        VI.scale!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
         # we use a minimally augmented formulation to set the initial vectors
-        a = isnothing(a) ? _randn(ζ) : a
-        b = isnothing(b) ? _randn(ζ) : b
+        a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
+        b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
+
         𝒯 = typeof(p)
         L = jacobian(prob, foldpointguess.u, parbif)
-        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), 0*a, one(𝒯))
+        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), VI.zerovector(a), one(𝒯))
         ~cv && @debug "Bordered linear solver for J did not converge."
 
-        @debug "EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, newb))
+        @debug "RIGHT EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, newb))
 
         L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
-        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), 0*a, one(𝒯))
+        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), VI.zerovector(a), one(𝒯))
         ~cv && @debug "Bordered linear solver for J' did not converge."
 
-        @debug "EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, newa))
+        @debug "LEFT  EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, newa))
 
-        ζad = newa; rmul!(ζad, 1 / normC(ζad))
-        ζ   = newb; rmul!(ζ,   1 / normC(ζ))
-        rmul!(ζad, 1 / dot(ζ, ζad))
+        ζad = newa; VI.scale!(ζad, 1 / normC(ζad))
+        ζ   = newb; VI.scale!(ζ,   1 / normC(ζ))
+        VI.scale!(ζad, 1 / dot(ζ, ζad))
     end
 
     return continuation_fold(prob, alg,
@@ -615,11 +615,11 @@ function test_bt_cusp(iter, state)
 
     # compute new b
     ζ = bd_vec.v
-    rmul!(ζ, 1 / 𝐅.norm(ζ))
+    VI.scale!(ζ, 1 / 𝐅.norm(ζ))
 
     # compute new a
     ζstar = bd_vec.w
-    rmul!(ζstar, 1 / 𝐅.norm(ζstar))
+    VI.scale!(ζstar, 1 / 𝐅.norm(ζstar))
 
     𝐅.BT = dot(ζstar, ζ)
     𝐅.CP = getp(state.τ)

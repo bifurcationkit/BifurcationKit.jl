@@ -124,8 +124,10 @@ module BifurcationKit
     # preconditioner based on deflation
     export PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 
+    export BorderedArray, zerovector
+
     # bordered linear problems
-    export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS, BorderedArray
+    export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS
 
     # nonlinear deflation
     export DeflationOperator, DeflatedProblem

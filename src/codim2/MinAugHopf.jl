@@ -1,5 +1,5 @@
 """
-For an initial guess from the index of a Hopf bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_hopf`.
+For an initial guess from the index of a Hopf bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newton_hopf`.
 """
 function hopf_point(br::AbstractBranchResult, index::Int)
     if br.specialpoint[index].type != :hopf 
@@ -48,6 +48,20 @@ end
     return vcat(res[1], res[2], res[3])
 end
 ###################################################################################################
+"""
+$(SIGNATURES)
+
+Compute the solution of 
+
+```
+┌                ┐ ┌  ┐   ┌   ┐
+│ J - iω    𝐇.a  │ │v │ = │ 0 │
+│  𝐇.b'    0     │ │σ │   │ 1 │
+└                ┘ └  ┘   └   ┘
+```
+
+and the same for the adjoint system.
+"""
 function _compute_bordered_vectors(𝐇::HopfProblemMinimallyAugmented, J_at_xp, JAd_at_xp, ω)
     a = 𝐇.a
     b = 𝐇.b
@@ -111,7 +125,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     σxv2i = @. -(u1i - u2) / ϵ2
     σₓ = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
-    Jhopf = hcat(_get_matrix(J_at_xp), dₚF, zero(dₚF))
+    Jhopf = hcat(_get_matrix(J_at_xp), dₚF, VI.zerovector(dₚF))
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
 end
@@ -120,11 +134,10 @@ end
 struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
 """
-This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point. The keyword `debugArray` is used to debug the routine by returning several key quantities.
+This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point.
 """
 function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
                             duu, dup, duω) where 𝒯
-    ################################################################################################
     # N = length(du) - 2
     # The Jacobian J of the vector field is expressed at (x, p)
     # the jacobian expression Jhopf of the hopf problem is
@@ -319,7 +332,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `options_cont` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Optional arguments:
-- `jacobian_ma::Symbol = :autodiff`, how the linear system of the Fold problem is solved. Can be `:autodiff, :finiteDifferencesMF, :finiteDifferences, :minaug`
+- `jacobian_ma = AutoDiff()`, how the linear system of the Hopf problem is solved. Can be `AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAug(), MinAugMatrixBased`.
 - `linsolve_adjoint` solver for (J+iω)^* ⋅sol = rhs
 - `bdlinsolver` bordered linear solver for the constraint equation with top-left block (J-iω). Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)^*. Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
@@ -558,7 +571,7 @@ function continuation_hopf(prob,
             error("The branch contains no eigenvectors for the Hopf point.\nPlease provide one.")
         end
         ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-        rmul!(ζ, 1 / normC(ζ))
+        VI.scale!(ζ, 1 / normC(ζ))
         ζad = conj.(ζ)
 
         # computation of adjoint eigenvalue
@@ -573,20 +586,22 @@ function continuation_hopf(prob,
         axpby!(1 / dot(ζ★, ζ), ζ★, 0, ζad)
     else
         # we use a minimally augmented formulation to set the initial vectors
-        # we start with a vector similar to an eigenvector
+        # we start with a vector similar to an eigenvector, we must ensure that
+        # it is complex valued
         ζ = _copy(getu0(br.prob))
-        a = isnothing(a) ? _randn(ζ) : a
-        b = isnothing(b) ? _randn(ζ) : b
+        VI.scale!(ζ, one(Complex{VI.scalartype(ζ)}))
+        a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
+        b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
         𝒯 = typeof(ω)
         L = jacobian(prob, bifpt.x, parbif)
-        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
+        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), VI.zerovector(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
         ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
         @debug "RIGHT EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,newb) - complex(0,ω)*newb) norminf(apply(L,newb) + complex(0,ω)*newb)
 
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, ω))
+        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), VI.zerovector(a), one(𝒯); shift = Complex{𝒯}(0, ω))
         ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
         @debug "LEFT  EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★,newa) - complex(0,ω)*newa) norminf(apply(L★,newa) + complex(0,ω)*newa)
@@ -620,14 +635,12 @@ function test_bt_gh(iter, state)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
-    probhopf = iter.prob.prob
-
-    a = probhopf.a
-    b = probhopf.b
+    a = 𝐇.a
+    b = 𝐇.b
 
     # expression of the jacobian
-    J_at_xp = jacobian(probhopf.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(probhopf) ? jacobian_adjoint(probhopf.prob_vf, x, newpar) : transpose(J_at_xp)
+    J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
+    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : transpose(J_at_xp)
 
     bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
@@ -639,19 +652,19 @@ function test_bt_gh(iter, state)
     ζ★ = bd_vec.w
 
     # test function for Bogdanov-Takens
-    probhopf.BT = ω
+    𝐇.BT = ω
     BT2 = real( dot(ζ★ ./ 𝐇.norm(ζ★), ζ) )
     ζ★ ./= dot(ζ, ζ★)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
     hp = hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO! WE NEED A KWARGS here
     # lyapunov coefficient
-    probhopf.l1 = hp.nf.b
+    𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.
     # If GH is too large, we take the previous value to avoid spurious detection
     # GH will be large close to BR points
-    probhopf.GH = abs(real(hp.nf.b)) < 1e5 ? real(hp.nf.b) : state.eventValue[2][2]
-    return probhopf.BT, probhopf.GH
+    𝐇.GH = abs(real(hp.nf.b)) < 1e5 ? real(hp.nf.b) : state.eventValue[2][2]
+    return 𝐇.BT, 𝐇.GH
 end
 
 # structure to compute the eigenvalues along the Hopf branch

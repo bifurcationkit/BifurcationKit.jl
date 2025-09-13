@@ -43,7 +43,7 @@ let
 
     z = BorderedArray(z_pred, rand(10))
     z2 = BorderedArray(z_pred, rand(10))
-    zero(z2); zero(z_pred)
+    BK.zerovector(z2); BK.zerovector(z_pred)
     @test length(z_pred) == 11
 
     copyto!(z,z2)

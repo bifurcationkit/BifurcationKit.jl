@@ -94,7 +94,7 @@ end
 ind_hopf = 1
 hopfpt = BK.hopf_point(br, ind_hopf)
 bifpt = br.specialpoint[ind_hopf]
-hopfvariable = HopfProblemMinimallyAugmented(
+𝐇 = HopfProblemMinimallyAugmented(
                     (@set prob.VF.d2F = nothing),
                     conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
                     (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
@@ -102,7 +102,7 @@ hopfvariable = HopfProblemMinimallyAugmented(
 
 Bd2Vec(x) = vcat(x.u, x.p)
 Vec2Bd(x) = BorderedArray(x[1:end-2], x[end-1:end])
-hopfpbVec(x, p) = Bd2Vec(hopfvariable(Vec2Bd(x),p))
+hopfpbVec(x, p) = Bd2Vec(𝐇(Vec2Bd(x),p))
 
 # finite differences Jacobian
 Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian( u-> hopfpbVec(u, p), u0)
@@ -112,15 +112,16 @@ Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x=u0, params=p,
 rhs = rand(length(hopfpt))
 jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
 sol_fd = jac_hopf_fd \ rhs
+BK.get_frequency(rhs, 𝐇)
 
 # test against analytical jacobian
-_hopf_ma_problem = BK.HopfMAProblem(hopfvariable, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+_hopf_ma_problem = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
 J_ana = BK.jacobian(_hopf_ma_problem, Bd2Vec(hopfpt), par_bru)
 @test norminf(J_ana - jac_hopf_fd) < 1e-3
 
 # create a linear solver
 hopfls = BK.HopfLinearSolverMinAug()
-sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[1:end-2],rhs[end-1:end]))
+sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, 𝐇), BorderedArray(rhs[1:end-2],rhs[end-1:end]))
 
 # we test the expression for σp
 σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end, end-1])
@@ -140,9 +141,9 @@ sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, hopfvariable), BorderedArray(rhs[
 outhopf = newton(br, 1)
 @test BK.converged(outhopf)
 
-pb_hopf_perso = BK.BifurcationProblem((u, p) -> hopfvariable(u, p),
+pb_hopf_perso = BK.BifurcationProblem((u, p) -> 𝐇(u, p),
                 hopfpt, par_bru;
-                J = (x, p) -> Jac_hopf_MA(x, p, hopfvariable),)
+                J = (x, p) -> Jac_hopf_MA(x, p, 𝐇),)
 outhopf = BK.solve(pb_hopf_perso, Newton(), NewtonPar(verbose = false, linsolver = BK.HopfLinearSolverMinAug()))
 @test BK.converged(outhopf)
 

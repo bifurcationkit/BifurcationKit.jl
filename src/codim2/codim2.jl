@@ -3,7 +3,7 @@ abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 
-# function to get the two lenses associated to 2-param continuation
+# function to get the two lenses associated to a 2-param continuation
 @inline function get_lenses(_prob::Union{FoldMAProblem,
                                          HopfMAProblem,
                                          PDMAProblem,
@@ -93,9 +93,11 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     _norm = norm,
                     update_minaug_every_step = 0)
         # determine scalar type associated to vectors a and b
-        α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
-        𝒯 = eltype(α)
-        return $op(prob, a, b, 0*a,
+        𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+        if ~(𝒯  <: Number)
+            error("This norm must return a `Number`, returned $𝒯")
+        end
+        return $op(prob, a, b, VI.zerovector(a),
                     complex(zero(𝒯)), # l1
                     real(one(𝒯)),     # cp
                     real(one(𝒯)),     # bt
@@ -113,9 +115,11 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
                     _norm = norm,
                     update_minaug_every_step = 0)
         a = b = 0.
-        α = norm(a) 
-        𝒯 = eltype(α)
-        return $op(prob, a, b, 0*a,
+        𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+        if ~(𝒯  <: Number)
+            error("This norm must return a `Number`, returned $𝒯")
+        end
+        return $op(prob, a, b, VI.zerovector(a),
                     complex(zero(𝒯)), # l1
                     real(one(𝒯)),     # cp
                     real(one(𝒯)),     # bt
@@ -129,6 +133,7 @@ end
 @inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
 @inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
 @inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
+@inline get_frequency(x, 𝐇::HopfProblemMinimallyAugmented) = getp(x, 𝐇)[2]
 
 update!(::FoldMAProblem, args...; k...) = update_default(args...; k...)
 update!(::HopfMAProblem, args...; k...) = update_default(args...; k...)

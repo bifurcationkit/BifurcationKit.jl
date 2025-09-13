@@ -2,6 +2,7 @@
 import Base: eltype, zero, eltype
 import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
 import KrylovKit: VectorInterface, RecursiveVec
+import KrylovKit.VectorInterface: zerovector
 const VI = VectorInterface
 
 """
@@ -49,7 +50,6 @@ length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) 
 
 dot(a::BorderedArray, b::BorderedArray) = dot(a.u, b.u) + dot(a.p, b.p)
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
-zero(b::BorderedArray{vectype, T}) where {vectype, T} = BorderedArray(zero(b.u), zero(b.p))
 
 # getters, useful for dispatch
 getvec(x::AbstractVector) = @view x[begin:end-1]
