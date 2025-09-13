@@ -16,6 +16,7 @@ plot(br)
 @test br.specialpoint[1].interval[2] ≈ 0.0005310637271224761
 ####################################################################################################
 # normal form computation
+bp = BK.get_normal_form(br, 1; verbose=false, detailed = false)
 bp = BK.get_normal_form(br, 1; verbose=false)
 @test BK.istranscritical(bp) == true
 @test BK.type(bp) == :Transcritical
@@ -122,6 +123,7 @@ bdiag = bifurcationdiagram(prob_pf, PALC(#=tangent=Bordered()=#), 2,
     setproperties(opts_br; p_min = -1.0, p_max = .5, ds = 0.01, dsmax = 0.05, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 30, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
     verbosediagram = true, normC = norminf)
 BK.getalg(bdiag)
+BK.get_solution(bdiag, 1)
 bdiag[1]
 ####################################################################################################
 function Fbp2d!(out, x, p)
@@ -143,6 +145,7 @@ let
         br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = saveev);
             plot = false, verbosity = 0, normC = norminf)
         # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
+        bp2d = BK.get_normal_form(br, 1; verbose = true, detailed = false);
         bp2d = BK.get_normal_form(br, 1; verbose = true);
         bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]], autodiff);
         show(bp2d)

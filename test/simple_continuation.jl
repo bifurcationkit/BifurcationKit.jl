@@ -179,6 +179,7 @@ end
 
 # test with callbacks
 br0 = continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = (state; kwargs...)->(true));
+BK.get_solution(br0, 1)
 
 ###### Used to check type stability of the methods
 iter = ContIterable(prob, PALC(), opts) # type stable

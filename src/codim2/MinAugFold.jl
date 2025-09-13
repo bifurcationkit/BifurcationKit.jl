@@ -591,7 +591,7 @@ function test_zh(iter, state)
     return iter.prob.prob.ZH
 end
 
-# Bogdanov-Takens/Cusp test function for the Fold functional
+# Bogdanov-Takens / Cusp test function for the Fold functional
 function test_bt_cusp(iter, state)
     probma = getprob(iter)
     lens1, lens2 = get_lenses(probma)

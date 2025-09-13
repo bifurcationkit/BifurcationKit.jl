@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-Structure to hold a connected component of a bifurcation diagram.
+Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`.
 
 ## Fields
 
@@ -10,26 +10,28 @@ $(TYPEDFIELDS)
 ## Methods
 
 - `hasbranch(diagram)`
-- `from(diagram)`
-- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`
+- `get_branch(diagram)` return the `AbstractBranch` stored inside the current node.
+- `from(diagram)` return the parent bifurcation point.
+- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`.
 """
 mutable struct BifDiagNode{Tγ, Tc}
-    "current recursion level"
+    "current recursion level."
     level::Int64
 
-    "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off"
+    "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
     code::Int64
 
-    "branch associated to the current node"
+    "branch associated to the current node."
     γ::Tγ
 
-    "children of current node. These are the different branches off the bifurcation point in γ"
+    "children of current node. These are the different branches off the bifurcation point in γ."
     child::Tc
 end
 
 # getters
 @inline level(node::BifDiagNode) = node.level
 hasbranch(tree::BifDiagNode) = ~isnothing(tree.γ)
+get_branch(tree::BifDiagNode) = tree.γ
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
@@ -38,6 +40,7 @@ get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
 getalg(tree::BifDiagNode) = tree.γ.alg
 Base.getindex(tree::BifDiagNode, code...) = get_branch(tree, code)
+get_solution(tree::BifDiagNode, ind) = get_solution(tree.γ, ind)
 
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")

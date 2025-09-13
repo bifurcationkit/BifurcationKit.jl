@@ -47,6 +47,7 @@ $(TYPEDFIELDS)
 - `BifurcationKit._merge(br1, br2)` merge twos branches into a single `ContResult`.
 - `type(br, ind)` returns the type of the ind-th bifurcation point
 - `br[k+1]` gives information about the k-th step. A typical run yields the following
+- `get_solution(br, ind)` returns the ind-th solution
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
@@ -107,6 +108,7 @@ end
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
 getalg(br::AbstractBranchResult) = br.alg
+get_solution(br::ContResult, i) = br.sol[i]
 """
 Return the parameters of the bifurcation problem of the branch.
 """
@@ -346,6 +348,7 @@ end
 
 Base.length(br::Branch) = length(br.γ)
 @inline kernel_dimension(br::Branch, ind) = kernel_dimension(br.γ, ind)
+get_solution(br::Branch, ind) = get_solution(br.γ, ind)
 
 """
 $(SIGNATURES)

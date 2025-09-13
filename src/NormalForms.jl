@@ -52,7 +52,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     Teigvec::Type = _getvectortype(br),
                     tol_fold = 1e-3,
                     scaleζ = norm,
-                    autodiff = true
+                    autodiff = true,
+                    detailed = true,
                     )
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
