@@ -45,13 +45,13 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     contParams = iter.contparams
 
     n2, n1 = nb_signs(_state.eventValue[1], event), nb_signs(_state.eventValue[2], event)
-    verbose && println("────▶ Entering [Event], indicator of 2 last events = ", (n2, n1))
+    verbose && println("────▶ Entering [location event], indicator of 2 last events = ", (n2, n1))
     verbose && println("────▶ [Bisection] initial ds = ", _state.ds)
 
     # we create a new state copy for stepping through the continuation routine
-    after = copy(_state)  # after the bifurcation point
+    after = copy(_state)  # after the event point
     state = copy(_state)  # current state of the bisection
-    before = copy(_state) # before the bifurcation point
+    before = copy(_state) # before the event point
     state.in_bisection = true # we signal to the state the we are entering bisection
 
     # we reverse some indicators for `before`. It is OK, it will never be used other than for getp(before)
@@ -60,7 +60,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     before.eventValue = (before.eventValue[2], before.eventValue[1])
     before.z_old.p, before.z.p = before.z.p, before.z_old.p
 
-    # the bifurcation point is before the current state
+    # the event point is before the current state
     # so we want to first iterate backward
     # we turn off stepsizecontrol because it would not be a
     # bisection otherwise
@@ -100,7 +100,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # emulate a do-while
     while true
         if ~converged(state)
-            @error "Newton failed to fully locate bifurcation point using bisection parameters!"
+            error("Newton failed to fully locate event point using bisection parameters!")
             break
          end
 
@@ -149,9 +149,12 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         if verbose
             printstyled(color=:blue, bold = true, "────▶ ", state.step,
                 " - [Bisection] (n1, n_current, n2) = ", (n1, nsigns[end], n2),
-                "\n\t\t\tds = ", state.ds, ", p = ", getp(state), ", #reverse = ", n_inversion,
+                "\n\t\t\tds = ", state.ds, 
+                ", p = ", getp(state), 
+                ", #reverse = ", n_inversion,
                 "\n────▶ event ∈ ", getinterval(interval...),
-                ", precision = ", @sprintf("%.3E", interval[2] - interval[1]), "\n")
+                ", precision = ", @sprintf("%.3E", interval[2] - interval[1]), 
+                "\n")
         end
 
         # this test contains the verification that the current state is an
@@ -233,7 +236,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     end
     # update the predictor before leaving
     update_predictor!(_state, iter)
-    verbose && println("────▶ Leaving [Loc-Bif]")
+    verbose && println("────▶ Leaving [location event]")
     return status, getinterval(interval...)
 end
 ####################################################################################################

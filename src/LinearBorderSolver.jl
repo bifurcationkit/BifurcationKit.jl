@@ -281,13 +281,18 @@ function solve_bls_block(lbs::MatrixBLS,
     return (@view sol[begin:end-n]), (@view sol[end-n+1:end]), true, 1
 end
 ####################################################################################################
-# composite type to save the bordered linear system with expression
-# ┌         ┐
-# │  J    a │
-# │  b'   c │
-# └         ┘
-# It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
-#
+"""
+$(TYPEDEF)
+
+Composite type to save the bordered linear system with expression
+
+┌         ┐
+│  J    a │
+│  b'   c │
+└         ┘
+
+It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
+"""
 struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
     J::Tj
     a::Ta

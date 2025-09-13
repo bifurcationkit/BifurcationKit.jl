@@ -44,6 +44,7 @@ $(TYPEDFIELDS)
 - `getlens(br)` get the lens used for the computation of the branch
 - `eigenvals(br, ind)` give the eigenvalues at continuation step `ind`
 - `eigenvalsfrombif(br, ind)` give the eigenvalues at bifurcation point index `ind`
+- `BifurcationKit._merge(br1, br2)` merge twos branches into a single `ContResult`.
 - `type(br, ind)` returns the type of the ind-th bifurcation point
 - `br[k+1]` gives information about the k-th step. A typical run yields the following
 ```
@@ -151,6 +152,7 @@ Set the parameter value `p0` according to the `::Lens` stored in `br` for the pa
 """
 setparam(br::AbstractBranchResult, p0) = setparam(br.prob, p0)
 Base.lastindex(br::ContResult) = length(br)
+Base.firstindex(br::ContResult) = firstindex(br.branch)
 
 function Base.getindex(br::ContResult, k::Int)
     idx = isnothing(br.eig) ? nothing : findfirst(x -> x.step == br.branch[k].step, br.eig)
@@ -355,6 +357,7 @@ from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
 from(tree::ContResult) = nothing
 _getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
+Base.firstindex(br::Branch) = firstindex(br.γ)
 Base.lastindex(br::Branch) = lastindex(br.γ)
 @inline getparams(br::Branch) = getparams(br.γ)
 

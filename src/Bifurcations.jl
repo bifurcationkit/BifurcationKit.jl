@@ -145,7 +145,7 @@ Function to locate precisely bifurcation points using a bisection algorithm. We 
 """
 function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Bool = true)
     ~detect_bifurcation(_state) && error("No bifurcation detected for the state")
-    verbose && println("┌─── Entering [Locate-Bifurcation], state.n_unstable = ", _state.n_unstable)
+    verbose && println("┌─── Entering [Locate bifurcation], state.n_unstable = ", _state.n_unstable)
 
     # type of scalars in iter
     𝒯 = eltype(iter)
@@ -203,7 +203,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     # emulate a do-while
     while true
         if ~converged(state)
-            @error "Newton failed to fully locate bifurcation point using bisection parameters!"
+            error("Newton failed to fully locate bifurcation point using bisection parameters!")
             break
          end
 
@@ -245,10 +245,13 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
             ct0 = rightmost(state.eigvals)
             printstyled(color=:blue,
                 "├─── $(state.step) - [Bisection] (n1, n_current, n2) = ", (n1, nunstbls[end], n2),
-                ", ds = ", state.ds, " p = ", getp(state), ", #reverse = ", n_inversion,
+                ", ds = ", state.ds, 
+                " p = ", getp(state), 
+                ", #reverse = ", n_inversion,
                 "\n├─── bifurcation ∈ ", getinterval(interval...),
                 ", precision = ", @sprintf("%.3E", interval[2] - interval[1]),
-                "\n├─── ", length(ct0)," Eigenvalues closest to ℜ = 0:\n")
+                "\n├─── ", length(ct0),
+                " Eigenvalues closest to ℜ = 0:\n")
             verbose && Base.display(sort(ct0[begin:min(5, length(ct0))], by = real))
         end
 
@@ -265,7 +268,10 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
         next = iterate(iter, state; _verbosity = 0)
     end
 
-    verbose && printstyled(color=:red, "────> Found at p = ", getp(state), ", δn = ", abs(2nunstbls[end]-n1-n2),", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
+    verbose && printstyled(color=:red, "────> Found at p = ", getp(state), 
+                                    ", δn = ", abs(2nunstbls[end]-n1-n2),
+                                    ", δim = ",abs(2nimags[end]-sum(state.n_imag)),
+                                    " from p = ",getp(_state),"\n")
 
     if verbose
         printstyled(color=:red, "────> Found at p = ", getp(state), " ∈ $interval, \n\t\t\t  δn = ", abs(2nunstbls[end]-n1-n2), ", δim = ",abs(2nimags[end]-sum(state.n_imag))," from p = ",getp(_state),"\n")
@@ -325,6 +331,6 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     end
     # update the predictor before leaving
     update_predictor!(_state, iter)
-    verbose && println("────> Leaving [Loc-Bif]")
+    verbose && println("────> Leaving [Locate bifurcation]")
     return status, getinterval(interval...)
 end

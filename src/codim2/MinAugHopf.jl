@@ -154,6 +154,7 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
     if 𝐇.usehessian == false || has_hessian(𝐇) == false
         cw = conj(w)
         vr = real(v); vi = imag(v)
+        # apply jacobian adjoint
         u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
         u1i = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vi, par0, cw, true)
         u2 = apply(JAd_at_xp,  cw)

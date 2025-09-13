@@ -49,7 +49,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     nev = length(eigenvalsfrombif(br, ind_bif)),
                     verbose = false,
                     lens = getlens(br),
-                    Teigvec = _getvectortype(br),
+                    Teigvec::Type = _getvectortype(br),
                     tol_fold = 1e-3,
                     scaleζ = norm,
                     autodiff = true
@@ -494,7 +494,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         lens = getlens(br),
-                        Teigvec = _getvectortype(br),
+                        Teigvec::Type = _getvectortype(br),
                         scaleζ = norm,
 
                         detailed = true,
@@ -542,7 +542,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
-                            Teigvec = _getvectortype(br),
+                            Teigvec::Type = _getvectortype(br),
                             tol_fold = 1e-3,
                             scaleζ = norm,
                             autodiff = false
@@ -567,16 +567,16 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec).\nYou can keep your choice by using the option `Teigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
     x0 = convert(Teigvec, bifpt.x)
-    p = bifpt.param
 
     # parameter for vector field
+    p = bifpt.param
     parbif = setparam(br, p)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
     # we invert L repeatedly, so we try to factorize it
-    Linv = L isa AbstractMatrix ? factorize(L) : L
+    L_fact = L isa AbstractMatrix ? factorize(L) : L
 
     # "zero" eigenvalues at bifurcation point
     rightEv = br.eig[bifpt.idx].eigenvals
@@ -657,7 +657,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                    dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
         end
 
-        Ψ01, cv, it = ls(Linv, E(R01))
+        Ψ01, cv, it = ls(L_fact, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
     end
@@ -684,17 +684,17 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         b3v = R3(ζs[jj], ζs[kk], ζs[ll])
         # d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζ★s[ii])
 
-        wst, flag, it = ls(Linv, E(R2(ζs[ll], ζs[kk])))
+        wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[kk])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[jj], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζ★s[ii])
 
-        wst, flag, it = ls(Linv, E(R2(ζs[ll], ζs[jj])))
+        wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[jj])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[kk], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζ★s[ii])
 
-        wst, flag, it = ls(Linv, E(R2(ζs[kk], ζs[jj])))
+        wst, flag, it = ls(L_fact, E(R2(ζs[kk], ζs[jj])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[ll], wst)
         # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζ★s[ii])
@@ -714,7 +714,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
-
 
 """
 $(SIGNATURES)
@@ -900,7 +899,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
     b = dot(bv, ζ★)
 
-    verbose && println((a = a, b = b))
+    verbose && println((;a, b))
     @reset pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
     if real(b) < 0
         pt.type = :SuperCritical
@@ -943,7 +942,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                     nev = length(eigenvalsfrombif(br, id_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),
-                    Teigvec = _getvectortype(br),
+                    Teigvec::Type = _getvectortype(br),
                     detailed = true,
                     autodiff = true,
                     scaleζ = norm)
@@ -1290,7 +1289,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     nev = length(eigenvalsfrombif(br, id_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),
-                    Teigvec = _getvectortype(br),
+                    Teigvec::Type = _getvectortype(br),
                     detailed = true,
                     autodiff = true,
                     scaleζ = norm)
@@ -1359,7 +1358,6 @@ We could have copied the implementation of `get_normal_form1d` but we would have
 function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                     bp::BranchPointMap,
                     ls::AbstractLinearSolver;
-                    bls = MatrixBLS(),
                     verbose = false,
                     tol_fold = 1e-3,
                     scaleζ = norm,
