@@ -32,6 +32,9 @@ function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, tΣ; kwargs...)
 # Structures related to computing ODE/PDE Flows
 """
 $(TYPEDEF)
+
+Structure to encode the flow associated to a Cauchy problem `dx/dt = F(x, p)`.
+
 $(TYPEDFIELDS)
 
 # Simplified constructor(s)

@@ -22,11 +22,11 @@ function Jac_carr!(J, x, p)
     n = length(x)
     J[band(-1)] .= ϵ^2/dx^2                                     # set the diagonal band
     J[band(1)]  .= ϵ^2/dx^2                                     # set the super-diagonal band
-    J[band(0)]  .= (-2ϵ^2 /dx^2) .+ 2 * (1 .- X.^2) .+ 2 .* x   # set the second super-diagonal band
-    J[1, 1] = 1.0
-    J[n, n] = 1.0
-    J[1, 2] = 0.0
-    J[n, n-1] = 0.0
+    J[band(0)]  .= @. (-2ϵ^2 /dx^2) + 2 * (1 - X^2) + 2 * x   # set the second super-diagonal band
+    J[1, 1] = 1
+    J[n, n] = 1
+    J[1, 2] = 0
+    J[n, n-1] = 0
     J
 end
 Jac_carr(x, p) = Jac_carr!(BandedMatrix{Float64}(undef, (length(x),length(x)), (1,1)), x, p)
@@ -99,6 +99,7 @@ plot(brdc, legend=true)#, marker=:d)
 # bifurcation diagram
 diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
         (@set optcont.newton_options.verbose = false);
+        autodiff = false,
         plot = true)
 
 plot(diagram, legend = false)

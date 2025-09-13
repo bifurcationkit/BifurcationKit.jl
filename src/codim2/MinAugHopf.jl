@@ -582,13 +582,13 @@ function continuation_hopf(prob,
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
         ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
-        @debug "EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,newb) - complex(0,ω)*newb) norminf(apply(L,newb) + complex(0,ω)*newb)
+        @debug "RIGHT EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,newb) - complex(0,ω)*newb) norminf(apply(L,newb) + complex(0,ω)*newb)
 
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
         newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), zero(a), one(𝒯); shift = Complex{𝒯}(0, ω))
         ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
-        @debug "EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★,newa) - complex(0,ω)*newa) norminf(apply(L★,newa) + complex(0,ω)*newa)
+        @debug "LEFT  EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★,newa) - complex(0,ω)*newa) norminf(apply(L★,newa) + complex(0,ω)*newa)
 
         ζad = newa ./ normC(newa)
         ζ   = newb ./ normC(newb)

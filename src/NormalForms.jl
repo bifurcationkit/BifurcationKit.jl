@@ -472,7 +472,7 @@ Compute the normal form of the bifurcation point located at `br.specialpoint[ind
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 - `autodiff = true` whether to use ForwardDiff for the differentiations w.r.t the parameters that are required to compute the normal form. Used for example for Bogdanov-Takens point. You can set to `autodiff = false` if you wish.
-- `detailed = true` whether to compute only a simplified normal form. Used for example for Bogdanov-Takens point.
+- `detailed = true` whether to compute only a simplified normal form whern only basic information is required. This can be useful is cases the computation is long. Used for example for Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
 - `bls_adjoint = bls` specify Bordered linear solver for the adjoint problem.
 - `bls_block = bls` specify Bordered linear solver when the border has dimension 2 (1 for `bls`).

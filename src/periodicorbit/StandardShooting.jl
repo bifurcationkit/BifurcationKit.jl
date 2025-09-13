@@ -59,7 +59,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
     flow::Tf = Flow()                    # should be a Flow
     ds::Ts = diff(LinRange(0, 1, M + 1)) # difference of times for multiple shooting
-    "`section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and which returns the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane."
+    "`section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and must return the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane."
     section::Tsection = nothing          # sections for phase condition
     "`parallel` whether the shooting is computed in parallel (threading). Available through the use of Flows defined by `EnsembleProblem` (this is automatically set up for you)."
     parallel::Bool = false               # whether we use DE in Ensemble mode for multiple shooting
@@ -82,14 +82,25 @@ setparam(prob::ShootingProblem, p) = set(getparams(prob), getlens(prob), p)
 
 function Base.show(io::IO, sh::ShootingProblem)
     println(io, "┌─ Standard shooting functional for periodic orbits")
-    println(io, "├─ time slices    : ", get_mesh_size(sh))
-    println(io, "├─ lens           : ", get_lens_symbol(sh.lens))
-    println(io, "├─ jacobian       : ", sh.jacobian)
-    println(io, "├─ update section : ", sh.update_section_every_step)
+    print(io, "├─ time slices    : ")
+    printstyled(io, get_mesh_size(sh), "\n"; color=:cyan, bold = true)
+
+    print(io, "├─ lens           : ")
+    printstyled(io, get_lens_symbol(sh.lens), "\n"; color=:cyan, bold = true)
+
+    print(io, "├─ jacobian       : ")
+    printstyled(io, sh.jacobian, "\n"; color=:cyan, bold = true)
+
+    print(io, "├─ update section : ")
+    printstyled(io, sh.update_section_every_step, "\n"; color=:cyan, bold = true)
+
     if sh.flow isa FlowDE
-        println(io, "├─ integrator     : ", typeof(sh.flow.alg).name.name)
+        print(io, "├─ integrator     : ")
+        printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color=:cyan, bold = true)
     end
-    println(io, "└─ parallel       : ", isparallel(sh))
+
+    print(io, "└─ parallel       : ")
+    printstyled(io, isparallel(sh), "\n"; color=:cyan, bold = true)
 end
 
 # this function updates the section during the continuation run

@@ -13,7 +13,7 @@ Compute the normal form (NF) of periodic orbits. We detail the additional keywor
 - `scaleζ = norm`, scale the eigenvector
 - `prm = true` NF based on Poincare return map (`prm=true`) or Iooss' method.
 - `autodiff = false` use autodiff or finite differences in some part of the normal form computation
-- `detailed = true` to get detailed normal form
+- `detailed = true` whether to compute only a simplified normal form whern only basic information is required. This can be useful is cases the computation is long.
 - `δ = getdelta(prob)` delta used for finite differences
 
 # Notes

@@ -311,14 +311,14 @@ out_ = similar(sol0f)
 @time Fcgl!(out_, sol0f, par_cgl)
 @time dFcgl!(out_, sol0f, par_cgl, sol0f)
 
-probInp = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
+probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
-            probInp,
+            probInplace,
             real.(vec_hopf), hopfpt.u,
             M, 2n, ls0; jacobian = BK.FullMatrixFree())
 

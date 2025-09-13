@@ -143,6 +143,8 @@ $(TYPEDEF)
 
 Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
+The struct is mutable so that you can modify the preconditioners.
+
 ## Fields
 $(TYPEDFIELDS)
 """
@@ -211,6 +213,8 @@ end
 $(TYPEDEF)
 
 Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+
+The struct is mutable so that you can modify the preconditioners.
 
 ## Fields
 $(TYPEDFIELDS)
@@ -284,6 +288,8 @@ $(TYPEDEF)
 Create a linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 You have access to `cg, cr, gmres, symmlq, cg_lanczos, cg_lanczos_shift_seq`...
 
+The struct is mutable so that you can modify the preconditioners.
+
 ## Fields 
 $(TYPEDFIELDS)
 
@@ -328,6 +334,8 @@ $(TYPEDEF)
 Create an inplace linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
 The Krylov space is pre-allocated. This is really great for GPU but also for CPU.
+
+The struct is mutable so that you can modify the preconditioners.
 
 ## Fields 
 $(TYPEDFIELDS)

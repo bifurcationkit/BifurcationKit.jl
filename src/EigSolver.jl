@@ -47,7 +47,9 @@ function gev(l::DefaultEig, A, B, nev; kwargs...)
     F = eigen(__to_array_for_eig(A), __to_array_for_eig(B))
     return Complex.(F.values), Complex.(F.vectors)
 end
-
+####################################################################################################
+# Solvers for Arpack
+####################################################################################################
 """
 $(TYPEDEF)
 

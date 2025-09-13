@@ -166,9 +166,9 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     return contres
 end
 
-_wrap(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
-_wrap(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
-_wrap(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
+__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
+__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
+__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int,
@@ -242,7 +242,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
@@ -252,8 +252,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
 
     contParams = (@set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
 
-    # set second derivative
-    probsh_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
+    # set the second derivative
+    prob_po_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
                 J = (x, p) -> jacobian(pbwrap, x, p),
                 Jᵗ = Jᵗ,
                 d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(probPO, z, p), x, dx1, dx2),
@@ -265,7 +265,7 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(probsh_fold, orbitguess, getparams(probsh_fold)).jacpb
+    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold)).jacpb
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -279,8 +279,8 @@ function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
     ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
-    branch = continuation_fold(probsh_fold, alg,
-        foldpointguess, getparams(probsh_fold),
+    branch = continuation_fold(prob_po_fold, alg,
+        foldpointguess, getparams(prob_po_fold),
         lens1, lens2,
         # p, q,
         q, p,
@@ -360,7 +360,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
@@ -490,7 +490,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(probPO, kwargs)
 
     jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = _wrap(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
