@@ -22,7 +22,14 @@ function ShootingProblem(prob::ODEType, alg, ds, section; parallel = false, par 
     _pb = parallel ? EnsembleProblem(prob) : prob
     kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(ShootingProblem)]
     kwargsDE = setdiff(kwargs, kwargsSh)
-    sh = ShootingProblem(;M = _M, flow = Flow(_pb, alg; kwargsDE...), kwargsSh..., ds = ds, section = section, parallel = parallel, par = par)
+    sh = ShootingProblem(;
+            M = _M, 
+            flow = Flow(_pb, alg; kwargsDE...), 
+            kwargsSh..., 
+            ds, 
+            section, 
+            parallel, 
+            par)
     # set jacobian for the flow too
     _sync_jacobian!(sh)
 end
@@ -31,7 +38,14 @@ ShootingProblem(prob::ODEType, alg, M::Int, section; kwargs...) = ShootingProble
 
 function ShootingProblem(prob::ODEType, alg, centers::AbstractVector; parallel = false, par = prob.p, kwargs...)
     F = get_vector_field(prob)
-    sh = ShootingProblem(prob, alg, diff(LinRange(0, 1, length(centers) + 1)), SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), centers[1]); parallel, par = par, kwargs...)
+    sh = ShootingProblem(prob,
+                        alg,
+                        diff(LinRange(0, 1, length(centers) + 1)), 
+                        SectionSS(F(centers[1], par) ./ norm(F(centers[1], par)), 
+                        centers[1]); 
+                        parallel, 
+                        par,
+                        kwargs...)
     # set jacobian for the flow too
     _sync_jacobian!(sh)
 end

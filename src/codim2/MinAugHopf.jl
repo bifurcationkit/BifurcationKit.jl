@@ -377,7 +377,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob_vf)
 
-    # options for the Newton Solver inherited from the ones the user provided
+    # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
     # tolerance for detecting BT bifurcation and stopping continuation
     threshBT = 100options_newton.tol

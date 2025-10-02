@@ -3,6 +3,11 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.5.2]
+- export `ODEBifProblem`
+- add new jacobian types
+- `jad` becomes `jacobian_adjoint`
+## [0.5.1]
 - `_eig_floquet_col` is now `_eig_floquet_coll`
 - `FloquetCollGEV` is now called `FloquetGEV`
 - `extract_period` is now called `_extract_period`

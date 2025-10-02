@@ -363,7 +363,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         @warn "You selected the PALC continuation algorithm with Bordered predictor.\nThe jacobian being singular on Fold points, this could lead to bad prediction and convergence.\nIf you have issues, try a different tangent predictor like Secant for example, you can pass it using `alg = PALC()`."
     end
 
-    # options for the Newton Solver inherited from the ones the user provided
+    # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
 
     𝐅 = FoldProblemMinimallyAugmented(
