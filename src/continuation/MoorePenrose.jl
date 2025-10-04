@@ -151,7 +151,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     dX = _copy(res_f) # copy(res_f)
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
+    minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res = normN(res_f)
     residuals = [res]
@@ -171,14 +171,14 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     X = BorderedArray(x, p)
     if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
         ϕ = _copy(τ0)
-        rmul!(ϕ,  one(𝒯) / norm(ϕ))
+        VI.scale!(ϕ,  one(𝒯) / norm(ϕ))
     end
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
+        minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -216,13 +216,13 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
             copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-            minus!(dFdp, res_f); rmul!(dFdp, 1 / ϵ)
+            minus!(dFdp, res_f); VI.scale!(dFdp, 1 / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)
             u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp
             ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             ϕ.u .= u; ϕ.p = up
-            # rmul!(ϕ,  one(𝒯) / norm(ϕ))
+            # VI.scale!(ϕ,  one(𝒯) / norm(ϕ))
             itlinear = (itlinear1 .+ itlinear2)
         end
         push!(residuals, res)

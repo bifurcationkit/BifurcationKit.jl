@@ -166,11 +166,8 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
 
-    # extract the orbit guess
-    xc = get_time_slices(sh, x)
-
     # variable to hold the computed result
-    out = similar(x)
+    out = VI.zerovector(x)
 
     if ~isparallel(sh)
         for ii in 1:M
@@ -223,13 +220,13 @@ end
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = convert(eltype(x.u), 1e-8))
+function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), 1e-8))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
 
     # variable to hold the computed result
-    out = BorderedArray{typeof(x.u), typeof(x.p)}(similar(x.u), typeof(x.p)(0))
+    out = VI.zerovector(x)
 
     if ~isparallel(sh)
         for ii in 1:M

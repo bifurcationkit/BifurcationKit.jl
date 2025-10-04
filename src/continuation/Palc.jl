@@ -19,7 +19,7 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( (x, y) -> LA.dot(x, y) / length(x), x -> LA.rmul!(x, 1/length(x))   )
+DotTheta() = DotTheta( (x, y) -> VI.inner(x, y) / length(x), x -> VI.scale!(x, 1/length(x))   )
 DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
@@ -136,7 +136,7 @@ function addtangent!(state::AbstractContinuationState, nrm = false)
     copyto!(state.z_pred, state.z)
     ds = state.ds
     ρ = nrm ? ds / state.τ.p : ds
-    axpy!(ρ, state.τ, state.z_pred)
+    VI.add!(state.z_pred, state.τ, ρ)
 end
 
 update_predictor!(state::AbstractContinuationState,
@@ -189,7 +189,7 @@ function _secant_tangent!(τ::M,
     copyto!(τ, z₁)
     minus!(τ, z₀)
     α = sign(ds) / dotθ(τ, θ)
-    rmul!(τ, α)
+    VI.scale!(τ, α)
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Secant, ::Bool) = nothing
@@ -233,7 +233,7 @@ function gettangent!(state::AbstractContinuationState,
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
     dFdl = residual(it.prob, state.z.u, setparam(it, state.z.p + ϵ))
     minus!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
-    rmul!(dFdl, 1/ϵ)
+    VI.scale!(dFdl, 1/ϵ)
 
     # compute jacobian at the current solution
     J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
@@ -242,7 +242,7 @@ function gettangent!(state::AbstractContinuationState,
     τu, τp, flag, itl = solve_bls_palc(getlinsolver(it),
                                         it, state,
                                         J, dFdl,
-                                        0*state.z.u, one(T)) # Right-hand side
+                                        VI.zerovector(state.z.u), one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
@@ -251,7 +251,7 @@ function gettangent!(state::AbstractContinuationState,
 
     copyto!(τ.u, τu)
     τ.p = τp
-    rmul!(τ, α)
+    VI.scale!(τ, α)
 end
 ####################################################################################################
 """
@@ -429,7 +429,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
     minus!(dFdp, res_f) # dFdp = dFdp - res_f
-    rmul!(dFdp, one(𝒯) / ϵ)
+    VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
     residuals = [res]
@@ -444,7 +444,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
+        minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -462,7 +462,7 @@ function newton_palc(iter::AbstractContinuationIterable,
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
-                copyto!(x_pred, x); axpy!(-α, u, x_pred)
+                copyto!(x_pred, x); VI.add!(x_pred, u, -α)
 
                 p_pred = p - α * up
                 copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))

@@ -70,9 +70,9 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflat
 end
 
 # constructors
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, LA.dot, α, roots, _copy(roots[1]), autodiff, T(1e-8))
+DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, VI.inner, α, roots, _copy(roots[1]), autodiff, T(1e-8))
 DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(eltype(roots[1]), 1e-8))
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, LA.dot, α, roots, v, autodiff, T(1e-8))
+DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, VI.inner, α, roots, v, autodiff, T(1e-8))
 
 # methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
@@ -102,10 +102,10 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) 
     length(df.roots) == 0 && return T(1)
     M(u) = T(1) / df.dot(u, u)^df.power + df.α
     # compute u - df.roots[1]
-    copyto!(tmp, u); axpy!(T(-1), df.roots[1], tmp)
+    copyto!(tmp, u); VI.add!(tmp, df.roots[1], T(-1))
     out = M(tmp)
     for ii in 2:length(df.roots)
-        copyto!(tmp, u); axpy!(T(-1), df.roots[ii], tmp)
+        copyto!(tmp, u); VI.add!(tmp, df.roots[ii], T(-1))
         out *= M(tmp)
     end
     return out
@@ -132,8 +132,8 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u
     if df.autodiff
         return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
     else
-        copyto!(tmp, u); axpy!(df.δ, du, tmp)
-        return (df(tmp) - df(u)) / df.δ
+        copyto!(tmp, u); VI.add!(tmp, du, df.δ)
+        return (df(tmp) - df(u)) / df.δ 
     end
 end
 (df::DeflationOperator)(u, du) = df(Val(:dMwithTmp), similar(u), u, du)
@@ -163,7 +163,7 @@ Return the deflated function M(u) * F(u) where M(u) ∈ R
 """
 function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u, par) where {Tprob, Tp, Tdot, T, vectype}
     out = residual(dfp.prob, u, par)
-    rmul!(out, dfp.M(u))
+    VI.scale!(out, dfp.M(u))
     return out
 end
 
@@ -175,12 +175,12 @@ function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u::vectype, par, du
     # out = dF(u)⋅du * M(u)
     out = dF(dfp.prob, u, par, du)
     M = dfp.M(u)
-    rmul!(out, M)
+    VI.scale!(out, M)
     # we add the remaining part
     if length(dfp) > 0
         F = residual(dfp.prob, u, par)
         # F(u) dM(u)⋅du, out .+= dfp.M(u, du) .* F
-        axpy!(dfp.M(u, du), F, out)
+        VI.add!(out, F, dfp.M(u, du))
     end
     return out
 end
@@ -264,7 +264,7 @@ function (dfl::DeflatedProblemCustomLS)(J, rhs)
     # We look for the expression of dM(u)⋅h
     # the solution is then h = Mu * h1 - z h2 where z has to be determined
     # z1 = dM(h)⋅h1
-    tmp = similar(u)
+    tmp = VI.zerovector(u)
     z1 = defPb.M(Val(:dMwithTmp), tmp, u, h1)
 
     # z2 = dM(h)⋅h2
@@ -277,8 +277,8 @@ function (dfl::DeflatedProblemCustomLS)(J, rhs)
 
     # return (h1 - z * h2) / Mu, true, (it1, it2)
     copyto!(tmp, h1)
-    axpy!(-z, h2, tmp)
-    rmul!(tmp, _T(1) / Mu)
+    VI.add!(tmp, h2, -z)
+    VI.scale!(tmp, _T(1) / Mu)
     return tmp, true, (it1, it2)
 end
 

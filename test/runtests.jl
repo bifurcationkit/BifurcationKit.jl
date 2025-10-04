@@ -8,6 +8,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     @testset "Linear Solvers" begin
         include("problems.jl")
         include("precond.jl")
+        include("bordered_arrays.jl")
         include("test_linear.jl")
     end
 

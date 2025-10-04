@@ -1,5 +1,4 @@
-# using Revise
-using Test, BifurcationKit, ForwardDiff, LinearAlgebra, RecursiveArrayTools
+using Test, BifurcationKit, ForwardDiff, LinearAlgebra
 const BK = BifurcationKit
 N = 10
 M = 5
@@ -10,8 +9,8 @@ struct MyFlow <: BK.AbstractFlow end
 fl = MyFlow()
 x0 = 0
 p0 = 0
-BK.jvp(fl, x0,p0,0,0)
-BK.vjp(fl, x0,p0,0,0)
+BK.jvp(fl, x0, p0, 0, 0)
+BK.vjp(fl, x0, p0, 0, 0)
 BK.vf(fl,x0, p0)
 BK.evolve(fl, x0, p0, 0)
 BK.evolve(fl, Val(:Full), x0, p0, 0)
@@ -40,16 +39,16 @@ section = section)
 
 show(probSh)
 
-poguess = VectorOfArray([rand(N) for ii=1:M])
+poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
 po = BorderedArray(poguess, 1.)
 
-dpoguess = VectorOfArray([rand(N) for ii=1:M])
+dpoguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
 dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractVector structure
-poguess = VectorOfArray([rand(N) for ii=1:M])
-pov = vcat(reduce(vcat, po.u), po.p)
-dpov = vcat(reduce(vcat, dpo.u), dpo.p)
+poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
+pov = vcat(reduce(vcat, po.u.vec), po.p)
+dpov = vcat(reduce(vcat, dpo.u.vec), dpo.p)
 resv = probSh(pov, par)
 
 dresv = probSh(pov, par, dpov; δ)
@@ -58,16 +57,16 @@ resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 
 # use of BorderedArray structure
 res = probSh(po, par)
-@test norm(reduce(vcat,res.u) - resv[1:end-1] , Inf) ≈ 0
+@test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
 dres = probSh(po, par, dpo; δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
-@test norm(reduce(vcat,dres.u) - dresv[1:end-1], Inf) ≈ 0
+@test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the jacobian of the multiple shooting functional using nonLinear flow
 vf(x, p) = x.^2
-flow(x, p, t) = (u=x ./ (1 .- t .* x),t=t)
+flow(x, p, t) = (u = x ./ (1 .- t .* x), t = t)
 dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 
 fl = BK.Flow(vf, flow, dflow)
@@ -76,15 +75,15 @@ probSh = BK.ShootingProblem(M = M, flow = fl,
 ds = LinRange(0,1,M+1) |> diff ,
 section = section)
 
-poguess = VectorOfArray([rand(N) for ii=1:M])
+poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
 po = BorderedArray(poguess, 1.)
 
-dpoguess = VectorOfArray([rand(N) for ii=1:M])
+dpoguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
 dpo = BorderedArray(dpoguess, 2.)
 
 # use of AbstractArray structure
-pov = vcat(vec(po.u), po.p)
-dpov = vcat(vec(dpo.u), dpo.p)
+pov = vcat(reduce(vcat, po.u.vec), po.p)
+dpov = vcat(reduce(vcat, dpo.u.vec), dpo.p)
 resv = probSh(pov, par)
 
 dresv = probSh(pov, par, dpov; δ = δ)
@@ -93,12 +92,12 @@ resad = ForwardDiff.derivative(t -> probSh(pov .+ t .* dpov, par), 0.)
 
 # use of BorderedArray structure
 res = probSh(po, par)
-@test norm(Vector(res.u) - resv[1:end-1] , Inf) ≈ 0
+@test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
 @test norm(res.p - resv[end], Inf) ≈ 0
 
 dres = probSh(po, par, dpo; δ = δ)
 @test norm(dres.p - dresv[end], Inf) ≈ 0
-@test norm(Vector(dres.u) - dresv[1:end-1], Inf) ≈ 0
+@test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0
 ####################################################################################################
 # test the hyperplane projections for Poincare Shooting
 M = 1
@@ -109,7 +108,7 @@ end
 centers = [rand(2) for ii=1:M]
 
 hyper = BK.SectionPS(normals, centers)
-poguess = VectorOfArray([rand(2) for ii=1:M])
+poguess = BK.VI.MinimalMVec([rand(2) for ii=1:M])
 
 x = rand(2)
 xb = BK.R(hyper, x, 1)
@@ -152,7 +151,7 @@ sectionps = SectionPS(normals, centers)
 probPSh = PoincareShootingProblem(flow = fl, M = M, section = sectionps)
 
 
-ci = reduce(vcat, BK.projection(probPSh, poguess.u))
+ci = reduce(vcat, BK.projection(probPSh, poguess.vec))
 dci = rand(length(ci))
 
 # we test that we have the analytical version of the flow
@@ -182,4 +181,4 @@ _out1 = ForwardDiff.derivative(z -> probPSh(ci .+ z .* dci, par), 0)
 display(_out0)
 display(_out1)
 display(_out2)
-_out0 - _out1 |> display
+@test _out2 ≈ _out1 atol = 1e-5

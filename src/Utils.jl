@@ -30,7 +30,7 @@ _empty(x::Matrix) = similar(x, 0, 0)
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
-norm2sqr(x) = LA.dot(x, x)
+norm2sqr(x) = VI.inner(x, x)
 ####################################################################################################
 # display eigenvals with color
 function print_ev(eigenvals, color = :black)

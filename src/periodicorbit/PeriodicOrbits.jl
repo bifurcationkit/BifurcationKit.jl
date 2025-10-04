@@ -427,7 +427,7 @@ function continuation(br::AbstractBranchResult,
     ζr = real.(hopfpt.ζ)
     ζi = imag.(hopfpt.ζ)
     # this phase is for POTrap problem constraint to be satisfied
-    ϕ = atan(LA.dot(ζr, ζr), LA.dot(ζi, ζr))
+    ϕ = atan(VI.inner(ζr, ζr), VI.inner(ζi, ζr))
 
     verbose && printstyled(color = :green, "━"^55*
             "\n┌─ Start branching from Hopf bif. point to periodic orbits.",
@@ -479,9 +479,9 @@ function continuation(br::AbstractBranchResult,
 
         # find the bifurcated branch using deflation
         if ~(probPO isa PoincareShootingProblem)
-            deflationOp = DeflationOperator(2, (x, y) -> LA.dot(x[begin:end-1], y[begin:end-1]), one(𝒯), [sol0.u]; autodiff = true)
+            deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(𝒯), [sol0.u]; autodiff = true)
         else
-            deflationOp = DeflationOperator(2, (x, y) -> LA.dot(x, y) / M, one(𝒯), [sol0.u]; autodiff = true)
+            deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x, y) / M, one(𝒯), [sol0.u]; autodiff = true)
         end
 
         verbose && println("\n──▶ Compute point on bifurcated branch...")
@@ -601,7 +601,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         end
 
         # find the bifurcated branch using deflation
-        deflationOp = DeflationOperator(2, (x, y) -> LA.dot(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
+        deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)

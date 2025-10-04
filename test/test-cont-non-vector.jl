@@ -7,8 +7,6 @@ const BK = BifurcationKit
 # test Bordered Arrays
 _a = BorderedArray(zeros(2), zeros(2))
 _b = BorderedArray(zeros(2), zeros(2))
-BK.mul!(_a, 1., _b)
-BK.axpby!(1., _a, 1., _b)
 BK.getvec(_a)
 BK.getvec(_a.u)
 BK.getvec(BorderedArray(rand(2),1.))
@@ -90,7 +88,7 @@ prob2 = BK.BifurcationProblem(Fb, sol0, (1., 1.), (@optic _[1]);
 
 br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 
-solfold = newton(br, 1; bdlinsolver = BorderingBLS(opt_newton.linsolver))
+solfold = newton(br, 1; bdlinsolver = BorderingBLS(solver = opt_newton.linsolver, dot = BK.VI.inner))
 @test BK.converged(solfold)
 
 try
@@ -113,7 +111,7 @@ push!(deflationOp, soldef1.u)
 
 Random.seed!(1231)
 # test with Newton deflation 2
-soldef2 = BK.solve(BK.re_make(prob, u0 = rmul!(soldef0,rand())), deflationOp, opt_newton)
+soldef2 = BK.solve(BK.re_make(prob, u0 = BK.VI.scale(soldef0, rand())), deflationOp, opt_newton)
 ####################################################################################################
 # using KrylovKit
 

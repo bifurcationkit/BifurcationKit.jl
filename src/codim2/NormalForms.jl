@@ -32,7 +32,7 @@ function cusp_normal_form(_prob,
     prob_vf = prob_ma.prob_vf
 
     # scalar type
-    𝒯 = eltype(Teigvec)
+    𝒯 = VI.scalartype(Teigvec)
 
     # linear solvers
     ls = prob_ma.linsolver
@@ -142,7 +142,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
                                     bls_block = bls)
     x0 = pt.x0
     parbif = pt.params
-    Ty = eltype(x0)
+    Ty = VI.scalartype(x0)
 
     # vector field
     VF = prob_ma.prob_vf
@@ -547,7 +547,7 @@ function bogdanov_takens_normal_form(_prob,
         x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
     end
 
-    𝒯 = eltype(Teigvec)
+    𝒯 = VI.scalartype(Teigvec)
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
@@ -654,7 +654,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     prob_vf = prob_ma.prob_vf
 
     # scalar type
-    𝒯 = eltype(Teigvec)
+    𝒯 = VI.scalartype(Teigvec)
     ϵ = 𝒯(δ)
 
     # functional
@@ -971,7 +971,7 @@ function zero_hopf_normal_form(_prob,
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
 
     # scalar type
-    𝒯 = eltype(Teigvec)
+    𝒯 = VI.scalartype(Teigvec)
     ϵ = 𝒯(δ)
 
     # get the MA problem
@@ -1320,7 +1320,7 @@ function hopf_hopf_normal_form(_prob,
     verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
 
     # scalar type
-    𝒯 = eltype(Teigvec)
+    𝒯 = VI.scalartype(Teigvec)
     ϵ = 𝒯(δ)
 
     # get the MA problem

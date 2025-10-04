@@ -16,11 +16,11 @@ let
     BK.minus!(z_pred, tau_pred)
     BK.eltype(z_pred)
 
-    axpy!(2. /3, tau_pred, z_pred)
-    axpby!(2. /3, tau_pred, 1.0, z_pred)
-    dot(z_pred, tau_pred)
+    BK.VI.add!(z_pred, tau_pred, 2.0/3)
+    BK.VI.add!(z_pred, tau_pred, 2.0/3, 1.0)
+    BK.VI.inner(z_pred, tau_pred)
 
-    dottheta = BK.DotTheta((x, y) -> dot(x, y) / length(x))
+    dottheta = BK.DotTheta((x, y) -> BK.VI.inner(x, y) / length(x))
 
     dottheta(z_pred, 0.1)
     dottheta(z_pred, tau_pred, 0.1)
@@ -28,22 +28,22 @@ let
 
     z = BorderedArray(z_pred, rand(10))
     z2 = BorderedArray(z_pred, rand(10))
-    BK.zerovector(z2); BK.zerovector(z_pred)
+    BK.VI.zerovector(z2); BK.VI.zerovector(z_pred)
     @test length(z_pred) == 11
 
     copyto!(z,z2)
     BK.minus(z.u,z2.u); BK.minus!(z.u,z2.u)
     BK.minus(1.,2.); BK.minus!(1.,2.)
-    rmul!(z_pred, 1.0)
-    rmul!(z_pred, true)
-    mul!(z_pred, tau_pred, 1.0)
+    BK.VI.scale!(z_pred, 1.0)
+    BK.VI.scale!(z_pred, true)
+    BK.VI.scale!(z_pred, tau_pred, 1.0)
 
     z_predC = BorderedArray(ComplexF64.(z_pred.u), ComplexF64.(z_pred.u))
-    z3 = similar(z_predC, ComplexF64)
-    mul!(z3, z3, 1.0)
+    z3 = BK.VI.scale(z_predC, ComplexF64(1))
+    BK.VI.scale!(z3, z3, 1.0)
 
     z_sim = BorderedArray(rand(3), rand(2))
-    z_sim2 = similar(z_sim)
+    z_sim2 = BK.VI.scale(z_sim, 1)
     typeof(z_sim) == typeof(z_sim2)
 end
 ####################################################################################################
@@ -456,7 +456,7 @@ end
 ####################################################################################################
 # test the linear solvers for matrix free formulations
 let
-    J0 = I + sprand(100,100,0.1)
+    J0 = I + sprand(100, 100, 0.1)
     Jmf = x -> J0 * x
     x0 = rand(100)
     ls = DefaultLS()

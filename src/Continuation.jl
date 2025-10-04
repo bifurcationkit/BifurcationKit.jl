@@ -401,7 +401,7 @@ function iterate_from_two_points(it::ContIterable,
     # compute event value and store it into state
     cbval = is_event_active(it) ? initialize(it.event, T) : nothing
     state = ContState(;z_pred = BorderedArray(_copy(u₀), p₀),
-                        τ = BorderedArray(0 * u₁, zero(p₁)),
+                        τ = BorderedArray(VI.scale(u₁, 0), zero(p₁)),
                         z,
                         z_old = BorderedArray(_copy(u₀), p₀),
                         converged = true,

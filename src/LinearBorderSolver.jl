@@ -68,7 +68,7 @@ $(TYPEDFIELDS)
     k::Int64 = 1
 
     "Inner product used in by the solver."
-    dot::Tdot = LA.dot
+    dot::Tdot = VI.inner
 
     @assert k > 0 "Number of recursions must be positive"
 end
@@ -136,7 +136,7 @@ function BEC(lbs::BorderingBLS,
     dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
 
     # dX = x1 .- dl .* δx
-    axpy!(-dl, δx, x1)
+    VI.add!(x1, δx, -dl)
     return x1, dl, success, itlinear
 end
 
@@ -147,16 +147,17 @@ function residualBEC(lbs::BorderingBLS,
                             dX, dl,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
-                            shift::𝒯s = nothing, dotp = LA.dot)  where {𝒯, 𝒯ξ, 𝒯s}
+                            shift::𝒯s = nothing, 
+                            dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
     # hence δx = R - (shift⋅I + J) * dX - dl * dR
     δX = apply(J, dX)
     if ~isnothing(shift)
-        axpy!(shift, dX, δX)
+        VI.add!(δX, dX, shift)
     end
-    axpy!(dl, dR, δX)
-    axpby!(1, R, -1, δX)
+    VI.add!(δX, dR, dl)
+    VI.add!(δX, R, 1, -1)
 
     δl = n - ξp * dzp * dl - ξu * dotp(dzu, dX)
 
@@ -181,7 +182,7 @@ function solve_bls_block(lbs::BorderingBLS,
     x2s = typeof(b[1])[]
     its = Int[]
     cv = true
-    δx = similar(x2s)
+    δx = VI.zerovector(x2s)
     for ii in eachindex(b)
         x2, success, it = lbs.solver(J, b[ii])
         push!(x2s, x2)
@@ -240,7 +241,7 @@ function (lbs::MatrixBLS)(J, dR,
     if isnothing(shift)
         A = J
     else
-        A = J + shift * I
+        A = J + shift * LA.I
     end
     # USE BLOCK ARRAYS LAZY?
     # A = hcat(A, dR)
@@ -305,21 +306,21 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
     dot::Td # possibly custom dot product
 end
 
-function (lbmap::MatrixFreeBLSmap)(x::BorderedArray)
-    out = similar(x)
+function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
+    out = VI.zerovector(x)
     copyto!(out.u, apply(lbmap.J, x.u))
-    axpy!(x.p, lbmap.a, out.u)
+    VI.add!(out.u, lbmap.a, x.p)
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, x.u, out.u)
+        VI.add!(out.u, x.u, lbmap.shift)
     end
-    out.p = lbmap.dot(lbmap.b, x.u)  + lbmap.c  * x.p
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c  * x.p
     return out
 end
 
 function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     # This implements the case where Tc is a number, ie there is one scalar constraint in the
     # bordered linear system
-    out = similar(x)
+    out = VI.zerovector(x)
     xu = @view x[begin:end-1]
     xp = x[end]
     # copyto!(out.u, apply(lbmap.J, x.u))
@@ -334,13 +335,13 @@ end
 
 # case matrix by blocks
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
-    out = similar(x)
+    out = VI.zerovector(x)
     copyto!(out.u, apply(lbmap.J, x.u))
     for ii in eachindex(lbmap.a)
-        axpy!(x.p[ii], lbmap.a[ii], out.u)
+        VI.add!(out.u, lbmap.a[ii], x.p[ii])
     end
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, x.u, out.u)
+        VI.add!(out.u, x.u, lbmap.shift)
     end
     out.p .= lbmap.c * x.p
     for ii in eachindex(lbmap.b)
@@ -362,11 +363,11 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::AbstractArray) where {Tj, Ta <
 
     out[begin:end-m] .= apply(lbmap.J, xu)
     for ii in eachindex(lbmap.a)
-        axpy!(xp[ii], lbmap.a[ii], outu)
+        VI.add!(outu, lbmap.a[ii], xp[ii])
     end
 
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, xu, outu)
+        VI.add!(outu, xu, lbmap.shift)
     end
     outp .= lbmap.c * xp
     for ii in eachindex(lbmap.b)
@@ -417,7 +418,7 @@ function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  dotp = LA.dot,
                                  applyξu! = nothing
                                  ) where {𝒯 <: Number, 𝒯ξ, S}
-    linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
+    linearmap = MatrixFreeBLSmap(J, dR, VI.scale(dzu, ξu), dzp * ξp, shift, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol), get_par_bls(sol), cv, it

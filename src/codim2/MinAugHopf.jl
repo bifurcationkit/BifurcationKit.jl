@@ -98,11 +98,11 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
              apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
-    σₚ = -LA.dot(w, dₚJv)
+    σₚ = -VI.inner(w, dₚJv)
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
-    σω = Complex{𝒯}(0, 1) * LA.dot(w, v)
+    σω = Complex{𝒯}(0, 1) * VI.inner(w, v)
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
 end
@@ -175,13 +175,13 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
         σxv2i = @. -(u1i - u2) / ϵ2
         σx = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
-        σxx1 = LA.dot(σx, x1)
-        σxx2 = LA.dot(σx, x2)
+        σxx1 = VI.inner(σx, x1)
+        σxx2 = VI.inner(σx, x2)
     else
         d2Fv = d2F(𝐇.prob_vf, x, par0, v, x1)
-        σxx1 = -conj(LA.dot(w, d2Fv))
+        σxx1 = -conj(VI.inner(w, d2Fv))
         d2Fv = d2F(𝐇.prob_vf, x, par0, v, x2)
-        σxx2 = -conj(LA.dot(w, d2Fv))
+        σxx2 = -conj(VI.inner(w, d2Fv))
     end
     # We need to be careful here because the dot produces conjugates. 
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
@@ -311,7 +311,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
         ζstar, λstar = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
-        ζad .= ζstar ./ LA.dot(ζstar, ζ)
+        ζad .= ζstar ./ VI.inner(ζstar, ζ)
     end
 
     # solve the hopf equations
@@ -583,7 +583,7 @@ function continuation_hopf(prob,
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
-        axpby!(1 / dot(ζ★, ζ), ζ★, 0, ζad)
+        VI.add!(ζad, ζ★, 1 / VI.inner(ζ★, ζ), 0)
     else
         # we use a minimally augmented formulation to set the initial vectors
         # we start with a vector similar to an eigenvector, we must ensure that
@@ -653,8 +653,8 @@ function test_bt_gh(iter, state)
 
     # test function for Bogdanov-Takens
     𝐇.BT = ω
-    BT2 = real( LA.dot(ζ★ ./ 𝐇.norm(ζ★), ζ) )
-    ζ★ ./= LA.dot(ζ, ζ★)
+    BT2 = real( VI.inner(ζ★ ./ 𝐇.norm(ζ★), ζ) )
+    ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
     hp = hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO! WE NEED A KWARGS here

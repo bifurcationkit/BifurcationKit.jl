@@ -91,7 +91,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
     for ii in algo.nb:-1:1
         algo.currentind = ii # record the current index
         zpred = _copy(state.z_pred)
-        axpy!(ii * ds, algo.τ, zpred)
+        VI.add!(zpred, algo.τ, ii * ds)
         copyto!(state.z_pred, zpred)
         # we restore the original callback if it reaches the usual case ii == 0
         corrector!(state, it, algo.alg; callback = cb, kwargs...)

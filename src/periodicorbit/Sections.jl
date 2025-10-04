@@ -10,7 +10,7 @@ function sectionShooting(x::AbstractArray,
     N = length(center)
     # we only constrain the first point to lie on a specific hyperplane
     # this avoids the temporary xc - centers
-    return (LA.dot(x, normal) - LA.dot(center, normal)) * T
+    return (VI.inner(x, normal) - VI.inner(center, normal)) * T
 end
 
 # section for Standard Shooting
@@ -34,7 +34,7 @@ end
 
 # matrix-free jacobian
 function (sect::SectionSS)(u, T::Ty, du, dT::Ty) where Ty
-    return sect(u, one(Ty)) * dT + LA.dot(du, sect.normal) * T
+    return sect(u, one(Ty)) * dT + VI.inner(du, sect.normal) * T
 end
 
 _isempty(sect::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
@@ -52,7 +52,7 @@ end
 function _section_hyp!(out, x, normals, centers, radius)
     for ii in eachindex(normals)
         if norm(x-centers[ii]) < radius
-            out[ii] = LA.dot(normals[ii], x) - LA.dot(normals[ii], centers[ii])
+            out[ii] = VI.inner(normals[ii], x) - VI.inner(normals[ii], centers[ii])
         else
             out[ii] = 1
         end
@@ -155,7 +155,7 @@ function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
     k = hyp.indices[ii]
     nbar  = hyp.normals_bar[ii]
     xcbar = hyp.centers_bar[ii]
-    coord_k = hyp.centers[ii][k] - (LA.dot(nbar, xbar) - LA.dot(nbar, xcbar)) / hyp.normals[ii][k]
+    coord_k = hyp.centers[ii][k] - (VI.inner(nbar, xbar) - VI.inner(nbar, xcbar)) / hyp.normals[ii][k]
 
     @views out[1:k-1] .= xbar[1:k-1]
     @views out[k+1:end] .= xbar[k:end]
@@ -173,7 +173,7 @@ function dE!(hyp::SectionPS, out, dxbar::AbstractVector, ii::Int)
     k = hyp.indices[ii]
     nbar = hyp.normals_bar[ii]
     xcbar = hyp.centers_bar[ii]
-    coord_k = - LA.dot(nbar, dxbar) / hyp.normals[ii][k]
+    coord_k = - VI.inner(nbar, dxbar) / hyp.normals[ii][k]
 
     @views out[1:k-1]   .= dxbar[1:k-1]
     @views out[k+1:end] .= dxbar[k:end]

@@ -269,14 +269,14 @@ This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x)
 """
 function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
     normal = psh.section.normals[ii]
-    abs(LA.dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(LA.dot(normal, dx))) > 1e-12 and $(dot(dx, dx))"
+    abs(VI.inner(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(VI.inner(normal, dx))) > 1e-12 and $(VI.inner(dx, dx))"
     # compute the Poincare map from x
     tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), x, par, Inf)
     z = vf(psh.flow, solΣ, par)
     # solution of the variational equation at time tΣ
     # We need the callback to be INACTIVE here!!!
     y = evolve(psh.flow, Val(:SerialdFlow), x, par, dx, tΣ; callback = nothing).du
-    out = y .- (LA.dot(normal, y) / LA.dot(normal, z)) .* z
+    out = y .- (VI.inner(normal, y) / VI.inner(normal, z)) .* z
 end
 
 # jacobian of the shooting functional
@@ -361,7 +361,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
         F .= vf(psh.flow, solΣ, par) #vector field
         normal .= psh.section.normals[ii]
         @views dflow(Jtmp, xc[:, im1], tΣ)
-        Jtmp .= Jtmp .- F * normal' * Jtmp ./ LA.dot(F, normal)
+        Jtmp .= Jtmp .- F * normal' * Jtmp ./ VI.inner(F, normal)
         # projection with Rm, Em
         ForwardDiff.jacobian!(Rm, x-> R(psh.section, x, ii), zeros(N))
         ForwardDiff.jacobian!(Em, x-> E(psh.section, x, im1), zeros(Nm1))
