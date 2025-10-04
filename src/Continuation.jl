@@ -194,10 +194,10 @@ function Base.copy(state::ContState)
 end
 
 function Base.copyto!(dest::ContState, src::ContState)
-        copyto!(dest.z_pred, src.z_pred)
-        copyto!(dest.τ, src.τ)
-        copyto!(dest.z, src.z)
-        copyto!(dest.z_old, src.z_old)
+        _copyto!(dest.z_pred, src.z_pred)
+        _copyto!(dest.τ, src.τ)
+        _copyto!(dest.z, src.z)
+        _copyto!(dest.z_old, src.z_old)
         dest.converged        = src.converged
         dest.itnewton         = src.itnewton
         dest.itlinear         = src.itlinear
@@ -590,7 +590,7 @@ end
 ####################################################################################################
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the continuation curve associated to the functional `F` which is stored in the bifurcation problem `prob`. General information is available in [Continuation methods: introduction](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/IntroContinuation/).
 

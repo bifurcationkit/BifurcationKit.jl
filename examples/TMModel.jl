@@ -21,8 +21,8 @@ z0 = [0.238616, 0.982747, 0.367876 ]
 
 prob = BifurcationProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
 
-opts_br = ContinuationPar(p_min = -10.0, p_max = 1., dsmax = 0.1, n_inversion = 8, nev = 3)
-br = @time continuation(prob, PALC(tangent = Bordered()), opts_br; plot = false, normC = norminf, bothside = false)
+opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, nev = 3)
+br = @time continuation(prob, PALC(), opts_br; normC = norminf)
 
 plot(br, plotfold = false)
 ####################################################################################################
@@ -34,7 +34,7 @@ br_fold = BK.continuation(br, 2, (@optic _.α),
 plot(br_fold)
 ####################################################################################################
 # continuation parameters
-opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 80, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
+opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
 # arguments for periodic orbits
 function plotSolution(x, p; k...)
@@ -66,13 +66,14 @@ plot(br, br_potrap, markersize = 3)
 plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
 # branching to PO from Hopf using Collocation
-opts_po_cont = ContinuationPar(opts_br, ds= 0.0001, dsmin = 1e-4, max_steps = 90, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds = 0.0001, dsmin = 1e-4, max_steps = 90, tol_stability = 1e-5, detect_bifurcation = 2, plot_every_step = 10)
 
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
-    PeriodicOrbitOCollProblem(50, 4; meshadapt = false, jacobian = BK.DenseAnalyticalInplace());
-    # verbosity = 3,
-    # plot = true,
+    PeriodicOrbitOCollProblem(100, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
+    alg = PALC(tangent = Bordered()),
+    verbosity = 3,
+    plot = true,
     args_po...,
     linear_algo = BK.COPBLS(),
     )
@@ -109,7 +110,7 @@ br_popsh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Poincaré Shooting
-    PoincareShootingProblem(3, prob_ode, ODE.Rodas5(); parallel = true);
+    PoincareShootingProblem(5, prob_ode, ODE.Rodas5(); parallel = true);
     # usedeflation = true,
     linear_algo = MatrixBLS(),
     verbosity = 2, plot = true,

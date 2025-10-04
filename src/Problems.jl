@@ -249,27 +249,27 @@ for (op, at) in (
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need of providing an adjoint
                 - `jvp` jacobian-vector product, signature `jvp(x,p,dx)`
                 - `vjp` vector-jacobian product (adjoint of jvp), signature `vjp(x,p,dx)`
-                - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x,p,dx1,dx2)`
-                - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x,p,dx1,dx2,dx3)`
+                - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x, p, dx1, dx2)`
+                - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x, p, dx1, dx2, dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
-                "Vector field, typically a [`BifFunction`](@ref)"
+                "Vector field, typically a [`BifFunction`](@ref)."
                 VF::Tvf
-                "Initial guess"
+                "Initial guess."
                 u0::Tu
-                "Parameters"
+                "Parameters."
                 params::Tp
-                "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1.78)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])`. For more information, we refer to `Accessors.jl`."
+                "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1.78)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [ 1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])` or pass directly `lens = 1`. For more information, we refer to `Accessors.jl`."
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the Makie package(s)."
                 plotSolution::Tplot
-                "`record_from_solution = (x, p; k...) -> norm(x)` function used record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
+                "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (not as a view to `x`). Signature: `save_solution(x, p)`"
+                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`."
                 save_solution::Tgets
-                "Function to update the problem after each continuation step"
+                "Function to update the problem after each continuation step."
                 update!::Tupdate
             end
 
@@ -373,7 +373,7 @@ for (op, at) in (
                 Finp = if inplace || _isinplace(_F)
                     _F
                 else
-                    (o, x, p) -> copyto!(o, _F(x, p))
+                    (o, x, p) -> _copyto!(o, _F(x, p))
                 end
 
                 J! = if isnothing(J!) && u0 isa AbstractArray

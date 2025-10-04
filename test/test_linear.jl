@@ -31,7 +31,7 @@ let
     BK.VI.zerovector(z2); BK.VI.zerovector(z_pred)
     @test length(z_pred) == 11
 
-    copyto!(z,z2)
+    BK._copyto!(z,z2)
     BK.minus(z.u,z2.u); BK.minus!(z.u,z2.u)
     BK.minus(1.,2.); BK.minus!(1.,2.)
     BK.VI.scale!(z_pred, 1.0)

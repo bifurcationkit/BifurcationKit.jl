@@ -1,7 +1,7 @@
 abstract type PeriodicOrbitAlgorithm end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function returns several useful quantities regarding a Hopf bifurcation point. More precisely, it returns:
 - the parameter value at which a Hopf bifurcation occurs

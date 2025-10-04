@@ -219,7 +219,7 @@ function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamC
 end
 ################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function turns an initial guess for a Fold / Hopf point into a solution to the Fold / Hopf problem based on a Minimally Augmented formulation.
 
@@ -261,7 +261,7 @@ function newton(br::AbstractBranchResult,
 end
 ################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Codimension 2 continuation of Fold / Hopf points. This function turns an initial guess for a Fold / Hopf point into a curve of Fold / Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `br` results returned after a call to [continuation](@ref Library-Continuation)
@@ -448,7 +448,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 end
 ################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """

@@ -58,7 +58,7 @@ $(TYPEDFIELDS)
     x::Tv = Vector{T}(undef, 0)
 
     "Tangent along the branch at the special point"
-    τ::BorderedArray{Tvτ, T} = BorderedArray(x, T(0))
+    τ::BorderedArray{Tvτ, T} = BorderedArray(x, zero(T))
 
     "Eigenvalue index responsible for detecting the special point (if applicable)"
     ind_ev::Int64 = 0
@@ -83,7 +83,7 @@ _getvectortype(::Type{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = 
 type(bp::SpecialPoint) = bp.type
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the dimension of the kernel of the special point.
 """
@@ -120,7 +120,7 @@ function SpecialPoint(it::ContIterable,
                         norm = it.normC(getx(state)),
                         printsol = _namedrecordfromsol(record_from_solution(it)(getx(state), getp(state); iter=it, state)),
                         x = save_solution(it.prob, _copy(getx(state)), getparam(it.prob)),
-                        τ = copy(state.τ),
+                        τ = _copy(state.τ),
                         ind_ev,
                         step = state.step,
                         status,
@@ -162,6 +162,8 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
     @eval begin
         """
         $(TYPEDEF)
+
+        ## Fields
 
         $(TYPEDFIELDS)
 
@@ -286,6 +288,8 @@ This is a type which holds information for the bifurcation points of equilibria 
 
 $(TYPEDEF)
 
+## Fields
+
 $(TYPEDFIELDS)
 
 ## Associated methods
@@ -345,6 +349,8 @@ end
 """
 $(TYPEDEF)
 
+## Fields
+
 $(TYPEDFIELDS)
 
 # Associated methods
@@ -403,6 +409,8 @@ end
 # type for Neimark-Sacker bifurcation (of Maps)
 """
 $(TYPEDEF)
+
+## Fields
 
 $(TYPEDFIELDS)
 

@@ -1,5 +1,5 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 [Internal] This function is not meant to be called directly.
 
@@ -44,7 +44,7 @@ function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref Branch-switching-page). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
@@ -193,7 +193,7 @@ continuation(br::AbstractBranchResult,
                                       kwargs...)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
@@ -272,7 +272,7 @@ function multicontinuation(br::AbstractBranchResult,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Function to transform predictors `solfromRE` in the normal form coordinates of `bpnf` into solutions. Note that `solfromRE = (before = Vector{vectype}, after = Vector{vectype})`.
 """
@@ -366,7 +366,7 @@ function multicontinuation(br::AbstractBranchResult,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 

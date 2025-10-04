@@ -186,7 +186,7 @@ function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the solution for the ind-th point stored in br.sol
 """
@@ -198,7 +198,7 @@ Return the solution for the ind-th point stored in br.sol
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the parameter for the ind-th point stored in br.sol
 """
@@ -220,7 +220,7 @@ end
 @inline kernel_dimension(br::ContResult, ind) = kernel_dimension(br.specialpoint[ind])
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the eigenvalues of the ind-th continuation step. `verbose` is used to tell the number of unstable eigen elements.
 
@@ -240,14 +240,14 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the eigenvalues of the ind-th bifurcation point.
 """
 eigenvalsfrombif(br::AbstractBranchResult, ind::Int) = br.eig[br.specialpoint[ind].idx].eigenvals
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the indev-th eigenvectors of the ind-th continuation step.
 """
@@ -286,7 +286,7 @@ end
 get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype} = br.eig[bp.idx]
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 
 # Arguments
@@ -321,7 +321,7 @@ function _contresult(iter,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the list of bifurcation points on a branch. It essentially filters the field `specialpoint`.
 """
@@ -351,7 +351,7 @@ Base.length(br::Branch) = length(br.γ)
 get_solution(br::Branch, ind) = get_solution(br.γ, ind)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the bifurcation point of a `::Branch`.
 """
@@ -404,7 +404,7 @@ _append!(x, y) = append!(x, y)
 _append!(x, ::Nothing) = nothing
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Merge two `ContResult`s and put the result in `br`.
 """

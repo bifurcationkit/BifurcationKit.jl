@@ -289,7 +289,7 @@ end
 residual(pb::ShootingProblem, x, p) = pb(x, p)
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """

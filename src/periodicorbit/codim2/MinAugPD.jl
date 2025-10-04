@@ -205,7 +205,7 @@ end
 @inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
 @inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
 residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
-residual!(pdpb::PDMAProblem, out, x, p) = (copyto!(out, pdpb.prob(x, p)); out)
+residual!(pdpb::PDMAProblem, out, x, p) = (_copyto!(out, pdpb.prob(x, p)); out)
 save_solution(::PDMAProblem, x, p) = x
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = pdpb.prob)

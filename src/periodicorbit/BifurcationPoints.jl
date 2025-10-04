@@ -8,6 +8,8 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
         """
         $(TYPEDEF)
 
+        # Fields
+
         $(TYPEDFIELDS)
 
         # Associated methods
@@ -60,9 +62,9 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
             println(io, "├─ Normal form (Iooss):\n├\t∂τ = 1 + a₀₁⋅δp + a₂⋅ξ²\n├\t∂ξ = ξ⋅(c₁₁⋅δp + c₃⋅ξ²)")
             if get(pd.nf.nf, :a₀₁, nothing) != nothing
                 println(io, "├─── a₀₁ = ", pd.nf.nf.a₀₁,
-                            "\n├─── a₂  = ", pd.nf.nf.a,
-                            "\n├─── c₁₁ = ", pd.nf.nf.c₁₁,
-                            "\n└─── c₃  = ", pd.nf.nf.b3)
+                          "\n├─── a₂  = ", pd.nf.nf.a,
+                          "\n├─── c₁₁ = ", pd.nf.nf.c₁₁,
+                          "\n└─── c₃  = ", pd.nf.nf.b3)
             end
         else
             show(io, pd.nf)
@@ -84,6 +86,8 @@ end
 
 """
 $(TYPEDEF)
+
+# Fields
 
 $(TYPEDFIELDS)
 

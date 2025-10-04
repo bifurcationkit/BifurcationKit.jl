@@ -1,5 +1,5 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`.
 
@@ -54,14 +54,14 @@ end
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the size of the bifurcation diagram. The argument `code` is the same as in `get_branch`.
 """
 Base.size(tree::BifDiagNode, code = ()) = _size(get_branch(tree, code))
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the part of the diagram (bifurcation diagram) by recursively descending down the diagram using the `Int` valued tuple `code`. For example `get_branch(diagram, (1,2,3,))` returns `diagram.child[1].child[2].child[3]`.
 """
@@ -71,7 +71,7 @@ function get_branch(diagram::BifDiagNode, code)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the part of the diagram corresponding to the indbif-th bifurcation point on the root branch.
 """
@@ -82,7 +82,7 @@ function get_branches_from_BP(diagram::BifDiagNode, indbif::Int)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recursively.
 
@@ -136,7 +136,7 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node` from which you want to further compute the bifurcated branches. It is usually used with `node = get_branch(diagram, code)` from a previously computed bifurcation `diagram`.
 

@@ -124,7 +124,7 @@ COPBLS(coll::PeriodicOrbitOCollProblem) = COPBLS(; cache = COPCACHE(coll, Val(1)
 COPLS() = COPLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Solve the linear system associated with the collocation problem for computing periodic orbits. It returns the solution to the equation `J * sol = rhs0`. It can also solve a bordered version of the above problem and the border size `δn` is inferred at run time.
 
@@ -184,7 +184,7 @@ Solve the linear system associated with the collocation problem for computing pe
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Copy the matrix J into 𝑱.
 """

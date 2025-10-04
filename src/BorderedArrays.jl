@@ -30,16 +30,17 @@ end
 _copy(b) = VI.scale(b, 1)
 _copy(::Nothing) = nothing
 _copy(b::AbstractArray) = copy(b)
-Base.copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
 
-function Base.copyto!(dest::BorderedArray{𝒯v, 𝒯1}, src::BorderedArray{𝒯v, 𝒯2}) where {𝒯v, 𝒯1, 𝒯2 }
-    copyto!(dest.u, src.u)
-    copyto!(dest.p, src.p)
+_copyto!(dest::AbstractArray, src::AbstractArray) = copyto!(dest, src)
+
+function _copyto!(dest::BorderedArray{𝒯v, 𝒯1}, src::BorderedArray{𝒯v, 𝒯2}) where {𝒯v, 𝒯1, 𝒯2 }
+    _copyto!(dest.u, src.u)
+    _copyto!(dest.p, src.p)
     return dest
 end
 
-function Base.copyto!(dest::BorderedArray{𝒯v, T1}, src::BorderedArray{𝒯v, T2}) where {𝒯v, T1 <: Number, T2 <: Number}
-    copyto!(dest.u, src.u)
+function _copyto!(dest::BorderedArray{𝒯v, T1}, src::BorderedArray{𝒯v, T2}) where {𝒯v, T1 <: Number, T2 <: Number}
+    _copyto!(dest.u, src.u)
     dest.p = src.p
     return dest
 end
@@ -220,6 +221,8 @@ function VI.add!!(y::BorderedArray{𝒯v1, 𝒯p1},
 end
 ########################
 """
+$(TYPEDSIGNATURES)
+
 Initialize a vector like `randn!`.
 """
 _randn(x) = randn!(_copy(x))

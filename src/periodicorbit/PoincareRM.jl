@@ -35,7 +35,7 @@ function (Π::PoincaréMap)(xₛ, par)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Constructor for the Poincaré return map. Return a `PoincaréMap`
 """
@@ -49,7 +49,7 @@ function PoincareMap(wrap::WrapPOSh, po, par, optn)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Constructor for the Poincaré return map. Return a `PoincaréMap`
 """
@@ -202,7 +202,7 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the monodromy matrix of the Poincaré Return Map. It yields a `Matrix{𝒯}`
 

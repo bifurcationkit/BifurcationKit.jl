@@ -158,7 +158,7 @@ get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
 get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
@@ -630,7 +630,7 @@ end
 ####################################################################################################
 # Utils
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
@@ -888,7 +888,7 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -905,7 +905,7 @@ newton(probPO::PeriodicOrbitTrapProblem,
         kwargs...) = _newton_trap(probPO, orbitguess, options; defOp = nothing, kwargs...)
 
 """
-    $(SIGNATURES)
+    $(TYPEDSIGNATURES)
 
 This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
@@ -918,7 +918,7 @@ newton(probPO::PeriodicOrbitTrapProblem,
 ####################################################################################################
 # continuation wrapper
 """
-    $(SIGNATURES)
+    $(TYPEDSIGNATURES)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 
@@ -1038,7 +1038,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
 

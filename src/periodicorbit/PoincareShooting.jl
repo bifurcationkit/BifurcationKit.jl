@@ -90,7 +90,7 @@ R(pb::PoincareShootingProblem, x::AbstractVector, k::Int) = R(pb.section, x, k)
 E(pb::PoincareShootingProblem, xbar::AbstractVector, k::Int) = E(pb.section, xbar, k)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
@@ -106,7 +106,7 @@ This function updates the normals and centers of the hyperplanes defining the Po
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x_bar`.
 """
@@ -152,7 +152,7 @@ function get_time_slices(prob::PoincareShootingProblem, x_bar::AbstractVector)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
@@ -181,7 +181,7 @@ end
 get_periodic_orbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré section.
 """
@@ -197,7 +197,7 @@ function projection(psh::PoincareShootingProblem, x::AbstractVector)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré section.
 """

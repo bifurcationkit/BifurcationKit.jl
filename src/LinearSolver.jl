@@ -366,7 +366,7 @@ mutable struct KrylovLSInplace{F, K, 𝒯l, 𝒯r} <: AbstractIterativeLinearSol
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Constructor for `KrylovLSInplace`.
 """

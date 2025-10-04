@@ -33,7 +33,7 @@ internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.t
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 """
 function MoorePenrose(;tangent = PALC(),
                         method = direct,
@@ -114,7 +114,7 @@ function corrector!(state::AbstractContinuationState,
 
     # update solution
     if converged(sol)
-        copyto!(state.z, sol.u)
+        _copyto!(state.z, sol.u)
     end
 
     return true

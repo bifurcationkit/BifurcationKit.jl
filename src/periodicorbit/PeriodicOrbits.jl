@@ -2,7 +2,7 @@
 @inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
@@ -207,7 +207,7 @@ function _generate_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ =
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the Newton-Krylov Solver for computing a periodic orbit using the (Standard / Poincaré) Shooting method.
 Note that the linear solver has to be appropriately set up in `options`.
@@ -236,7 +236,7 @@ function newton(prob::AbstractShootingProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the deflated Newton-Krylov Solver for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
 
@@ -286,7 +286,7 @@ function generate_jacobian(probPO::AbstractShootingProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the continuation method for computing a periodic orbit using a (Standard / Poincaré) Shooting method.
 
@@ -303,7 +303,7 @@ function continuation(probPO::AbstractShootingProblem,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
                         linear_algo::AbstractBorderedLinearSolver;
-                        δ = convert(eltype(orbitguess), 1e-8),
+                        δ = convert(VI.scalartype(orbitguess), 1e-8),
                         eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
                         record_from_solution = nothing,
                         plot_solution = nothing,
@@ -343,7 +343,7 @@ function continuation(probPO::AbstractShootingProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the continuation routine for computing a periodic orbit.
 
@@ -368,7 +368,7 @@ end
 
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Perform automatic branch switching from a Hopf bifurcation point labelled `ind_bif` in the list of the bifurcated points of a previously computed branch `br::ContResult`. It first computes a Hopf normal form.
 
@@ -513,7 +513,7 @@ end
 ####################################################################################################
 # Branch switching from bifurcations of periodic orbits
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 

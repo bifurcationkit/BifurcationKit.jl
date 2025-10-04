@@ -92,7 +92,7 @@ function compute_legendre_matrices(σs::AbstractVector{𝒯}) where 𝒯
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return all the times at which the problem is evaluated.
 """
@@ -132,7 +132,7 @@ struct POCollCache{𝒯}
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 [Internal] In case `save_mem = true`, we do not allocate the identity matrix.
 """
@@ -256,7 +256,7 @@ function PeriodicOrbitOCollProblem(Ntst::Int,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function change the parameters `Ntst, m` for the collocation problem `pb` and return a new problem.
 """
@@ -413,7 +413,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 [INTERNAL] Implementation of ∫_0^T < u(t), v(t) > dt.
 
@@ -463,7 +463,7 @@ function ∫(pb::PeriodicOrbitOCollProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 [INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it works for non uniform mesh.
 
@@ -593,7 +593,7 @@ function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, p
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the identity matrix associated with the collocation problem.
 """
@@ -609,7 +609,7 @@ function I(coll::PeriodicOrbitOCollProblem, u, par)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the jacobian of the problem defining the periodic orbits by orthogonal collocation using an analytical formula. More precisely, it discretises
 
@@ -976,7 +976,7 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the Newton solver for computing a periodic orbit using orthogonal collocation method.
 Note that the linear solver has to be apropriately set up in `options`.
@@ -998,7 +998,7 @@ newton(probPO::PeriodicOrbitOCollProblem,
             kwargs...) = _newton_pocoll(probPO, orbitguess, options; defOp = nothing, kwargs...)
 
 """
-    $(SIGNATURES)
+    $(TYPEDSIGNATURES)
 
 This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
@@ -1045,7 +1045,7 @@ function generate_jacobian(coll::PeriodicOrbitOCollProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the continuation method for computing a periodic orbit using an orthogonal collocation method.
 
@@ -1189,7 +1189,7 @@ end
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Perform mesh adaptation of the periodic orbit problem. Modify `pb` and `x` inplace if the adaptation is successfull.
 
@@ -1297,7 +1297,7 @@ end
 # condensation of parameters in Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix J which is a M x M Block matrix where each block N x N has the same sparsity.
 """

@@ -13,7 +13,7 @@ function initialize!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::Natural, nrm = false)
     # we want to start at (u0, p0), not at (u1, p1)
-    copyto!(state.z, state.z_old)
+    _copyto!(state.z, state.z_old)
     getpredictor!(state, iter, alg)
 end
 
@@ -21,7 +21,7 @@ end
 function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
                         alg::Natural, nrm = false)
-    copyto!(state.z_pred, state.z)
+    _copyto!(state.z_pred, state.z)
     state.z_pred.p += state.ds
 end
 
@@ -41,7 +41,7 @@ function corrector!(state::AbstractContinuationState,
 
     # update solution
     if converged(sol)
-        copyto!(state.z.u, sol.u)
+        _copyto!(state.z.u, sol.u)
         state.z.p = state.z_pred.p
     end
 

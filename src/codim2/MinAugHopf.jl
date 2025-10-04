@@ -49,7 +49,7 @@ end
 end
 ###################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the solution of 
 
@@ -223,7 +223,7 @@ jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = 
 jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function turns an initial guess for a Hopf point into a solution to the Hopf problem based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationProblem` where `p` is a set of parameters.
@@ -319,7 +319,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 codim 2 continuation of Hopf points. This function turns an initial guess for a Hopf point into a curve of Hopf points based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationProblem`
@@ -589,7 +589,7 @@ function continuation_hopf(prob,
         # we start with a vector similar to an eigenvector, we must ensure that
         # it is complex valued
         ζ = _copy(getu0(br.prob))
-        VI.scale!(ζ, one(Complex{VI.scalartype(ζ)}))
+        ζ = VI.scale(ζ, one(Complex{VI.scalartype(ζ)}))
         a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
         b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 

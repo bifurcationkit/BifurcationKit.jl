@@ -1,5 +1,5 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the normal form (NF) of periodic orbits. We detail the additional keyword arguments specific to periodic orbits
 
@@ -257,13 +257,14 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     N, m, Ntst = size(coll)
     pars = bp0.params
     period = getperiod(coll, bp0.x0, pars)
+    _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)
 
     # we get the nontrivial floquet eigenvectors μ = 1
     # We could use Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” n.d.
     # formula (6.9) on page 201
-    # but I am not sure the formula is correct, ie having a Jordan block [0 1; 0 0].
+    # but I am not sure that the formula is correct, ie having a Jordan block [0 1; 0 0].
     # We thus find the 2d kernel using Bordering strategy
-    # we need to know which one is closest to F(u₀)
+    # we need to know which eigenvector is closest to F(u₀)
     u₀ₛ = get_time_slices(coll, bp0.x0) # periodic solution at bifurcation
     Fu₀ₛ = copy(u₀ₛ)
     Fu₀ = vec(Fu₀ₛ)
@@ -275,12 +276,12 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     J = copy(_get_matrix(jac))
     nj = size(J, 1)
     J[end, begin:end-1] .= Fu₀
-    J[:, end] .= randn(nj)
+    J[:, end] .= _rand(nj)
     J[end,end] = 0
     rhs = zeros(𝒯, nj); rhs[end] = 1
     
-    q = J  \ rhs; #q = q[begin:end-1]
-    p = J' \ rhs; #p = p[begin:end-1]
+    q = J  \ rhs
+    p = J' \ rhs
     
     # doing this again makes p[end] ≈ 0
     J[end, begin:end-1] .= q[begin:end-1]
@@ -315,7 +316,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     J0 = J[begin:end-1,begin:end-1]
 
     _ps = (LA.dot(q₀, Fu₀), LA.dot(q₁, Fu₀))
-    ind = argmin(abs.(_ps))
+    ind = argmin(abs, _ps)
     v₁ = q₁#ind==1 ? q₀ : q₁
     v₁ ./= norminf(v₁)
     
@@ -1228,7 +1229,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
@@ -1266,7 +1267,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
@@ -1294,7 +1295,7 @@ function predictor(nf::NeimarkSackerPO,
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
@@ -1355,7 +1356,7 @@ function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitOCollProblem },
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
@@ -1369,7 +1370,7 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
@@ -1401,7 +1402,7 @@ function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
@@ -1416,7 +1417,7 @@ function predictor(nf::BranchPointPO{ <: ShootingProblem },
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
@@ -1436,7 +1437,7 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem },
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """

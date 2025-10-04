@@ -108,7 +108,7 @@ function initialize!(state::AbstractContinuationState,
     # fails at bifurcation points. Instead, we start with a Secant predictor
     gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
-    copyto!(state.z, state.z_old)
+    _copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
     addtangent!(state, nrm)
 end
@@ -128,12 +128,15 @@ function getpredictor!(state::AbstractContinuationState,
     addtangent!(state, nrm)
 end
 
-# this function only mutates z_pred
-# the nrm argument allows to just the increment z_pred.p by ds
+"""
+This function only mutates z_pred. The nrm argument allows to just the increment z_pred.p by ds.
+
+We perform z_pred = z + ds * τ
+"""
 function addtangent!(state::AbstractContinuationState, nrm = false)
     # we perform z_pred = z + ds * τ
     # note that state.z contains the last converged state
-    copyto!(state.z_pred, state.z)
+    _copyto!(state.z_pred, state.z)
     ds = state.ds
     ρ = nrm ? ds / state.τ.p : ds
     VI.add!(state.z_pred, state.τ, ρ)
@@ -163,7 +166,7 @@ function corrector!(state::AbstractContinuationState,
 
     # update solution
     if converged(sol)
-        copyto!(state.z, sol.u)
+        _copyto!(state.z, sol.u)
     end
 
     return true
@@ -187,7 +190,7 @@ function _secant_tangent!(τ::M,
                           dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
-    copyto!(τ, z₁)
+    _copyto!(τ, z₁)
     minus!(τ, z₀)
     α = sign(ds) / dotθ(τ, θ)
     VI.scale!(τ, α)
@@ -251,7 +254,7 @@ function gettangent!(state::AbstractContinuationState,
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
     α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
 
-    copyto!(τ.u, τu)
+    _copyto!(τ.u, τu)
     τ.p = τp
     VI.scale!(τ, α)
 end

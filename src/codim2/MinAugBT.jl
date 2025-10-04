@@ -250,7 +250,7 @@ jacobian(BTpb::BTMAProblem, x, p) = (x = x, params = p, fldpb = BTpb.prob)
 jacobian_adjoint(BTpb::BTMAProblem, args...) = jacobian_adjoint(BTpb.prob, args...)
 ################################################################################################### Newton functions
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function turns an initial guess for a BT point into a solution to the BT problem based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`
@@ -349,7 +349,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function turns an initial guess for a Bogdanov-Takens point into a solution to the Bogdanov-Takens problem based on a Minimally Augmented formulation.
 
@@ -397,7 +397,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
     ζ = getvec(bifpt.τ.u, prob_ma); VI.scale!(ζ, 1/normN(ζ))
     # in the case of Fold continuation, this could be ill-defined.
     if ~isnothing(findfirst(isnan, ζ)) && ~start_with_eigen
-        @warn "ζtor ill defined (has NaN). Use the option start_with_eigen = true"
+        @warn "ζ is ill defined (has NaN). Use the option start_with_eigen = true"
     end
     ζad = _copy(ζ)
 

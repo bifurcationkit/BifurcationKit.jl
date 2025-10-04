@@ -51,7 +51,7 @@ function _update_field_but_not_sol!(state::AbstractContinuationState,
     state.itlinear  = sol.itlineartot
     # record previous solution
     if converged(sol)
-        copyto!(state.z_old, state.z)
+        _copyto!(state.z_old, state.z)
     end
 end
 ####################################################################################################

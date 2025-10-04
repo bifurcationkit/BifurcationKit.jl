@@ -15,6 +15,8 @@ $(TYPEDEF)
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
+## Fields
+
 $(TYPEDFIELDS)
 
 Given `defOp::DeflationOperator`, one can access its roots via `defOp[n]` as a shortcut for `defOp.roots[n]`. Note that you can also use `defOp[end]`.
@@ -102,10 +104,10 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) 
     length(df.roots) == 0 && return T(1)
     M(u) = T(1) / df.dot(u, u)^df.power + df.α
     # compute u - df.roots[1]
-    copyto!(tmp, u); VI.add!(tmp, df.roots[1], T(-1))
+    _copyto!(tmp, u); VI.add!(tmp, df.roots[1], T(-1))
     out = M(tmp)
     for ii in 2:length(df.roots)
-        copyto!(tmp, u); VI.add!(tmp, df.roots[ii], T(-1))
+        _copyto!(tmp, u); VI.add!(tmp, df.roots[ii], T(-1))
         out *= M(tmp)
     end
     return out
@@ -132,7 +134,7 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u
     if df.autodiff
         return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
     else
-        copyto!(tmp, u); VI.add!(tmp, du, df.δ)
+        _copyto!(tmp, u); VI.add!(tmp, du, df.δ)
         return (df(tmp) - df(u)) / df.δ 
     end
 end
@@ -276,7 +278,7 @@ function (dfl::DeflatedProblemCustomLS)(J, rhs)
     _T = eltype(defPb.M)
 
     # return (h1 - z * h2) / Mu, true, (it1, it2)
-    copyto!(tmp, h1)
+    _copyto!(tmp, h1)
     VI.add!(tmp, h2, -z)
     VI.scale!(tmp, _T(1) / Mu)
     return tmp, true, (it1, it2)
@@ -292,7 +294,7 @@ struct DefProbFullIterativeLinearSolver{T} <: AbstractLinearSolverForDeflation
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This is the deflated version of the Krylov-Newton Solver for `F(x, p0) = 0`.
 

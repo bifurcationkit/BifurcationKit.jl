@@ -1,5 +1,5 @@
 """
-    $(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This event implements the detection of when the parameter values, used during continuation, equals one of the values in `positions`. This state is then saved in the branch.
 

@@ -1,5 +1,5 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the Cusp normal form.
 
@@ -116,7 +116,7 @@ function cusp_normal_form(_prob,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the Bogdanov-Takens normal form.
 
@@ -328,7 +328,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the Hopf curve near the Bogdanov-Takens point.
 """
@@ -394,7 +394,7 @@ end
 
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the Fold curve near the Bogdanov-Takens point.
 """
@@ -425,7 +425,7 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of homoclinic orbits near the Bogdanov-Takens point.
 
@@ -476,7 +476,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the Bogdanov-Takens normal form.
 
@@ -921,7 +921,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of Folds of periodic orbits near the Bautin bifurcation point.
 
@@ -1196,7 +1196,7 @@ function zero_hopf_normal_form(_prob,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of Hopf bifurcations near the Zero-Hopf bifurcation point.
 """
@@ -1230,7 +1230,7 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of Fold bifurcations near the Zero-Hopf bifurcation point.
 """
@@ -1264,7 +1264,7 @@ function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of Neimark-Sacker bifurcations near the Zero-Hopf bifurcation point.
 
@@ -1521,7 +1521,7 @@ function hopf_hopf_normal_form(_prob,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 """
@@ -1555,7 +1555,7 @@ function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the predictor for the curve of Neimark-Sacker points near the Hopf-Hopf bifurcation point.
 

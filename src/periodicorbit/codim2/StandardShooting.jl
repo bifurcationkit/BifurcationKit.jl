@@ -247,11 +247,6 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         ζ ./= norminf(ζ)
         verbose && println(" Done!")
 
-        # # compute the full eigenvector
-        # floquetsolver = br.contparams.newton_options.eigsolver
-        # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
-        # ζs = reduce(vcat, ζ_a)
-        # ζs_ad = copy(ζs)
 
         # compute the full eigenvector, version with bordered problem
         ls = options_cont.newton_options.linsolver

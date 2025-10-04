@@ -1,8 +1,11 @@
 """
 $(TYPEDEF)
 
-Continuation algorithm which switches automatically between Natural continuation and PALC (or other if specified) depending on the stiffness of the branch being continued.
+Continuation algorithm which switches automatically between Natural continuation and PALC (or other if specified) depending on the stiffness of the branch being continued. The formula for switching is:
 
+`(1-θ)*abs(τ.p) > tol_param`
+
+## Fields
 $(TYPEDFIELDS)
 
 """
@@ -40,7 +43,7 @@ function getpredictor!(state::AbstractContinuationState,
         @debug "Update tangent AutoSwitch"
         gettangent!(state, iter, alg.tangent, getdot(alg))
     end
-    # then update the predictor state.z_pred
+    # then update the predictor state.z_pred ?? WHAT ??
     addtangent!(state, nrm)
 end
 

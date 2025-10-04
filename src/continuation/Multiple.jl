@@ -92,7 +92,7 @@ function corrector!(_state::AbstractContinuationState, it::AbstractContinuationI
         algo.currentind = ii # record the current index
         zpred = _copy(state.z_pred)
         VI.add!(zpred, algo.τ, ii * ds)
-        copyto!(state.z_pred, zpred)
+        _copyto!(state.z_pred, zpred)
         # we restore the original callback if it reaches the usual case ii == 0
         corrector!(state, it, algo.alg; callback = cb, kwargs...)
         if verbose > 1

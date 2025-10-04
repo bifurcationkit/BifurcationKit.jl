@@ -100,7 +100,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # emulate a do-while
     while true
         if ~converged(state)
-            error("Newton did not converge. Failure to fully locate event point using bisection parameters!")
+            @error "Newton did not converge. Failure to fully locate event point using bisection parameters!"
             break
          end
 
@@ -194,10 +194,10 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # In the case n_inversion = 0, we are still on the right of the event point
     if iseven(n_inversion)
         status = n_inversion >= contParams.n_inversion ? :converged : :guess
-        copyto!(_state.z_pred, state.z_pred)
-        copyto!(_state.z_old,  state.z_old)
-        copyto!(_state.z,  state.z)
-        copyto!(_state.τ, state.τ)
+        _copyto!(_state.z_pred, state.z_pred)
+        _copyto!(_state.z_old,  state.z_old)
+        _copyto!(_state.z,  state.z)
+        _copyto!(_state.τ, state.τ)
         # if there is no inversion, the eventValue will possibly be constant like (0, 0). Hence
 
         if compute_eigenelements(iter.event)
@@ -215,10 +215,10 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
         interval = (getp(state), getp(before))
     else
         status = :guessL
-        copyto!(_state.z_pred, after.z_pred)
-        copyto!(_state.z_old, after.z_old)
-        copyto!(_state.z,  after.z)
-        copyto!(_state.τ, after.τ)
+        _copyto!(_state.z_pred, after.z_pred)
+        _copyto!(_state.z_old, after.z_old)
+        _copyto!(_state.z,  after.z)
+        _copyto!(_state.τ, after.τ)
 
         if compute_eigenelements(iter.event)
             # save eigen-elements

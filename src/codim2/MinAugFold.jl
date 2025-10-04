@@ -1,5 +1,5 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 For an initial guess from the index of a Fold bifurcation point located in `ContResult.specialpoint`, returns a point which can can refined using `newtonFold`.
 """
@@ -49,7 +49,7 @@ end
 end
 ###################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the solution of 
 
@@ -165,7 +165,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         d2Fv = d2F(𝐅.prob_vf, x, par0, x1, v)
         σx1 = -VI.inner(w, d2Fv )
 
-        copyto!(d2Fv, d2F(𝐅.prob_vf, x, par0, x2, v))
+        _copyto!(d2Fv, d2F(𝐅.prob_vf, x, par0, x2, v))
         σx2 = -VI.inner(w, d2Fv )
 
         dσ = (rhsp - σx1) / (σₚ - σx2)
@@ -191,7 +191,7 @@ end
 @inline getdelta(foldpb::FoldMAProblem) = getdelta(foldpb.prob)
 @inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
 residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
-residual!(foldpb::FoldMAProblem, out, x, p) = (copyto!(out, foldpb.prob(x, p)); out)
+residual!(foldpb::FoldMAProblem, out, x, p) = (_copyto!(out, foldpb.prob(x, p)); out)
 jacobian_adjoint(foldpb::FoldMAProblem, args...) = jacobian_adjoint(foldpb.prob, args...)
 save_solution(::FoldMAProblem, x, p) = x
 
@@ -204,7 +204,7 @@ jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = 
 jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`
@@ -304,7 +304,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`

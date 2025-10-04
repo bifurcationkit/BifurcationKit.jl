@@ -92,7 +92,7 @@ function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute a Jacobian by Finite Differences. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
 """
@@ -113,7 +113,7 @@ function finite_differences(F, x::AbstractVector; δ = 1e-9)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Same as finite_differences but with inplace `F`
 """
@@ -151,7 +151,7 @@ function block_to_sparse(J::AbstractBlockArray)
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
 """
@@ -166,7 +166,7 @@ function get_blocks(A::SparseMatrixCSC, N, M)
 end
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function implements a counter. If `everyN == 0`, it returns false. Otherwise, it returns `true` when `step` is a multiple of `everyN`
 """
@@ -189,7 +189,7 @@ apply!(y, f, x) = f(y, x)
 # _empty(a::AbstractMatrix{T}, ::Type{U}=T) where {T,U} = similar(a, (0,0))
 ####################################################################################################
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Function to detect continuation branches which loop on themselves.
 """
