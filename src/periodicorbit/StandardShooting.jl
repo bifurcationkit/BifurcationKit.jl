@@ -83,6 +83,10 @@ end
 getparams(prob::ShootingProblem) = prob.par
 setparam(prob::ShootingProblem, p) = set(getparams(prob), getlens(prob), p)
 
+# getindex function for getting the time slices
+_getindex(v, i) = v[i]
+_getindex(v::VI.MinimalVec, i) = v.vec[i]
+
 function Base.show(io::IO, sh::ShootingProblem)
     println(io, "┌─ Standard shooting functional for periodic orbits")
     print(io, "├─ time slices    : ")
@@ -122,7 +126,7 @@ end
 end
 @inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 @inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
-@inline get_time_slice(sh::ShootingProblem, x::BorderedArray, ii::Int) = x.u[ii]
+@inline get_time_slice(sh::ShootingProblem, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
 @inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
@@ -171,7 +175,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            copyto!(out.u[ii], evolve(sh.flow, xc[ii], pars, sh.ds[ii] * T).u .- xc[ip1])
+            copyto!(_getindex(out.u,ii), evolve(sh.flow, _getindex(x.u,ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
         end
     else
         @assert false "Not implemented yet. Try to use an AbstractVector instead"
@@ -231,15 +235,15 @@ function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = c
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
-            tmp = jvp(sh.flow, x.u[ii], pars, dx.u[ii], sh.ds[ii] * T)
-            copyto!(out.u[ii], tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dx.u[ip1])
+            tmp = jvp(sh.flow, _getindex(x.u, ii), pars, _getindex(dx.u, ii), sh.ds[ii] * T)
+            copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- _getindex(dx.u, ip1))
         end
     else
         @assert false "Not implemented yet. Try using AbstractVectors instead"
     end
 
     # add constraint
-    out.p = sh.section(x.u[1], T, dx.u[1], dT)
+    out.p = sh.section(_getindex(x.u, 1), T, _getindex(dx.u, 1), dT)
     return out
 end
 
