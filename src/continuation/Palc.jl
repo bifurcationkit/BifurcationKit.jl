@@ -19,7 +19,7 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x))   )
+DotTheta() = DotTheta( (x, y) -> LA.dot(x, y) / length(x), x -> LA.rmul!(x, 1/length(x))   )
 DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
@@ -353,8 +353,8 @@ function update_pred!(polypred::Polynomial)
     for jj in 1:polypred.n; polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss; end
     # invert linear system for least square fitting
     B = (polypred.A' * polypred.A) \ polypred.A'
-    mul!(polypred.coeffsSol, B, polypred.solutions)
-    mul!(polypred.coeffsPar, B, polypred.parameters)
+    LA.mul!(polypred.coeffsSol, B, polypred.solutions)
+    LA.mul!(polypred.coeffsPar, B, polypred.parameters)
     return true
 end
 

@@ -1,7 +1,8 @@
 abstract type AbstractDeflationFactor end
 
 """
-Wrapper for a distance. You need to pass a function `d(u, v)`.
+Structure for defining a custom distance.
+You need to pass a function `d(u, v)`.
 """
 struct CustomDist{T}
     dist::T
@@ -10,8 +11,6 @@ end
 
 """
 $(TYPEDEF)
-
-Structure for defining a custom distance.
 
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
 ``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
@@ -38,13 +37,13 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 
-## Linear solvers
+## Linear solvers / jacobians
 
 When used with newton, you have access to the following linear solvers
 
 - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
 - For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
-- if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem
+- if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem.
 - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflationFactor
@@ -71,9 +70,9 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflat
 end
 
 # constructors
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, dot, α, roots, _copy(roots[1]), autodiff, T(1e-8))
+DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, LA.dot, α, roots, _copy(roots[1]), autodiff, T(1e-8))
 DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(eltype(roots[1]), 1e-8))
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, dot, α, roots, v, autodiff, T(1e-8))
+DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, LA.dot, α, roots, v, autodiff, T(1e-8))
 
 # methods to deal with DeflationOperator
 Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
@@ -147,7 +146,7 @@ Create a `DeflatedProblem`.
 This creates a deflated functional (problem) ``M(u) \\cdot F(u) = 0`` where `M` is a `DeflationOperator` which encodes the penalization term. `prob` is an `AbstractBifurcationProblem` which encodes the functional. It is not meant not be used directly albeit by advanced users.
 
 ## Arguments
-- `jactype` select the jacobian for the newton solve. Can be `Val(:autodiff)`, `Val(:fullIterative)`, `Val(:Custom)`
+- `jactype` selects the jacobian for the newton solve. Can be `Val(:autodiff)`, `Val(:fullIterative)`, `Val(:Custom)`
 """
 struct DeflatedProblem{Tprob <: AbstractBifurcationProblem, Tp, Tdot, T, vectype, Tjac} <: AbstractBifurcationProblem
     prob::Tprob
@@ -172,9 +171,9 @@ end
 Return the jacobian of the deflated function M(u) * F(u) where M(u) ∈ R
 """
 function (dfp::DeflatedProblem{Tprob, Tp, Tdot, T, vectype})(u::vectype, par, du) where {Tprob, Tp, Tdot, T, vectype}
-    out = dF(dfp.prob, u, par, du)
     # dF(u)⋅du * M(u) + F(u) dM(u)⋅du
     # out = dF(u)⋅du * M(u)
+    out = dF(dfp.prob, u, par, du)
     M = dfp.M(u)
     rmul!(out, M)
     # we add the remaining part

@@ -196,7 +196,7 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     Fx = vf(sh.flow, Πx, pars)
     y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
     # differential of return time
-    ∂th = - dot(normal, y) / dot(normal, Fx)
+    ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
     out = @. y + ∂th * Fx
     return (u = out, t = ∂th)
 end
@@ -222,7 +222,7 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
         h[i] += 1
         y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
         # differential of return time
-        ∂th = - dot(normal, y) / dot(normal, Fx)
+        ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
         out = @. y + ∂th * Fx
         Mono[:, i] .= out
         h[i] -= 1
@@ -249,15 +249,15 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     ∂2ϕh12 = ∂2ϕ(x,h₁,h₂)
 
     # differentials of return times
-    ∂th1 = -dot(normal, ∂ϕh1) / dot(normal, Fx)
+    ∂th1 = -LA.dot(normal, ∂ϕh1) / LA.dot(normal, Fx)
     y = ∂ϕ(x,h₂)
 
     y = dvf(Πx, ∂Πh2) .* ∂th1 .+
         ∂2ϕh12 .+ dvf(Πx, ∂ϕh1) .* ∂th2
-    ∂2t = -dot(normal, y) / dot(normal, Fx)
+    ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(dot(normal, y)))"
+    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(LA.dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end
@@ -311,9 +311,9 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
            dvf(Πx, ∂ϕh1) .* ∂2t23
 
     # we compute dτ(x)[h₁, h₂, h₃]
-    ∂3t = -dot(normal, y) / dot(normal, Fx)
+    ∂3t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     out = y .+ ∂3t .* Fx
 
-    abs(dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(dot(normal, out))) > 1e-10"
+    abs(LA.dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(LA.dot(normal, out))) > 1e-10"
     return (u = out, t = ∂3t)
 end

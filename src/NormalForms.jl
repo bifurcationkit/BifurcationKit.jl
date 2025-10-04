@@ -61,7 +61,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         error("The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt.")
     end
     if ~(abs(bifpt.δ[1]) <= 1)
-        error("We only provide normal form computation for simple bifurcation points e.g when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
+        error("We only provide normal form computation for simple bifurcation points e.g. when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
     end
 
     verbose && println("━"^53*"\n┌─ Normal form computation for 1d kernel")
@@ -114,15 +114,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
-    if ~(abs(dot(ζ, ζ★)) > 1e-10)
-        error("We got ζ⋅ζ★ = $((dot(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
+    if ~(abs(LA.dot(ζ, ζ★)) > 1e-10)
+        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
-    ζ★ ./= dot(ζ, ζ★)
+    ζ★ ./= LA.dot(ζ, ζ★) #ARG
 
     # differentials and projector on Range(L), there are real valued
     R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
     R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
-    E(x) = x .- dot(x, ζ★) .* ζ
+    E(x) = x .- LA.dot(x, ζ★) .* ζ
 
     # we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
@@ -133,7 +133,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
-    a = dot(R01, ζ★)
+    a = LA.dot(R01, ζ★)
     Ψ01, cv, it = ls(L, E(R01))
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
     verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
@@ -147,19 +147,19 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
     end
 
-    b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
+    b1 = LA.dot(R11 .- R2(ζ, Ψ01), ζ★)
     verbose && println("├─── b1   = ", b1)
 
     # coefficient of x^2
     b2v = R2(ζ, ζ)
-    b2 = dot(b2v, ζ★)
+    b2 = LA.dot(b2v, ζ★)
     verbose && println("├─── b2/2 = ", b2/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ)
     wst, cv, it = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
     ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
-    b3 = dot(b3v, ζ★)
+    b3 = LA.dot(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b3/6)
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a , b1, b2, b3, Ψ01, wst), :NA)
@@ -213,7 +213,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap}, ds::T; verbose = 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
     # xm1 previous point on bifurcated branch
-    if norm(τ.u) >0 && abs(dot(bp.ζ, τ.u[eachindex(bp.ζ)])) >= 0.9 * norm(τ.u)
+    if norm(τ.u) >0 && abs(LA.dot(bp.ζ, τ.u[eachindex(bp.ζ)])) >= 0.9 * norm(τ.u)
         @debug "Constant predictor in Transcritical"
         x1  = bp.x0 .- ds .* Ψ01 # we put minus, because Ψ01 = L \ R01 and GS Vol 1 uses w = -L\R01
         xm1 = bp.x0
@@ -401,15 +401,15 @@ $(SIGNATURES)
 Bi-orthogonalise the two sets of vectors.
 
 # Optional argument
-- `_dot = dot` specify your own dot product
+- `_dot = LinearAlgebra.dot` specify your own dot product
 """
-function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
+function biorthogonalise(ζs, ζ★s, verbose; _dot = LA.dot)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-    if abs(det(G)) <= 1e-14
-        error("The Gram matrix is not invertible! det(G) = $(det(G)), G = \n$G $(display(G))")
+    if abs(LA.det(G)) <= 1e-14
+        error("The Gram matrix is not invertible! det(G) = $(LA.det(G)), G = \n$G $(display(G))")
     end
 
     # save those in case the first algo fails
@@ -437,11 +437,11 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
 
     # we switch to another algo if the above fails
-    if norminf(G - LinearAlgebra.I) >= 1e-5 || switch_algo
+    if norminf(G - LA.I) >= 1e-5 || switch_algo
         @warn "Gram matrix not equal to identity. Switching to LU algorithm."
-        println("G (det = $(det(G))) = "); display(G)
+        println("G (det = $(LA.det(G))) = "); display(G)
         G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
-        _F = lu(G; check = true)
+        _F = LA.lu(G; check = true)
         display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
         ζs = inv(_F.L) * inv(_F.P) * _ζs
         ζ★s = inv(_F.U)' * _ζ★s
@@ -450,7 +450,7 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = dot)
     # test the bi-orthogonalization
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     verbose && (printstyled(color=:green, "──▶ Gram matrix = \n"); Base.display(G))
-    if ~(norminf(G - LinearAlgebra.I) < 1e-5)
+    if ~(norminf(G - LA.I) < 1e-5)
         error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
     end
     return ζs, ζ★s
@@ -577,7 +577,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     L = jacobian(prob_vf, x0, parbif)
 
     # we invert L repeatedly, so we try to factorize it
-    L_fact = L isa AbstractMatrix ? factorize(L) : L
+    L_fact = L isa AbstractMatrix ? LA.factorize(L) : L
 
     # "zero" eigenvalues at bifurcation point
     rightEv = br.eig[bifpt.idx].eigenvals
@@ -625,7 +625,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     function E(x)
         out = copy(x)
         for ii in 1:N
-            out .= out .- dot(x, ζ★s[ii]) .* ζs[ii]
+            out .= out .- LA.dot(x, ζ★s[ii]) .* ζs[ii]
         end
         return out
     end
@@ -644,7 +644,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
    
     for ii in 1:N
-        dgidp[ii] = dot(R01, ζ★s[ii])
+        dgidp[ii] = LA.dot(R01, ζ★s[ii])
     end
     verbose && printstyled(color=:green,"──▶ a (∂/∂p) = ", dgidp, "\n")
 
@@ -660,7 +660,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
         Ψ01, cv, it = ls(L_fact, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
-        d2gidxjdpk[ii,jj] = dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
+        d2gidxjdpk[ii,jj] = LA.dot(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
     end
     verbose && (printstyled(color=:green, "\n──▶ b1 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
 
@@ -668,7 +668,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     d2gidxjdxk = zeros(Tvec, N, N, N)
     for ii in 1:N, jj in 1:N, kk in 1:N
         b2v = R2(ζs[jj], ζs[kk])
-        d2gidxjdxk[ii, jj, kk] = dot(b2v, ζ★s[ii])
+        d2gidxjdxk[ii, jj, kk] = LA.dot(b2v, ζ★s[ii])
     end
 
     if verbose
@@ -683,24 +683,24 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     d3gidxjdxkdxl = zeros(Tvec, N, N, N, N)
     for jj in 1:N, kk in 1:N, ll in 1:N
         b3v = R3(ζs[jj], ζs[kk], ζs[ll])
-        # d3gidxjdxkdxl[ii,jj,kk,ll] = dot(b3v, ζ★s[ii])
+        # d3gidxjdxkdxl[ii,jj,kk,ll] = LA.dot(b3v, ζ★s[ii])
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[kk])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[jj], wst)
-        # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[jj], wst), ζ★s[ii])
+        # d3gidxjdxkdxl[ii,jj,kk,ll] -= LA.dot(R2(ζs[jj], wst), ζ★s[ii])
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[jj])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[kk], wst)
-        # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[kk], wst), ζ★s[ii])
+        # d3gidxjdxkdxl[ii,jj,kk,ll] -= LA.dot(R2(ζs[kk], wst), ζ★s[ii])
 
         wst, flag, it = ls(L_fact, E(R2(ζs[kk], ζs[jj])))
         ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
         b3v .-= R2(ζs[ll], wst)
-        # d3gidxjdxkdxl[ii,jj,kk,ll] -= dot(R2(ζs[ll], wst), ζ★s[ii])
+        # d3gidxjdxkdxl[ii,jj,kk,ll] -= LA.dot(R2(ζs[ll], wst), ζ★s[ii])
         for ii in 1:N
-            d3gidxjdxkdxl[ii, jj, kk, ll] = dot(b3v, ζ★s[ii])
+            d3gidxjdxkdxl[ii, jj, kk, ll] = LA.dot(b3v, ζ★s[ii])
         end
     end
     if verbose
@@ -883,7 +883,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
               R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
     end
     av .+= 2 .* R2(ζ, Ψ001)
-    a = dot(av, ζ★)
+    a = LA.dot(av, ζ★)
 
     # (2iω−L)Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
@@ -898,7 +898,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # b = ⟨2R20(ζ, Ψ110) + 2R20(cζ, Ψ200) + 3R30(ζ, ζ, cζ), ζ∗⟩)
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
-    b = dot(bv, ζ★)
+    b = LA.dot(bv, ζ★)
 
     verbose && println((;a, b))
     @reset pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
@@ -989,8 +989,8 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     abs(λ + λ★) > 1e-2 && @debug "[Hopf normal form] We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
 
     # normalise left eigenvector
-    ζ★ ./= dot(ζ, ζ★)
-    if ~(dot(ζ, ζ★) ≈ 1)
+    ζ★ ./= LA.dot(ζ, ζ★)
+    if ~(LA.dot(ζ, ζ★) ≈ 1)
         error("Error of precision in normalization")
     end
 
@@ -1113,8 +1113,8 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     ζ★ = pt.ζ★ |> real
     δ = getdelta(prob)
 
-    abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(dot(ζ, ζ))"
-    abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(dot(ζ★, ζ))"
+    abs(LA.dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(LA.dot(ζ, ζ))"
+    abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(LA.dot(ζ★, ζ))"
 
     # jacobian at the bifurcation point
     L = jacobian(prob, x0, parbif)
@@ -1122,7 +1122,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     # we use BilinearMap to be able to call on complex valued arrays
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3)  )
-    E(x) = x .- dot(ζ★, x) .* ζ
+    E(x) = x .- LA.dot(ζ★, x) .* ζ
 
     # coefficient of x*p
     if ~autodiff
@@ -1138,7 +1138,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     # (I − L)⋅Ψ01 = R01
     Ψ01, cv, it = ls(L, -E(R01); a₀ = -1)
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
-    a = dot(ζ★, R11 .+ R2(ζ, Ψ01))
+    a = LA.dot(ζ★, R11 .+ R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
     verbose && println("──▶ a  = ", a)
 
@@ -1149,7 +1149,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     h20, cv, it = ls(L, h2v; a₀ = -1) # h20 = (L - I) \ h2v
     ~cv && @debug "[PD h20] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, h20)
-    b = dot(ζ★, b3v) / 6
+    b = LA.dot(ζ★, b3v) / 6
     verbose && println("──▶ b₃ = ", b)
 
     nf = (a = a, b3 = b)
@@ -1231,7 +1231,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                   R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
         end
         av .+= 2 .* R2(ζ, Ψ001)
-        a = dot(ζ★, av) * cis(-ω)
+        a = LA.dot(ζ★, av) * cis(-ω)
         verbose && println("──▶ a  = ", a)
     end
 
@@ -1248,7 +1248,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
     bv = 2 .* R2(ζ, Ψ110) .+ 2 .* R2(cζ, Ψ200) .+ 3 .* R3(ζ, ζ, cζ)
-    b = dot(ζ★, bv) * cis(-ω) / 2
+    b = LA.dot(ζ★, bv) * cis(-ω) / 2
     b /= 6
 
     # return coefficients of the normal form
@@ -1333,8 +1333,8 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev"
 
     # normalise left eigenvector
-    ζ★ ./= dot(ζ, ζ★)
-    if ~(dot(ζ, ζ★) ≈ 1)
+    ζ★ ./= LA.dot(ζ, ζ★)
+    if ~(LA.dot(ζ, ζ★) ≈ 1)
         error("Error of precision in normalization")
     end
 
@@ -1373,21 +1373,21 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     ζ★ = bp.ζ★ |> real
     δ = getdelta(prob)
 
-    abs(dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier 1 not normalized, dot = $(dot(ζ, ζ))"
-    abs(dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier 1 not normalized, dot = $(dot(ζ★, ζ))"
+    abs(LA.dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier 1 not normalized, dot = $(LA.dot(ζ, ζ))"
+    abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier 1 not normalized, dot = $(LA.dot(ζ★, ζ))"
 
     # jacobian at bifurcation point
     L = jacobian(prob, x0, parbif)
 
-    if ~(abs(dot(ζ, ζ★)) > 1e-10)
-        error("We got ζ⋅ζ★ = $((dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+    if ~(abs(LA.dot(ζ, ζ★)) > 1e-10)
+        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
     end
-    ζ★ ./= dot(ζ, ζ★)
+    ζ★ ./= LA.dot(ζ, ζ★)
 
     # differentials and projector on Range(L), there are real valued
     R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
     R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
-    E(x) = x .- dot(x, ζ★) .* ζ
+    E(x) = x .- LA.dot(x, ζ★) .* ζ
 
     # we compute the reduced equation: x + a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
@@ -1398,7 +1398,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
     end
-    a = dot(R01, ζ★)
+    a = LA.dot(R01, ζ★)
 
     Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
 
@@ -1415,19 +1415,19 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
     end
 
-    b1 = dot(R11 .- R2(ζ, Ψ01), ζ★)
+    b1 = LA.dot(R11 .- R2(ζ, Ψ01), ζ★)
     verbose && println("├─── b1   = ", b1)
 
     # coefficient of x^2
     b2v = R2(ζ, ζ)
-    b2 = dot(b2v, ζ★)
+    b2 = LA.dot(b2v, ζ★)
     verbose && println("├─── b2/2 = ", b2/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ)
     wst, cv, it = ls(L, E(b2v); a₀ = -1) # Golub. Schaeffer Vol 1 page 33, eq 3.22
     ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
-    b3 = dot(b3v, ζ★)
+    b3 = LA.dot(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b3/6)
 
     bp_args = (x0, bp.τ, p, parbif, lens, ζ, ζ★, (;a, b1, b2, b3, Ψ01, wst), :NA)

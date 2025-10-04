@@ -100,15 +100,15 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
     ################### computation of σx σp ####################
     # TODO!! This is only finite differences
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵ1)),
-                residual(POWrap, x, set(par, lens, p - ϵ1))); rmul!(dₚF, 𝒯(1 / (2ϵ1)))
+                residual(POWrap, x, set(par, lens, p - ϵ1))); LA.rmul!(dₚF, 𝒯(1 / (2ϵ1)))
     dJvdp = minus(apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p + ϵ3), ω), v),
                   apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p - ϵ3), ω), v));
-    rmul!(dJvdp, 𝒯(1/(2ϵ3)))
-    σₚ = -dot(w, dJvdp)
+    LA.rmul!(dJvdp, 𝒯(1/(2ϵ3)))
+    σₚ = -LA.dot(w, dJvdp)
 
     # case of ∂σ_ω
-    σω = -(dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω+ϵ2), v)) - 
-           dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
+    σω = -(LA.dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω+ϵ2), v)) - 
+           LA.dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
 
     return (;JNS, JNS★, dₚF, σₚ, δ, ϵ2, ϵ3, v, w, par0, dJvdp, itv, itw, σω)
 end
@@ -138,8 +138,8 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0 * vr, 1), par0, ω), v),
                   apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0 * vr, 1), par0, ω), v));
-    rmul!(dJvdt, 𝒯(1/(2ϵ3)))
-    σt = -dot(w, dJvdt) 
+    LA.rmul!(dJvdt, 𝒯(1/(2ϵ3)))
+    σt = -LA.dot(w, dJvdt) 
 
     _Jpo = jacobian(POWrap, x, par0)
     Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
@@ -191,16 +191,16 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
 
         dJvdt = minus(apply(jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(0 * vr, 1), par0, ω), v),
                       apply(jacobian_neimark_sacker(POWrap, x .- ϵ2 .* vcat(0 * vr, 1), par0, ω), v));
-        rmul!(dJvdt, 𝒯(1/(2ϵ3)))
-        σt = -dot(w, dJvdt) 
+        LA.rmul!(dJvdt, 𝒯(1/(2ϵ3)))
+        σt = -LA.dot(w, dJvdt) 
 
         _Jpo = jacobian(POWrap, x, par0)
 
         x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
-        σxx1 = dot(vcat(σx,σt), x1)
-        σxx2 = dot(vcat(σx,σt), x2)
+        σxx1 = LA.dot(vcat(σx,σt), x1)
+        σxx2 = LA.dot(vcat(σx,σt), x2)
 
     else
         error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
@@ -346,9 +346,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
 
         (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
-        copyto!(𝐍𝐒.a, w); rmul!(𝐍𝐒.a, 1/normC(w))
+        copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        copyto!(𝐍𝐒.b, v); rmul!(𝐍𝐒.b, 1/normC(v))
+        copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/normC(v))
 
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch

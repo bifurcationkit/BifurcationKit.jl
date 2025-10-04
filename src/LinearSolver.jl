@@ -1,5 +1,5 @@
-using IterativeSolvers, LinearAlgebra
-import Krylov
+using IterativeSolvers
+import Krylov, LinearAlgebra
 import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
 norminf(x) = LinearAlgebra.norm(x, Inf)
 
@@ -33,12 +33,12 @@ function _axpy(J, a₀, a₁)
         end
     elseif a₀ == 1
         if a₁ == 1
-            return I + J
+            return LA.I + J
         else
-            return I + a₁ .* J
+            return LA.I + a₁ .* J
         end
     else
-        return a₀ * I + a₁ .* J
+        return a₀ * LA.I + a₁ .* J
     end
 end
 
@@ -110,7 +110,7 @@ end
 function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
     if l.useFactorization
         # factorize makes this type-unstable
-        Jfact = factorize(_axpy(J, a₀, a₁))
+        Jfact = LA.factorize(_axpy(J, a₀, a₁))
         return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
     else
         _J = _axpy(J, a₀, a₁)
@@ -222,15 +222,15 @@ $(TYPEDFIELDS)
 !!! tip "Different linear solvers"
     By tuning the options, you can select CG, GMRES... see [here](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve)
 """
-@with_kw mutable struct GMRESKrylovKit{T, Tl} <: AbstractIterativeLinearSolver
+@with_kw mutable struct GMRESKrylovKit{𝒯, 𝒯l} <: AbstractIterativeLinearSolver
     "Krylov Dimension"
     dim::Int64 = KrylovDefaults.krylovdim[]
 
     "Absolute tolerance for solver"
-    atol::T = KrylovDefaults.tol[]
+    atol::𝒯 = KrylovDefaults.tol[]
 
     "Relative tolerance for solver"
-    rtol::T = KrylovDefaults.tol[]
+    rtol::𝒯 = KrylovDefaults.tol[]
 
     "Maximum number of iterations"
     maxiter::Int64 = KrylovDefaults.maxiter[]
@@ -248,18 +248,23 @@ $(TYPEDFIELDS)
     isposdef::Bool = false
 
     "Left preconditioner"
-    Pl::Tl = nothing
+    Pl::𝒯l = nothing
 end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
 function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {𝒯, 𝒯l}
     if 𝒯l === Nothing
-        res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; rtol = l.rtol, verbosity = l.verbose,
-                                       krylovdim = l.dim, maxiter = l.maxiter,
-                                       atol = l.atol, issymmetric = l.issymmetric,
-                                       ishermitian = l.ishermitian, isposdef = l.isposdef,
-                                       kwargs...)
+        res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; 
+                            rtol = l.rtol,
+                            verbosity = l.verbose,
+                            krylovdim = l.dim,
+                            maxiter = l.maxiter,
+                            atol = l.atol,
+                            issymmetric = l.issymmetric,
+                            ishermitian = l.ishermitian,
+                            isposdef = l.isposdef,
+                            kwargs...)
     else # use preconditioner
         # the preconditioner must be applied after the scaling
         function _linmap(dx)
@@ -267,14 +272,18 @@ function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
             # out = similar(dx)
             # ldiv!(out, l.Pl, Jdx)
             out = l.Pl \ Jdx
-            axpby!(a₀, dx, a₁, out)
+            LA.axpby!(a₀, dx, a₁, out)
         end
-        res, info = KrylovKit.linsolve(_linmap, ldiv!(similar(rhs), l.Pl, copy(rhs));
-                                       rtol = l.rtol, verbosity = l.verbose,
-                                       krylovdim = l.dim, maxiter = l.maxiter,
-                                       atol = l.atol, issymmetric = l.issymmetric,
-                                       ishermitian = l.ishermitian, isposdef = l.isposdef,
-                                       kwargs...)
+        res, info = KrylovKit.linsolve(_linmap, LA.ldiv!(similar(rhs), l.Pl, copy(rhs));
+                                rtol = l.rtol,
+                                verbosity = l.verbose,
+                                krylovdim = l.dim,
+                                maxiter = l.maxiter,
+                                atol = l.atol,
+                                issymmetric = l.issymmetric,
+                                ishermitian = l.ishermitian,
+                                isposdef = l.isposdef,
+                                kwargs...)
     end
     info.converged == 0 && (@debug "KrylovKit.linsolve solver did not converge")
     return res, info.converged == 1, info.numops
@@ -297,20 +306,21 @@ $(TYPEDFIELDS)
 
 Look at `KrylovLSInplace` for a method where the Krylov space is kept in memory
 """
-mutable struct KrylovLS{K, Tl, Tr} <: AbstractIterativeLinearSolver
+mutable struct KrylovLS{K, 𝒯l, 𝒯r} <: AbstractIterativeLinearSolver
     "Krylov method"
     KrylovAlg::Symbol
     "Arguments passed to the linear solver"
     kwargs::K
     "Left preconditioner"
-    Pl::Tl
+    Pl::𝒯l
     "Right preconditioner"
-    Pr::Tr
+    Pr::𝒯r
 end
 
 function KrylovLS(args...; 
                   KrylovAlg :: Symbol = :gmres,
-                  Pl = I, Pr = I,
+                  Pl = LA.I,
+                  Pr = LA.I,
                   kwargs...)
     return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
 end
@@ -340,7 +350,7 @@ The struct is mutable so that you can modify the preconditioners.
 ## Fields 
 $(TYPEDFIELDS)
 """
-mutable struct KrylovLSInplace{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
+mutable struct KrylovLSInplace{F, K, 𝒯l, 𝒯r} <: AbstractIterativeLinearSolver
     "Can be Krylov.GmresWorkspace for example."
     workspace::F
     "Krylov method."
@@ -348,9 +358,9 @@ mutable struct KrylovLSInplace{F, K, Tl, Tr} <: AbstractIterativeLinearSolver
     "Arguments passed to the linear solver."
     kwargs::K
     "Left preconditioner."
-    Pl::Tl
+    Pl::𝒯l
     "Right preconditioner."
-    Pr::Tr
+    Pr::𝒯r
     "Is the linear mapping inplace."
     is_inplace::Bool
 end
@@ -366,7 +376,8 @@ function KrylovLSInplace(args...;
                         memory = 20,
                         S = Vector{Float64},
                         KrylovAlg :: Symbol = :gmres,
-                        Pl = I, Pr = I,
+                        Pl = LA.I,
+                        Pr = LA.I,
                         is_inplace = false,
                         kwargs...)
     if KrylovAlg == :gmres || KrylovAlg == :fgmres || KrylovAlg == :dqgmres || KrylovAlg == :fom || KrylovAlg == :diom

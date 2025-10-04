@@ -385,7 +385,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         J[end, end] = 0
         # enforce NS boundary condition
         N, m, Ntst = size(probPO)
-        J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
+        J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)

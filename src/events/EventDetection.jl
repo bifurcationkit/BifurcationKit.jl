@@ -100,7 +100,7 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     # emulate a do-while
     while true
         if ~converged(state)
-            error("Newton failed to fully locate event point using bisection parameters!")
+            error("Newton did not converge. Failure to fully locate event point using bisection parameters!")
             break
          end
 

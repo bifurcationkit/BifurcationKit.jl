@@ -195,6 +195,13 @@ record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
+const _dict_doc_string_prob = Dict(
+    :BifurcationProblem => "Generic case, the user has to set most options.", 
+    :ODEBifProblem => "Specific to Ordinary Differential Equations. The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :PDEBifProblem => "Specific to Partial Differential Equations. The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :DAEBifProblem => "Specific to Differential Algebraic Equations. The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
+)
+
 # create specific problems where pretty much is available
 for (op, at) in (
                 (:BifurcationProblem, AbstractBifurcationProblem),
@@ -216,7 +223,7 @@ for (op, at) in (
             """
             $(TYPEDEF)
 
-            Structure to hold the bifurcation problem.
+            Structure to hold a bifurcation problem. $($(_dict_doc_string_prob[op]))
 
             ## Fields
 
@@ -235,8 +242,8 @@ for (op, at) in (
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
 
             ## Constructors
-            - `BifurcationProblem(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
-            - `BifurcationProblem(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
+            - `$($op)(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
+            - `$($op)(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
                 - `plot_solution` see above
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need of providing an adjoint

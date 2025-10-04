@@ -1,4 +1,3 @@
-# using Revise
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack
 const BK = BifurcationKit
 
@@ -9,20 +8,6 @@ BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))
 BK.print_ev(rand(2))
 BK._print_line(1, nothing, 1)
-####################################################################################################
-# test VectorInterface
-# x0 = rand(5)
-# y0 = rand(5)
-# x0b = BorderedArray(x0[begin:end-1], x0[end])
-# y0b = BorderedArray(y0[begin:end-1], y0[end])
-
-# @test BK.zerovector(x0b) |> norm == 0
-# out = BK.add(y0b,x0b,1.1,-0.1)
-# @test (vcat(out.u,out.p) == 1.1 .*x0 .-0.1 .*y0)
-# out = BK.add!(copy(y0b),x0b,1.1,-0.1)
-# @test (vcat(out.u,out.p) == 1.1 .*x0 .-0.1 .*y0)
-# out = BK.add!!(copy(y0b),x0b,1.1,-0.1)
-# @test (vcat(out.u,out.p) == 1.1 .*x0 .-0.1 .*y0)
 ####################################################################################################
 # test the type BorderedArray and the different methods associated to it
 let
@@ -84,19 +69,24 @@ end
 ####################################################################################################
 # test of MatrixFreeBLSmap
 let
-    J0 = rand(100, 100)
-    map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), rand(), dot)
-    x_bd = BorderedArray(rand(100), rand())
-    x_bd_v = vcat(copy(x_bd.u), x_bd.p)
-    o1 = map_bls(x_bd)
-    o2 = map_bls(x_bd_v)
-    @test o1.u ≈ o2[begin:end-1]
-    @test o1.p ≈ o2[end]
+    for _shift in (0.0, randn(), randn())
+        J0 = rand(100, 100)
+        map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), _shift, LinearAlgebra.dot)
+        x_bd = BorderedArray(rand(100), rand())
+        x_bd_v = vcat(copy(x_bd.u), x_bd.p)
+        o1 = map_bls(x_bd)
+        o2 = map_bls(x_bd_v)
+        o3 = [J0 + _shift * I map_bls.a; map_bls.b' map_bls.c] * x_bd_v
+        @test o1.u ≈ o2[begin:end-1]
+        @test o1.p ≈ o2[end]
+        @test o3[begin:end-1] ≈ o2[begin:end-1]
+        @test o3[end] ≈ o2[end]
+    end
 end
 ####################################################################################################
 # test symmetric solvers
 let
-    J0 = Symmetric(rand(100,100) * 0.01 - I)
+    J0 = Symmetric(rand(100, 100) * 0.01 - I)
     rhs = rand(100)
     sol_explicit = J0 \ rhs
 
@@ -108,7 +98,7 @@ let
     _sol, = ls(J0, rhs)
     @test _sol ≈ sol_explicit
 
-    ls = KrylovLSInplace(Pl = I, m = 100, n = 100, KrylovAlg = :minres)
+    ls = KrylovLSInplace(Pl = LinearAlgebra.I, m = 100, n = 100, KrylovAlg = :minres)
     _sol, = ls(J0, rhs)
     @test _sol ≈ sol_explicit
 end
@@ -178,7 +168,7 @@ sol_explicit = (J0) \ rhs
 ####################################################################################################
 # test the bordered linear solvers
 let
-    J0 = rand(5,5) * 0.9 - I
+    J0 = randn(5,5) * 0.2 - I
     rhs = rand(5)
     sol_explicit = (J0 + 0.2spdiagm(0 => vcat(ones(4),0))) \ rhs
 

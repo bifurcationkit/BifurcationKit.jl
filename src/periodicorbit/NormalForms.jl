@@ -119,11 +119,11 @@ function branch_normal_form(pbwrap::WrapPOSh,
     ζ1 ./= scaleζ(ζ1)
     ζ2 = real(geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, ind[2]))
     ζ2 ./= scaleζ(ζ2)
-    _dotprods = (dot(ζ₀, ζ1), dot(ζ₀, ζ2))
+    _dotprods = (LA.dot(ζ₀, ζ1), LA.dot(ζ₀, ζ2))
     verbose && println("├─ scalar products with ζ₀ are = ", _dotprods)
     ind0 = argmax(abs.(abs.(_dotprods) .- 1))
     ζ = ind0 == 1 ? ζ1 : ζ2
-    verbose && println("├─ scalar products dot(ζ₀, ζ) is ", dot(ζ₀, ζ))
+    verbose && println("├─ scalar products dot(ζ₀, ζ) is ", LA.dot(ζ₀, ζ))
 
     # compute the full eigenvector
     floquetsolver = br.contparams.newton_options.eigsolver
@@ -171,8 +171,8 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     
     # the spectrum of  M is {1,1,...}
     # the spectrum of dΠ is {1,0,...}
-    Fₘ = eigen(M)
-    F  = eigen(dΠ)
+    Fₘ = LA.eigen(M)
+    F  = LA.eigen(dΠ)
     
     ind = argmin(abs.(F.values .- 1))
     λ₁ = F.values[ind] # λ₁ ≈ 1
@@ -181,13 +181,13 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     # get the scalar products
     ev = F.vectors[:, ind]
     
-    Fp = eigen(dΠ')
+    Fp = LA.eigen(dΠ')
     indp = argmin(abs.(Fp.values .- λ₁)) # eigenvalue closest to λ₁
     evp = Fp.vectors[:, indp]
     
     # normalize eigenvectors
-    ev ./= sqrt(dot(ev, ev))
-    evp ./= dot(evp, ev)
+    ev ./= sqrt(LA.dot(ev, ev))
+    evp ./= LA.dot(evp, ev)
     
     # @debug "" xₛ ev evp dΠ _nrm pars F.values[ind] Fp.values[indp]
     # @debug "" F.values bp0.x0
@@ -292,7 +292,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[begin:end-1]
     Jbd[end,1:nj-1] .= randn(nj-1)
     Jbd[end-1:end,end-1:end] .= 0
-    rhs = zeros(𝒯, nj+1, 2); rhs[end-1:end,end-1:end] .= I(2)
+    rhs = zeros(𝒯, nj+1, 2); rhs[end-1:end,end-1:end] .= LA.I(2)
     sols   = Jbd  \ rhs
     sols_t = Jbd' \ rhs
 
@@ -314,7 +314,7 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
 
     J0 = J[begin:end-1,begin:end-1]
 
-    _ps = (dot(q₀, Fu₀), dot(q₁, Fu₀))
+    _ps = (LA.dot(q₀, Fu₀), LA.dot(q₁, Fu₀))
     ind = argmin(abs.(_ps))
     v₁ = q₁#ind==1 ? q₀ : q₁
     v₁ ./= norminf(v₁)
@@ -438,7 +438,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     # If M is the monodromy matrix and E := x - <x,e>e with e the eigen
     # vector of M for the eigenvalue 1, then, we find that
     # eigenvector(P) = E ∘ eigenvector(M)
-    # E(x) = x .- dot(ζ₁, x) .* ζ₁
+    # E(x) = x .- LA.dot(ζ₁, x) .* ζ₁
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
     _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
@@ -448,12 +448,12 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     J = jacobian(pbwrap, pd0.x0, pars)
     M = MonodromyQaD(J)
 
-    Fₘ = eigen(M)
-    F = eigen(dΠ)
+    Fₘ = LA.eigen(M)
+    F = LA.eigen(dΠ)
 
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
-    F★ = eigen(dΠ')
+    F★ = LA.eigen(dΠ')
     ind₋₁ = argmin(abs.(F★.values .+ 1))
     ev₋₁★ = F★.vectors[:, ind₋₁]
     ####
@@ -461,8 +461,8 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     @debug "" Fₘ.values F.values F★.values
 
     # normalize eigenvectors
-    ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
-    ev₋₁★ ./= dot(ev₋₁, ev₋₁★)
+    ev₋₁ ./= sqrt(LA.dot(ev₋₁, ev₋₁))
+    ev₋₁★ ./= LA.dot(ev₋₁, ev₋₁★)
 
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
@@ -558,8 +558,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[:, end] .= _rand(nj)
     J[end, end] = 0
     # enforce PD boundary condition
-    J[end-N:end-1, 1:N] .= I(N)
-    J[end-N:end-1, end-N:end-1] .= I(N)
+    J[end-N:end-1, 1:N] .= LA.I(N)
+    J[end-N:end-1, end-N:end-1] .= LA.I(N)
 
     rhs = zeros(𝒯, nj); rhs[end] = 1;
     k = J  \ rhs; k = k[begin:end-1]; k ./= norm(k) #≈ ker(J)
@@ -582,8 +582,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
     # enforce PD boundary condition
-    J★[end-N:end-1, 1:N] .= I(N)
-    J★[end-N:end-1, end-N:end-1] .= I(N)
+    J★[end-N:end-1, 1:N] .= LA.I(N)
+    J★[end-N:end-1, end-N:end-1] .= LA.I(N)
 
     rhs = zeros(𝒯, nj); rhs[end] = 1;
     k = J★  \ rhs; k = k[begin:end-1]; k ./= norm(k) # ≈ ker(J)
@@ -623,8 +623,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
     Jψ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
-    Jψ[end-N:end-1, 1:N] .= -I(N)
-    Jψ[end-N:end-1, end-N:end-1] .= I(N)
+    Jψ[end-N:end-1, 1:N] .= -LA.I(N)
+    Jψ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
     Jψ[end, :] .= _rand(nj)
     Jψ[:, end] .= _rand(nj)
@@ -658,8 +658,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     # we could perhaps save the re-computation of J here and use the previous J
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
     J = copy(_get_matrix(jac))
-    J[end-N:end-1, 1:N] .= -I(N)
-    J[end-N:end-1, end-N:end-1] .= I(N)
+    J[end-N:end-1, 1:N] .= -LA.I(N)
+    J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders
     J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
@@ -707,8 +707,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
     J = copy(_get_matrix(jac))
-    J[end-N:end-1, 1:N] .= -I(N)
-    J[end-N:end-1, end-N:end-1] .= I(N)
+    J[end-N:end-1, 1:N] .= -LA.I(N)
+    J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders
     J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
@@ -757,17 +757,17 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
     xₛ = pd0.x0[1:N]
     dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
-    F = eigen(dΠ)
+    F = LA.eigen(dΠ)
 
     ind₋₁ = argmin(abs.(F.values .+ 1))
     ev₋₁ = F.vectors[:, ind₋₁]
-    Fp = eigen(dΠ')
+    Fp = LA.eigen(dΠ')
     ind₋₁ = argmin(abs.(Fp.values .+ 1))
     ev₋₁p = Fp.vectors[:, ind₋₁]
 
     # normalize eigenvectors
-    ev₋₁ ./= sqrt(dot(ev₋₁, ev₋₁))
-    ev₋₁p ./= dot(ev₋₁, ev₋₁p)
+    ev₋₁ ./= sqrt(LA.dot(ev₋₁, ev₋₁))
+    ev₋₁p ./= LA.dot(ev₋₁, ev₋₁p)
 
     δ2 = √δ
     δ3 = δ^(1/3)
@@ -796,7 +796,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     J[end, :] .= rand(nj)
     J[:, end] .= rand(nj)
     # enforce PD boundary condition
-    J[end-N:end-1, 1:N] .= I(N)
+    J[end-N:end-1, 1:N] .= LA.I(N)
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q)
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
@@ -897,7 +897,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     Π = PoincareMap(pbwrap, ns0.x0, pars, optn)
     xₛ = ns0.x0[1:N]
     dΠ = finite_differences(x -> Π(x,pars).u, xₛ)
-    F = eigen(dΠ)
+    F = LA.eigen(dΠ)
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
     _nrm > 1e-12 && @warn  "$_nrm"
@@ -905,13 +905,13 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     ####
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
     ev = F.vectors[:, ind]
-    Fp = eigen(dΠ')
+    Fp = LA.eigen(dΠ')
     indp = argmin(abs.(log.(complex.(Fp.values)) .+ Complex(0, ns0.ω )))
     evp = Fp.vectors[:, indp]
 
     # normalize eigenvectors
-    ev ./= sqrt(dot(ev, ev))
-    evp ./= dot(ev, evp)
+    ev ./= sqrt(LA.dot(ev, ev))
+    evp ./= LA.dot(ev, evp)
 
     δ2 = √δ
     δ3 = δ^(1/3)
@@ -998,8 +998,8 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     # compute ϕ1star
     # Jϕ = D  +  T * Aᵗ(t)
     Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = Val(true), ρF = -1)
-    Jϕ[end-N:end-1, 1:N] .= -I(N)
-    Jϕ[end-N:end-1, end-N:end-1] .= I(N)
+    Jϕ[end-N:end-1, 1:N] .= -LA.I(N)
+    Jϕ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
     Jϕ[end, :] .= _rand(nj)
     Jϕ[:, end] .= _rand(nj)
@@ -1094,8 +1094,8 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
                                      zeros(𝒯, length(ϕ₁★ₛ))
                                     )
     J = analytical_jacobian(coll, ns.x0, par;  𝒯 = Complex{𝒯})
-    J[end-N:end-1, 1:N] .= -I(N)
-    J[end-N:end-1, end-N:end-1] .= I(N)
+    J[end-N:end-1, 1:N] .= -LA.I(N)
+    J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders
     J[end, begin:end-1] .= border_ϕ1 # integral condition
     J[:, end] .= ϕ₁★
@@ -1199,18 +1199,18 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     J = jacobian(pbwrap, ns0.x0, pars)
     M = MonodromyQaD(J)
 
-    Fₘ = eigen(M)
-    F = eigen(dΠ)
+    Fₘ = LA.eigen(M)
+    F  = LA.eigen(dΠ)
 
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
     ev = F.vectors[:, ind]
-    Fp = eigen(dΠ')
+    Fp = LA.eigen(dΠ')
     indp = argmin(abs.(log.(complex.(Fp.values)) .+ Complex(0, ns0.ω )))
     evp = Fp.vectors[:, indp]
 
     # normalize eigenvectors
-    ev ./= sqrt(dot(ev, ev))
-    evp ./= dot(evp, ev)
+    ev ./= sqrt(LA.dot(ev, ev))
+    evp ./= LA.dot(evp, ev)
 
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,

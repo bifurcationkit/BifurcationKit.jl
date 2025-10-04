@@ -172,7 +172,7 @@ Solve the linear system associated with the collocation problem for computing pe
     rhs_ext = build_external_system!(Jext, Jcop, rhs, cop_cache.rhs_ext, Iₙ, Ntst, nbcoll, Npo, δn, N, m)
 
     if uselu
-        F = lu(Jext)
+        F = LA.lu(Jext)
         sol_ext = F \ rhs_ext
     else
         # gaussian elimination plus backward substitution to invert Jext
@@ -387,7 +387,7 @@ end
     sol_cop[1:N] .= sol_ext[1:N]
 
     for iₜ in 1:Ntst
-        Jtemp = UpperTriangular(Jcond[r1, r2])
+        Jtemp = LA.UpperTriangular(Jcond[r1, r2])
         left_part = Jcond[r1, rN_left]
         right_part = Jcond[r1, r2[end]+1:r2[end]+N]
 
@@ -404,10 +404,10 @@ end
         else
             throw("This version of the current function is not yet implemented. δn = $δn")
         end
-        mul!(rhs_tmp, left_part,  sol_ext[rN],      -1, 1)
-        mul!(rhs_tmp, right_part, sol_ext[rN .+ N], -1, 1)
+        LA.mul!(rhs_tmp, left_part,  sol_ext[rN],      -1, 1)
+        LA.mul!(rhs_tmp, right_part, sol_ext[rN .+ N], -1, 1)
 
-        ldiv!(sol_tmp, Jtemp, rhs_tmp)
+        LA.ldiv!(sol_tmp, Jtemp, rhs_tmp)
 
         sol_cop[rsol .+ N] .= sol_tmp
         sol_cop[rsol[end]+N+1:rsol[end]+2N] .= sol_ext[rN .+ N]
@@ -518,9 +518,9 @@ end
         else
             throw("Case not handled")
         end
-        mul!(rhs_tmp, Jext[(1:n) .+ st, 1:n], x₀, -1, 1)
-        mul!(rhs_tmp, Jext[(1:n) .+ st, (1:n) .+ st .+ 2n], sol_ext[(1:n) .+ st .+ 2n], -1, 1)
-        ldiv!(sol_ext[(1:n) .+ st .+ n], UpperTriangular(Jext[(1:n) .+ st, (1:n) .+ st .+ n]), rhs_tmp)
+        LA.mul!(rhs_tmp, Jext[(1:n) .+ st, 1:n], x₀, -1, 1)
+        LA.mul!(rhs_tmp, Jext[(1:n) .+ st, (1:n) .+ st .+ 2n], sol_ext[(1:n) .+ st .+ 2n], -1, 1)
+        LA.ldiv!(sol_ext[(1:n) .+ st .+ n], LA.UpperTriangular(Jext[(1:n) .+ st, (1:n) .+ st .+ n]), rhs_tmp)
         st -= n
     end
     return sol_ext

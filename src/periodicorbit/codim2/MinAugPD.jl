@@ -108,11 +108,11 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, 
  
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
                 residual(POWrap, x, set(par, lens, p - ϵₚ)))
-    rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
+    LA.rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
     dJvdp = minus(apply(jacobian_period_doubling(POWrap, x, set(par, lens, p + ϵⱼ)), v),
                   apply(jacobian_period_doubling(POWrap, x, set(par, lens, p - ϵⱼ)), v));
-    rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
-    σₚ = -dot(w, dJvdp)
+    LA.rmul!(dJvdp, 𝒯(1/(2ϵⱼ)))
+    σₚ = -LA.dot(w, dJvdp)
 
     return (;JPD, JPD★, dₚF, σₚ, δ, ϵₜ, ϵₓ, v, w, par0, dJvdp, itv, itw)
 end
@@ -131,7 +131,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
     # TODO!! This is only finite differences
     u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
     u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
-    σₓ = minus(u2, u1); rmul!(σₓ, 1 / (2ϵₓ))
+    σₓ = minus(u2, u1); LA.rmul!(σₓ, 1 / (2ϵₓ))
 
     # a bit of a hack
     xtmp = copy(x); xtmp[end] += ϵₜ
@@ -173,7 +173,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         # apply Jacobian adjoint
         u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
         u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
-        σₓ = minus(u2, u1); rmul!(σₓ, 1 / (2ϵₓ))
+        σₓ = minus(u2, u1); LA.rmul!(σₓ, 1 / (2ϵₓ))
 
         # a bit of a hack
         xtmp = copy(x); xtmp[end] += ϵₜ
@@ -371,9 +371,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
         # normalization
         (;v, w) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
-        copyto!(𝐏𝐝.a, w); rmul!(𝐏𝐝.a, 1/normC(w))
+        copyto!(𝐏𝐝.a, w); LA.rmul!(𝐏𝐝.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
-        copyto!(𝐏𝐝.b, v); rmul!(𝐏𝐝.b, 1/normC(v))
+        copyto!(𝐏𝐝.b, v); LA.rmul!(𝐏𝐝.b, 1/normC(v))
 
         # call the user-passed finalizer
         final_result = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
@@ -461,7 +461,7 @@ function test_for_gpd_cp(iter, state)
     ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Pdᵗ did not converge."
     ζ★ ./= norm(ζ★)
-    𝐏𝐝.R2 = dot(ζ★, ζ)
+    𝐏𝐝.R2 = LA.dot(ζ★, ζ)
 
     pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
     if pbwrap.prob isa ShootingProblem

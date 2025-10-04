@@ -105,7 +105,7 @@ end
 
 # try with newtonDeflation
 # test with Newton deflation 1
-deflationOp = DeflationOperator(2, 1.0, [zerovector(sol.u)])
+deflationOp = DeflationOperator(2, 1.0, [BK.VI.zerovector(sol.u)])
 soldef0 = BorderedArray([0.1], 0.0)
 soldef1 = BK.solve(BK.re_make(prob, u0 = soldef0), deflationOp, opt_newton)
 

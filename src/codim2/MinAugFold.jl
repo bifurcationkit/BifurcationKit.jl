@@ -106,7 +106,7 @@ function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, pa
     dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵ3)), v),
                   apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵ3)), v));
     VI.scale!(dJvdp, 𝒯(1/(2ϵ3)))
-    σₚ = -dot(w, dJvdp)
+    σₚ = -LA.dot(w, dJvdp)
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, dJvdp, itv, itw)
 end
@@ -163,10 +163,10 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par
         ~cv && @debug "Linear solver for J did not converge."
 
         d2Fv = d2F(𝐅.prob_vf, x, par0, x1, v)
-        σx1 = -dot(w, d2Fv )
+        σx1 = -LA.dot(w, d2Fv )
 
         copyto!(d2Fv, d2F(𝐅.prob_vf, x, par0, x2, v))
-        σx2 = -dot(w, d2Fv )
+        σx2 = -LA.dot(w, d2Fv )
 
         dσ = (rhsp - σx1) / (σₚ - σx2)
 
@@ -544,7 +544,7 @@ function continuation_fold(prob,
         # computation of zero adjoint eigenvector
         ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
-        VI.scale!(ζad, 1 / real(dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
+        VI.scale!(ζad, 1 / real(LA.dot(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
         # we use a minimally augmented formulation to set the initial vectors
         a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
@@ -565,7 +565,7 @@ function continuation_fold(prob,
 
         ζad = newa; VI.scale!(ζad, 1 / normC(ζad))
         ζ   = newb; VI.scale!(ζ,   1 / normC(ζ))
-        VI.scale!(ζad, 1 / dot(ζ, ζad))
+        VI.scale!(ζad, 1 / LA.dot(ζ, ζad))
     end
 
     return continuation_fold(prob, alg,
@@ -621,7 +621,7 @@ function test_bt_cusp(iter, state)
     ζstar = bd_vec.w
     VI.scale!(ζstar, 1 / 𝐅.norm(ζstar))
 
-    𝐅.BT = dot(ζstar, ζ)
+    𝐅.BT = LA.dot(ζstar, ζ)
     𝐅.CP = getp(state.τ)
 
     return 𝐅.BT, 𝐅.CP

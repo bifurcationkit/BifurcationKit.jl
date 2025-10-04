@@ -96,7 +96,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
 
     ~(br.specialpoint[ind_bif].type in (:bp, :nd)) && error("You cannot banch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n ")
 
-    verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
+    verbose = get(kwargs, :verbosity, 0) > 0
     verbose && println("──▶ Considering bifurcation point:")
     verbose && _show(stdout, br.specialpoint[ind_bif], ind_bif)
 
@@ -133,7 +133,10 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
 
     # compute predictor for a point on new branch
     if ~use_normal_form
-        pred = (;x0 = bp.x0, x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), p =  bp.p + δp, amp = ampfactor)
+        pred = (;x0 = bp.x0, 
+                x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
+                p =  bp.p + δp, 
+                amp = ampfactor)
     else
         pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
     end

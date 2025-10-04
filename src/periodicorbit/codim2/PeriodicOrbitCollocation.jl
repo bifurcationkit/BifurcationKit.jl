@@ -18,7 +18,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     Jac = jacobian(pbwrap, x, par)
     # put the PD boundary condition
     J = copy(_get_matrix(Jac))
-    J[end-N:end-1, 1:N] .= I(N)
+    J[end-N:end-1, 1:N] .= LA.I(N)
     @set Jac.jacpb = J[begin:end-1, begin:end-1]
     # J[begin:end-1, begin:end-1]
 end
@@ -28,12 +28,12 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
     J = Complex.(_get_matrix(Jac))
-    J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ω))(N)
+    J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ω))(N)
     Jns = @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
 
 for (fname, cdt, err_msg) in (
-                    (:fold_point, (:bp, :nd, :fold),"This should be a Branch Point / Fold / BP point"),
+                    (:fold_point, (:bp, :nd, :fold), "This should be a Branch Point / Fold / BP point"),
                     (:pd_point, (:pd,), "This should be a PD point")
                     ) 
     @eval begin
@@ -209,7 +209,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     J[:, end] .= rand(nj)
     J[end, end] = 0
     # enforce PD boundary condition
-    J[end-N:end-1, 1:N] .= I(N)
+    J[end-N:end-1, 1:N] .= LA.I(N)
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
@@ -268,7 +268,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     J[end, end] = 0
     # enforce NS boundary condition
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    J[end-N:end-1, end-N:end-1] .= UniformScaling(exp(λₙₛ))(N)
+    J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(exp(λₙₛ))(N)
 
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)

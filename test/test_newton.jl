@@ -1,14 +1,13 @@
-# using Revise
 using Test, BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 function test_newton(x0)
     Ty = eltype(x0)
     F(x, p) = @. x^3 - 1
-    J0 = zeros(length(x0), length(x0))
+    J0 = zeros(Ty, length(x0), length(x0))
     function Jac(x, p)
         for i in eachindex(x)
-            J0[i,i] = 3 * x[i]^2
+            J0[i, i] = 3 * x[i]^2
         end
         J0
     end
@@ -126,11 +125,11 @@ let
     solverdf = BK.DeflatedProblemCustomLS(DefaultLS())
     probdf = DeflatedProblem(prob, deflationOp, Val(:Custom))
     Jdf = BK.jacobian((@set probdf.jactype = BK.AutoDiff()), sol, nothing)
-    @test Jdf ≈ ForwardDiff.jacobian(z->probdf(z,nothing),sol)
+    @test Jdf ≈ ForwardDiff.jacobian(z -> probdf(z,nothing), sol)
     Jdf = BK.jacobian(probdf, sol, nothing)
     # test the value of the jacobian
-    outj = probdf(sol, nothing, rhs)
-    outfd = ForwardDiff.derivative(t->probdf(sol .+ t .* rhs, nothing), 0)
+    outj = probdf(sol, nothing, rhs) # jvp
+    outfd = ForwardDiff.derivative(t -> probdf(sol .+ t .* rhs, nothing), 0)
     @test outj ≈ outfd
 
     sol0, = solverdf(Jdf, rhs)

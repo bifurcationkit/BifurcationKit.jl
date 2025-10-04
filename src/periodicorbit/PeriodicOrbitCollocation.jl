@@ -146,7 +146,7 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     vj  = DiffCache(zeros(𝒯, n, m+1))
     tmp = DiffCache(zeros(𝒯, n))
     ∇phase = zeros(𝒯, n * (1 + m * Ntst))
-    In = Array(I(save_mem ? 1 : n))
+    In = Array(LA.I(save_mem ? 1 : n))
     return POCollCache(gj, gi, ∂gj, uj, vj, tmp, ∇phase, In)
 end
 ####################################################################################################
@@ -439,10 +439,10 @@ $(SIGNATURES)
 
     rg = UnitRange(1, m+1)
     @inbounds for j in 1:Ntst
-        mul!(guj, uc[:, rg], L)
-        mul!(gvj, vc[:, rg], L)
+        LA.mul!(guj, uc[:, rg], L)
+        LA.mul!(gvj, vc[:, rg], L)
         @inbounds for l in 1:m
-            phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
+            phase += LA.dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
         end
         rg = rg .+ m
     end
@@ -504,10 +504,10 @@ end
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
-        mul!(pu, uc[:, rg], L) # pu : n x m
-        mul!(pϕ, ϕc[:, rg], ∂L)
+        LA.mul!(pu, uc[:, rg], L) # pu : n x m
+        LA.mul!(pϕ, ϕc[:, rg], ∂L)
         @inbounds for l in Base.OneTo(m)
-            phase += dot(pu[:, l], pϕ[:, l]) * ω[l]
+            phase += LA.dot(pu[:, l], pϕ[:, l]) * ω[l]
         end
         rg = rg .+ m
     end
@@ -543,15 +543,15 @@ end
     rg = axes(out, 2)[UnitRange(1, m+1)] #Base.OneTo(m+1) 
     @inbounds for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
-        mul!( pj, u[:, rg], L)  # size (n, m)
-        mul!(∂pj, u[:, rg], ∂L) # size (n, m)
+        LA.mul!( pj, u[:, rg], L)  # size (n, m)
+        LA.mul!(∂pj, u[:, rg], ∂L) # size (n, m)
         # compute the collocation residual
         for l in Base.OneTo(m)
             _POO_coll_scheme!(pb, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
         if CP === true
             @inbounds for l in Base.OneTo(m)
-                phase += dot(pj[:, l], pb.∂ϕ[:, (j-1)*m + l]) * ω[l]
+                phase += LA.dot(pj[:, l], pb.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
         end
         # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
@@ -593,7 +593,7 @@ $(SIGNATURES)
 
 Compute the identity matrix associated with the collocation problem.
 """
-function LinearAlgebra.I(coll::PeriodicOrbitOCollProblem, u, par)
+function I(coll::PeriodicOrbitOCollProblem, u, par)
     T = getperiod(coll, u, par)
     N = get_state_dim(coll)
     Icoll = analytical_jacobian(coll, u, par; ρD = 0, ρF = 0, ρI = -1/T)
@@ -647,14 +647,14 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         α = period * dt
-        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
+        LA.mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         # put the jacobian of the vector field
         for l in 1:m
             _rgX = rgNx .+ (l-1)*n
             if TransposeBool == false
                 jacobian!(VF, J0, pj[:, l], pars)
             else
-                J0 .= transpose(jacobian(VF, pj[:, l], pars))
+                J0 .= LA.transpose(jacobian(VF, pj[:, l], pars))
             end
 
             for l2 in 1:m+1
@@ -665,7 +665,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
             residual!(VF, J[_rgX, nJ], pj[:, l], pars)
             J[_rgX, nJ] .*= (-dt)
 
-            phase += dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+            phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -741,8 +741,8 @@ end
     # vector field
     VF = coll.prob_vf
 
-    In = I(n)
     J0 = jacobian(VF, u[1:n], pars) # this works for sparse
+    In = LA.I(n)
 
     # put boundary condition
     view(J, Block(1 + m * Ntst, 1 + m * Ntst)) .= In
@@ -757,13 +757,13 @@ end
     for j in 1:Ntst
         dt = (mesh[j+1] - mesh[j]) / 2
         α = period * dt
-        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
+        LA.mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         # put the jacobian of the vector field
         for l in 1:m
             if TransposeBool == false
                 jacobian!(VF, J0, pj[:, l], pars)
             else
-                J0 .= transpose(jacobian(VF, pj[:, l], pars))
+                J0 .= LA.transpose(jacobian(VF, pj[:, l], pars))
             end
 
             for l2 in 1:m+1
@@ -774,7 +774,7 @@ end
             residual!(VF, view(J, Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
             view(J, Block(l + (j-1)*m, n_blocks)) .*= (-dt)
 
-            phase += dot(pj[:, l], coll.∂ϕ[:, iₚ + l]) * ω[l]
+            phase += LA.dot(pj[:, l], coll.∂ϕ[:, iₚ + l]) * ω[l]
             view(J, Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period
             i∇ += 1; rgNx = rgNx .+ n
         end
@@ -807,7 +807,7 @@ end
     phase = zero(𝒯)
     uc = get_time_slices(coll, u)
     pj = zeros(𝒯, n, m)
-    In = sparse(I(n))
+    In = sparse(LA.I(n))
     J0 = jacobian(coll.prob_vf, uc[1:n], pars)
     tmpJ = copy(J0 + In)
     @assert J0 isa AbstractSparseMatrix
@@ -825,7 +825,7 @@ end
     rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
-        mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
+        LA.mul!(pj, uc[:, rg], L) # pj ≈ (L * uj')'
         dt = (mesh[j+1]-mesh[j]) / 2
         α = period * dt
         # put the jacobian of the vector field
@@ -833,16 +833,16 @@ end
             if ~TransposeBool
                 @inbounds jacobian!(VF, J0, pj[:, l], pars)
             else
-                J0 .= transpose(jacobian(coll.prob_vf, pj[:,l], pars))
+                J0 .= LA.transpose(jacobian(coll.prob_vf, pj[:,l], pars))
             end
 
             for l2 in 1:m+1
-                tmpJ .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * I) .+ ρD * (∂L[l2, l] .* In)
+                tmpJ .= (-α * L[l2, l]) .* (ρF .* J0 + ρI * LA.I) .+ ρD * (∂L[l2, l] .* In)
                 J.nzval[indx[ l + (j-1) * m, l2 + (j-1)*m] ] .= (tmpJ).nzval
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-dt)
-            phase += dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+            phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -1134,7 +1134,7 @@ end
     pϕ = get_tmp(coll.cache.∂gj, ϕc) # zeros(𝒯, n, m)
     rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
     @inbounds for j in 1:Ntst
-        mul!(pϕ, ϕc[:, rg], ∂L)
+        LA.mul!(pϕ, ϕc[:, rg], ∂L)
         coll.∂ϕ[:, (j-1)*m .+ (1:m)] .= pϕ
         rg = rg .+ m
     end

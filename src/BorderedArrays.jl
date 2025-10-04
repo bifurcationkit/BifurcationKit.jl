@@ -1,30 +1,29 @@
-# composite type for Bordered arrays
 import Base: eltype, zero, eltype
-import LinearAlgebra: norm, dot, length, similar, axpy!, axpby!, rmul!, mul!
-import KrylovKit: VectorInterface, RecursiveVec
-import KrylovKit.VectorInterface: zerovector
+import LinearAlgebra: norm, length, similar
+import KrylovKit: VectorInterface
 const VI = VectorInterface
 
 """
 $(TYPEDEF)
 
-This defines an array (although not `<: AbstractArray`) to hold two arrays or an array and a scalar. 
+This defines an "array" (although not `<: AbstractArray`) to hold two arrays or an array and a scalar. As such, it is a convenient alternative to `cat`, `vcat` and friends. It proves useful for the GPU where the operation `x[end]` can be slow.
+
 This is useful when one wants to add constraints (phase, ...) to a functional for example. 
-It is used throughout the package for the Pseudo Arc Length Continuation (PALC), for the continuation of Fold / Hopf points, for periodic orbits... 
-It is also used to define periodic orbits as (orbit, period). As such, it is a convenient alternative to `cat`, `vcat` and friends. 
-We chose not to make it a subtype of AbstractArray as we wish to apply the current package to general "arrays", see [Requested methods for Custom State](@ref). 
-Finally, it proves useful for the GPU where the operation `x[end]` can be slow.
+It is used throughout the package for the Pseudo Arc Length Continuation (PALC), for the continuation of Fold / Hopf points, for periodic orbits...
+
+It is for example used to define periodic orbits as (orbit, period).
+We chose not to make it a subtype of `AbstractArray` as we wish to apply the current package to general "arrays", see [Requested methods for Custom State](@ref). 
+
+!!! danger "Required methods"
+    The element in each (array, array) or (array, scalar) packed in a `BorderedArray` must comply with the interface of `VectorInterface.jl`.
+
+!!! info "Note"
+    In essence, it is very close to the vector `MinimalMVec` from `VectorInterface.jl`.
 """
-mutable struct BorderedArray{vectype1, vectype2}
-    u::vectype1
-    p::vectype2
+mutable struct BorderedArray{𝒯1, 𝒯2}
+    u::𝒯1
+    p::𝒯2
 end
-
-eltype(::Type{BorderedArray{vectype, T}}) where {vectype, T} = eltype(T)
-similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T, vectype} = BorderedArray(similar(b.u, S), similar(b.p, S))
-similar(b::BorderedArray{vectype, T}, ::Type{S} = eltype(b)) where {S, T <: Number, vectype} = BorderedArray(similar(b.u, S), S(0))
-
-Base.:*(a::S, b::BorderedArray{vectype, T}) where {vectype, T, S <: Number} = BorderedArray(*(a, b.u), *(a, b.p))
 
 # a version of copy which cope with our requirements concerning the methods
 # available for
@@ -33,20 +32,20 @@ _copy(::Nothing) = nothing
 _copy(b::AbstractArray) = copy(b)
 Base.copy(b::BorderedArray) = BorderedArray(_copy(b.u), _copy(b.p))
 
-function Base.copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1, T2 }
+function Base.copyto!(dest::BorderedArray{𝒯v, 𝒯1}, src::BorderedArray{𝒯v, 𝒯2}) where {𝒯v, 𝒯1, 𝒯2 }
     copyto!(dest.u, src.u)
     copyto!(dest.p, src.p)
     return dest
 end
 
-function Base.copyto!(dest::BorderedArray{vectype, T1}, src::BorderedArray{vectype, T2}) where {vectype, T1 <: Number, T2 <: Number}
+function Base.copyto!(dest::BorderedArray{𝒯v, T1}, src::BorderedArray{𝒯v, T2}) where {𝒯v, T1 <: Number, T2 <: Number}
     copyto!(dest.u, src.u)
     dest.p = src.p
     return dest
 end
 
-length(b::BorderedArray{vectype, T}) where {vectype, T} = length(b.u) + length(b.p)
-length(b::BorderedArray{vectype, T}) where {vectype, T <: Number} = length(b.u) + 1
+length(b::BorderedArray{𝒯v, T}) where {𝒯v, T} = length(b.u) + length(b.p)
+length(b::BorderedArray{𝒯v, T}) where {𝒯v, T <: Number} = length(b.u) + 1
 
 dot(a::BorderedArray, b::BorderedArray) = dot(a.u, b.u) + dot(a.p, b.p)
 norm(b::BorderedArray{vectype, T}, p::Real) where {vectype, T} = max(norm(b.u, p), norm(b.p, p))
@@ -139,7 +138,7 @@ function minus!(x::BorderedArray{vectype, T}, y::BorderedArray{vectype, T}) wher
 end
 ################################################################################
 #
-#    `minus(x,y)`
+#    `minus(x, y)`
 #
 # returns x - y
 minus(x, y) = (x1 = 1*x; minus!(x1, y); return x1)

@@ -1,5 +1,6 @@
-using IterativeSolvers, Arpack, LinearAlgebra
+using IterativeSolvers, Arpack
 import KrylovKit: eigsolve
+import LinearAlgebra
 
 abstract type AbstractEigenSolver end
 abstract type AbstractDirectEigenSolver <: AbstractEigenSolver end
@@ -35,7 +36,7 @@ end
 
 function (l::DefaultEig)(J, nev; kwargs...)
     # we convert to Array so we can call l on small sparse matrices
-    F = eigen(__to_array_for_eig(J); sortby = l.which)
+    F = LA.eigen(__to_array_for_eig(J); sortby = l.which)
     nev2 = min(nev, length(F.values))
     # we perform a conversion to Complex numbers here as the type can 
     # change from Float to Complex along the branch, this would cause a bug
@@ -44,7 +45,7 @@ end
 
 function gev(l::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
-    F = eigen(__to_array_for_eig(A), __to_array_for_eig(B))
+    F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B))
     return Complex.(F.values), Complex.(F.vectors)
 end
 ####################################################################################################
@@ -212,8 +213,8 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
                                                          which = l.which,
                                                          l.kwargs...)
         else
-            F = factorize(l.sigma * LinearAlgebra.I - J)
-            Jmap = LinearMaps.LinearMap{eltype(J)}((y, x) -> ldiv!(y, F, x), size(J, 1);
+            F = LA.factorize(l.sigma * LinearAlgebra.I - J)
+            Jmap = LinearMaps.LinearMap{eltype(J)}((y, x) -> LA.ldiv!(y, F, x), size(J, 1);
                                         ismutating = true)
             decomp, history = ArnoldiMethod.partialschur(Jmap; nev, 
                                                          which = l.which,
@@ -247,9 +248,9 @@ function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
         # Solve Ax = λBx using Shift-invert method 
         # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
         σ = isnothing(l.sigma) ? 0 : l.sigma
-        P = lu(A - σ * B)
+        P = LA.lu(A - σ * B)
         𝒯 = eltype(A)
-        L = LinearMaps.LinearMap{𝒯}((y, x) -> ldiv!(y, P, B * x), size(A, 1), ismutating = true)
+        L = LinearMaps.LinearMap{𝒯}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
         decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
                                                          l.kwargs...)
         vals, ϕ = ArnoldiMethod.partialeigen(decomp)

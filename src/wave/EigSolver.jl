@@ -1,4 +1,5 @@
-using IterativeSolvers, Arpack, LinearAlgebra
+using IterativeSolvers, Arpack
+import LinearAlgebra
 
 # abstract type for generalised eigenvector
 abstract type AbstractGEigenSolver <: AbstractEigenSolver end
@@ -20,7 +21,7 @@ end
 
 function (l::DefaultGEig)(Jac, nev; kwargs...)
     # I put Array so we can call it on small sparse matrices
-    F = eigen(Array(Jac), l.B)
+    F = LA.eigen(Array(Jac), l.B)
     I = sortperm(F.values, by = l.which, rev = true)
     nev2 = min(nev, length(I))
     J = findall( abs.(F.values[I]) .< 100000)

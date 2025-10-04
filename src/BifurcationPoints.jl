@@ -246,7 +246,11 @@ function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}) #a⋅(p - pbif) +
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
     println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+    if bp isa PitchforkMap
+        println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+    else
+        println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+    end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end

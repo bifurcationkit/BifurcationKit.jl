@@ -10,6 +10,7 @@ module BifurcationKit
     import DataStructures # used for Polynomial predictor
     using ForwardDiff
     import Random: randn!
+    import LinearAlgebra as LA
 
     include("Accessors.jl")
     include("Problems.jl")

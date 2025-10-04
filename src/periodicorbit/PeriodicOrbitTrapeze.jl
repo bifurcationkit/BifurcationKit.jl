@@ -287,9 +287,9 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
 
         # this is for CuArrays.jl to work in the mode allowscalar(false)
         if on_gpu(pb)
-            return @views vcat(out[begin:end-1], dot(u[begin:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ)) # this is the phase condition
+            return @views vcat(out[begin:end-1], LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)) # this is the phase condition
         else
-            out[end] = @views dot(u[begin:end-1], pb.ϕ) - dot(pb.xπ, pb.ϕ) #dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
+            out[end] = @views LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ) #LA.dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
             return out
         end
 end
@@ -327,9 +327,9 @@ function jvp!(pb::PeriodicOrbitTrapProblem, out, u, par, du)
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
     if on_gpu(pb)
-        return @views vcat(out[begin:end-1], dot(du[begin:end-1], pb.ϕ))
+        return @views vcat(out[begin:end-1], LA.dot(du[begin:end-1], pb.ϕ))
     else
-        out[end] = @views dot(du[begin:end-1], pb.ϕ)
+        out[end] = @views LA.dot(du[begin:end-1], pb.ϕ)
         return out
     end
 end
@@ -705,7 +705,7 @@ function (A::AγOperatorSparseInplace)(orbitguess::AbstractVector, par)
     # compute the cyclic matrix
     A.prob(Val(:JacFullSparseInplace), A.Jc, orbitguess, par, A.indx; updateborder = false)
     # update the Lu decomposition
-    lu!(A.Jcfact, A.Jc)
+    LA.lu!(A.Jcfact, A.Jc)
     return A
 end
 
@@ -859,14 +859,14 @@ function _newton_trap(probPO::PeriodicOrbitTrapProblem,
         end
     else # bordered linear solvers
         if jacobianPO == BorderedLU()
-            Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = probPO)
+            Aγ = AγOperatorLU(N = N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = probPO)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  probPO(Val(:JacCyclicSparse), orbitguess, getparams(probPO.prob_vf))
             _indx = get_blocks(_J, N, M-1)
             # inplace modification of the jacobian _J
-            Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = lu(_J), prob = probPO, indx = _indx)
+            Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = LA.lu(_J), prob = probPO, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
 
         else # BorderedMatrixFree()
@@ -1000,14 +1000,14 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             )
     else
         if jacobianPO == BorderedLU()
-            Aγ = AγOperatorLU(N = N, Jc = lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
+            Aγ = AγOperatorLU(N = N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  prob(Val(:JacCyclicSparse), orbitguess, getparams(prob.prob_vf))
             _indx = get_blocks(_J, N, M-1)
             # inplace modification of the jacobian _J
-            Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = lu(_J), prob = prob, indx = _indx)
+            Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = LA.lu(_J), prob = prob, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
 
         else # BorderedMatrixFree

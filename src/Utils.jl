@@ -30,7 +30,7 @@ _empty(x::Matrix) = similar(x, 0, 0)
 closesttozero(ev) = ev[sortperm(ev, by = abs)]
 rightmost(ev) = ev[sortperm(ev, by = abs∘real)]
 getinterval(a, b) = (min(a, b), max(a, b))
-norm2sqr(x) = dot(x, x)
+norm2sqr(x) = LA.dot(x, x)
 ####################################################################################################
 # display eigenvals with color
 function print_ev(eigenvals, color = :black)
@@ -181,7 +181,7 @@ end
 apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
 
-apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = mul!(y, A, x)
+apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = LA.mul!(y, A, x)
 apply!(y, f, x) = f(y, x)
 
 # empty eigenvectors to save memory

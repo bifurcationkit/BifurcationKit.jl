@@ -256,7 +256,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
     dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, pars, _T).u, _x)
 
     # put the matrices by blocks
-    In = I(N)
+    In = LA.I(N)
     for ii in 1:M
         @views dflow(J[(ii-1)*N+1:(ii-1)*N+N, (ii-1)*N+1:(ii-1)*N+N], xc[:, ii], sh.ds[ii] * T)
         # we put the identity matrices

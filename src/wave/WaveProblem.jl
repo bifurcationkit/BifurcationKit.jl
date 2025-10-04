@@ -45,7 +45,7 @@ end
 
 function TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
     # ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
-    ∂u₀ = Tuple( mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
+    ∂u₀ = Tuple( LA.mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
     return TWProblem(prob_vf = prob, ∂ = ∂,
         u₀ = u₀,
         ∂u₀ = ∂u₀,
@@ -85,7 +85,7 @@ end
 function applyD(pb::TWProblem, out, ss, u)
     for (D, s) in zip(pb.∂, ss)
         # out .-=  s .* (D * u)
-        mul!(out, D, u, -s, 1)
+        LA.mul!(out, D, u, -s, 1)
     end
     out
 end
@@ -118,9 +118,9 @@ VFtw(pb::TWProblem, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s
     outu .= VF_plus_D(pb, u, s, pars)
     # we put the constraints
     for ii in 0:nc-1
-        out[end-ii] = dot(u, pb.∂u₀[ii+1])
+        out[end-ii] = LA.dot(u, pb.∂u₀[ii+1])
         if pb.DAE == 0
-            out[end-ii] -= dot(pb.u₀, pb.∂u₀[ii+1])
+            out[end-ii] -= LA.dot(pb.u₀, pb.∂u₀[ii+1])
         end
     end
     return out
@@ -149,7 +149,7 @@ residual(pb::TWProblem, x::AbstractVector, pars) = residual!(pb, similar(x), x, 
     applyD(pb, outu, ds, u)
     # we put the constraints
     for ii in 0:nc-1
-        out[end-ii] = dot(du, pb.∂u₀[ii+1])
+        out[end-ii] = LA.dot(du, pb.∂u₀[ii+1])
     end
     return out
 end
@@ -170,7 +170,7 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
     rightpart = zeros(N, nc)
     for ii in 1:nc
         J1 = J1 - s[ii] * pb.∂[ii]
-        mul!(view(rightpart, :, ii), pb.∂[ii], u, -1, 0)
+        LA.mul!(view(rightpart, :, ii), pb.∂[ii], u, -1, 0)
     end
     J2 = hcat(J1, rightpart)
     for ii in 1:nc
@@ -241,7 +241,7 @@ function continuation(prob::TWProblem,
     end
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
-    B = spdiagm(vcat(ones(N-1),0))
+    B = spdiagm(vcat(ones(N-1), 0))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convertToGEV(old_eigsolver, B)

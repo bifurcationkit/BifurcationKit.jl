@@ -58,13 +58,13 @@ $(TYPEDFIELDS)
     "Linear solver for the Bordering method."
     solver::S = nothing
 
-    "Tolerance for checking precision"
+    "Tolerance for checking precision."
     tol::Ttol = 1e-12
 
     "Check precision of the linear solve?"
     check_precision::Bool = true
 
-    "Number of recursions to achieve tolerance"
+    "Number of recursions to achieve tolerance."
     k::Int64 = 1
 
     @assert k > 0 "Number of recursions must be positive"
@@ -82,7 +82,7 @@ function (lbs::BorderingBLS)(J, dR,
                              R, n::𝒯,
                              ξu::𝒯ξ = one(𝒯), 
                              ξp::𝒯ξ = one(𝒯); 
-                             dotp = dot, 
+                             dotp = LA.dot, 
                              shift::𝒯s = nothing,
                              applyξu! = nothing # A CORRIGER
                              ) where {𝒯, 𝒯ξ <: Number, 𝒯s}
@@ -121,7 +121,7 @@ function BEC(lbs::BorderingBLS,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
              shift::𝒯s = nothing,
-             dotp = dot)  where {𝒯, 𝒯ξ, 𝒯s}
+             dotp = LA.dot)  where {𝒯, 𝒯ξ, 𝒯s}
     if isnothing(shift)
         x1, δx, success, itlinear = lbs.solver(J, R, dR)
     else
@@ -144,7 +144,7 @@ function residualBEC(lbs::BorderingBLS,
                             dX, dl,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
-                            shift::𝒯s = nothing, dotp = dot)  where {𝒯, 𝒯ξ, 𝒯s}
+                            shift::𝒯s = nothing, dotp = LA.dot)  where {𝒯, 𝒯ξ, 𝒯s}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
     # hence δx = R - (shift⋅I + J) * dX - dl * dR
@@ -194,7 +194,7 @@ function solve_bls_block(lbs::BorderingBLS,
 
     cx1 = zeros(eltype(d), m)
     for ii in eachindex(c)
-        cx1[ii] = dot(c[ii], x1)
+        cx1[ii] = LA.dot(c[ii], x1)
     end
 
     u2 = δd \ (rhsb - cx1)
@@ -247,7 +247,7 @@ function (lbs::MatrixBLS)(J, dR,
     # USE Hvcat
     # n = size(A, 1)
     # A = hvcat((n+1, n+1), A, dR, adjoint(dzu .* ξu), dzp * ξp) # much slower than the following
-    A = vcat(hcat(A, dR), hcat(adjoint(dzu .* ξu), dzp * ξp))
+    A = vcat(hcat(A, dR), hcat(LA.adjoint(dzu .* ξu), dzp * ξp))
 
     # apply a linear operator to ξu
     if isnothing(applyξu!) == false
@@ -375,7 +375,7 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x, p)`.
+This struct is used to provide a bordered linear solver based on a matrix free operator for the full system in `(x, p)`.
 
 ## Constructor
 
@@ -388,7 +388,7 @@ $(TYPEDFIELDS)
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
     "Linear solver for solving the extended linear system"
     solver::S
-    "What is the structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
+    "Structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used which is analogous to `vcat(x, p)`."
     use_bordered_array::Bool
 end
 
@@ -407,11 +407,11 @@ get_par_bls(x::BorderedArray, m::Int = 1)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  dzu, dzp::𝒯, 
-                                 R, n::𝒯,
+                                 R,   n::𝒯,
                                  ξu::𝒯ξ = 1, 
                                  ξp::𝒯ξ = 1; 
                                  shift = nothing, 
-                                 dotp = dot,
+                                 dotp = LA.dot,
                                  applyξu! = nothing
                                  ) where {𝒯 <: Number, 𝒯ξ, S}
     linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
@@ -426,7 +426,7 @@ function solve_bls_block(lbs::MatrixFreeBLS,
                                 b, c, 
                                 rhst, rhsb; 
                                 shift::𝒯s = nothing, 
-                                dotp = dot) where {𝒯s}
+                                dotp = LA.dot) where {𝒯s}
     linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
@@ -456,13 +456,13 @@ end
 LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), check_precision = false))
 
 function (l::LSFromBLS)(J, rhs)
-    F = factorize(J[begin:end-1, begin:end-1])
+    F = LA.factorize(J[begin:end-1, begin:end-1])
     x1, x2, flag, it = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs[begin:end-1]), rhs[end])
     return vcat(x1, x2), flag, sum(it)
 end
 
 function  (l::LSFromBLS)(J, rhs1, rhs2)
-    F = factorize(J[begin:end-1,begin:end-1])
+    F = LA.factorize(J[begin:end-1,begin:end-1])
     x1, x2, flag1, it1 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs1[begin:end-1]), rhs1[end])
 
     y1, y2, flag2, it2 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs2[begin:end-1]), rhs2[end])

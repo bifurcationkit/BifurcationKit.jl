@@ -188,24 +188,24 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTProblemMinimallyAugmented
 
     dJvdp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJvdp1, T(1/(2ϵ3)))
-    σ1p1 = -dot(w1, dJvdp1) / n
+    σ1p1 = -LA.dot(w1, dJvdp1) / n
 
     dJvdp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
                    apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJvdp2, T(1/(2ϵ3)))
-    σ1p2 = -dot(w1, dJvdp2) / n
+    σ1p2 = -LA.dot(w1, dJvdp2) / n
 
     dJv1dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v1),
                     apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v1)); rmul!(dJv1dp1, T(1/(2ϵ3)))
     dJv2dp1 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 + ϵ3)), v2),
                     apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens1, p1 - ϵ3)), v2)); rmul!(dJv2dp1, T(1/(2ϵ3)))
-    σ2p1 = -dot(w2, dJv1dp1) / n - dot(w1, dJv2dp1) / n
+    σ2p1 = -LA.dot(w2, dJv1dp1) / n - LA.dot(w1, dJv2dp1) / n
 
 
     dJv1dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v1),
                     apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v1)); rmul!(dJv1dp2, T(1/(2ϵ3)))
     dJv2dp2 = minus(apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 + ϵ3)), v2),
                     apply(jacobian(𝐁𝐓.prob_vf, x, set(par, lens2, p2 - ϵ3)), v2)); rmul!(dJv2dp2, T(1/(2ϵ3)))
-    σ2p2 = -dot(w2, dJv1dp2) / n - dot(w1, dJv2dp2) / n
+    σ2p2 = -LA.dot(w2, dJv1dp2) / n - LA.dot(w1, dJv2dp2) / n
     σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
     if 1==1
@@ -409,7 +409,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 
         # computation of zero eigenvector
         λ = zero(_getvectoreltype(br))
-        ζ0, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
+        ζ0, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev, verbose = false)
         ζ .= real.(ζ0)
         rmul!(ζ, 1/normN(ζ))
 

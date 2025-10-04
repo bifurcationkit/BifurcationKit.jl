@@ -36,7 +36,7 @@ function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }
     # put the PD boundary condition
     @set Jac.jacpb = copy(Jac.jacpb)
     J = Jac.jacpb
-    J[end-N:end-1, 1:N] .= I(N)
+    J[end-N:end-1, 1:N] .= LA.I(N)
     @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
 

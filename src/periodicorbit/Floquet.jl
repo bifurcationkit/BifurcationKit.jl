@@ -133,13 +133,13 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
     N = div(length(JacSH.x) - 1, M)
     mono = copy(J[1:N, 1:N])
     if M == 1
-        return mono + I
+        return mono + LA.I
     end
     tmp = similar(mono)
     r = N
     for ii = 1:M-1
         # mono .= J[r+1:r+N, r+1:r+N] * mono
-        @views mul!(tmp, J[r+1:r+N, r+1:r+N], mono)
+        @views LA.mul!(tmp, J[r+1:r+N, r+1:r+N], mono)
         mono .= tmp
         r += N
     end
@@ -148,7 +148,11 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOSh{ <: ShootingProblem}, x::AbstractVector, par, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, 
+                                powrap::WrapPOSh{ <: ShootingProblem}, 
+                                x::AbstractVector, 
+                                par, 
+                                ζ::AbstractVector)
     # get the shooting problem
     sh = powrap.prob
 
@@ -229,7 +233,7 @@ function MonodromyQaD(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}) where
     r2 = N
     for ii = 1:M-1
         # mono .= J[r+1:r+N, r+1:r+N] * mono
-        @views mul!(tmp, J[r1+1:r1+N, r2+1:r2+N], mono)
+        @views LA.mul!(tmp, J[r1+1:r1+N, r2+1:r2+N], mono)
         mono .= tmp
         r1 = mod(r1 + N, Nj)
         r2 += N
@@ -263,7 +267,6 @@ end
         dE!(psh.section, outc, outbar, ii)
         outc .= diff_poincare_map(psh, xc, p, outc, ii)
         # check to <outc, normals[ii]> = 0
-        # println("--> ii=$ii, <out, normali> = ", dot(outc, sh.section.normals[ii]))
         dR!(psh.section, outbar, outc, ii)
         push!(out_a, copy(outbar))
     end
@@ -366,14 +369,14 @@ function MonodromyQaD(JacFW::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp})  wher
 
     u0c = get_time_slices(u0, N, M)
 
-    @views mono = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, 1], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, M-1], par))
+    @views mono = Array(LA.I - h/2 * (jacobian(poPb.prob_vf, u0c[:, 1], par))) \ Array(LA.I + h/2 * jacobian(poPb.prob_vf, u0c[:, M-1], par))
     temp = similar(mono)
 
     for ii in 2:M-1
         # for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
         # also I - h/2 .* J seems to hurt (a little) the performances
         h =  T * get_time_step(poPb, ii)
-        @views temp = Array(I - h/2 * (jacobian(poPb.prob_vf, u0c[:, ii], par))) \ Array(I + h/2 * jacobian(poPb.prob_vf, u0c[:, ii-1], par))
+        @views temp = Array(LA.I - h/2 * (jacobian(poPb.prob_vf, u0c[:, ii], par))) \ Array(LA.I + h/2 * jacobian(poPb.prob_vf, u0c[:, ii-1], par))
         mono .= temp * mono
     end
     return mono
@@ -408,7 +411,7 @@ struct FloquetGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
         eigls2 = check_floquet_options(eigls)
         # build the mass matrix
         B = array_zeros(ntot, ntot)
-        B[end-n+1:end, end-n+1:end] .= I(n)
+        B[end-n+1:end, end-n+1:end] .= LA.I(n)
         return new{typeof(eigls2), typeof(B)}(eigls2, B)
     end
     FloquetGEV(eigls::FloquetGEV) = eigls
@@ -422,9 +425,9 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
     n = get_state_dim(prob)
     J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)
-    J[end-n+1:end, 1:n] .= I(n)
+    J[end-n+1:end, 1:n] .= LA.I(n)
     # case of v(1)
-    J[end-n+1:end, end-n+1:end] .= -I(n)
+    J[end-n+1:end, end-n+1:end] .= (-1) .* J[end-n+1:end, 1:n]
     # solve generalized eigenvalue problem
     values, vecs = gev(fl.eigsolver, J, fl.B, nev)
     # remove infinite eigenvalues
@@ -501,7 +504,7 @@ end
     P1 = Jext_gauss[1:n, 1:n]
     P0 = Jext_gauss[1:n, n+1:2n]
 
-    vals_b = eigvals(P0, -P1)
+    vals_b = LA.eigvals(P0, -P1)
     logvals = Complex{𝒯}[]
 
     for ev in vals_b
@@ -545,20 +548,20 @@ end
     Jcop[end-N:end-1,end-N:end-1] .= In
     Jcop[end-N:end-1,1:N] .= (-1) .* In
     Jcop[end, end] = J[end, end]
-    Lₜ = LowerTriangular(copy(blockⱼ))
+    Lₜ = LA.LowerTriangular(copy(blockⱼ))
     for 𝐢 in 1:Ntst
         blockⱼ .= J[rg, rg .+ N]
-        F = lu!(blockⱼ)
+        F = LA.lu!(blockⱼ)
         p = F.p
         # Lₜ = LowerTriangular(F.L) # zero allocation?
         Lₜ.data .= F.factors
         for i in axes(Lₜ, 1); Lₜ[i,i] = one(𝒯); end
 
         # we put the blocks in Jcop
-        Jcop[rg, rg .+ N] .= UpperTriangular(F.factors)
+        Jcop[rg, rg .+ N] .= LA.UpperTriangular(F.factors)
         # Jcop[rg, rN] .= F.L \ (F.P * J[rg, rN])
         blockₙ .= J[rg, rN][p,:]
-        ldiv!(blockₙ₂, Lₜ, blockₙ)
+        LA.ldiv!(blockₙ₂, Lₜ, blockₙ)
         Jcop[rg, rN] .= blockₙ₂
 
         rg = rg .+ nbcoll
@@ -609,14 +612,14 @@ end
     # Jcop[end-N:end-1,end-N:end-1] .= In
     # Jcop[end-N:end-1,1:N] .= (-1) .* In
     # Jcop[end, end] = J[end, end]
-    Lₜ = LowerTriangular(copy(blockⱼ))
+    Lₜ = LA.LowerTriangular(copy(blockⱼ))
 
     first_column_block = Matrix{𝒯}[]
     upper_triangular = SparseMatrixCSC{𝒯, Int64}[]
 
     for 𝐢 in 1:Ntst
         # blockⱼ .= J[rg, rg .+ N]
-        F = lu(Array(J[rg, rg .+ N]))
+        F = LA.lu(Array(J[rg, rg .+ N]))
         p = F.p
         # Lₜ = LowerTriangular(F.L) # zero allocation?
         Lₜ = F.L
@@ -667,7 +670,7 @@ function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     factor = iseven(Ntst) ? 1 : -1
 
     # floquet multipliers
-    vals = eigvals(M)
+    vals = LA.eigvals(M)
 
     nev = min(N, nev)
     logvals = @. log(Complex(factor * vals))
