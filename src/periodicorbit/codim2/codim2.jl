@@ -171,12 +171,12 @@ __wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
 __wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},
-                    ind_bif::Int,
-                    options_cont::ContinuationPar,
-                    probPO::AbstractPeriodicOrbitProblem;
-                    detect_codim2_bifurcation::Int = 0,
-                    autodiff = true,
-                    kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+                      ind_bif::Int,
+                      options_cont::ContinuationPar,
+                      probPO::AbstractPeriodicOrbitProblem;
+                      detect_codim2_bifurcation::Int = 0,
+                      autodiff = true,
+                      kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
     nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)
@@ -185,7 +185,8 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     return _continuation(nf, br, _contParams, probPO; kwargs...)
 end
 
-function _continuation(gh::Bautin, br::AbstractResult{Tkind, Tprob},
+function _continuation(gh::Bautin, 
+                        br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
                         probPO::AbstractPeriodicOrbitProblem;
                         alg = br.alg,

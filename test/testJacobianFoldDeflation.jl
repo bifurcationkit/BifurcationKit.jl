@@ -70,6 +70,9 @@ res_fd =  J_fold_fd \ rhs
 
 # test against analytical jacobian
 _fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
+BK.has_adjoint(_fold_ma_problem)
+BK.is_symmetric(_fold_ma_problem)
+BK.residual!(_fold_ma_problem, zero(Bd2Vec(foldpt)) ,Bd2Vec(foldpt), par_chan)
 J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
 @test norminf(J_ana - J_fold_fd) < 1e-5
 

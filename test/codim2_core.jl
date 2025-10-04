@@ -9,3 +9,8 @@ let
     @test lens1 == getlens(prob)
     @test BK.get_lenses(wrap) == (lens1, lens2)
 end
+
+begin
+    hh = BK.HopfHopf(0,zeros(2),((@optic _[1]), (@optic _[2])),zeros(1),zeros(1),(λ1 = 0, λ2 = 0),:nothing)
+    show(stdout, hh)
+end

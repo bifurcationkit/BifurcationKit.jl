@@ -416,6 +416,14 @@ let
         # update the BT point using newton and MA formulation
         solbt = BK.newton_bt(sn_codim2, 1; options = NewtonPar(sn_codim2.contparams.newton_options, verbose = true), start_with_eigen = true, jacobian_ma = BK.AutoDiff())
         @assert BK.converged(solbt)
+        _prob_bt = solbt.prob.VF.F
+        BK.has_hessian(_prob_bt)
+        BK.is_symmetric(_prob_bt)
+        BK.has_adjoint(_prob_bt)
+        BK.has_adjoint_MF(_prob_bt)
+        BK.isinplace(_prob_bt)
+        BK.getvec(zeros(2), _prob_bt)
+        BK.getp(zeros(2), _prob_bt)
     end
 end
 ####################################################################################################

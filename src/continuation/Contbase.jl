@@ -30,6 +30,9 @@ Base.empty!(alg::AbstractContinuationAlgorithm) = alg
 Base.empty!(alg::AbstractTangentComputation) = alg
 # Base.copy(::AbstractContinuationAlgorithm) = throw("Not defined. Please define a copy method for your continuation algorithm")
 
+# name to be print in show(::AbstractBranch)
+_shortname(alg::AbstractContinuationAlgorithm) = typeof(alg).name.name
+
 # we need to be able to reset / empty the predictors when locating bifurcation points and when doing automatic branch switching
 function Base.empty(alg::AbstractContinuationAlgorithm)
     alg2 = deepcopy(alg)

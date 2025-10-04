@@ -120,21 +120,21 @@ end
 """
 cache to remove allocations from PeriodicOrbitOCollProblem
 """
-struct POCollCache{T}
-    gj::DiffCache{Matrix{T}, Vector{T}}
-    gi::DiffCache{Matrix{T}, Vector{T}}
-    ∂gj::DiffCache{Matrix{T}, Vector{T}}
-    uj::DiffCache{Matrix{T}, Vector{T}}
-    vj::DiffCache{Matrix{T}, Vector{T}}
-    tmp::DiffCache{Vector{T}, Vector{T}}
-    ∇phase::Vector{T}
+struct POCollCache{𝒯}
+    gj::DiffCache{Matrix{𝒯},  Vector{𝒯}}
+    gi::DiffCache{Matrix{𝒯},  Vector{𝒯}}
+    ∂gj::DiffCache{Matrix{𝒯}, Vector{𝒯}}
+    uj::DiffCache{Matrix{𝒯},  Vector{𝒯}}
+    vj::DiffCache{Matrix{𝒯},  Vector{𝒯}}
+    tmp::DiffCache{Vector{𝒯}, Vector{𝒯}}
+    ∇phase::Vector{𝒯}
     In::Matrix{Bool}
 end
 
 """
 $(SIGNATURES)
 
-In case `save_mem = true`, we do not allocate the identity matrix.
+[Internal] In case `save_mem = true`, we do not allocate the identity matrix.
 """
 function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     # in case save_mem = true, we do not allocate the identity matrix
@@ -151,7 +151,11 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
 end
 ####################################################################################################
 
-const _pocoll_jacobian_types = (AutoDiffDense(), DenseAnalytical(), FullSparse(), DenseAnalyticalInplace(), FullSparseInplace())
+const _pocoll_jacobian_types = (AutoDiffDense(),
+                                DenseAnalytical(),
+                                FullSparse(),
+                                DenseAnalyticalInplace(),
+                                FullSparseInplace())
 
 """
 $(TYPEDEF)
@@ -278,7 +282,7 @@ The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProb
     return n * (1 + m * Ntst)
 end
 
-@inline Base.eltype(::PeriodicOrbitOCollProblem{Tp, Tj, T}) where {Tp, Tj, T} = T
+@inline Base.eltype(::PeriodicOrbitOCollProblem{𝒯p, 𝒯j, 𝒯}) where {𝒯p, 𝒯j, 𝒯} = 𝒯
 """
     L, ∂L = get_Ls(pb)
 
@@ -333,11 +337,11 @@ $(TYPEDSIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`. Used also in `generate_ci_problem`.
 """
-function generate_solution(pb::PeriodicOrbitOCollProblem{Tp, Tj, T}, orbit, period) where {Tp, Tj, T}
+function generate_solution(pb::PeriodicOrbitOCollProblem{𝒯p, 𝒯j, 𝒯}, orbit, period) where {𝒯p, 𝒯j, 𝒯}
     n, _m, Ntst = size(pb)
     ts = get_times(pb)
     Nt = length(ts)
-    ci = zeros(T, n, Nt)
+    ci = zeros(𝒯, n, Nt)
     for (l, t) in pairs(ts)
         ci[:, l] .= orbit(t * period)
     end
@@ -422,20 +426,20 @@ $(SIGNATURES)
 @views function ∫(pb::PeriodicOrbitOCollProblem, 
                     uc::AbstractMatrix, 
                     vc::AbstractMatrix,
-                    T = one(eltype(uc)))
-    Ty = promote_type(eltype(uc), eltype(vc)) 
-    phase = zero(Ty)
+                    period = one(eltype(uc)))
+    𝒯y = promote_type(eltype(uc), eltype(vc)) 
+    phase = zero(𝒯y)
 
     n, m, Ntst = size(pb)
     L, ∂L = get_Ls(pb.mesh_cache)
     ω = pb.mesh_cache.gauss_weight
     mesh = pb.mesh_cache.τs
 
-    guj = zeros(Ty, n, m)
-    uj  = zeros(Ty, n, m+1)
+    guj = zeros(𝒯y, n, m)
+    uj  = zeros(𝒯y, n, m+1)
 
-    gvj = zeros(Ty, n, m)
-    vj  = zeros(Ty, n, m+1)
+    gvj = zeros(𝒯y, n, m)
+    vj  = zeros(𝒯y, n, m+1)
 
     rg = UnitRange(1, m+1)
     @inbounds for j in 1:Ntst
@@ -446,16 +450,16 @@ $(SIGNATURES)
         end
         rg = rg .+ m
     end
-    return phase * T
+    return phase * period
 end
 
 function ∫(pb::PeriodicOrbitOCollProblem,
             u::AbstractVector,
             v::AbstractVector,
-            T = one(eltype(uc)))
+            period = one(eltype(uc)))
     uc = get_time_slices(pb, u)
     vc = get_time_slices(pb, v)
-    ∫(pb, uc, vc, T)
+    return ∫(pb, uc, vc, period)
 end
 
 """

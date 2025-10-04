@@ -273,7 +273,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     printstyled(io, get_lens_symbol(br), color=:cyan, bold = true)
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
     print(io, prefix * "├─ Algo: ")
-    printstyled(io, typeof(br.alg).name.name, "\n", color=:cyan, bold = true)
+    printstyled(io, _shortname(br.alg), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
         println(io, prefix * "└─ Special points:\n")
         for ii in eachindex(br.specialpoint)
@@ -432,9 +432,6 @@ function _cat!(br::ContResult, br2::ContResult)
     end
     return br
 end
-
-# _catrev(br1::ContResult, br2::ContResult) = _merge!(_reverse(br1), br2)
-# _cat(br1::ContResult, br2::ContResult) = _merge!(deepcopy(br1), br2)
 
 """
 Same as _cat! but determine the ordering so that the branches merge properly

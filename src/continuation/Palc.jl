@@ -174,6 +174,7 @@ end
     Secant Tangent predictor
 """
 struct Secant <: AbstractTangentComputation end
+_shortname(::PALC{Secant}) = "PALC [Secant]"
 
 # This function is used for initialization in iterate_from_two_points
 function _secant_tangent!(τ::M, 
@@ -212,6 +213,7 @@ gettangent!(state::AbstractContinuationState,
 struct Bordered <: AbstractTangentComputation end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Bordered, ::Bool) = nothing
+_shortname(::PALC{Bordered}) = "PALC [Bordered]"
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
@@ -306,6 +308,7 @@ mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <:
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
+_shortname(::PALC{Polynomial}) = "PALC [Polynomial]"
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"

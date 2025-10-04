@@ -30,6 +30,8 @@ internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.t
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 @inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
 
+_shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
+
 """
 $(SIGNATURES)
 """
