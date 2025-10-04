@@ -1,7 +1,7 @@
 @enum MoorePenroseLS direct=1 pInv=2 iterative=3
 
 """
-    Moore-Penrose predictor / corrector
+$(TYPEDEF)
 
 Moore-Penrose continuation algorithm.
 

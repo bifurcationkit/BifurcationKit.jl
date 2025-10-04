@@ -10,10 +10,10 @@ AF = Array{TY}
 
 using CUDA
 CUDA.allowscalar(false)
-import LinearAlgebra: mul!, axpby!
-mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
-mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
-axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
+# import LinearAlgebra: mul!, axpby!
+# mul!(x::CuArray, y::CuArray, α::T) where {T <: Number} = (x .= α .* y)
+# mul!(x::CuArray, y::T, α::CuArray) where {T <: Number} = (x .= α .* y)
+# axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+ b .* Y)
 
 TY = Float64
 AF = CuArray{TY}

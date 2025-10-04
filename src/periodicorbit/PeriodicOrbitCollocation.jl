@@ -1231,13 +1231,15 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     sk[Ntst] = 2normE(vm[end]) / (τsT[end] - τsT[end-2])
     ############
     # monitor function
-    ϕ = sk.^(1/m)
+    ϕ = sk.^(1/(m+1))
     # if the monitor function is too small, don't do anything
     if maximum(ϕ) < 1e-7
         return (;success = true, newmesh = nothing, ϕ)
     end
     ϕ = max.(ϕ, maximum(ϕ) / K)
-    @assert length(ϕ) == Ntst "Error. Please open an issue of the website of BifurcationKit.jl"
+    if length(ϕ) != Ntst
+        error("Error. Please open an issue of the website of BifurcationKit.jl")
+    end
     # compute θ = ∫ϕ but also all intermediate values
     # these intermediate values are useful because the integral is piecewise linear
     # and equipartition is analytical
