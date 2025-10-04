@@ -54,7 +54,7 @@ $(TYPEDFIELDS)
 - you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
 
 """
-@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
+@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol, Tdot} <: AbstractBorderedLinearSolver
     "Linear solver for the Bordering method."
     solver::S = nothing
 
@@ -66,6 +66,9 @@ $(TYPEDFIELDS)
 
     "Number of recursions to achieve tolerance."
     k::Int64 = 1
+
+    "Inner product used in by the solver."
+    dot::Tdot = LA.dot
 
     @assert k > 0 "Number of recursions must be positive"
 end
@@ -82,7 +85,7 @@ function (lbs::BorderingBLS)(J, dR,
                              R, n::𝒯,
                              ξu::𝒯ξ = one(𝒯), 
                              ξp::𝒯ξ = one(𝒯); 
-                             dotp = LA.dot, 
+                             dotp = lbs.dot, 
                              shift::𝒯s = nothing,
                              applyξu! = nothing # A CORRIGER
                              ) where {𝒯, 𝒯ξ <: Number, 𝒯s}
@@ -121,7 +124,7 @@ function BEC(lbs::BorderingBLS,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
              shift::𝒯s = nothing,
-             dotp = LA.dot)  where {𝒯, 𝒯ξ, 𝒯s}
+             dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
     if isnothing(shift)
         x1, δx, success, itlinear = lbs.solver(J, R, dR)
     else
