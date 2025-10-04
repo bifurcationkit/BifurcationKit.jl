@@ -72,7 +72,7 @@ plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p.α .* d2Nl.(x; b = b) .* u .* v
 
-prob2 = re_make(prob, d2F = d2F)
+prob2 = re_make(prob; d2F)
 
 outfold = @time newton((@set br.prob = prob2), indfold)
 BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")

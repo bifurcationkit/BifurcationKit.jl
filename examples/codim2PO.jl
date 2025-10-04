@@ -34,7 +34,6 @@ alg = Rodas5()
 sol = OrdinaryDiffEq.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
 sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
-
 plot(sol)
 ################################################################################
 function recordFromSolution(x, p; k...)
@@ -68,7 +67,7 @@ argspo = (record_from_solution = recordFromSolution,
     plot_solution = plotSolution
     )
 ################################################################################
-probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = BK.DenseAD(), update_section_every_step = 0), prob_bif, sol, 2.)
+probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = BK.AutoDiffDense(), update_section_every_step = 0), prob_bif, sol, 2.)
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 

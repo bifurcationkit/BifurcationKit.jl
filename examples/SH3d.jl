@@ -1,7 +1,7 @@
 using Revise, KrylovKit
 using GLMakie
 using BifurcationKit
-using LinearAlgebra, SparseArrays#, LinearMaps
+using LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
 Makie.inline!(true)
@@ -63,8 +63,8 @@ d2F_sh(u, p, dx1, dx2) = (2 .* p.ν .* dx2 .- 6 .* dx2 .* u) .* dx1
 d3F_sh(u, p, dx1, dx2, dx3) = (-6 .* dx2 .* dx3) .* dx1
 
 # these types are useful to switch to GPU
-TY = Float64
-AF = Array{TY}
+const TY = Float64
+const AF = Array{TY}
 ####################################################################################################
 Nx = Ny = Nz = 22; N = Nx*Ny*Nz
 lx = ly = lz = pi
@@ -129,14 +129,14 @@ println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
 contour3dMakie(sol0)
 contour3dMakie(sol_hexa.u)
 
-@time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
+@time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10);
 ###################################################################################################
-struct SH3dEigMB{Tf, Tσ} <: BK.AbstractEigenSolver
+struct SH3dEigMatrixBased{Tf, Tσ} <: BK.AbstractEigenSolver
     σ::Tσ
     f::Tf
 end
 
-function (sheig::SH3dEigMB)(J, nev::Int; verbosity = 0, kwargs...)
+function (sheig::SH3dEigMatrixBased)(J, nev::Int; verbosity = 0, kwargs...)
     @info keys(kwargs)
     σ = sheig.σ
     f = sheig.f
@@ -150,16 +150,16 @@ function (sheig::SH3dEigMB)(J, nev::Int; verbosity = 0, kwargs...)
     # return vals2[Ind], vecs[:, Ind], true, info
     return vals2[Ind], vecs[Ind], true, info
 end
-BifurcationKit.geteigenvector(eigsolve::SH3dEigMB, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
-eigSH3d = SH3dEigMB(0.0, lu(L1))
+BifurcationKit.geteigenvector(eigsolve::SH3dEigMatrixBased, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
+eigSH3d = SH3dEigMatrixBased(0.0, lu(L1))
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
-# @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10)
+# @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10);
 ###################################################################################################
 optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = NewtonPar(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 3, nev = 15, n_inversion = 4, plot_every_step  = 1)
 
 br = @time continuation(
     prob, PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
-    plot = true, verbosity = 1,
+    plot = true, verbosity = 3,
     normC = norminf,
     event = BK.FoldDetectEvent,
     )

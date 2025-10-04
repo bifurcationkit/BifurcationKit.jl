@@ -1,6 +1,7 @@
 # example taken from Aragón, J. L., R. A. Barrio, T. E. Woolley, R. E. Baker, and P. K. Maini. “Nonlinear Effects on Turing Patterns: Time Oscillations and Chaos.” Physical Review E 86, no. 2 (August 8, 2012): 026201. https://doi.org/10.1103/PhysRevE.86.026201.
 using Revise
-using ForwardDiff, DifferentialEquations
+using ForwardDiff
+import OrdinaryDiffEq as ODE
 using BifurcationKit, LinearAlgebra, Plots, SparseArrays
 const BK = BifurcationKit
 
@@ -20,7 +21,6 @@ function NL!(dest, u, p, t = 0.)
         dest[ii] = f(u1, u2, p)
         dest[ii+N] = g(u1, u2, p)
     end
-
     return dest
 end
 
@@ -44,9 +44,6 @@ end
 dFbr(x, p, dx) = dFbr!(similar(dx), x, p, dx)
 
 Jbr(x, p) = sparse(ForwardDiff.jacobian(x -> Fbr(x, p), x))
-
-using SparseDiffTools
-
 ####################################################################################################
 N = 100
 n = 2N
@@ -93,8 +90,8 @@ br_po = @time continuation(
     br, 1,
     # arguments for continuation
     optcontpo,
-    PeriodicOrbitTrapProblem(M = M, jacobian = BK.FullSparseInplace());
-    # PeriodicOrbitOCollProblem(30, 4, jacobian = BK.FullSparseInplace());
+    # PeriodicOrbitTrapProblem(M = M, jacobian = BK.FullSparseInplace());
+    PeriodicOrbitOCollProblem(30, 4, jacobian = BK.FullSparseInplace());
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess
@@ -139,14 +136,14 @@ get_normal_form(br_po_pd, 5, verbose = true)
 ####################################################################################################
 # shooting
 par_br_hopf = @set par_br.C = -0.86
-f1 = MatrixOperator(par_br.Δ)
+f1 = ODE.MatrixOperator(par_br.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
+prob_sp = ODE.SplitODEProblem(f1, f2, solc0, (0.0, 280.0), par_br_hopf)
 
-sol = @time DifferentialEquations.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
+sol = @time ODE.solve(prob_sp, ODE.ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1, progress = true)
 
-prob_ode = ODEProblem(Fbr, solc0, (0.0, 280.0), par_br_hopf)
-sol = @time DifferentialEquations.solve(prob_ode, Rodas4P(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
+prob_ode = ODE.ODEProblem(Fbr, solc0, (0.0, 280.0), par_br_hopf)
+sol = @time ODE.solve(prob_ode, ODE.Rodas4P(); abstol=1e-14, reltol=1e-7, dt = 0.1, progress = true)
 orbitsection = Array(sol[:,[end]])
 # orbitsection = orbitguess[:, 1]
 
@@ -154,7 +151,7 @@ initpo = vcat(vec(orbitsection), 3.)
 
 BK.plot_periodic_shooting(initpo[1:end-1], 1);title!("")
 
-probSh = ShootingProblem(prob_sp, ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true,
+probSh = ShootingProblem(prob_sp, ODE.ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true,
     lens = (@optic _.C), par = par_br_hopf, jacobian = BK.FiniteDifferencesMF())
 # probSh = ShootingProblem(prob_ode, Rodas4P(), [sol(280.0)]; abstol=1e-10, reltol=1e-4, parallel = true)
 
@@ -193,12 +190,12 @@ plot(br_po_sh, br, label = "")
 ####################################################################################################
 # shooting Period Doubling
 par_br_pd = @set par_br.C = -1.32
-f1 = MatrixOperator(par_br.Δ)
+f1 = ODE.MatrixOperator(par_br.Δ)
 f2 = NL!
-prob_sp = SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd; abstol=1e-14, reltol=1e-14, dt = 0.01)
+prob_sp = ODE.SplitODEProblem(f1, f2, solc0, (0.0, 300.0), par_br_pd; abstol=1e-14, reltol=1e-14, dt = 0.01)
 # solution close to the PD point.
 
-solpd = @time DifferentialEquations.solve(prob_sp, ETDRK2(krylov=true), progress = true)
+solpd = @time ODE.solve(prob_sp, ODE.ETDRK2(krylov=true), progress = true)
     # heatmap(sol.t, X, sol[1:N,:], color=:viridis, xlim=(20,280.0))
 
 orbitsectionpd = Array(solpd[:,end-100])
@@ -216,7 +213,7 @@ ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, v
 # ls = GMRESKrylovKit(verbose = 0, dim = 200, atol = 1e-9, rtol = 1e-5)
 optn = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 12, linsolver = ls)
 # deflationOp = BK.DeflationOperator(2 (x,y) -> dot(x[1:end-1], y[1:end-1]),1.0, [outpo])
-outposh_pd = @time BK.newton(BK.set_params_po(probSh,par_br_pd), initpo_pd, optn;
+outposh_pd = @time BK.newton((@set probSh.par = par_br_pd), initpo_pd, optn;
         # callback = (state; kwargs...) -> (@show state.x[end];true),
         normN = norminf)
 BK.converged(outposh_pd) && printstyled(color=:red, "--> T = ", outposh_pd.u[end])
@@ -247,7 +244,7 @@ opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 12, linsolver  =
 optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1.8, max_steps = 50, newton_options = (@set opt_po.eigsolver = eig), nev = 20, tol_stability = 1e-2, detect_bifurcation = 3, n_inversion = 8)
 
 probPO = ShootingProblem(1, prob_sp,
-                        ETDRK2(krylov=true); 
+                        ODE.ETDRK2(krylov=true); 
                         abstol=1e-14, reltol=1e-14,
                         jacobian = BK.FiniteDifferencesMF(),
                         # jacobian = BK.AutoDiffMF(),
@@ -328,8 +325,3 @@ br_po_pdcodim2 = @time continuation(
     normC = norminf)
 ####################################################################################################
 # aBS Poincare Shooting
-
-br_po.contparams.newton_options.linsolver.solver.N
-br_po_pd.contparams.newton_options.linsolver.solver.N
-
-####################################################################################################

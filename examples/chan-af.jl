@@ -1,30 +1,19 @@
 using Revise
-using ApproxFun, LinearAlgebra
+using ApproxFun
 using BifurcationKit, Plots
 const BK = BifurcationKit
 ####################################################################################################
 # specific methods for ApproxFun
-import Base: eltype, similar, copyto!, length
-import LinearAlgebra: mul!, rmul!, axpy!, axpby!, dot, norm
+import Base: length, copyto!
+import LinearAlgebra: norm
 
-similar(x::ApproxFun.Fun, T) = (copy(x))
-similar(x::ApproxFun.Fun) = copy(x)
-mul!(w::ApproxFun.Fun, v::ApproxFun.Fun, α) = (w .= α * v)
-
-eltype(x::ApproxFun.Fun) = eltype(x.coefficients)
 length(x::ApproxFun.Fun) = length(x.coefficients)
+copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = x .= y
 
-dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
-
-# do not put y .= a .* x .+ y, this puts a lot of coefficients!
-axpy!(a, x::ApproxFun.Fun, y::ApproxFun.Fun) = (y .= a * x + y)
-axpby!(a::Float64, x::ApproxFun.Fun, b::Float64, y::ApproxFun.Fun) = (y .= a * x + b * y)
-rmul!(y::ApproxFun.Fun, b::Float64) = (y.coefficients .*= b; y)
-rmul!(y::ApproxFun.Fun, b::Bool) = b == true ? y : (y.coefficients .*= 0; y)
-
-# copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( copyto!(x.coefficients, y.coefficients);x)
-copyto!(x::ApproxFun.Fun, y::ApproxFun.Fun) = ( (x.coefficients .= (y.coefficients);x))
-
+BK.VI.inner(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y)
+BK.VI.scale!(y::ApproxFun.Fun, α::Number) = (y.coefficients .*= α; y)
+BK.VI.scalartype(x::ApproxFun.Fun) = eltype(x.coefficients)
+BK.VI.zerovector(x::ApproxFun.Fun) = (x.coefficients .= 0; x)
 ####################################################################################################
 N(x; a = 0.5, b = 0.01) = 1 + (x + a * x^2) / (1 + b * x^2)
 dN(x; a = 0.5, b = 0.01) = (1 - b * x^2 + 2 * a * x)/(1 + b * x^2)^2
@@ -70,23 +59,28 @@ plot(sol.u, label="Solution")
 
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 20, newton_options = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = true), max_steps = 300, detect_bifurcation = 0)
 
+alg = PALC(bls = BorderingBLS(solver = optnew.linsolver, check_precision = false))
+
 br = @time continuation(
-    prob, PALC(bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
+    prob, 
+    alg,
+    optcont;
     plot = true, verbosity = 2,
     normC = norm)
+plot(br)
 ####################################################################################################
 # Example with deflation technique
-deflationOp = DeflationOperator(2.0, (x, y) -> dot(x, y), 1.0, [sol.u])
+deflationOp = DeflationOperator(2.0, (x, y) -> BK.VI.inner(x, y), 1.0, [sol.u])
 par_def = @set par_af.α = 3.3
 
 optdef = setproperties(optnew; tol = 1e-9, max_iterations = 1000)
 
 solp = copy(sol.u)
-    solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
+solp.coefficients .*= (1 .+ 0.41*rand(length(solp.coefficients)))
 
 plot(sol.u);plot!(solp)
 
-outdef1 = @time BK.newton(BK.re_make(prob, u0 = solp), deflationOp, optdef)
+outdef1 = @time BK.solve(BK.re_make(prob, u0 = solp), deflationOp, optdef)
 BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(deflationOp.roots)
@@ -94,11 +88,10 @@ plot(deflationOp.roots)
 # other dot product
 # dot(x::ApproxFun.Fun, y::ApproxFun.Fun) = sum(x * y) * length(x) # gives 0.1
 
-optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = true), max_steps = 300, θ = 0.2, detect_bifurcation = 0)
+optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, plot_every_step = 10, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = true), max_steps = 300, detect_bifurcation = 0)
 
     br = @time continuation(
-        prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
-        dotPALC = BK.DotTheta(dot),
+        prob, PALC(bls=BorderingBLS(solver = optnew.linsolver, check_precision = false), θ = 0.2), optcont;
         plot = true,
         verbosity = 2,
         normC = norminf)
@@ -108,9 +101,10 @@ br = @time continuation(
     prob, PALC(tangent=Bordered(), bls=BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont,
     plot = true,)
 ####################################################################################################
+# fold continuation
 indfold = 2
 outfold = @time BK.newton(
         br, indfold, #index of the fold point
         bdlinsolver = BorderingBLS(solver = DefaultLS(false), check_precision = false)
         )
-    BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")
+BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold][3],"\n")

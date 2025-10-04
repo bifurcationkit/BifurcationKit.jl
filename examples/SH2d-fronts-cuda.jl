@@ -78,14 +78,14 @@ sol0 = sol0 .- 0.25
 sol0 .*= 1.7
 # heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs; shift = 0., rtol = 1e-8)
+function (sh::SHLinearOp)(J, rhs; shift = zero(eltype(rhs)), rtol = convert(eltype(rhs), 1e-8))
     u, l, ν = J
-    udiag = l .+ 1 .+ (2ν) .* u .- 3 .* u.^2 .- shift
+    udiag = @. l + 1 + (2ν) * u - 3 * u^2 - shift
     tmp = copy(udiag); dudiag = copy(udiag)
     function h(du)
         dudiag .= udiag .* du
         apply!(tmp, sh, dudiag, sh.l1, /)
-        (-1) .* du .+ tmp
+        return (-1) .* du .+ tmp
     end
     res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 6, issymmetric = true, krylovdim = 50, atol = 1e-12)
     return res, true, info.numops

@@ -110,7 +110,8 @@ kwargsC = (verbosity = 3,
     plot = true,
     callback_newton = cb,
     finalise_solution = finSol,
-    normC = norminf
+    normC = norminf,
+    autodiff = false,
     )
 
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, p_max = 3.5, p_min = 0.01, detect_bifurcation = 3, nev = 50, plot_every_step = 10, newton_options = (@set opt_newton.verbose = false), max_steps = 251, tol_stability = 1e-6, n_inversion = 6, max_bisection_steps = 25)
@@ -158,7 +159,7 @@ plot(get_branches_from_BP(diagram, 2); plotfold = false, legend = false, vars = 
 
 get_branch(diagram, (2,1)) |> plot
 ####################################################################################################
-bp2d = @time get_normal_form(br, 2, nev = 30)
+bp2d = @time get_normal_form(br, 2, nev = 30, autodiff = false)
 
 res = BK.continuation(br, 2,
     setproperties(opts_br; detect_bifurcation = 3, ds = 0.001, p_min = 0.01, max_steps = 32 ) ;

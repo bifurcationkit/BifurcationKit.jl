@@ -27,7 +27,7 @@ d2R(u,p,dx1,dx2) = @. p.ν * 6u * dx1 * dx2 - 5 * 4u^3 * dx1 * dx2
 d3R(u,p,dx1,dx2,dx3) = @. p.ν * 6dx3 * dx1 * dx2 - 5 * 4 * 3u^2 * dx1 * dx2 * dx3
 
 parSH = (λ = -0.1, ν = 2., L1 = L1)
-sol0 = 1.1cos.(X) .* exp.(-0X.^2/(2*5^2))
+sol0 = @. 1.1cos(X) * exp(-0X^2/(2*5^2))
 
 prob = BifurcationProblem(R_SH, sol0, parSH, (@optic _.λ); J = Jac_sp,
     record_from_solution = (x, p; k...) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
@@ -56,7 +56,7 @@ end
 kwargsC = (verbosity = 3,
     plot = true,
     linear_algo  = MatrixBLS(),
-    callback_newton = cb
+    callback_newton = cb,
     )
 
 brflat = @time continuation(prob, PALC(#=tangent=Bordered()=#), opts; kwargsC..., verbosity = 0)
@@ -79,6 +79,7 @@ diagram = @time bifurcationdiagram(
             3, 
             optrec; 
             kwargsC..., 
+            autodiff = false,
             halfbranch = true, 
             verbosity = 0, 
             usedeflation = false)

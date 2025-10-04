@@ -52,11 +52,6 @@ function Fcgl!(f, u, p, t = 0.)
 	f .= f .+ NL(u, p)
 end
 
-# computation of the first derivative
-# d1Fcgl(x, p, dx) = ForwardDiff.derivative(t -> Fcgl(x .+ t .* dx, p), 0.)
-
-# d1NL(x, p, dx) = ForwardDiff.derivative(t -> NL(x .+ t .* dx, p), 0.)
-
 function dFcgl!(f, x, p, dx, t = 0)
     dNL!(f, x, p, dx)
     mul!(f, p.Δ, dx, 1,1)
@@ -115,11 +110,7 @@ f2 = NL!
 prob_sp = SplitODEProblem(f1, f2, sol0_f, (0.0, 120.0), @set par_cgl.r = 1.2; reltol = 1e-8, dt = 0.1)
 prob = ODEProblem(Fcgl!, sol0_f, (0.0, 120.0), (@set par_cgl.r = 1.2))#, jac = Jcgl, jac_prototype = Jcgl(sol0_f, par_cgl))
 ####################################################################################################
-# sol = @time solve(prob, Vern9(); abstol=1e-14, reltol=1e-14)
-sol = @time OrdinaryDiffEq.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1) #1.78s
-# sol = @time solve(prob, LawsonEuler(krylov=true, m=50); abstol=1e-14, reltol=1e-14, dt = 0.1)
-# sol = @time solve(prob_sp, CNAB2(linsolve=LinSolveGMRES()); abstol=1e-14, reltol=1e-14, dt = 0.03)
-
+sol = @time OrdinaryDiffEq.solve(prob_sp, ETDRK2(krylov=true); abstol=1e-14, reltol=1e-14, dt = 0.1)
 plot(sol.t, [norm(v[1:Nx*Ny], Inf) for v in sol.u], xlims=(105, 120))
 
 # plotting the solution as a movie
@@ -156,7 +147,6 @@ br_po = @time continuation(probSh, outpo.u, PALC(),
         plot = true,
         linear_algo = MatrixFreeBLS(@set ls.N = probSh.M*2n+2),
         plot_solution = (x, p; kwargs...) -> heatmap!(reshape(x[1:Nx*Ny], Nx, Ny); color=:viridis, kwargs...),
-        # plot_solution = (ax, x, p; kwargs...) -> heatmap!(ax, reshape(x[1:Nx*Ny], Nx, Ny); kwargs...),
         normC = norminf)
 
 ####################################################################################################
@@ -173,7 +163,7 @@ br_po = continuation(
     opts_po_cont,
     ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = BK.FiniteDifferencesMF(),) ;
     verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
-    # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
+    autodiff_nf = false,
     linear_algo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
     finalise_solution = (z, tau, step, contResult; k...) ->begin
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)

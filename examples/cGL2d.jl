@@ -127,13 +127,13 @@ br_hopf = continuation(br, 1, (@optic _.γ),
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 
 # normal form of BT point
-get_normal_form(br_hopf, 2; autodiff = false)
-
-# improve estimation of BT point
-btsol = BK.newton(br_hopf, 2; jacobian_ma = BK.MinAug(),)
-
 # find the index of the BT point
 indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
+get_normal_form(br_hopf, indbt; autodiff = false)
+
+# improve estimation of BT point
+btsol = BK.newton(br_hopf, indbt; jacobian_ma = BK.MinAug(),)
+
 # branch from the BT point
 brfold = continuation(br_hopf, indbt, 
                     setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
@@ -189,8 +189,7 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 #                                     slow version DO NOT RUN!!!
 #
 ####################################################################################################
-# opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
-opt_po = (@set opt_po.eigsolver = DefaultEig())
+opt_po = (@set opt_newton.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
 @assert 1==0 "Too much memory will be used!"
 br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
@@ -203,7 +202,7 @@ br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
 
-Precilu = @time ilu(Jpo, τ = 0.005); # ~2 sec
+Precilu = @time ilu(Jpo, τ = 0.005); # ~1 sec
 
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 ls(Jpo, rand(ls.N))
@@ -239,14 +238,17 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, poTrapMF;
-    # ampfactor = 3.,
+    autodiff_nf = false, # for Hopf normal form
     verbosity = 3, 
     plot = true,
     # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
     finalise_solution = (z, tau, step, contResult; k...) ->
     (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-    record_from_solution = (u, p; k...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), 
+    record_from_solution = (u, p; k...) -> begin
+                solpo = BK.get_periodic_orbit(p.prob, u, nothing)
+                maximum(solpo.u)
+        end,
     normC = norminf)
 ####################################################################################################
 # Experimental, full Inplace
@@ -298,12 +300,14 @@ end
 function Fcgl!(f, u, p, t = 0.)
     NL!(f, u, p)
     mul!(f, p.Δ, u, 1., 1.)
+    return f
 end
 
 function dFcgl!(f, x, p, dx)
     # 19.869 μs (0 allocations: 0 bytes)
     dNL!(f, x, p, dx)
     mul!(f, p.Δ, dx, 1., 1.)
+    return f
 end
 
 sol0f = vec(sol0)
@@ -325,7 +329,7 @@ poTrapMFi = PeriodicOrbitTrapProblem(
 # ca ne devrait pas allouer!!!
 out_po = copy(orbitguess_f)
 @time BK.residual!(poTrapMFi, out_po, orbitguess_f, par_cgl);
-@time BK.potrap_functional_jac!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f)
+@time BK.jvp!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f);
 opt_po_inp = @set opt_po.linsolver = ls
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 

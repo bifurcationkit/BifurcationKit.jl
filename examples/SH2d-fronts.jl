@@ -56,7 +56,7 @@ par = (l = -0.1, ν = 1.3, L1 = (I + Δ)^2);
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20)
 
-prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!((x); label="", kwargs...)),record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)), d2F = d2F_sh, d3F = d3F_sh)
+prob = BifurcationProblem(F_sh, vec(sol0), par, (@optic _.l); J = dF_sh, plot_solution = (x, p; kwargs...) -> (plotsol!(x; label="", kwargs...)),record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)), d2F = d2F_sh, d3F = d3F_sh)
 # optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, eigsolver = EigArpack(0.5, :LM))
 sol_hexa = @time BK.solve(prob, Newton(), optnew)
 println("--> norm(sol) = ", norm(sol_hexa.u, Inf64))
@@ -103,14 +103,13 @@ optfold = setproperties(optfold; p_min = -2., p_max= 2., dsmax = 0.1)
 plotsol!(x::BorderedArray, args...; k...) = plotsol!(x.u, args...; k...)
 
 brfold = continuation(br, 1, (@optic _.ν), optfold;
-    verbosity = 3, plot = true,
+    # verbosity = 3, plot = true,
     bdlinsolver = MatrixBLS(),
     jacobian_ma = BK.MinAugMatrixBased(),
-    start_with_eigen = false,
+    start_with_eigen = true,
     detect_codim2_bifurcation = 0,
     bothside = true,
     linear_algo = MatrixBLS(),
-    # plot_solution = (x, p; kwargs...) -> (plotsol!((x.u); label="", kwargs...)),
     update_minaug_every_step = 1,
     normC = norminf,
     )
@@ -118,8 +117,8 @@ brfold = continuation(br, 1, (@optic _.ν), optfold;
 plot(brfold)
 ###################################################################################################
 using IncompleteLU
-prec = ilu(L1 + I, τ = 0.15);
-prec = lu(L1 + I);
+prec = ilu(par.L1 + I, τ = 0.15);
+prec = lu(par.L1 + I);
 ls = GMRESIterativeSolvers(reltol = 1e-5, N = Nx*Ny, Pl = prec)
 
 function dF_sh2(du, u, p)

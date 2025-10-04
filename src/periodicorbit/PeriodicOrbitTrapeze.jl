@@ -26,11 +26,11 @@ Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([get_time_step(ms, 1)]
 const _trapezoid_jacobian_type = [Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), BorderedLU(), BorderedMatrixFree(), FullSparseInplace(), BorderedSparseInplace(), AutoDiffMF()]
 
 const DocStrjacobianPOTrap = """
-Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `[FullLU(), FullSparseInplace(), Dense(), DenseAD(), BorderedLU(), BorderedSparseInplace(), FullMatrixFree(), BorderedMatrixFree(), FullMatrixFreeAD]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
+Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `[FullLU(), FullSparseInplace(), Dense(), AutoDiffDense(), BorderedLU(), BorderedSparseInplace(), FullMatrixFree(), BorderedMatrixFree(), FullMatrixFreeAD]`. This is used to select a way of inverting the jacobian `dG` of the functional G.
 - For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
 - For `jacobian = FullSparseInplace()`, this is the same as for `FullLU()` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `FullLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = Dense()`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-- For `jacobian = DenseAD()`, evaluate the jacobian using ForwardDiff
+- For `jacobian = AutoDiffDense()`, evaluate the jacobian using ForwardDiff
 - For `jacobian = BorderedLU()`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver.
 - For `jacobian = BorderedSparseInplace()`, this is the same as for `BorderedLU()` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = FullMatrixFree()`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
@@ -289,7 +289,7 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
         if on_gpu(pb)
             return @views vcat(out[begin:end-1], LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)) # this is the phase condition
         else
-            out[end] = @views LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ) #LA.dot(u0c[:, 1] .- pb.xπ, pb.ϕ)
+            out[end] = @views LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)
             return out
         end
 end

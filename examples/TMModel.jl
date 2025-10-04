@@ -30,7 +30,6 @@ br_fold = BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
         jacobian_ma = BK.MinAug(),
-        usehessian = true,
         bothside = true,)
 plot(br_fold)
 ####################################################################################################
@@ -81,10 +80,10 @@ br_pocoll = @time continuation(
 plot(br, br_pocoll, markersize = 3, xlims = (-2.5, 0))
 ####################################################################################################
 # idem with Standard shooting
-using DifferentialEquations
+import OrdinaryDiffEq as ODE
 
 # this is the ODEProblem used with `DiffEqBase.solve`
-prob_ode = ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-11, reltol = 1e-9)
+prob_ode = ODE.ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-11, reltol = 1e-9)
 
 opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7, verbose = false), tol_stability = 1e-7, detect_bifurcation = 3, plot_every_step = 10)
 
@@ -93,7 +92,7 @@ br_posh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Standard Shooting
-    ShootingProblem(15, prob_ode, Rodas4P(), parallel = true,);
+    ShootingProblem(15, prob_ode, ODE.Rodas5(), parallel = true,);
     linear_algo = MatrixBLS(),
     # verbosity = 2,
     plot = true,
@@ -110,7 +109,7 @@ br_popsh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Poincaré Shooting
-    PoincareShootingProblem(3, prob_ode, Rodas4P(); parallel = true);
+    PoincareShootingProblem(3, prob_ode, ODE.Rodas5(); parallel = true);
     # usedeflation = true,
     linear_algo = MatrixBLS(),
     verbosity = 2, plot = true,

@@ -109,7 +109,8 @@ function (lbs::BorderingBLS)(J, dR,
         @debug k, norm(δX), abs(δl)
         if failBLS
             dX1, dl1, cv, itlinear = BEC0(δX, δl)
-            axpy!(1, dX1, dX)
+            # axpy!(1, dX1, dX)
+            VI.add!(dX, dX1, 1)
             dl += dl1
             k += 1
         end

@@ -49,7 +49,7 @@ plot(out.u, label = "Solution")
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), nev = 40, n_inversion = 6)
 br = @time continuation(
     prob, PALC(bls = BorderingBLS(solver = DefaultLS())), optcont;
-    plot = true, verbosity = 0,
+    plot = true,
     normC = norminf)
 
 plot(br)
@@ -68,15 +68,22 @@ function perturbsol(sol, p, id)
 end
 
 outdef1 = @time BK.solve(
-    (@set prob.u0 = perturbsol(-out.u, 0, 0)), deflationOp,
-    # perturbsol(deflationOp[1],0,0), par_def,
+    (@set prob.u0 = perturbsol(-out.u, 0, 0)), 
+    deflationOp,
     optdef;
-    # callback = BK.cbMaxNorm(1e8)
     )
 BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(); for _s in deflationOp.roots; plot!(_s);end;title!("")
 perturbsol(-deflationOp[1],0,0) |> plot
+####################################################################################################
+# bifurcation diagram
+diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
+        (@set optcont.newton_options.verbose = false);
+        autodiff = false,
+        plot = true)
+
+plot(diagram, legend = false)
 ####################################################################################################
 # bifurcation diagram with deflated continuation
 # empty!(deflationOp)
@@ -95,11 +102,3 @@ brdc = @time continuation(
     )
 
 plot(brdc, legend=true)#, marker=:d)
-####################################################################################################
-# bifurcation diagram
-diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
-        (@set optcont.newton_options.verbose = false);
-        autodiff = false,
-        plot = true)
-
-plot(diagram, legend = false)

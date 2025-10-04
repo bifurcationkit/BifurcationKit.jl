@@ -50,12 +50,12 @@ BK.jvp!(pbi, resi, orbitguess_f, par, orbitguess_f)
 # @code_warntype BK.potrap_functional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
-# @btime pb($orbitguess_f, $par);                               # 17.825 ms (62 allocations: 34.33 MiB)
-# @btime pbi($orbitguess_f, $par);                              # 12.768 ms (2 allocations: 17.17 MiB)
-# @btime pb($orbitguess_f, $par, $orbitguess_f)                 # 28.427 ms (122 allocations: 51.50 MiB)
-# @btime pbi($orbitguess_f, $par, $orbitguess_f)                # 14.170 ms (2 allocations: 17.17 MiB)
-# @btime BK.potrap_functional!($pbi, $resi, $orbitguess_f, $par) # 7.117 ms (0 allocations: 0 bytes)
-# @btime BK.jvp!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f) #  13.117 ms (0 allocations: 0 bytes)
+# @btime BK.residual($pb, $orbitguess_f, $par);                    # 6.825 ms (62 allocations: 34.33 MiB)
+# @btime BK.residual($pbi, $orbitguess_f, $par);                   # 4.768 ms (2 allocations: 17.17 MiB)
+# @btime BK.jvp($pb, $orbitguess_f, $par, $orbitguess_f);          # 8.427 ms (122 allocations: 51.50 MiB)
+# @btime BK.jvp($pbi, $orbitguess_f, $par, $orbitguess_f);         # 5.170 ms (2 allocations: 17.17 MiB)
+# @btime BK.residual!($pbi, $resi, $orbitguess_f, $par);           # 7.117 ms (0 allocations: 0 bytes)
+# @btime BK.jvp!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f); # 3.900 ms (0 allocations: 0 bytes)
 
 #
 # using IterativeSolvers, LinearMaps
