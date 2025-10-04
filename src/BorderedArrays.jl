@@ -44,22 +44,23 @@ function Base.copyto!(dest::BorderedArray{𝒯v, T1}, src::BorderedArray{𝒯v, 
     return dest
 end
 
-length(b::BorderedArray{𝒯v, T}) where {𝒯v, T} = length(b.u) + length(b.p)
-length(b::BorderedArray{𝒯v, T}) where {𝒯v, T <: Number} = length(b.u) + 1
+Base.length(b::BorderedArray{𝒯v, T}) where {𝒯v, T} = length(b.u) + length(b.p)
+Base.length(b::BorderedArray{𝒯v, T}) where {𝒯v, T <: Number} = length(b.u) + 1
+Base.length(u::VI.MinimalVec) = mapreduce(length, +, u.vec)
 
 VI.inner(a::BorderedArray, b::BorderedArray) = VI.inner(a.u, b.u) + VI.inner(a.p, b.p)
 
-function norm(b::BorderedArray{Tv, Tp}, p::Real = 2) where {Tv, Tp}
+function LA.norm(b::BorderedArray{Tv, Tp}, p::Real = 2) where {Tv, Tp}
     if p == 2
         return sqrt(norm(b.u, 2)^2 + norm(b.p, 2)^2)
     elseif p == 1
-        return norm1(b.u) + norm1(b.p)
+        return LA.norm1(b.u) + LA.norm1(b.p)
     elseif p == Inf
         return max(norm(b.u, Inf), norm(b.p, Inf))
     elseif p == 0
-        return min(norm(b.u, -Inf), norm(b.p, -Inf))
+        return norm(b.u, 0) + norm(b.p, 0)
     elseif p == -Inf
-
+        return min(norm(b.u, -Inf), norm(b.p, -Inf))
     else
         return (norm(b.u, p)^p + norm(b.p, p)^p)^(1/p)
     end

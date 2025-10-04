@@ -110,18 +110,42 @@ orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ####################################################################################################
 # Standard Shooting
-using DifferentialEquations, ForwardDiff
+using OrdinaryDiffEq, ForwardDiff
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
 prob = ODEProblem(Fbru!, u0, (0., 520.), par_hopf) # gives 0.68s
+####################################################################################################
+# this part allows to have AD derive the sparse jacobian for us with very few allocations
+import OrdinaryDiffEq as ODE
+import DifferentiationInterface as DI
+using SparseConnectivityTracer, SparseMatrixColorings
+
+u0 = sol0 .+ 0.01 .* rand(2n)
+par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
+prob = ODE.ODEProblem(Fbru!, u0, (0., 520.), par_hopf) # gives 0.68s
 #####
 # this part allows to have AD derive the sparse jacobian for us with very few allocations
-jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
-using SparseDiffTools, SparseArrays
-_colors = matrix_colors(jac_prototype)
 JlgvfColorsAD(J, u, p, colors = _colors) =  SparseDiffTools.forwarddiff_color_jacobian!(J, (out, x) -> Fbru!(out,x,p), u, colorvec = colors)
-vf = ODEFunction(Fbru!; jac_prototype = jac_prototype, colorvec = _colors)
+
+const sparse_forward_backend = DI.AutoSparse(
+    DI.AutoForwardDiff();  # any object from ADTypes
+    sparsity_detector=TracerSparsityDetector(),
+    coloring_algorithm=GreedyColoringAlgorithm(),
+)
+
+const jac_prep_sparse_nonallocating = DI.prepare_jacobian(Fbru!, zeros(2n), sparse_forward_backend, ones(2n), DI.Constant(par_hopf))
+const jac_buffer = similar(sparsity_pattern(jac_prep_sparse_nonallocating), eltype(ones(2n)))
+
+J1 = copy(jac_buffer)
+
+function JlgvfColorsAD(J, x, p)
+    DI.jacobian!(Fbru!, zero(x), J, jac_prep_sparse_nonallocating, sparse_forward_backend, x, DI.Constant(p)) 
+    J
+end
+
+
+vf = ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_colors(jac_prep_sparse_nonallocating))
 prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 #####
 # solve the Brusselator

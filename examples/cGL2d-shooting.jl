@@ -1,5 +1,5 @@
 using Revise
-using ForwardDiff, DifferentialEquations
+using ForwardDiff, OrdinaryDiffEq
 using Plots
 # using GLMakie; Makie.inline!(true)
 using BifurcationKit, LinearAlgebra, SparseArrays, LoopVectorization

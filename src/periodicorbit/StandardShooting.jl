@@ -236,7 +236,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = c
             copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- _getindex(dx.u, ip1))
         end
     else
-        @assert false "Not implemented yet. Try using AbstractVectors instead"
+        error("Not implemented yet. Try using AbstractVectors instead")
     end
 
     # add constraint
