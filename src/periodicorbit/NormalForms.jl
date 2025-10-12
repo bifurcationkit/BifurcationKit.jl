@@ -988,9 +988,9 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
 
                 if _NRMDEBUG; v₁ₛ .*= (-0.4238149014771724 - 0.32924318979676237im)/v₁ₛ[1,1]; end
-                # re-scale the eigenvector
-                v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
-                v₁ = vec(v₁ₛ)
+    # re-scale the eigenvector
+    v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
+    v₁ = vec(v₁ₛ)
 
     @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
 
