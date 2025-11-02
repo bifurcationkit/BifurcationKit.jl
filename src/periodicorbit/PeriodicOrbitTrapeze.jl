@@ -212,15 +212,13 @@ function PeriodicOrbitTrapProblem(prob_vf,
     return prob
 end
 
-# PeriodicOrbitTrapProblem(F, J, ϕ::vectype, xπ::vectype, m::Union{Int, vecmesh}, N::Int, ls::AbstractLinearSolver = DefaultLS(); ongpu = false, adaptmesh = false, massmatrix = nothing) where {vectype, vecmesh <: AbstractVector} = PeriodicOrbitTrapProblem(F, J, nothing, ϕ, xπ, m, N, ls; isinplace = isinplace, ongpu = ongpu, massmatrix = massmatrix)
-
 PeriodicOrbitTrapProblem(prob_vf,
                         m::Union{Int, AbstractVector},
                         N::Int,
                         ls::AbstractLinearSolver = DefaultLS();
                         ongpu = false,
                         adaptmesh = false,
-                        massmatrix = nothing) = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu = ongpu, massmatrix = massmatrix)
+                        massmatrix = nothing) = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
 
 
 # do not type h::Number because this will annoy CUDA
@@ -534,7 +532,6 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         return J0
 end
 
-
 @views function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder::Bool = true)
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
@@ -754,7 +751,6 @@ end
     !flag && @warn "Sparse solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
-
 ####################################################################################################
 # The following structure encodes the jacobian of a PeriodicOrbitTrapProblem which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
@@ -888,13 +884,13 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
+This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments:
-- `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It should be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `par` parameters to be passed to the functional
-- `options` same as for the regular `newton` method
+- `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
+- `par` parameters to be passed to the functional.
+- `options` same as for the regular `newton` method.
 $DocStrjacobianPOTrap
 """
 newton(probPO::PeriodicOrbitTrapProblem,
@@ -916,13 +912,13 @@ newton(probPO::PeriodicOrbitTrapProblem,
 ####################################################################################################
 # continuation wrapper
 """
-    $(TYPEDSIGNATURES)
+$(TYPEDSIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
+This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments
-- `prob::PeriodicOrbitTrapProblem` encodes the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
+- `prob::PeriodicOrbitTrapProblem` encodes the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
 - `alg` continuation algorithm
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linear_algo` same as in [`continuation`](@ref)
@@ -1038,13 +1034,13 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a functional G based on Finite Differences and a Trapezoidal rule.
+This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments
-- `prob::PeriodicOrbitTrapProblem` encodes the functional G
-- `orbitguess` a guess for the periodic orbit where `orbitguess[end]` is an estimate of the period of the orbit. It could be a vector of size `N * M + 1` where `M` is the number of time slices, `N` is the dimension of the phase space. This must be compatible with the numbers `N, M` in `prob`.
-- `alg` continuation algorithm
-- `contParams` same as for the regular [`continuation`](@ref) method
+- `prob::PeriodicOrbitTrapProblem` encodes the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
+- `alg` continuation algorithm.
+- `contParams` same as for the regular [`continuation`](@ref) method.
 
 # Keyword arguments
 
@@ -1123,7 +1119,7 @@ function generate_ci_problem(pb::PeriodicOrbitTrapProblem,
 
     par = sol.prob.p
     prob_vf = re_make(bifprob, params = par)
-    probtrap = setproperties(pb; M = pb.M, N = N, prob_vf = prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
+    probtrap = setproperties(pb; M = pb.M, N, prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
 
     M, N = size(probtrap)
     resize!(probtrap.ϕ, N * M)

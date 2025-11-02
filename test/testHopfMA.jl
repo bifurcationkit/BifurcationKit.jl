@@ -163,11 +163,11 @@ outhopf = newton(br_d2f, 1)
 @test BK.converged(outhopf)
 
 br_hopf = continuation(br, ind_hopf, (@optic _.β),
-            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
+            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, max_steps = 3, newton_options = NewtonPar(verbose = false)), 
             jacobian_ma = BK.MinAug())
 
 br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), 
-            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, p_min = 0.0, a = 2., max_steps = 3, newton_options = NewtonPar(verbose = false)), 
+            ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, max_steps = 3, newton_options = NewtonPar(verbose = false)), 
             jacobian_ma = BK.MinAug())
 ####################################################################################################
 ind_hopf = 1
@@ -189,11 +189,13 @@ orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 
 # test guess using function
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
+hopf_nf = BK.hopf_normal_form(br.prob, br, ind_hopf; detailed = Val(false))
+pred = BK.predictor(hopf_nf, 0.01)
 
 prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
         J = Jbru_sp)
 
-poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopfpt.u, M, 2n)
+poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
 
 jac_PO_fd = BK.finite_differences(x -> BK.residual(poTrap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
 jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
@@ -204,18 +206,14 @@ jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf +
 
 # test various jacobians and methods
 jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
-# BK.Jc(poTrap, reshape(orbitguess_f[1:end-1], 2n, M), par_bru, reshape(orbitguess_f[1:end-1], 2n, M))
-# BK.Jc(poTrap, orbitguess_f, par_bru, orbitguess_f)
 
 # newton to find Periodic orbit
 _prob = BK.BifurcationProblem((x, p) -> BK.residual(poTrap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
 opt_po = NewtonPar(tol = 1e-8, max_iterations = 150)
 outpo_f = @time BK.solve(_prob, Newton(), opt_po)
 @test BK.converged(outpo_f)
-    # println("--> T = ", outpo_f[end])
-# flag && printstyled(color=:red, "--> T = ", outpo_f[end], ", amplitude = ", BK.amplitude(outpo_f, n, M; ratio = 2),"\n")
 
-outpo_f = newton(poTrap, orbitguess_f, opt_po; jacobianPO = :FullLU)
+outpo_f = newton((@set poTrap.jacobian = BK.FullLU()), orbitguess_f, opt_po)
 BK.converged(outpo_f)
 
 # jacobian of the functional
@@ -225,7 +223,7 @@ Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.
 floquetES = FloquetQaD(DefaultEig())
 
 # calcul des exposants de Floquet, extract full vector
-pbwrap = BK.WrapPOTrap(poTrap, :dense, orbitguess_f, par_bru, nothing, nothing, nothing)
+pbwrap = BK.WrapPOTrap(poTrap, :dense, nothing, orbitguess_f, par_bru, nothing, nothing, nothing)
 floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # continuation of periodic orbits using :BorderedLU linear algorithm

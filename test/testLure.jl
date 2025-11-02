@@ -98,15 +98,15 @@ for meshadapt in (false, true)
         if length(br_po.specialpoint) >=1 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
             println("")
             for prm in (true, false)
-                pt = get_normal_form(br_po, _ind; verbose = true, prm)
+                pt = get_normal_form(br_po, _ind; verbose = true, prm = Val(prm))
                 show(pt)
             end
         end
     end
 
-    pd = get_normal_form(br_po, 1; verbose = false, prm = true)
+    pd = get_normal_form(br_po, 1; verbose = false, prm = Val(true))
     predictor(pd, 0.1, 1)
-    pd = get_normal_form(br_po, 1; verbose = false, prm = false)
+    pd = get_normal_form(br_po, 1; verbose = false, prm = Val(false))
     predictor(pd, 0.1, 1)
     @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-3 # reference value computed with ApproxFun
     # @test pd.nf.nf.a  ≈ 0.020989802220981707 rtol=1e-3 # reference value computed with ApproxFun
@@ -118,25 +118,19 @@ for meshadapt in (false, true)
     )
 end
 ####################################################################################################
-using OrdinaryDiffEq
+import OrdinaryDiffEq as ODE
 
-probsh = ODEProblem(lur!, copy(BK.getu0(prob)), (0., 1000.), BK.getparams(prob); abstol = 1e-12, reltol = 1e-10)
+probsh = ODE.ODEProblem(lur!, copy(BK.getu0(prob)), (0., 1000.), BK.getparams(prob); abstol = 1e-12, reltol = 1e-10)
 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps = 122, newton_options = NewtonPar(tol = 1e-12, max_iterations = 25), tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10, n_inversion = 6, nev = 3)
 
 br_po = continuation(
     br, 2, opts_po_cont,
-    ShootingProblem(15, probsh, Rodas5P(); parallel = false, update_section_every_step = 1);
-    # ampfactor = 1., δp = 0.0051,
+    ShootingProblem(15, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1);
     # verbosity = 3,    plot = true,
     record_from_solution = recordPO,
     plot_solution = plotPO,
-    # finalise_solution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
-    #         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)
-    #         return z.u[end] < 30 && length(contResult.specialpoint) < 3
-    #         true
-    #     end,
     callback_newton = BK.cbMaxNorm(10),
     normC = norminf)
 
@@ -160,7 +154,7 @@ for _ind in (1,3)
 end
 
 # aBS from PD
-br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurcation = 3, max_steps = 5, ds = 0.01, plot_every_step = 1, save_sol_every_step = 1);
+br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, max_steps = 5, ds = -0.02, plot_every_step = 1, save_sol_every_step = 1);
     # verbosity = 0, plot = false,
     # usedeflation = true,
     ampfactor = .1, δp = -0.005,
@@ -174,8 +168,7 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
 opts_po_cont_ps = @set opts_po_cont.newton_options.tol = 1e-9
 @set opts_po_cont_ps.dsmax = 0.0025
 br_po = continuation(br, 2, opts_po_cont_ps,
-    PoincareShootingProblem(2, probsh, Rodas4P(); parallel = false, reltol = 1e-6, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
-    ampfactor = 1., δp = 0.0051, 
+    PoincareShootingProblem(2, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
     # verbosity = 3, plot=true,
     callback_newton = BK.cbMaxNorm(10),
     record_from_solution = recordPO,

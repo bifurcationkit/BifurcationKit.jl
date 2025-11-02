@@ -552,11 +552,11 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       ampfactor = 1,
                       usedeflation = false,
                       linear_algo = nothing,
-                      detailed = true,
-                      prm = getprob(br) isa WrapPOColl ? false : true,
+                      detailed::Val{detailed_type} = Val(true),
+                      prm::Val{prm_type} = Val(getprob(br) isa WrapPOColl ? false : true),
                       use_normal_form = true,
                       autodiff_nf = true,
-                      kwargs...) where {Tprob <: AbstractWrapperPOProblem}
+                      kwargs...) where {Tprob <: AbstractWrapperPOProblem, detailed_type, prm_type}
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
@@ -567,7 +567,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         error("Only simple bifurcation points are handled properly")
     end
 
-    detailed = detailed && use_normal_form
+    detailed = Val(detailed_type && use_normal_form)
     nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
@@ -578,7 +578,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     verbose && printstyled(color = :green, "━"^55*
             "\n┌─ Start branching from $(bptype) point to periodic orbits.",
             "\n├─ Bifurcation type = ", bifpt.type,
-            "\n├─── normal form    = ", use_normal_form ? "based on $(prm ? "Poincaré" : "Iooss") formulation" : "none",
+            "\n├─── normal form    = ", use_normal_form ? "based on $(detailed_type ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, 

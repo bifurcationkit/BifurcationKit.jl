@@ -25,17 +25,17 @@ For collocation, the default method to compute the NF of Period-doubling and Nei
 """
 function get_normal_form(prob::AbstractPeriodicOrbitProblem,
                         br::AbstractResult{ <: PeriodicOrbitCont}, 
-                        id_bif::Int ;
+                        id_bif::Int,
+                        Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                         nev = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,
                         lens = getlens(br),
-                        Teigvec::Type = _getvectortype(br),
                         scaleζ = norm,
                         autodiff = false,
                         δ = getdelta(prob),
                         k...
-            )
+            ) where {𝒯eigvec}
     bifpt = br.specialpoint[id_bif]
 
     if bifpt.type == :endpoint
@@ -43,14 +43,14 @@ function get_normal_form(prob::AbstractPeriodicOrbitProblem,
     end
 
     # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ, k...)
+    kwargs_nf = (;nev, verbose, lens, scaleζ, k...)
 
     if bifpt.type == :pd
-        return period_doubling_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
+        return period_doubling_normal_form(prob, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :bp
-        return branch_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
+        return branch_normal_form(prob, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(prob, br, id_bif; δ, autodiff, kwargs_nf...)
+        return neimark_sacker_normal_form(prob, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
     end
     error("Normal form for $(bifpt.type) not yet implemented.")
 end
@@ -60,11 +60,12 @@ end
 """
 function branch_normal_form(pbwrap,
                             br,
-                            ind_bif::Int;
+                            ind_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             verbose = false,
                             lens = getlens(br),
                             scaleζ = norminf,
-                            kwargs_nf...)
+                            kwargs_nf...) where {𝒯eigvec}
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
@@ -93,14 +94,14 @@ end
 
 function branch_normal_form(pbwrap::WrapPOSh,
                             br,
-                            ind_bif::Int;
+                            ind_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
-                            Teigvec = vectortype(br),
                             scaleζ = norminf,
-                            detailed = true,
-                            kwargs_nf...)
+                            detailed::Val{detailed_type} = Val(true),
+                            kwargs_nf...) where {𝒯eigvec, detailed_type}
     verbose && println("━"^53*"\n──▶ Branch point of periodic orbit normal form computation")
     prob_sh = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
@@ -139,7 +140,7 @@ function branch_normal_form(pbwrap::WrapPOSh,
     # normal form for Poincaré map
     bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
 
-    if ~detailed
+    if ~detailed_type
         ζ★ = nothing
         return BranchPointPO(bifpt.x, period, real.(ζs), ζ★, bp0, prob_sh, true)
     end
@@ -182,8 +183,8 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                     lens = getlens(pbwrap),
                                     autodiff = false,
                                     scaleζ = norminf,
-                                    detailed = true,
-                                    kwargs_nf...)
+                                    detailed::Val{detailed_type} = Val(true),
+                                    kwargs_nf...) where {detailed_type}
     # ζₚₒ is the trivial eigenvector ∂ₜu₀(0)=F(u₀(0)) where u₀ is the periodic orbit
     sh = pbwrap.prob
     pars = bp0.params
@@ -209,7 +210,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     ζ★ = nothing
     bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
-    if detailed
+    if detailed_type
         bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose, autodiff)
         return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, bp, sh, true)
     end
@@ -218,12 +219,13 @@ end
 
 function branch_normal_form(pbwrap::WrapPOColl,
                             br,
-                            ind_bif::Int;
+                            ind_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             verbose = false,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
-                            prm = false,
-                            detailed = true,
-                            kwargs_nf...)
+                            prm::Val{prm_type} = Val(false),
+                            detailed::Val{detailed_type} = Val(true),
+                            kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
     @debug "BP-PO normal form for Collocation: use prm by default"
     prm = true
     # first, get the bifurcation point parameters
@@ -240,7 +242,7 @@ function branch_normal_form(pbwrap::WrapPOColl,
     end
     
     bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
-    if ~prm || ~detailed
+    if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
     end
@@ -405,13 +407,13 @@ end
 ####################################################################################################
 function period_doubling_normal_form(pbwrap,
                                 br,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
-                                Teigvec = vectortype(br),
                                 scaleζ = norminf,
-                                kwargs_nf...)
+                                kwargs_nf...) where {𝒯eigvec}
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
@@ -437,14 +439,14 @@ end
 
 function period_doubling_normal_form(pbwrap::WrapPOSh,
                                 br,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
-                                Teigvec = vectortype(br),
-                                detailed = true,
+                                detailed::Val{detailed_type} = Val(true),
                                 scaleζ = norminf,
-                                kwargs_nf...)
+                                kwargs_nf...) where {𝒯eigvec, detailed_type}
     verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
@@ -463,7 +465,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
     ζs = reduce(vcat, ζ_a)
 
     pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, pars,lens, nothing, nothing, nothing, :none)
-    if ~detailed
+    if ~detailed_type
         period = getperiod(pbwrap.prob, pd0.x0, pd0.params)
         ζ★ = nothing
         return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd0, pbwrap.prob, true)
@@ -545,12 +547,13 @@ end
 
 function period_doubling_normal_form(pbwrap::WrapPOColl,
                                 br,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 verbose = false,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
-                                prm = false,
-                                detailed = true,
-                                kwargs_nf...)
+                                prm::Val{prm_type} = Val(false),
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
     # first, get the bifurcation point parameters
     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
@@ -565,7 +568,7 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
         bifpt = @set bifpt.x = bifpt.x.sol
     end
     pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
-    if ~prm
+    if ~prm_type
         # method based on Iooss method
         return period_doubling_normal_form_iooss(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
     end
@@ -580,8 +583,8 @@ function period_doubling_normal_form_iooss(pbwrap,
                                 nev = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
-                                detailed = true,
-                                kwargs_nf...)
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {detailed_type}
     # function based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis https://doi.org/10.1137/040611306.
     # on page 1243
@@ -667,7 +670,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
 
     # if we just want the eigenvectors
-    if ~detailed
+    if ~detailed_type
         return PeriodDoublingPO(pd.x0, T, v₁, v₁★, (@set pd.nf = (a = 0, b3 = 0)), coll, false)
     end
 
@@ -810,9 +813,9 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
                                     nev = 3,
                                     δ = 1e-7,
                                     verbose = false,
-                                    detailed = true,
+                                    detailed::Val{detailed_type} = Val(true),
                                     lens = getlens(pbwrap),
-                                    kwargs_nf...)
+                                    kwargs_nf...) where {detailed_type}
     @debug "PD normal form collocation, method PRM"
     coll = pbwrap.prob
     𝒯 = eltype(coll)
@@ -853,7 +856,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
-    pd = detailed ? period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose) : nothing
+    pd = detailed_type ? period_doubling_normal_form(probΠ, pd1, optn.linsolver; verbose) : nothing
 
     # we get the floquet eigenvectors for μ = -1
     jac = jacobian(pbwrap, pd0.x0, pars)
@@ -882,13 +885,13 @@ end
 ####################################################################################################
 function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
                                 br::AbstractBranchResult,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
-                                Teigvec = vectortype(br),
                                 scaleζ = norminf,
-                                kwargs_nf...)
+                                kwargs_nf...) where {𝒯eigvec}
     pb = pbwrap.prob
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
@@ -905,12 +908,13 @@ end
 
 function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                 br::AbstractBranchResult,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 verbose = false,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
-                                prm = false,
-                                detailed = true,
-                                kwargs_nf...)
+                                prm::Val{prm_type} = Val(false),
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
     # get the bifurcation point parameters
     coll = pbwrap.prob
@@ -932,11 +936,11 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     end
     ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
 
-    if ~detailed
+    if ~detailed_type
         return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
     end
 
-    if prm # method based on Poincare Return Map (PRM)
+    if prm_type # method based on Poincare Return Map (PRM)
         # newton parameter
         optn = br.contparams.newton_options
         return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
@@ -1210,13 +1214,13 @@ end
 
 function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 br::AbstractBranchResult,
-                                ind_bif::Int;
+                                ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
-                                Teigvec = vectortype(br),
-                                detailed = true,
-                                kwargs_nf...)
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {detailed_type, 𝒯eigvec}
 
     # first, get the bifurcation point parameters
     sh = pbwrap.prob
@@ -1236,7 +1240,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, pars, getlens(br), nothing, nothing, nothing, :none)
 
-    if ~detailed
+    if ~detailed_type
         return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
     end
 

@@ -60,9 +60,9 @@ brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont
     argspo...
     )
 
-get_normal_form(brpo_pd, 1, prm = true)
+get_normal_form(brpo_pd, 1, prm = Val(true))
 # test PD normal form computation using Iooss method
-get_normal_form(brpo_pd, 1, prm = false)
+get_normal_form(brpo_pd, 1, prm = Val(false))
 ################################################################################
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
@@ -108,9 +108,9 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     )
 
 # compute NS normal form using Poincare return map
-get_normal_form(brpo_ns, 1; prm = true)
+get_normal_form(brpo_ns, 1; prm = Val(true))
 # compute NS normal form using Iooss method
-get_normal_form(brpo_ns, 1; prm = false)
+get_normal_form(brpo_ns, 1; prm = Val(false))
 
 opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 

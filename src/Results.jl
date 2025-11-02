@@ -407,35 +407,35 @@ _append!(x, ::Nothing) = nothing
 """
 $(TYPEDSIGNATURES)
 
-Merge two `ContResult`s and put the result in `br`.
+Merge two `ContResult`s and put the result in `br`. This is a barbone cat, in a way `br <- cat(br, br1)`. Nothing is tested to see if this is valid.
 """
-function _cat!(br::ContResult, br2::ContResult)
+function _cat!(br::ContResult, br1::ContResult)
     nb = length(br.branch)
     if ~isnothing(br.branch)
         append!(br.branch,
-            [setproperties(pt; step = nb + pt.step) for pt in br2.branch])
+            [setproperties(pt; step = nb + pt.step) for pt in br1.branch])
     end
     if ~isnothing(br.specialpoint)
         append!(br.specialpoint,
             [setproperties(pt;
                 step = nb + pt.step,
-                idx = nb + pt.idx) for pt in br2.specialpoint])
+                idx = nb + pt.idx) for pt in br1.specialpoint])
     end
 
     if ~isnothing(br.eig)
         append!(br.eig,
-            [setproperties(pt; step = nb + pt.step) for pt in br2.eig])
+            [setproperties(pt; step = nb + pt.step) for pt in br1.eig])
     end
 
     if ~isnothing(br.sol)
         append!(br.sol,
-            [setproperties(pt; step = nb + pt.step) for pt in br2.sol])
+            [setproperties(pt; step = nb + pt.step) for pt in br1.sol])
     end
     return br
 end
 
 """
-Same as _cat! but determine the ordering so that the branches merge properly
+Same as `_cat!` but determine the ordering so that the branches merge properly.
 """
 function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
     # find the intersection point

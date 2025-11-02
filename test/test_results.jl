@@ -54,6 +54,14 @@ end
     @test branch[bp.step:end][1:1][1].param == branch[bp.step:end][1].param
 end
 
+@testset "cat/merge for AbstractBranchResult" begin
+    opt = BK.ContinuationPar(p_min=-2.0, p_max=1.0)
+    contres = BK.continuation(prob, PALC(), opt)
+    opt2 = BK.ContinuationPar(p_min=-2.0, p_max=-1.0)
+    contres2 = BK.continuation(BK.re_make(prob; params = (r = -2.0,)), PALC(), opt2)
+    new_branch = BK._merge(contres2, contres)
+end
+
 
 
 
