@@ -280,7 +280,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     𝒯 = VI.scalartype(x0)
     mybls(z) = bls(L, ζ★, ζ, zero(𝒯), z, zero(𝒯))
 
-    verbose && println("┌── Normal form:   a01⋅δ$plens + a02⋅δ$(plens)² + b11⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6")
+    verbose && println("┌── Normal form:   a01⋅δ$plens + a02⋅δ$(plens)²/2 + b11⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6")
 
     # we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
@@ -329,13 +329,13 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── b20/2 = ", b20/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ), Golub. Schaeffer Vol 1 page 33, eq 3.22 (a)
-    Ψ02, _, cv, it  = mybls(-E(b2v))
-    ~cv && @debug "[Normal form Ψ02] Linear solver for J did not converge. it = $it"
-    b3v = R3(ζ, ζ, ζ) .+ 3 .* R2(ζ, Ψ02)
+    Ψ20, _, cv, it  = mybls(-E(b2v))
+    ~cv && @debug "[Normal form Ψ20] Linear solver for J did not converge. it = $it"
+    b3v = R3(ζ, ζ, ζ) .+ 3 .* R2(ζ, Ψ20)
     b30 = VI.inner(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b30/6)
 
-    bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a01, a02, b11, b20, b30, Ψ01, Ψ02), :NA)
+    bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a01, a02, b11, b20, b30, Ψ01, Ψ20), :NA)
     if max(abs(a01), abs(b11)) > 1e-10
         if abs(a01) < tol_fold
             return 100abs(b20/2) < abs(b30/6) ? Pitchfork(bp[begin:end-1]...) : Transcritical(bp...) #!!! TYPE UNSTABLE
@@ -406,13 +406,13 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     # xm1 previous point on bifurcated branch
     if norm(τ.u) > 0 && abs(LA.dot(bp.ζ, τ.u[eachindex(bp.ζ)])) >= 0.9 * norm(τ.u)
         @debug "Constant predictor in Transcritical"
-        x1  = bp.x0 .+ ds .* Ψ01 # Golub. Schaeffer Vol 1 page 33, eq 3.22 (b)
+        x1  = @. bp.x0 + ds * Ψ01 # Golub. Schaeffer Vol 1 page 33, eq 3.22 (b)
         xm1 = bp.x0
-        x0  = bp.x0 .+ ds/τ.p .* τ.u
+        x0  = @. bp.x0 + ds/τ.p * τ.u
     else
         x0  = bp.x0
-        x1  = @. bp.x0 + amp * real(bp.ζ) + ds * Ψ01
-        xm1 = @. bp.x0 - amp * real(bp.ζ) - ds * Ψ01
+        x1  = @. bp.x0 + amp * real(bp.ζ) - ds * Ψ01
+        xm1 = @. bp.x0 - amp * real(bp.ζ) + ds * Ψ01
     end
 
     if amp == 0
@@ -421,7 +421,14 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     end
 
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp, p0 = bp.p)
+    return (;x0,
+             x1,
+             xm1,
+             p = pnew,
+             pm1 = bp.p - ds,
+             dsfactor,
+             amp,
+             p0 = bp.p)
 end
 
 """

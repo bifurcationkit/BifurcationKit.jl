@@ -16,7 +16,7 @@ Structure to record special points on a curve. There are two types of special po
 $(TYPEDFIELDS)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
-    "Description of the special points. In case of Events, this field records the user passed named to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following:
+    "Description of the special points. In case of `Events`, this field records the user passed name to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following names:
 
     - :bp Bifurcation point, simple eigenvalue crossing the imaginary axis
     - :fold Fold point

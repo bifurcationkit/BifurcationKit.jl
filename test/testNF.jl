@@ -20,9 +20,9 @@ begin
     # normal form computation
     # we set the bifurcation point for exact computations
     @reset br.specialpoint[1].param = 0.
-    bp = BK.get_normal_form(br, 1; verbose=true, detailed = false, ζs = [1., 0], ζs_ad = [1., 1])
+    bp = BK.get_normal_form(br, 1; verbose = true, detailed = false, ζs = [1., 0], ζs_ad = [1., 1])
     # on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
-    @test bp.nf.Ψ02 ≈ [0, 2prob.params.γ]
+    @test bp.nf.Ψ20 ≈ [0, 2prob.params.γ]
     # normal form
     nf = bp.nf
 
@@ -68,7 +68,7 @@ BK.eigenvals(br2, 1, true)
 BK._getfirstusertype(br2)
 @test length(br2) == 12
 get_normal_form(br2, 1)
-plot(br_noev,br2)
+plot(br_noev, br2)
 
 br3 = continuation(br_noev, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
 @test isnothing(BK.multicontinuation(br_noev, 1))
@@ -83,7 +83,7 @@ bdiag = bifurcationdiagram(prob, PALC(), 2,
 plot(bdiag)
 
 # same from the non-trivial branch
-prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0, γ = 0), (@optic _.μ))
+prob = BK.ODEBifProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0, γ = 0), (@optic _.μ))
 br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf)
 bp = BK.get_normal_form(br, 1; verbose=false)
 nf = bp.nf
@@ -98,7 +98,7 @@ br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_s
 par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0, γ = 1.422)
 prob_pf = BK.re_make(prob, params = par_pf, record_from_solution = (x,p;k...)->(x[1], norm(x)))
 brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = norminf)
-bpp = BK.get_normal_form(brp, 1; verbose=true)
+bpp = BK.get_normal_form(brp, 1; verbose = true)
 show(bpp)
 BK.type(bpp)
 BK._predictor(bpp, 0.01)
@@ -113,11 +113,10 @@ nf = bpp.nf
 # test predictor
 pred = predictor(bpp, 0.1)
 @test norminf(pred.x0) < 1e-6
-# @test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol = 1e-5
 
 # test automatic branch switching
-br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2); ampfactor = 1)
-# plot(brp,br2, marker=:d)
+br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2))
+plot(brp, br2)
 
 # test methods for aBS
 BK.from(br2) |> BK.type
