@@ -38,12 +38,21 @@ let
 
     probSh = BK.ShootingProblem(M = M, flow = fl,
                 ds = LinRange(0, 1, M+1) |> diff,
-                section = section)
+                section = section
+                )
+
+    probSh2 = BK.ShootingProblem(M = M, flow = fl,
+            ds = LinRange(0, 1, M+1) |> diff,
+            section = BK.SectionSS(ones(N), zeros(N))
+            )
 
     show(probSh)
 
     poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     po = BorderedArray(poguess, 1.)
+
+    # test section update
+    BK.updatesection!(probSh2, po, par)
 
     dpoguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     dpo = BorderedArray(dpoguess, 2.)
@@ -59,10 +68,12 @@ let
     @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
     # use of BorderedArray structure
+     BK.residual(probSh2, po, par)
     res = BK.residual(probSh, po, par)
     @test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
     @test norm(res.p - resv[end], Inf) ≈ 0
 
+    BK.jvp(probSh2, po, par, dpo; δ)
     dres = BK.jvp(probSh, po, par, dpo; δ)
     @test norm(dres.p - dresv[end], Inf) ≈ 0
     @test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0
@@ -80,6 +91,11 @@ let
                 ds = LinRange(0,1,M+1) |> diff ,
                 section = section)
 
+    probSh2 = BK.ShootingProblem(M = M, flow = fl,
+                ds = LinRange(0,1,M+1) |> diff ,
+                section = BK.SectionSS(ones(N), zeros(N))
+                )
+
     poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     po = BorderedArray(poguess, 1.)
 
@@ -89,17 +105,18 @@ let
     # use of AbstractArray structure
     pov = vcat(reduce(vcat, po.u.vec), po.p)
     dpov = vcat(reduce(vcat, dpo.u.vec), dpo.p)
-    resv = probSh(pov, par)
+    resv = BK.residual(probSh, pov, par)
 
     dresv = BK.jvp(probSh, pov, par, dpov; δ = δ)
     resad = ForwardDiff.derivative(t -> BK.residual(probSh, pov .+ t .* dpov, par), 0.)
     @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
     # use of BorderedArray structure
-    res = probSh(po, par)
+    res = BK.residual(probSh, po, par)
     @test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
     @test norm(res.p - resv[end], Inf) ≈ 0
 
+    BK.jvp(probSh2, po, par, dpo; δ = δ)
     dres = BK.jvp(probSh, po, par, dpo; δ = δ)
     @test norm(dres.p - dresv[end], Inf) ≈ 0
     @test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0

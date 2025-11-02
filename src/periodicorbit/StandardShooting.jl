@@ -119,15 +119,15 @@ function updatesection!(sh::ShootingProblem, x, pars)
     return true
 end
 
+@inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
+@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
+@inline get_time_slice(::ShootingProblem, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
+@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 @views function get_time_slices(sh::ShootingProblem, x::AbstractVector)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     return reshape(x[begin:end-1], N, M)
 end
-@inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
-@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
-@inline get_time_slice(sh::ShootingProblem, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
-@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 @views function (sh::ShootingProblem)(x::AbstractVector, pars)
@@ -172,7 +172,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            copyto!(_getindex(out.u,ii), evolve(sh.flow, _getindex(x.u,ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
+            copyto!(_getindex(out.u, ii), evolve(sh.flow, _getindex(x.u, ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
         end
     else
         @assert false "Not implemented yet. Try to use an AbstractVector instead"

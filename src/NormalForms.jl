@@ -333,7 +333,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     ~cv && @debug "[Normal form Ψ20] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .+ 3 .* R2(ζ, Ψ20)
     b30 = VI.inner(b3v, ζ★)
-    verbose && println("└─── b3/6 = ", b30/6)
+    verbose && println("└─── b30/6 = ", b30/6)
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a01, a02, b11, b20, b30, Ψ01, Ψ20), :NA)
     if max(abs(a01), abs(b11)) > 1e-10

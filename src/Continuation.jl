@@ -333,7 +333,8 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     prob = it.prob
     p₀ = getparam(prob)
 
-    verbose && printstyled("━"^54*"\n"*"─"^18*" ", typeof(getalg(it)).name.name, " "*"─"^18*"\n\n", bold = true, color = :red)
+    algo_string = typeof(getalg(it)).name.name; lalgo = 54-length(algo_string|>string)-2
+    verbose && printstyled("━"^54*"\n"*"─"^(lalgo÷2)*" ", algo_string, " "*"─"^(lalgo÷2)*"\n\n", bold = true, color = :red)
 
     # newton parameters
     (;p_min, p_max, max_steps, newton_options, η, ds) = it.contparams
@@ -344,7 +345,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     end
 
     # apply Newton algorithm to initial guess
-    verbose && printstyled("━"^18*"  INITIAL GUESS   "*"━"^18, bold = true, color = :magenta)
+    verbose && printstyled("━"^18*"  INITIAL GUESS   " * "━"^18, bold = true, color = :magenta)
 
     # we pass additional kwargs to newton so that it is sent to the newton callback
     sol₀ = solve(prob, Newton(), newton_options; 
@@ -353,15 +354,15 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
                  iterationC = 0,
                  p = p₀)
     if  ~converged(sol₀)
-        printstyled("\nNewton failed to converge for the initial guess on the branch. Residuals:\n", color=:red)
+        printstyled("\nNewton failed to converge for the initial guess on the branch. Residuals:\n", color = :red)
         display(sol₀.residuals)
         throw("Stopping continuation.")
     end
     if verbose
         print("\n──▶ convergence of initial guess = ")
-        printstyled("OK\n\n", color=:green)
+        printstyled("OK\n\n", color = :green)
         println("──▶ parameter = ", p₀, ", initial step")
-        printstyled("\n"*"━"^18*" INITIAL TANGENT  "*"━"^18, bold = true, color = :magenta)
+        printstyled("\n"*"━"^18 * " INITIAL TANGENT  " * "━"^18, bold = true, color = :magenta)
     end
 
     sol₁ = solve(re_make(prob; params = setparam(it, p₀ + ds / η), u0 = sol₀.u),
@@ -372,7 +373,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
                          iterationC = 0,
                          p = p₀ + ds / η)
     if ~converged(sol₁) 
-        error("Newton failed to converge. Required for the computation of the initial tangent.")
+        error("Newton failed to converge. Required for the computation of the initial tangent.\nYou can either decrease `ds` or increase `η`.")
     end
     if verbose
         print("\n──▶ convergence of the initial guess = ")

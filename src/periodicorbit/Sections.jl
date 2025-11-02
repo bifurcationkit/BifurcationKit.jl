@@ -21,25 +21,33 @@ This composite type (named for Section Standard Shooting) encodes a type of sect
 
 $(TYPEDFIELDS)
 
+# Constructor(s)
+    SectionSS(normals, centers)
+
 """
 struct SectionSS{Tn}  <: AbstractSection
-    "Normal to define hyperplane"
+    "Normal to define hyperplane."
     normal::Tn
 
-    "Representative point on hyperplane"
+    "Representative point on hyperplane."
     center::Tn
 end
 
 (sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
 
 # matrix-free jacobian
-function (sect::SectionSS)(u, T::Ty, du, dT::Ty) where Ty
-    return sect(u, one(Ty)) * dT + VI.inner(du, sect.normal) * T
+function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
+    return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
 end
 
 _isempty(sect::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
 
-# we update the field of Section, useful during continuation procedure for updating the section
+
+"""
+$(TYPEDSIGNATURES)
+
+Update the field of `SectionSS`, useful during continuation procedure for updating the section.
+"""
 function update!(sect::SectionSS, normal, center)
     _copyto!(sect.normal, normal)
     _copyto!(sect.center, center)
@@ -115,14 +123,14 @@ _duplicate(hyp::SectionPS) = SectionPS(_duplicate(hyp.normals), _duplicate(hyp.c
 _duplicate(hyp::SectionSS) = SectionSS(_duplicate(hyp.normals), _duplicate(hyp.centers))
 # ==================================================================================================
 """
-    update!(hyp::SectionPS, normals, centers)
+$(TYPEDSIGNATURES)
 
 Update the hyperplanes saved in `hyp`.
 """
 function update!(hyp::SectionPS, normals, centers)
     M = hyp.M
-    @assert length(normals) == M "Wrong number of normals"
-    @assert length(centers) == M "Wrong number of centers"
+    @assert length(normals) == M "Wrong number of normals!"
+    @assert length(centers) == M "Wrong number of centers!"
     for ii in 1:M
         hyp.normals[ii] .= normals[ii]
         hyp.centers[ii] .= centers[ii]
