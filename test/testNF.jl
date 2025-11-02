@@ -40,10 +40,10 @@ show(bp)
 # normal form
 nf = bp.nf
 
-@test nf.a ≈ 0          atol = 1e-10
-@test nf.b1 ≈ 3.23      atol = 1e-10
-@test nf.b2/2 ≈ -1.12   atol = 1e-10
-@test nf.b3/6 ≈ 0.234   atol = 1e-10
+@test nf.a01 ≈ 0         atol = 1e-10
+@test nf.b11 ≈ 3.23      atol = 1e-10
+@test nf.b20/2 ≈ -1.12   atol = 1e-10
+@test nf.b30/6 ≈ 0.234   atol = 1e-10
 
 # test normal form predictor
 pred = predictor(bp, 0.1)
@@ -56,10 +56,10 @@ br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false)
 bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
 bp = BK.get_normal_form(br_noev, 1; verbose=false)
 nf = bp.nf
-@test nf.a ≈ 0          atol = 1e-10
-@test nf.b1 ≈ 3.23      atol = 1e-10
-@test nf.b2/2 ≈ -1.12   atol = 1e-10
-@test nf.b3/6 ≈ 0.234   atol = 1e-10
+@test nf.a01 ≈ 0         atol = 1e-10
+@test nf.b11 ≈ 3.23      atol = 1e-10
+@test nf.b20/2 ≈ -1.12   atol = 1e-10
+@test nf.b30/6 ≈ 0.234   atol = 1e-10
 ####################################################################################################
 # Automatic branch switching
 br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14))
@@ -89,10 +89,10 @@ prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 
 br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf)
 bp = BK.get_normal_form(br, 1; verbose=false)
 nf = bp.nf
-@test nf.a ≈ 0        atol = 1e-4
-@test nf.b1 ≈ 3.23    atol = 1e-4
-@test nf.b2/2 ≈ -1.12 atol = 1e-5
-@test nf.b3/6 ≈ 0.234 atol = 1e-5
+@test nf.a01 ≈ 0       atol = 1e-4
+@test nf.b11 ≈ 3.23    atol = 1e-4
+@test nf.b20/2 ≈ -1.12 atol = 1e-5
+@test nf.b30/6 ≈ 0.234 atol = 1e-5
 br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
 # plot(br,br2)
 ####################################################################################################
@@ -106,10 +106,10 @@ show(bpp)
 @test BK.type(bpp) == :Pitchfork
 
 nf = bpp.nf
-@test nf.a ≈ 0         atol = 1e-8
-@test nf.b1 ≈ 3.23     atol = 1e-9
-@test nf.b2/2 ≈ 0      atol = 1e-9
-@test nf.b3/6 ≈ -0.234 atol = 1e-9
+@test nf.a01 ≈ 0        atol = 1e-8
+@test nf.b11 ≈ 3.23     atol = 1e-9
+@test nf.b20/2 ≈ 0      atol = 1e-9
+@test nf.b30/6 ≈ -0.234 atol = 1e-9
 
 # test predictor
 pred = predictor(bpp, 0.1)

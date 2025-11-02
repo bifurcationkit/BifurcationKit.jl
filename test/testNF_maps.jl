@@ -40,10 +40,10 @@ for b in (0, 0.21), saveev in (true, false)
 
     nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true)
     nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true, autodiff = true)
-    @test nf.nf.a ≈ 0 
-    @test nf.nf.b1 ≈ pars_bp.a
-    @test nf.nf.b2/2 ≈ pars_bp.b
-    @test nf.nf.b3/6 ≈ pars_bp.c
+    @test nf.nf.a01 ≈ 0 
+    @test nf.nf.b11 ≈ pars_bp.a
+    @test nf.nf.b20/2 ≈ pars_bp.b
+    @test nf.nf.b30/6 ≈ pars_bp.c
     show(nf)
     BK.type(nf)
 

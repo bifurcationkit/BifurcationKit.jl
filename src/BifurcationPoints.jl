@@ -205,7 +205,7 @@ end
 
 for op in (:Pitchfork, :PitchforkMap)
     @eval begin
-    $op(x0, τ, p, params, lens, ζ, ζ★, nf) = $op(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+    $op(x0, τ, p, params, lens, ζ, ζ★, nf) = $op(x0, τ, p, params, lens, ζ, ζ★, nf, real(nf.b11) * real(nf.b30) < 0 ? :SuperCritical : :SubCritical)
     end
 end
 
@@ -220,10 +220,10 @@ type(bp::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function printnf1d(io, nf; prefix = "")
-    println(io, prefix * "┌─ a  = ", nf.a)
-    println(io, prefix * "├─ b1 = ", nf.b1)
-    println(io, prefix * "├─ b2 = ", nf.b2)
-    println(io, prefix * "└─ b3 = ", nf.b3)
+    println(io, prefix * "┌─ a01 = ", nf.a01)
+    println(io, prefix * "├─ b11 = ", nf.b11)
+    println(io, prefix * "├─ b20 = ", nf.b20)
+    println(io, prefix * "└─ b30 = ", nf.b30)
 end
 
 function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
@@ -234,16 +234,16 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
     plens = get_lens_symbol(bp.lens)
     println(io, " bifurcation point at $plens ≈ $(bp.p)")
     if bp isa AbstractSimpleBranchPointForMaps
-        println(io, prefix*"Normal form x ─▶ x + (aδ$plens + b1⋅x⋅δ$plens + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form x ─▶ x + (a01⋅δ$plens + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
     else
-        println(io, prefix*"Normal form (aδ$plens + b1⋅x⋅δ$plens + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form (a01⋅δ$plens + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
     end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf; prefix)
     end
 end
 
-function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "") #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "")
     printstyled(io, prefix, bp.type, " - Pitchfork", color=:cyan, bold = true)
     if bp isa PitchforkMap
         printstyled(io, " (Maps)", color=:cyan, bold = true)
@@ -251,9 +251,9 @@ function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "") #a�
     plens = get_lens_symbol(bp.lens)
     println(io, " bifurcation point at $plens ≈ $(bp.p)")
     if bp isa PitchforkMap
-        println(io, prefix*"Normal form x ─▶ x + a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6)")
+        println(io, prefix*"Normal form x ─▶ x + a01⋅δ$plens + x⋅(b11⋅δ$plens + b30⋅x²/6)")
     else
-        println(io, prefix*"Normal form a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6)")
+        println(io, prefix*"Normal form a01⋅δ$plens + x⋅(b11⋅δ$plens + b30⋅x²/6)")
     end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf; prefix)
