@@ -26,14 +26,14 @@ Computes Floquet multipliers (eigenvalues of the monodromy matrix) for periodic 
 
 The "Quick and Dirty" (QaD) method computes Floquet multipliers through sequential matrix products along the periodic orbit. This approach has numerical limitation:
 
-- **Precision issues**: Accuracy degrades for large or small Floquet exponents when using many time sections, due to accumulated errors from repeated matrix multiplications
+- **Precision issues**: Accuracy degrades for large or small Floquet exponents when using many time sections, due to accumulated errors from repeated matrix multiplications.
 
-Despite precision limitations, the method is sufficient for bifurcation detection in most cases
+Despite precision limitations, the method is sufficient for bifurcation detection in most cases.
 
 ## Fields
 
-- `eigsolver::AbstractEigenSolver`: Eigensolver used to compute the eigenvalues of the monodromy matrix
-- `matrix_free::Bool`: Whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver)
+- `eigsolver::AbstractEigenSolver`: Eigensolver used to compute the eigenvalues of the monodromy matrix.
+- `matrix_free::Bool`: Whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver).
 
 ## Implementation Details
 
@@ -412,8 +412,8 @@ This method reformulates the Floquet multiplier computation as a large-dimension
 
 ## Fields
 
-- `eigsolver::AbstractEigenSolver`: Eigensolver used to solve the generalized eigenvalue problem
-- `B::Tb`: Mass matrix for the generalized eigenvalue formulation
+- `eigsolver::AbstractEigenSolver`: Eigensolver used to solve the generalized eigenvalue problem.
+- `B::Tb`: Mass matrix for the generalized eigenvalue formulation.
 
 ## Constructor
 
@@ -422,10 +422,10 @@ FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
 ```
 
 **Arguments**:
-- `eigls`: Eigensolver to use
-- `ntot`: Total dimension of the generalized eigenvalue problem
-- `n`: State space dimension
-- `array_zeros`: Function to allocate zero arrays (defaults to `zeros`)
+- `eigls`: Eigensolver to use.
+- `ntot`: Total dimension of the generalized eigenvalue problem.
+- `n`: State space dimension.
+- `array_zeros`: Function to allocate zero arrays (defaults to `zeros`).
 
 ## Example
 
@@ -470,7 +470,7 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
     μ = @. Complex(1 / (1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
     end
     Ind = sortperm(log.(μ); by = real, rev = true)
     nev2 = min(nev, length(Ind))
@@ -518,14 +518,14 @@ floquet_solver = FloquetColl(eigls = EigArpack())
 ```
 
 ## References
-[1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
+[1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «Numerical analysis and control of bifurcation problems (ii): bifurcation in infinite dimensions». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
 
 [2] Lust, Kurt. «Improved Numerical Floquet Multipliers». International Journal of Bifurcation and Chaos 11, nᵒ 09 (septembre 2001): 2389‑2410. https://doi.org/10.1142/S0218127401003486.
 
 [3] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
 """
 struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
-    "Which eigen solver. Defaults to `DefaultEig`"
+    "Which eigen solver. Defaults to `DefaultEig`."
     eigsolver::E
     "Cache, defaults to `nothing`. It should be set to `COPCACHE`. When used with `COPBLS`, it is automatically set up."
     cache::C
@@ -592,7 +592,7 @@ end
     nbcoll = N * m
     In = LinearAlgebra.I(N)
 
-    # condensation of parameters
+    # Condensation of parameters:
     # this removes the internal unknowns of each mesh interval
     # this matrix is diagonal by blocks and each block is the L Matrix
     # which makes the corresponding J block upper triangular

@@ -56,15 +56,15 @@ function _update_cont_params(contParams::ContinuationPar, pb::AbstractShootingPr
     return contParams
 end
 
-function _update_cont_params(contParams::ContinuationPar, coll::PeriodicOrbitOCollProblem, orbitguess)
-    if contParams.newton_options.linsolver isa BifurcationKit.FloquetWrapperLS{<:COPLS}
-        @reset contParams.newton_options.linsolver.solver = COPLS(COPCACHE(coll, Val(0)))
+function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOCollProblem, orbitguess)
+    if cont_params.newton_options.linsolver isa BifurcationKit.FloquetWrapperLS{<:COPLS}
+        @reset cont_params.newton_options.linsolver.solver = COPLS(COPCACHE(coll, Val(0)))
     end
-    return contParams
+    return cont_params
 end
 
-function _update_cont_params(contParams::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
-    return contParams
+function _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
+    return cont_params
 end
 ####################################################################################################
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)

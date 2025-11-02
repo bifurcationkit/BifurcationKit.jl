@@ -22,9 +22,9 @@ import OrdinaryDiffEq as ODE
 begin
     probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
     br_po = continuation(br, 1,
-    ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-    ShootingProblem(15, probsh, ODE.Rodas5(), parallel = true);
-    δp = 0.001, 
+                ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
+                ShootingProblem(15, probsh, ODE.Rodas5(), parallel = true);
+                δp = 0.001, 
     )
     @test br_po.specialpoint[1].type == :bp
     @test br_po.specialpoint[2].type == :bp
@@ -33,20 +33,23 @@ begin
     get_normal_form(br_po, 2, detailed = true)
     
     br_po_bp = continuation(deepcopy(br_po), 2;
-    δp = -0.001, ampfactor = 0.01,
-    use_normal_form = false, detailed = false,
+                    δp = -0.001, ampfactor = 0.01,
+                    use_normal_form = false, detailed = false,
     )
     
     @test br_po_bp.specialpoint[1].type == :ns
     @test br_po_bp.specialpoint[2].type == :pd
+
+    get_normal_form(br_po_bp, 1; detailed = true)
+    get_normal_form(br_po_bp, 2; detailed = true)
     # plot(br, br_po, br_po_bp, xlims = (-0.7,-0.5))
 end
 ##################################################################################
 begin
     br_po = continuation(br, 1, 
-    ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-    PeriodicOrbitOCollProblem(30,4; jacobian = BK.DenseAnalyticalInplace());
-    δp = 0.001, 
+                ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
+                PeriodicOrbitOCollProblem(30,4; jacobian = BK.DenseAnalyticalInplace());
+                δp = 0.001, 
     )
     
     @test br_po.specialpoint[1].type == :bp
@@ -57,18 +60,22 @@ begin
     BK.predictor(bppo, 0.01, 0.1)
     
     br_po_bp = continuation(deepcopy(br_po), 2; 
-    δp = -0.001, ampfactor = 0.01,
-    use_normal_form = true, detailed = false,
+                    δp = -0.001, ampfactor = 0.01,
+                    use_normal_form = true, detailed = false,
     )
     @test br_po_bp.specialpoint[1].type == :ns
     @test br_po_bp.specialpoint[2].type == :pd
+    get_normal_form(br_po_bp, 1; detailed = true)
+    get_normal_form(br_po_bp, 1; detailed = true, prm = true)
+    get_normal_form(br_po_bp, 2; detailed = true)
+    get_normal_form(br_po_bp, 2; detailed = true, prm = true)
 end
 ##################################################################################
 begin
     br_po = continuation(br, 1, 
-    ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-    PeriodicOrbitTrapProblem(M = 100; jacobian = BK.Dense());
-    δp = 0.001, 
+                ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
+                PeriodicOrbitTrapProblem(M = 100; jacobian = BK.Dense());
+                δp = 0.001, 
     )
 
     @test br_po.specialpoint[1].type == :bp
@@ -79,12 +86,15 @@ begin
     BK.predictor(bppo,0.01,0.1)
 
     br_po_bp = continuation(deepcopy(br_po), 2; 
-    δp = -0.001, ampfactor = 0.01,
-    use_normal_form = true, detailed = false,
-    prm = false
+                    δp = -0.001, ampfactor = 0.01,
+                    use_normal_form = true, detailed = false,
+                    prm = false
     )
 
     @test br_po_bp.specialpoint[1].type == :ns
     @test br_po_bp.specialpoint[2].type == :pd
+
+    get_normal_form(br_po_bp, 1; detailed = true)
+    get_normal_form(br_po_bp, 2; detailed = true)
     # plot(br_po, br_po_bp)
 end

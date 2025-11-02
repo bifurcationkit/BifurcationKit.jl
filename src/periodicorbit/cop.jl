@@ -38,7 +38,9 @@ struct COPCACHE{dim, 𝒯, Tp}
     function COPCACHE(coll::PeriodicOrbitOCollProblem, 
                         ::Val{dim0} = Val(0); 
                         𝒯 = eltype(coll)) where {dim0}
-        @assert dim0 isa Int64
+        if ~(dim0 isa Int64)
+            error("You must pass an integer.")
+        end
         dim::Int = dim0
         N, m, Ntst = size(coll)
         n = N

@@ -13,11 +13,11 @@ struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
     "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
     alg::Talg
 
-    "tolerance for switching to PALC(), default value = 0.5"
+    "tolerance for switching to PALC(), default value = 1//2"
     tol_param::T
 end
 
-function AutoSwitch(;alg = PALC(), tol_param = 0.5)
+function AutoSwitch(;alg = PALC(), tol_param = 1//2)
     return AutoSwitch(alg, tol_param)
 end
 

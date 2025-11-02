@@ -112,7 +112,7 @@ let poTrap = poTrap
 
     # tests for constructor of Floquet routines
     for eig in (EigArpack(), EigArnoldiMethod(), EigKrylovKit())
-        BK.check_floquet_options(eig)
+        BK._check_floquet_options(eig)
     end
     FloquetQaD(EigKrylovKit()) |> FloquetQaD
 

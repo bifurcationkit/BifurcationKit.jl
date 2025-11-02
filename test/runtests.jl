@@ -69,6 +69,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
     @testset "Periodic orbits BP-PO" begin
         # for testing BP-PO aBS for coll/Shooting/Trapezoidal
+        # test BP/PD/NS normal form for Shooting/Collocation
         include("freire.jl")
     end
 
@@ -88,7 +89,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     end
 
     @testset "Periodic orbits function SH4 - and Collocation" begin
-        # for testing period doubling aBS
+        # for testing period doubling aBS, NF for SH/Coll
         @info "Entry in testLure.jl"
         include("testLure.jl")
     end

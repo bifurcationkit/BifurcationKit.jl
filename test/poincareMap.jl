@@ -1,7 +1,8 @@
 # using Revise, Test
 # using Plots
-using BifurcationKit, OrdinaryDiffEq, ForwardDiff
+using BifurcationKit, ForwardDiff
 using LinearAlgebra
+import OrdinaryDiffEq as ODE
 
 function Fsl!(f, u, p, t)
     (;r, μ, ω, c3) = p
@@ -26,14 +27,14 @@ end
 par_sl = (r = 0.1, μ = 0., ω = 1.0, c3 = 1.0,)
 u0 = [.001, .001]
 δ = 1e-8
-prob = ODEProblem(Fsl!, u0, (0., 100.), par_sl)
-algsl = KenCarp4()#Rodas4P()
+prob = ODE.ODEProblem(Fsl!, u0, (0., 100.), par_sl)
+algsl = ODE.KenCarp4()#Rodas4P()
 ####################################################################################################
-sol = OrdinaryDiffEq.solve(prob, algsl, abstol =1e-9, reltol=1e-6)
+sol = ODE.solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
 function flowTS(x, t, pb; alg = algsl, kwargs...)
     _pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
-    sol = OrdinaryDiffEq.solve(_pb, alg; abstol=1e-10, reltol=1e-9, save_everystep = false, kwargs...)
+    sol = ODE.solve(_pb, alg; abstol=1e-10, reltol=1e-9, save_everystep = false, kwargs...)
     return sol.t, sol
 end
 flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2][end]
@@ -51,7 +52,7 @@ centers = [zeros(2)]
 sectionH(x, c, n) = dot( x .- c[1], n[1])
 pSection(u, t, integrator) = sectionH(u, centers, normals) * (integrator.iter > 1)
 affect!(integrator) = terminate!(integrator)
-cb = OrdinaryDiffEq.ContinuousCallback(pSection, affect!; affect_neg! = nothing)
+cb = ODE.ContinuousCallback(pSection, affect!; affect_neg! = nothing)
 
 Π(x) = flowDE(x, Inf; callback = cb, save_everystep = false) # Poincaré return map
 T(x) = flowTS(x, Inf64, prob; callback = cb)[1][end] # time to section

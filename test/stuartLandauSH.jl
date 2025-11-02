@@ -113,6 +113,20 @@ br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
 _sol = BK.get_po_solution(_pb, outpo.u, BK.getparams(_pb))
 _sol(0.1)
 # plot(br_pok2)
+
+# test of all matrix-based jacobians 
+let
+    for jacPO in (BK.AutoDiffDense(), BK.FiniteDifferences(), BK.AutoDiffDenseAnalytical())
+        for eig in (FloquetQaD(optn.eigsolver), FloquetGEV(optn.eigsolver, 2*_pb.M, 2))
+            println("*"^50)
+            br_po = continuation((@set _pb.jacobian = jacPO), outpo.u, PALC(tangent = Bordered()),
+            opts_po_cont;
+            # verbosity = 0, plot = false,
+            eigsolver = eig,
+            normC = norminf)
+        end
+    end
+end
 ####################################################################################################
 # test automatic branch switching
 @info "Single Shooting aBS"

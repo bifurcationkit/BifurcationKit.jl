@@ -37,7 +37,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Constructor for the Poincaré return map. Return a `PoincaréMap`
+Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
 function PoincareMap(wrap::WrapPOSh, po, par, optn)
     sh = wrap.prob
@@ -51,7 +51,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Constructor for the Poincaré return map. Return a `PoincaréMap`
+Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
 function PoincareMap(wrap::WrapPOColl, po, par, optn)
     coll = wrap.prob
@@ -64,15 +64,14 @@ function PoincareMap(wrap::WrapPOColl, po, par, optn)
 end
 
 function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
-    # shooting problem
     sh = Π.probpo.prob
 
     M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
     T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
-    tₘ = _extract_period(x)    # estimate of the last bit for the return time
+    tₘ = _extract_period(x)   # estimate of the last bit for the return time
 
-    # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
+    # extract the orbit guess and reshape it into a matrix as it's more convenient to handle
     poc = get_time_slices(sh, Π.po)
     # unknowns are po₁, po₂, ..., poₘ, period
     @assert size(poc) == (N, M+1)
@@ -81,12 +80,12 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     # unknowns are x₂,...,xₘ,tΣ
 
     # variable to hold the computed result
-    out = similar(x, typeof(x[1]*x₁[1]*_get(par, getlens(sh))))
+    out = similar(x, typeof(x[1] * x₁[1] * _get(par, getlens(sh))))
     outc = get_time_slices(Π, out)
 
     if M == 0
         𝒯 = typeof(x[1] * x₁[1])
-        # this type promotion is to use ForwardDiff
+        # this type promotion is for ForwardDiff
         out[1] = Π.Σ(evolve(sh.flow, 𝒯.(x₁), par, tₘ * T⁰).u, T⁰)
         return out
     end
@@ -120,7 +119,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     x₀ = Π.po[N+1:end]
     x₀[end] = sh.ds[end]
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
-    # @assert false "needs a jacobian"
+    ## TODO needs a jacobian
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
@@ -204,8 +203,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the monodromy matrix of the Poincaré Return Map. It yields a `Matrix{𝒯}`
-
+Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
 function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
     sh = Π.probpo.prob
@@ -218,7 +216,7 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
     Mono = zeros(𝒯p, N, N)
     h = zeros(𝒯p, N)
-    for i = eachindex(h)
+    for i in eachindex(h)
         h[i] += 1
         y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
         # differential of return time
@@ -229,7 +227,6 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     end
     return Mono
 end
-
 
 function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)

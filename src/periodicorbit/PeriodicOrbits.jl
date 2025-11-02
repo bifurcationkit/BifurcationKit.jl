@@ -581,7 +581,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n├─── normal form    = ", use_normal_form ? "based on $(prm ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
-            "\n├─── new param    p = ", newp, ", p - p0 = ", newp - bifpt.param,
+            "\n├─── new param    p = ", newp, 
+            "\n├─── p - p0         = ", newp - bifpt.param,
             "\n├─── amplitude p.o. = ", pred.ampfactor,
             "\n")
 

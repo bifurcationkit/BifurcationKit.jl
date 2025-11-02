@@ -4,7 +4,7 @@ $(TYPEDSIGNATURES)
 Compute the Cusp normal form.
 
 # Arguments
-- `prob` bifurcation problem
+- `_prob` bifurcation problem
 - `pt::Cusp` Cusp bifurcation point
 - `ls` linear solver
 
@@ -21,7 +21,9 @@ function cusp_normal_form(_prob,
                             lens = getlens(br),
                             Teigvec::Type = _getvectortype(br),
                             scaleζ = norm)
-    @assert br.specialpoint[ind_bif].type == :cusp "The provided index does not refer to a Cusp Point"
+    if br.specialpoint[ind_bif].type != :cusp 
+        error("The provided index does not refer to a Cusp Point")
+    end
 
     verbose && println("━"^53*"\n──▶ Cusp Normal form computation")
 
@@ -65,7 +67,7 @@ function cusp_normal_form(_prob,
     L = jacobian(prob_vf, x0, parbif)
 
     # eigenvectors
-    # we recompute the eigen-elements if they were not saved during the computation of the branch
+    # we recompute the eigen-elements if they were not saved
     verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
     eigsolver = getsolver(options.eigsolver)
     _λ0, _ev0, _ = eigsolver(L, nev)
@@ -78,7 +80,7 @@ function cusp_normal_form(_prob,
     ζ = real.(geteigenvector(eigsolver, _ev0, Ivp[1]))
     ζ ./= scaleζ(ζ)
 
-    # extract eigen-elements for adjoint(L), needed to build spectral projector
+    # extract eigen-elements for adjoint(L), needed for spectral projector
     if is_symmetric(prob_vf)
         λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         ζ★ = copy(ζ)
@@ -96,12 +98,13 @@ function cusp_normal_form(_prob,
     # notations from this paper
     B(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
     C(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
-    q = ζ; p = ζ★
+    q = ζ
+    p = ζ★
 
     h2 = B(q, q)
     h2 .= LA.dot(p, h2) .* q .- h2
     H2, _, cv, it = bls(L, q, p, zero(𝒯), h2, zero(𝒯))
-    ~cv && @debug "[CUSP (H2)] Bordered linear solver for J did not converge. it = $it"
+    ~cv && @debug "[CUSP (H2)] Bordered linear solver for J did not converge. iterations = $it"
 
     c = LA.dot(p, C(q, q, q)) + 3LA.dot(p, B(q, H2))
     c /= 6
@@ -150,7 +153,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # for finite differences
     ϵ = convert(Ty, δ)
-    ϵ2 = sqrt(ϵ) # this one is for second order differential
+    ϵ2 = sqrt(ϵ) # for second order differential
 
     # linear solvers
     ls = prob_ma.linsolver
@@ -168,7 +171,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
     norm(G - LA.I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
 
     G = [LA.dot(xs, apply(L, x)) for xs in pt.ζ★, x in pt.ζ]
-    norminf(G - [0 1; 0 0]) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norm(G - [0 1; 0 0], Inf))"
+    norminf(G - [0 1; 0 0]) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norminf(G - [0 1; 0 0]))"
 
     # second differential
     R2(dx1, dx2) = d2F(VF, x0, parbif, dx1, dx2) ./2
@@ -350,7 +353,6 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     getx(s) = a > 0 ? -sqrt(abs(s) / a) : sqrt(abs(s) / abs(a))
 
     function HopfCurve(s)
-        # x = getx(s)
         if a > 0
             x = -sqrt(abs(s) / a)
             β1 = -abs(s)
@@ -436,9 +438,6 @@ Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initializ
 function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = one(T)) where T
-    # we follow
-    # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
-
     (;a, b) = bt.nf
     (;K10, K11, K2, b1, e, d, a1) = bt.nfsupp
     (;H0001, H0010, H0002, H1001, H2000) = bt.nfsupp
@@ -911,8 +910,8 @@ function bautin_normal_form(_prob::HopfMAProblem,
             C1(q0, q0, cq0, lens2) .+
             2 .* B1(h₁₁₀₀, q0, lens2) .+ B1(h₂₀₀₀, cq0, lens2) .+ A1(h₂₁₀₀, lens2)
     
-    γ₂₁₀ = LA.dot(p0, tmp2110)/2
-    γ₂₀₁ = LA.dot(p0, tmp2101)/2
+    γ₂₁₀ = LA.dot(p0, tmp2110) / 2
+    γ₂₀₁ = LA.dot(p0, tmp2101) / 2
 
     # formula (22)
     α = real.([γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]) \ [0, 1]
@@ -1032,7 +1031,7 @@ function zero_hopf_normal_form(_prob,
         q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
         verbose && @info "Second eigenvalue = $(λI)"
     else
-        @assert false "This case has not been done. Please open an issue on the website."
+        error("This case has not been done. Please open an issue on the website.")
         ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
     end
 

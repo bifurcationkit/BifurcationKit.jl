@@ -45,7 +45,7 @@ $(TYPEDSIGNATURES)
 Bi-orthogonalise the two sets of vectors.
 
 # Optional argument
-- `_dot = VectorInterface.inner` specify your own dot product
+- `_dot = VectorInterface.inner` specify your own dot product.
 """
 function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
@@ -113,7 +113,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     lens = getlens(br),
                     Teigvec::Type = _getvectortype(br),
                     tol_fold = 1e-3,
-                    scaleζ = norm,
+                    scaleζ = LA.norm,
                     autodiff::Bool = true,
                     detailed::Bool = true,
                     )
@@ -244,16 +244,15 @@ $(TYPEDSIGNATURES)
 Compute predictions for solution branches near a Transcritical bifurcation point.
 
 This function predicts points on both the trivial and bifurcated branches near a Transcritical
-bifurcation. The predictions are based on the normal form coefficients.
+bifurcation based on the normal form coefficients.
 
 # Arguments
-- `bp::Transcritical`: The Transcritical bifurcation point
-- `ds`: Parameter distance from the bifurcation point. Can be positive or negative.
-  The new parameter value will be `p = bp.p + ds`
+- `bp::Transcritical`: Transcritical bifurcation point.
+- `ds`: Parameter distance from the bifurcation point. Can be positive or negative. The new parameter value will be `p = bp.p + ds`.
 
 # Keyword Arguments
-- `verbose = false`: Display prediction information
-- `ampfactor = 1`: Multiplicative factor for the amplitude prediction
+- `verbose = false`: Display prediction information.
+- `ampfactor = 1`: Multiplicative factor for the amplitude prediction.
 
 # Returns
 A named tuple with the following fields:
@@ -307,12 +306,12 @@ $(TYPEDSIGNATURES)
 This function provides prediction for the zeros of the Pitchfork bifurcation point.
 
 # Arguments
-- `bp::Pitchfork` the bifurcation point
+- `bp::Pitchfork` bifurcation point.
 - `ds` at with distance relative to the bifurcation point do you want the prediction. Based on the criticality of the Pitchfork, its sign is enforced no matter what you pass. Basically the parameter is `bp.p + abs(ds) * dsfactor` where `dsfactor = ±1` depending on the criticality.
 
 # Optional arguments
-- `verbose` display information
-- `ampfactor = 1` factor multiplying prediction
+- `verbose` display information.
+- `ampfactor = 1` factor multiplying prediction.
 
 # Returned values
 - `x0` trivial solution (which bifurcates)
@@ -337,7 +336,7 @@ function predictor(bp::Union{Pitchfork, PitchforkMap}, ds::𝒯; verbose = false
     #     pnew = bp.p + dsfactor * ds^2 * abs(b3/b1/6)
     end
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor, amp)
+    return (;x0 = bp.x0, x1 = bp.x0 .+ amp .* real.(bp.ζ), p = pnew, dsfactor, amp, δp = pnew - bp.p)
 end
 
 function predictor(bp::Fold, ds::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
@@ -508,7 +507,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         verbose = false,
                         lens = getlens(br),
                         Teigvec::Type = _getvectortype(br),
-                        scaleζ = norm,
+                        scaleζ = LA.norm,
 
                         detailed = true,
                         autodiff = true,
@@ -557,7 +556,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             lens = getlens(br),
                             Teigvec::Type = _getvectortype(br),
                             tol_fold = 1e-3,
-                            scaleζ = norm,
+                            scaleζ = LA.norm,
                             autodiff = false
                             )
     bifpt = br.specialpoint[id_bif]
@@ -751,9 +750,9 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
     # dimension of the kernel
     n = length(bp.ζ)
 
+    deflationOp = DeflationOperator(2, one(𝒯), [zeros(𝒯, n)]; autodiff = true)
     # find zeros of the normal on each side of the bifurcation point
     function _get_roots_nf(_ds)
-        deflationOp = DeflationOperator(2, one(𝒯), [zeros(𝒯, n)]; autodiff = true)
         prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, p)),
                                     (rand(𝒯, n) .- 𝒯(1/2)) .* 𝒯(1.1), 
                                     _ds)
@@ -783,7 +782,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function provides prediction for what the zeros of the reduced equation / normal form should be should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the hypercube.
+This function provides prediction for what the zeros of the reduced equation / normal form should be for the parameter value `δp`. The algorithm for finding these zeros is based on deflated newton. The initial guesses are the vertices of the hypercube.
 
 ## Optional arguments
 - `J` jacobian of the normal form. It is evaluated with ForwardDiff otherwise.
@@ -800,7 +799,7 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::𝒯;
                     J = nothing,
                     igs = nothing,
                     normN = norminf,
-                    optn::NewtonPar = NewtonPar(max_iterations = maxiter, verbose = verbose)) where 𝒯
+                    optn::NewtonPar = NewtonPar(;max_iterations = maxiter, verbose)) where 𝒯
 
     # dimension of the kernel
     n = length(bp.ζ)
@@ -823,8 +822,8 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::𝒯;
         # we allow for 30 failures of nonlinear deflation
         for ci in igs
             prob.u0 .= [ci...] * ampfactor
-            # outdef1 = newton(prob, deflationOp, optn, Val(:autodiff); normN = normN)
-            outdef1 = solve(prob, Newton(), optn; normN = normN)
+            # outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN)
+            outdef1 = solve(prob, Newton(), optn; normN)
             @debug _ds ci outdef1.converged prob.u0 outdef1.u
             if converged(outdef1)
                 push!(deflationOp, outdef1.u)
@@ -855,7 +854,7 @@ Compute the Hopf normal form.
 - `verbose` bool to print information
 - `L` jacobian
 """
-function hopf_normal_form(prob::AbstractBifurcationProblem, 
+function __hopf_normal_form(prob::AbstractBifurcationProblem, 
                             pt::Hopf, 
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
@@ -1028,7 +1027,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         :SuperCritical
     )
 
-    return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
+    return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 
 """
@@ -1176,7 +1175,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     return setproperties(pt; nf, type)
 end
 
-function predictor(pd::PeriodDoubling, δp ; verbose = false, ampfactor = 1 )
+function predictor(pd::PeriodDoubling, δp; verbose = false, ampfactor = 1 )
     # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
     # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
     #               = (1-2∂p)x -2cx^3 + h.o.t.
@@ -1304,7 +1303,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     Teigvec::Type = _getvectortype(br),
                     detailed = true,
                     autodiff = true,
-                    scaleζ = norm)
+                    scaleζ = LA.norm)
 
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
@@ -1341,12 +1340,12 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
-    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev"
+    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev."
 
     # normalise left eigenvector
     ζ★ ./= LA.dot(ζ, ζ★)
     if ~(LA.dot(ζ, ζ★) ≈ 1)
-        error("Error of precision in normalization")
+        error("Error of precision in normalization.")
     end
 
     nspt = NeimarkSacker(bifpt.x, bifpt.τ, bifpt.param,
@@ -1364,15 +1363,15 @@ $(TYPEDSIGNATURES)
 
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 
-## Note
-We could have copied the implementation of `get_normal_form1d` but we would have to redefine the jacobian which for shooting problem might sound a bit hacky. Nevertheless, it amounts to applying the same result to G(x) ≡ F(x) - x. Hence, we only chnage the linear solvers below.
+# Note
+We could have copied the implementation of `get_normal_form1d` but we would have to redefine the jacobian which, for shooting problems, might sound a bit hacky. Nevertheless, it amounts to applying the same result to G(x) ≡ F(x) - x. Hence, we only chnage the linear solvers below.
 """
 function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                     bp::BranchPointMap,
                     ls::AbstractLinearSolver;
                     verbose = false,
                     tol_fold = 1e-3,
-                    scaleζ = norm,
+                    scaleζ = LA.norm,
                     autodiff = false)
 
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
@@ -1390,7 +1389,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     # jacobian at bifurcation point
     L = jacobian(prob, x0, parbif)
 
-    if ~(abs(LA.dot(ζ, ζ★)) > 1e-10)
+    if abs(LA.dot(ζ, ζ★)) <= 1e-10
         error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
     end
     ζ★ ./= LA.dot(ζ, ζ★)
@@ -1400,7 +1399,9 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
     E(x) = x .- LA.dot(x, ζ★) .* ζ
 
-    # we compute the reduced equation: x + a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+    # we compute the reduced equation: 
+    #         x + a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+
     # coefficient of p
     δ = getdelta(prob)
     if autodiff
@@ -1412,8 +1413,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     a = LA.dot(R01, ζ★)
 
     Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
-
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
+
     verbose && println("┌── Normal form:   aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6")
     verbose && println("├─── a    = ", a)
 
@@ -1447,6 +1448,4 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     else
         return Fold(bp_args...)
     end
-    # we should never hit this
-    return nothing
 end

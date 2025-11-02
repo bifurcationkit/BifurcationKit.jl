@@ -1,5 +1,3 @@
-# using Revise
-# using Plots, Test
 using BifurcationKit, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
 ####################################################################################################
@@ -29,7 +27,15 @@ for b in (0, 0.21), saveev in (true, false)
 
     prob = BK.BifurcationProblem(Fbp, [0.0], pars_bp, (@optic _.μ))
 
-    bp = BK.BranchPointMap(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_bp.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
+    bp = BK.BranchPointMap(br.specialpoint[1].x, 
+                            br.specialpoint[1].τ,
+                            br.specialpoint[1].param,
+                            (@set pars_bp.μ = br.specialpoint[1].param),
+                            BK.getlens(br),
+                            [1.],
+                            [1.],
+                            nothing,
+                            :none)
     show(bp)
 
     nf = BK.get_normal_form1d_maps(prob, bp, DefaultLS(); verbose = true)
@@ -47,30 +53,32 @@ for b in (0, 0.21), saveev in (true, false)
 end
 ####################################################################################################
 # case of the period doubling
-Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
-pars_pd = (μ = -0.2, a = 0.456, c = -1.234)
+begin
+    Fpd(u, p) = @. (-1+p.μ * p.a) * u + p.c * u^3
+    pars_pd = (μ = -0.2, a = 0.456, c = -1.234)
 
-probMap = BK.BifurcationProblem((x, p) -> Fpd(x, p) .- x, [0.0], pars_pd, (@optic _.μ))
+    probMap = BK.BifurcationProblem((x, p) -> Fpd(x, p) .- x, [0.0], pars_pd, (@optic _.μ))
 
-@reset opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
-br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
+    @reset opts_br.newton_options.eigsolver = EigMaps(DefaultEig())
+    br = continuation(probMap, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@optic _.μ))
+    prob = BK.BifurcationProblem(Fpd, [0.0], pars_pd, (@optic _.μ))
 
-pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
-BK.type(pd)
+    pd = BK.PeriodDoubling(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (@set pars_pd.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
+    BK.type(pd)
 
-nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false)
-nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false, autodiff = true)
-@test nf.nf.a ≈ pars_pd.a
-@test nf.nf.b3 ≈ pars_pd.c
-show(nf)
-BK.type(nf)
+    nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false)
+    nf = BK.period_doubling_normal_form(prob, pd, DefaultLS(); verbose = false, autodiff = true)
+    @test nf.nf.a ≈ pars_pd.a
+    @test nf.nf.b3 ≈ pars_pd.c
+    show(nf)
+    BK.type(nf)
 
-# test of the predictor
-pred = predictor(nf, 0.1)
-@test pred.x0 ≈ 0
-@test pred.x1 ≈ abs(sqrt(-pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)*(pars_pd.a*0.1)*((pars_pd.a*0.1) - 2))/(pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)))
+    # test of the predictor
+    pred = predictor(nf, 0.1)
+    @test pred.x0 ≈ 0
+    @test pred.x1 ≈ abs(sqrt(-pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)*(pars_pd.a*0.1)*((pars_pd.a*0.1) - 2))/(pars_pd.c*((pars_pd.a*0.1)^3 - 3*(pars_pd.a*0.1)^2 + 4*(pars_pd.a*0.1) - 2)))
+end
 ####################################################################################################
 # case of the Neimark-Sacker
 function Fns!(f, u, p, t)
@@ -84,22 +92,24 @@ function Fns!(f, u, p, t)
     return f
 end
 Fns(x, p) = Fns!(similar(x, promote_type(eltype(x), typeof(p.μ))), x, p, 0.)
-pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -6.789 - 0.456im)
+begin
+    pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -6.789 - 0.456im)
 
-prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))
-br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
+    prob_ns = BK.BifurcationProblem((x, p) -> Fns(x, p) .- x, 0.01rand(2), pars_ns, (@optic _.μ))
+    br = BK.continuation(prob_ns, PALC(), opts_br; normC = norminf, verbosity = 0)
 
-prob = BK.BifurcationProblem(Fns, [0.0, 0], pars_ns, (@optic _.μ))
-ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
-BK.type(ns)
+    prob = BK.BifurcationProblem(Fns, [0.0, 0], pars_ns, (@optic _.μ))
+    ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
+    BK.type(ns)
 
-nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
-nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true, autodiff = true)
-@test nf.nf.a ≈ pars_ns.a
-@test nf.nf.b ≈ pars_ns.c3
-show(nf)
-BK.type(nf)
+    nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
+    nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true, autodiff = true)
+    @test nf.nf.a ≈ pars_ns.a
+    @test nf.nf.b ≈ pars_ns.c3
+    show(nf)
+    BK.type(nf)
 
-nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = false)
-@test nf.nf.a == nothing
-BK.type(nf)
+    nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = false)
+    @test nf.nf.a == nothing
+    BK.type(nf)
+end

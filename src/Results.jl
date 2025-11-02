@@ -128,8 +128,8 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline type(br::AbstractBranchResult, ind) = type(br.specialpoint[ind])
 
 # check whether the eigenvalues are saved in the branch
-# this is a good test because we always fill br.eig with a dummy vector :(
 @inline haseigenvalues(br::ContResult) = _hasstability(br)
+# this is a good test because we always fill br.eig with at least one empty vector :(
 @inline haseigenvalues(br::AbstractBranchResult) = haseigenvalues(br.γ)
 
 # check whether the solution are saved in the branch
@@ -148,6 +148,7 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectortype(br::AbstractBranchResult) = _getvectortype(eltype(br.specialpoint))
 @inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
+
 """
     setparam(br, p0)
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.
