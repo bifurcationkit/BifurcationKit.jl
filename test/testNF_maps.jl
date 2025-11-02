@@ -10,7 +10,7 @@ function (eig::EigMaps)(J, nev; kwargs...)
     return log.(Complex.(λs)), evs, cv, it
 end
 ####################################################################################################
-opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20, verbose = false)
+opt_newton = NewtonPar(tol = 1e-9, max_iterations = 20)
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 100, n_inversion = 4, tol_bisection_eigenvalue = 1e-8, dsmin_bisection = 1e-9)
 ####################################################################################################
 # case of the branch point
@@ -92,6 +92,7 @@ function Fns!(f, u, p, t)
     return f
 end
 Fns(x, p) = Fns!(similar(x, promote_type(eltype(x), typeof(p.μ))), x, p, 0.)
+
 begin
     pars_ns = (a = 1.123, μ = -0.1, θ = 0.1, c3 = -6.789 - 0.456im)
 

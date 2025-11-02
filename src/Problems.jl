@@ -125,7 +125,7 @@ end
 
 # getters
 residual(pb::BifFunction, x, p) = pb.F(x, p)
-residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p);o)
+residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p); o)
 #####
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
 

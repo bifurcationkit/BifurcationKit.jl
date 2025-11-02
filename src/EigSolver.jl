@@ -34,9 +34,9 @@ Just pass the above fields like `DefaultEig(; which = abs)`
     which::T = real
 end
 
-function (l::DefaultEig)(J, nev; kwargs...)
+function (eig::DefaultEig)(J, nev; kwargs...)
     # we convert to Array so we can call l on small sparse matrices
-    F = LA.eigen(__to_array_for_eig(J); sortby = l.which)
+    F = LA.eigen(__to_array_for_eig(J); sortby = eig.which)
     nev2 = min(nev, length(F.values))
     # we perform a conversion to Complex numbers here as the type can 
     # change from Float to Complex along the branch, this would cause a bug
@@ -81,31 +81,35 @@ end
 
 EigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, real, kwargs)
 
-function (l::EigArpack)(J, nev; kwargs...)
+function (eig::EigArpack)(J, nev; kwargs...)
     if J isa AbstractMatrix
-        λ, ϕ, ncv = Arpack.eigs(J; nev, which = l.which, sigma = l.sigma, l.kwargs...)
+        λ, ϕ, ncv = Arpack.eigs(J; nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
     else
-        if !(:v0 in keys(l.kwargs))
+        if !(:v0 in keys(eig.kwargs))
             error("The v0 argument must be provided in EigArpack for the matrix-free case")
         end
-        N = length(l.kwargs[:v0])
-        T = eltype(l.kwargs[:v0])
+        N = length(eig.kwargs[:v0])
+        T = eltype(eig.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = l.which, sigma = l.sigma, l.kwargs...)
+        λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
     end
-    Ind = sortperm(λ; by = l.by, rev = true)
-    ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
-    return λ[Ind], ϕ[:, Ind], true, 1
+    return __sort_arpack(eig, λ, ϕ, ncv, nev)
 end
 
 # GEV, useful for computation of Floquet exponents based on collocation
-function gev(l::EigArpack, A, B, nev; kwargs...)
+function gev(eig::EigArpack, A, B, nev; kwargs...)
     if A isa AbstractMatrix
-        values, ϕ, ncv = @time "eigs" Arpack.eigs(A, B; nev, sigma = l.sigma, which = l.which, l.kwargs...)
+        λ, ϕ, ncv = Arpack.eigs(A, B; nev, sigma = eig.sigma, which = eig.which, eig.kwargs...)
     else
         error("Not defined yet. Please open an issue or make a Pull Request")
     end
-    return values, ϕ
+    return __sort_arpack(eig, λ, ϕ, ncv, nev)
+end
+
+function __sort_arpack(eig, λ, ϕ, ncv, nev)
+    Ind = sortperm(λ; by = eig.by, rev = true)
+    ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
+    return λ[Ind], ϕ[:, Ind], true, 1
 end
 ####################################################################################################
 # Solvers for KrylovKit
@@ -150,23 +154,22 @@ Just pass the above fields like `EigKrylovKit(;dim=2)`
     x₀::vectype = nothing
 end
 
-function (l::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
+function (eig::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     # note that there is no need to order the eigen-elements. KrylovKit does it
     # with the option `which`, by decreasing order.
-    kw = (verbosity = l.verbose,
-            krylovdim = l.dim, 
-            maxiter = l.maxiter,
-            tol = l.tol, 
-            issymmetric = l.issymmetric,
-            ishermitian = l.ishermitian)
-    if J isa AbstractMatrix && isnothing(l.x₀)
+    kw = (verbosity = eig.verbose,
+            krylovdim = eig.dim, 
+            maxiter = eig.maxiter,
+            tol = eig.tol, 
+            issymmetric = eig.issymmetric,
+            ishermitian = eig.ishermitian)
+    if J isa AbstractMatrix && isnothing(eig.x₀)
         nev = min(_nev, size(J, 1))
-        vals, vec, info = KrylovKit.eigsolve(J, nev, l.which; kw...)
+        vals, vec, info = KrylovKit.eigsolve(J, nev, eig.which; kw...)
     else
-        nev = min(_nev, length(l.x₀))
-        vals, vec, info = KrylovKit.eigsolve(J, l.x₀, nev, l.which; kw...)
+        nev = min(_nev, length(eig.x₀))
+        vals, vec, info = KrylovKit.eigsolve(J, eig.x₀, nev, eig.which; kw...)
     end
-    # (length(vals) != _nev) && (@warn "EigKrylovKit returned $(length(vals)) eigenvalues instead of the $_nev requested")
     info.converged == 0 && (@warn "KrylovKit.eigsolve solver did not converge")
     return vals, vec, info.converged > 0, info.numops
 end
@@ -206,36 +209,36 @@ end
 
 EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...) = EigArnoldiMethod(sigma, which, real, kwargs, x₀)
 
-function (l::EigArnoldiMethod)(J, nev; kwargs...)
+function (eig::EigArnoldiMethod)(J, nev; kwargs...)
     if J isa AbstractMatrix
-        if isnothing(l.sigma)
+        if isnothing(eig.sigma)
             decomp, history = ArnoldiMethod.partialschur(J; nev, 
-                                                         which = l.which,
-                                                         l.kwargs...)
+                                                         which = eig.which,
+                                                         eig.kwargs...)
         else
-            F = LA.factorize(l.sigma * LinearAlgebra.I - J)
+            F = LA.factorize(eig.sigma * LinearAlgebra.I - J)
             Jmap = LinearMaps.LinearMap{eltype(J)}((y, x) -> LA.ldiv!(y, F, x), size(J, 1);
                                         ismutating = true)
             decomp, history = ArnoldiMethod.partialschur(Jmap; nev, 
-                                                         which = l.which,
-                                                         l.kwargs...)
+                                                         which = eig.which,
+                                                         eig.kwargs...)
         end
     else
-        N = length(l.x₀)
-        𝒯 = eltype(l.x₀)
-        if isnothing(l.sigma) == false
+        N = length(eig.x₀)
+        𝒯 = eltype(eig.x₀)
+        if isnothing(eig.sigma) == false
             @warn "Shift-Invert strategy not implemented for maps"
         end
         Jmap = LinearMaps.LinearMap{𝒯}(J, N, N; ismutating = false)
-        decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = l.which,
-                                                     l.kwargs...)
+        decomp, history = ArnoldiMethod.partialschur(Jmap; nev, which = eig.which,
+                                                     eig.kwargs...)
     end
     λ, ϕ = ArnoldiMethod.partialeigen(decomp)
     # shift and invert
-    if isnothing(l.sigma) == false
-        λ .= @. l.sigma - 1 / λ
+    if isnothing(eig.sigma) == false
+        λ .= @. eig.sigma - 1 / λ
     end
-    Ind = sortperm(λ; by = l.by, rev = true)
+    Ind = sortperm(λ; by = eig.by, rev = true)
     ncv = length(λ)
     ncv < nev &&
         @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
@@ -243,22 +246,22 @@ function (l::EigArnoldiMethod)(J, nev; kwargs...)
 end
 
 # GEV useful for computation of Floquet exponents based on collocation
-function gev(l::EigArnoldiMethod, A, B, nev; kwargs...)
+function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
     if A isa AbstractMatrix
         # Solve Ax = λBx using Shift-invert method 
         # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
-        σ = isnothing(l.sigma) ? 0 : l.sigma
+        σ = isnothing(eig.sigma) ? 0 : eig.sigma
         P = LA.lu(A - σ * B)
         𝒯 = eltype(A)
         L = LinearMaps.LinearMap{𝒯}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
-        decomp, history = ArnoldiMethod.partialschur(L; nev, which = l.which,
-                                                         l.kwargs...)
+        decomp, history = ArnoldiMethod.partialschur(L; nev, which = eig.which,
+                                                         eig.kwargs...)
         vals, ϕ = ArnoldiMethod.partialeigen(decomp)
         values = @. 1/vals + σ
     else
         throw("Not defined yet. Please open an issue or make a Pull Request")
     end
-    return Complex.(values), Complex.(ϕ)
+    return Complex.(values), Complex.(ϕ), history.converged, 1
 end
 ####################################################################################################
 """
@@ -281,11 +284,32 @@ end
 
 geteigenvector(eigsolve::ShiftInvert, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
 
-function (eigen::ShiftInvert)(J, nev; kwargs...)
+function (eig::ShiftInvert)(J, nev; kwargs...)
     # (a₀ * I + a₁ * J) * x = rhs
     function Jmap(rhs)
-        eigen.ls(J, rhs; a₀ = -eigen.sigma , a₁ = 1)[1]
+        eig.ls(J, rhs; a₀ = -eig.sigma , a₁ = 1)[1]
     end
-    vals, vecs, cv, n = @time "SI-ev" eigen.eig(Jmap, nev; kwargs...)
-    return 1 ./vals .+ eigen.sigma, vecs, cv, n
+    vals, vecs, cv, n = @time "SI-ev" eig.eig(Jmap, nev; kwargs...)
+    return 1 ./vals .+ eig.sigma, vecs, cv, n
+end
+####################################################################################################
+"""
+$(TYPEDEF)
+
+Create an eigensolver for DAE, Basically a GEV with mass matrix.
+
+## Fields
+
+$(TYPEDFIELDS)
+"""
+struct EigenMassMatrix{Tb, Teig <: AbstractEigenSolver} <: AbstractEigenSolver
+    "Mass matrix"
+    B::Tb
+    "Eigen-solver"
+    eig::Teig
+end
+geteigenvector(eigsolve::EigenMassMatrix, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
+
+function (eigsolve::EigenMassMatrix)(J, nev; kwargs...)
+    return gev(eigsolve.eig, J, eigsolve.B, nev; kwargs...)
 end

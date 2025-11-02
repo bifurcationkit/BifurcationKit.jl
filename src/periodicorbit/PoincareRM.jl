@@ -1,20 +1,20 @@
 """
 $(TYPEDEF)
 
-Construct a Poincaré return map `Π` to an hyperplane `Σ` from a `AbstractPeriodicOrbitProblem`.
+Construct a Poincaré return map `Π` to an hyperplane `Σ` from an `AbstractPeriodicOrbitProblem`.
 If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
 
 ## Fields
 $(TYPEDFIELDS)
 """
 struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
-    "periodic orbit problem"
+    "periodic orbit problem."
     probpo::Tp
-    "Periodic orbit"
+    "Periodic orbit."
     po::Tpo
-    "section"
+    "section."
     Σ::Ts
-    "Newton options"
+    "Newton options."
     options::To
 end
 
@@ -148,13 +148,13 @@ function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
 end
 
 @views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
-    # shooting problem
+    # collocation problem
     coll = Π.probpo.prob
     N,_,_ = size(coll)
 
     uc = get_time_slices(coll, u)
     T = getperiod(coll, u, nothing)
-    𝒯 = typeof(u[1] * x₁[1])
+    𝒯 = promote_type(VI.scalartype(u), VI.scalartype(x₁))
     result = 𝒯.(u)
     resultc = get_time_slices(coll, result)
     functional_coll_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)

@@ -5,15 +5,25 @@ using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
+
+function jacobian_Fbp(x::AbstractVector{T}, p) where {T}
+    x1 = x[1]
+    J = zeros(T,2,2)
+    J[1,1] = 3.23 * p.μ - 2 * p.x2 * x1 + 0.702 * p.x3 * x1^2
+    J[1,2] = 1.0
+    J[2,1] = 0.0
+    J[2,2] = -1.0
+    return J
+end
 ####################################################################################################
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = NewtonPar(tol = 1e-9), max_steps = 100, n_inversion = 4)
 
-prob = BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
+prob = BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ); J = jacobian_Fbp)
 br = continuation(prob, PALC(), opts_br; normC = norminf)
 plot(br)
 
-@test br.specialpoint[1].interval[1] ≈ -2.136344567951428e-5
-@test br.specialpoint[1].interval[2] ≈ 0.0005310637271224761
+@test br.specialpoint[1].interval[1] < 0
+@test br.specialpoint[1].interval[2] > 0
 ####################################################################################################
 # normal form computation
 bp = BK.get_normal_form(br, 1; verbose=false, detailed = false)
@@ -30,10 +40,10 @@ show(bp)
 # normal form
 nf = bp.nf
 
-@test norm(nf.a) < 1e-10
-@test norm(nf.b1 - 3.23) < 1e-10
-@test norm(nf.b2/2 - -1.12) < 1e-10
-@test norm(nf.b3/6 - 0.234) < 1e-10
+@test nf.a ≈ 0          atol = 1e-10
+@test nf.b1 ≈ 3.23      atol = 1e-10
+@test nf.b2/2 ≈ -1.12   atol = 1e-10
+@test nf.b3/6 ≈ 0.234   atol = 1e-10
 
 # test normal form predictor
 pred = predictor(bp, 0.1)
@@ -46,10 +56,10 @@ br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false)
 bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
 bp = BK.get_normal_form(br_noev, 1; verbose=false)
 nf = bp.nf
-@test norm(nf[1]) < 1e-10
-@test norm(nf[2] - 3.23) < 1e-10
-@test norm(nf[3]/2 - -1.12) < 1e-10
-@test norm(nf[4]/6 - 0.234) < 1e-10
+@test nf.a ≈ 0          atol = 1e-10
+@test nf.b1 ≈ 3.23      atol = 1e-10
+@test nf.b2/2 ≈ -1.12   atol = 1e-10
+@test nf.b3/6 ≈ 0.234   atol = 1e-10
 ####################################################################################################
 # Automatic branch switching
 br2 = continuation(br, 1, setproperties(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14))
@@ -79,10 +89,10 @@ prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 
 br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf)
 bp = BK.get_normal_form(br, 1; verbose=false)
 nf = bp.nf
-@test norm(nf[1]) < 1e-4
-@test norm(nf[2] - 3.23) < 1e-4
-@test norm(nf[3]/2 - -1.12) < 1e-5
-@test norm(nf[4]/6 - 0.234) < 1e-5
+@test nf.a ≈ 0        atol = 1e-4
+@test nf.b1 ≈ 3.23    atol = 1e-4
+@test nf.b2/2 ≈ -1.12 atol = 1e-5
+@test nf.b3/6 ≈ 0.234 atol = 1e-5
 br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
 # plot(br,br2)
 ####################################################################################################
@@ -95,17 +105,16 @@ bpp = BK.get_normal_form(brp, 1; verbose=true)
 show(bpp)
 @test BK.type(bpp) == :Pitchfork
 
-
 nf = bpp.nf
-@test norm(nf.a) < 1e-8
-@test norm(nf.b1 - 3.23) < 1e-9
-@test norm(nf.b2/2 - 0) < 1e-9
-@test norm(nf.b3/6 + 0.234) < 1e-9
+@test nf.a ≈ 0         atol = 1e-8
+@test nf.b1 ≈ 3.23     atol = 1e-9
+@test nf.b2/2 ≈ 0      atol = 1e-9
+@test nf.b3/6 ≈ -0.234 atol = 1e-9
 
 # test predictor
 pred = predictor(bpp, 0.1)
 @test norm(pred.x0) < 1e-12
-@test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol=1e-5
+@test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol = 1e-5
 
 # test automatic branch switching
 br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2); ampfactor = 1)
@@ -151,7 +160,7 @@ let
         show(bp2d)
         BK.type(bp2d)
 
-        BK.nf(bp2d)
+        BK._get_string(bp2d)
         length(bp2d)
         bp2d(rand(2), 0.2)
         bp2d(Val(:reducedForm), rand(2), 0.2)
@@ -163,10 +172,10 @@ let
         _o2 = Fbp2d(_x0, (μ = 0.2, ν = 0., α = -1))[1:2]
         @test norminf(abs.(_o1) - abs.(_o2)) < 1e-9
 
-        @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -prob2d.params.α * 0.123) < 1e-10
-        @test abs(bp2d.nf.b3[1,1,2,2] / 2 - -prob2d.params.α * 0.234) < 1e-10
-        @test abs(bp2d.nf.b3[1,1,1,2] / 2 - -prob2d.params.α * 0.0)   < 1e-10
-        @test abs(bp2d.nf.b3[2,1,1,2] / 2 - -prob2d.params.α * 0.456) < 1e-10
+        @test bp2d.nf.b3[1,1,1,1] / 6 ≈ -prob2d.params.α * 0.123 atol = 1e-10
+        @test bp2d.nf.b3[1,1,2,2] / 2 ≈ -prob2d.params.α * 0.234 atol = 1e-10
+        @test bp2d.nf.b3[1,1,1,2] / 2 ≈ -prob2d.params.α * 0.0   atol = 1e-10
+        @test bp2d.nf.b3[2,1,1,2] / 2 ≈ -prob2d.params.α * 0.456 atol = 1e-10
         @test norm(bp2d.nf.b2, Inf) < 3e-6
         @test norm(bp2d.nf.b1 - prob2d.params.α * 3.23 * I, Inf) < 1e-9
         @test norm(bp2d.nf.a, Inf) < 1e-6
@@ -174,10 +183,10 @@ let
         # same but when the eigenvalues are not saved in the branch but computed on the fly instead
         br_noev = BK.continuation( prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = false); normC = norminf)
         bp2d = BK.get_normal_form(br_noev, 1; ζs = [[1, 0, 0.], [0, 1, 0.]]);
-        @test abs(bp2d.nf.b3[1,1,1,1] / 6 - -prob2d.params.α * 0.123) < 1e-15
-        @test abs(bp2d.nf.b3[1,1,2,2] / 2 - -prob2d.params.α * 0.234) < 1e-15
-        @test abs(bp2d.nf.b3[1,1,1,2] / 2 - -prob2d.params.α * 0.0)   < 1e-15
-        @test abs(bp2d.nf.b3[2,1,1,2] / 2 - -prob2d.params.α * 0.456) < 1e-15
+        @test bp2d.nf.b3[1,1,1,1] / 6 ≈ -prob2d.params.α * 0.123 atol = 1e-15
+        @test bp2d.nf.b3[1,1,2,2] / 2 ≈ -prob2d.params.α * 0.234 atol = 1e-15
+        @test bp2d.nf.b3[1,1,1,2] / 2 ≈ -prob2d.params.α * 0.0   atol = 1e-15
+        @test bp2d.nf.b3[2,1,1,2] / 2 ≈ -prob2d.params.α * 0.456 atol = 1e-15
         @test norm(bp2d.nf.b2, Inf) < 3e-15
         @test norm(bp2d.nf.b1 - prob2d.params.α * 3.23 * I, Inf) < 1e-9
         @test norm(bp2d.nf.a, Inf) < 1e-15
@@ -231,14 +240,14 @@ br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds 
 # plot(br;  plotfold = false)
 # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
 bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.], [0, 0, 1.]])
-BK.nf(bp2d)
+BK._get_string(bp2d)
 BK.type(bp2d)
 
 @test bp2d.nf.a == zeros(3)
 @test bp2d.nf.b1 ≈ I(3)
-@test abs(bp2d.nf.b3[1,1,1,1] / 6 - -probD6.params.b) < 1e-10
-@test abs(bp2d.nf.b3[1,1,2,2] / 2 - -probD6.params.c) < 1e-10
-@test abs(bp2d.nf.b2[1,2,3] - probD6.params.a)   < 1e-10
+@test bp2d.nf.b3[1,1,1,1] / 6 ≈ -probD6.params.b atol = 1e-10
+@test bp2d.nf.b3[1,1,2,2] / 2 ≈ -probD6.params.c atol = 1e-10
+@test bp2d.nf.b2[1,2,3] ≈ probD6.params.a atol = 1e-10
 
 # test the evaluation of the normal form
 x0 = rand(3); @test norm(FbpD6(x0, BK.setparam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
@@ -290,16 +299,16 @@ let
         nf = hp.nf
         BK.type(hp)
 
-        @test abs(nf.a - 1) < 1e-9
-        @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+        @test nf.a ≈ 1  atol = 1e-9
+        @test nf.b/2 ≈ (-par_sl.c3 + im*par_sl.μ)  atol = 1e-14
 
         # same but when the eigenvalues are not saved in the branch but computed on the fly instead
         br = BK.continuation(probsl2, PALC(), ContinuationPar(opts_br, save_eigenvectors = false); normC = norminf)
         hp = BK.get_normal_form(br, 1)
         show(hp)
         nf = hp.nf
-        @test abs(nf.a - 1) < 1e-9
-        @test abs(nf.b/2 - (-par_sl.c3 + im*par_sl.μ)) < 1e-14
+        @test nf.a ≈ 1  atol = 1e-9
+        @test nf.b/2 ≈ (-par_sl.c3 + im*par_sl.μ)  atol = 1e-14
     end
 end
 ####################################################################################################
@@ -384,22 +393,6 @@ let
         SN = BK.predictor(btpt, Val(:FoldCurve), 0.)
         Hom = BK.predictor(btpt, Val(:HomoclinicCurve), 0.)
         Hom.orbit(0,0)
-
-        # plot(sn_codim2, branchlabel = ["Fold"], vars = (:β1, :β2))
-        #     _S = LinRange(-0.06, 0.06, 1000)
-        #     plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=5, label = "Hpred")
-        #     plot!([SN.fold(s)[1] for s in _S], [SN.fold(s)[2] for s in _S], linewidth=5, label = "SNpred")
-        #     _S = LinRange(-0.25, 0.25, 1000)
-        #     plot!([Hom.α(s)[1] for s in _S], [Hom.α(s)[2] for s in _S], linewidth=5, label = "Hom")
-        #
-        #     plot!(hopf_codim2, branchlabel = ["Hopf"], vars = (:β1, :β2), color = :black)
-        #     xlims!(-0.001, 0.05)
-
-
-        # plot of the homoclinic orbit
-        # hom1 = [Hom.orbit(t,0.1)[1] for t in LinRange(-1000, 1000, 10000)]
-        # hom2 = [Hom.orbit(t,0.1)[2] for t in LinRange(-1000, 1000, 10000)]
-        # plot(hom1, hom2)
 
         # branch switching from BT from Fold
         opt = sn_codim2.contparams

@@ -287,7 +287,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
-                prm = false,
+                prm::Bool = prob isa WrapPOSh,
                 usehessian = false,
                 kind = PDCont(),
                 kwargs...) where {𝒯, vectype}
@@ -308,6 +308,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             usehessian,
             _norm = normC,
             newton_options,
+            prm,
             update_minaug_every_step)
 
     # this is to remove this part from the arguments passed to continuation

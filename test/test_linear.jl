@@ -651,3 +651,6 @@ J = I + 0.1rand(10,10)
 res1 = eig(J, 10)
 res1[1]
 @test norminf(eigvals(J, sortby = real) - res1[1])<1e-9
+
+eig = BK.EigenMassMatrix([1. 0; 0 0], DefaultEig())
+eig(rand(2, 2), 2)

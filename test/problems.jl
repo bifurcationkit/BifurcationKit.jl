@@ -2,7 +2,7 @@
 using Test, BifurcationKit
 const BK = BifurcationKit
 
-prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]), R11=(x,p,dx,dp) -> dx .* dp)
+prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]), R11 =(x,p,dx,dp) -> dx .* dp)
 
 BK.residual(prob, prob.u0, prob.params)
 BK.jacobian(prob, prob.u0, prob.params)

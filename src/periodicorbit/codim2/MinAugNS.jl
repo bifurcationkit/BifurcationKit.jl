@@ -260,7 +260,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         kind = NSCont(),
                         usehessian = false,
                         plot_solution = BifurcationKit.plot_solution(prob),
-                        prm = false,
+                        prm::Bool = prob isa WrapPOSh,
                         kwargs...) where {𝒯b, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)
@@ -281,6 +281,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
             usehessian,
             _norm = normC,
             newton_options,
+            prm,
             update_minaug_every_step)
 
     @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug(), FiniteDifferencesMF(), MinAugMatrixBased())

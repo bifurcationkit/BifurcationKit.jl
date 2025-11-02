@@ -28,26 +28,26 @@ You can see the propertynames of a result `br` by using `propertynames(br)` or `
 $(TYPEDFIELDS)
 
 # Associated methods
-- `length(br)` number of the continuation steps
-- `show(br)` display information about the branch
-- `propertynames(br)` give the propertynames of a result
-- `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step
-- `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step
-- `get_normal_form(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`
-- `getlens(br)` return the parameter axis used for the branch
-- `getlenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD)
-- `get_solx(br, k)` returns the k-th solution on the branch
-- `get_solp(br, k)` returns the parameter  value associated with k-th solution on the branch
+- `length(br)` number of the continuation steps.
+- `show(br)` display information about the branch.
+- `propertynames(br)` give the propertynames of a result.
+- `eigenvals(br, ind)` returns the eigenvalues for the ind-th continuation step.
+- `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step.
+- `get_normal_form(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`.
+- `getlens(br)` return the parameter axis used for the branch.
+- `getlenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD).
+- `get_solx(br, k)` returns the k-th solution on the branch.
+- `get_solp(br, k)` returns the parameter  value associated with k-th solution on the branch.
 - `getparams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
 - `getparams(br, ind)` Parameters passed to continuation and used in the equation `F(x, par) = 0` for the ind-th continuation step.
-- `setparam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`
-- `getlens(br)` get the lens used for the computation of the branch
-- `eigenvals(br, ind)` give the eigenvalues at continuation step `ind`
-- `eigenvalsfrombif(br, ind)` give the eigenvalues at bifurcation point index `ind`
+- `setparam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`.
+- `getlens(br)` get the lens used for the computation of the branch.
+- `eigenvals(br, ind)` give the eigenvalues at continuation step `ind`.
+- `eigenvalsfrombif(br, ind)` give the eigenvalues at bifurcation point index `ind`.
 - `BifurcationKit._merge(br1, br2)` merge twos branches into a single `ContResult`.
-- `type(br, ind)` returns the type of the ind-th bifurcation point
-- `br[k+1]` gives information about the k-th step. A typical run yields the following
-- `get_solution(br, ind)` returns the ind-th solution
+- `type(br, ind)` returns the type of the ind-th bifurcation point.
+- `br[k+1]` gives information about the k-th step. A typical run yields the following.
+- `get_solution(br, ind)` returns the ind-th solution.
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
@@ -73,13 +73,12 @@ julia> br.param
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
     "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
-  - `itnewton` number of Newton iterations
-  - `itlinear` total number of linear iterations during newton (corrector)
-  - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation)
+  - `itnewton` number of Newton iterations.
+  - `itlinear` total number of linear iterations during newton (corrector).
+  - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation).
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
   - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
-  - `step` continuation step (here equal `i`)"
-    branch::StructArrays.StructArray{Tbr}
+  - `step` continuation step (here equal `i`)."
 
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
@@ -87,7 +86,7 @@ julia> br.param
     "Vector of solutions sampled along the branch. This is set by the argument `save_sol_every_step::Int64` (default 0) in [`ContinuationPar`](@ref)."
     sol::Tsol
 
-    "The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)"
+    "The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)."
     contparams::Tparc
 
     "Type of solutions computed in this branch."
@@ -338,9 +337,9 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
-    "Set of branches branching off the bifurcation point `bp`"
+    "Set of branches branching off the bifurcation point `bp`."
     γ::T
-    "Bifurcation point. It is thought as the root of the branches in γ"
+    "Bifurcation point. It is thought as the root of the branches in γ."
     bp::Tbp
     function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ AbstractResult{Tkind, Tprob}} }}
         return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
@@ -350,6 +349,7 @@ end
 Base.length(br::Branch) = length(br.γ)
 @inline kernel_dimension(br::Branch, ind) = kernel_dimension(br.γ, ind)
 get_solution(br::Branch, ind) = get_solution(br.γ, ind)
+getprob(br::Branch) = getprob(br.γ)
 
 """
 $(TYPEDSIGNATURES)

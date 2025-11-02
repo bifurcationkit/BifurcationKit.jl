@@ -364,8 +364,8 @@ function branch_normal_form_prm(pbwrap::WrapPOColl,
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
             jvp = d1Π,
+            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
             # d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
             # d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             d2F = d2Π,

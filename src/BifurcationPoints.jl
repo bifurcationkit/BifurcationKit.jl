@@ -231,11 +231,12 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
     if bp isa AbstractSimpleBranchPointForMaps
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
-    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
+    plens = get_lens_symbol(bp.lens)
+    println(io, " bifurcation point at $plens ≈ $(bp.p)")
     if bp isa AbstractSimpleBranchPointForMaps
-        println(io, prefix*"Normal form x ─▶ x + (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form x ─▶ x + (aδ$plens + b1⋅x⋅δ$plens + b2⋅x²/2 + b3⋅x³/6)")
     else
-        println(io, prefix*"Normal form (aδμ + b1⋅x⋅δμ + b2⋅x²/2 + b3⋅x³/6)")
+        println(io, prefix*"Normal form (aδ$plens + b1⋅x⋅δ$plens + b2⋅x²/2 + b3⋅x³/6)")
     end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf; prefix)
@@ -247,12 +248,12 @@ function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "") #a�
     if bp isa PitchforkMap
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
-    println(io, " bifurcation point")
-    println(io, prefix, get_lens_symbol(bp.lens)," ≈ $(bp.p)")
+    plens = get_lens_symbol(bp.lens)
+    println(io, " bifurcation point at $plens ≈ $(bp.p)")
     if bp isa PitchforkMap
-        println(io, prefix*"Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+        println(io, prefix*"Normal form x ─▶ x + a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6)")
     else
-        println(io, prefix*"Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+        println(io, prefix*"Normal form a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6)")
     end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf; prefix)
@@ -260,9 +261,10 @@ function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "") #a�
 end
 
 function Base.show(io::IO, bp::PeriodDoubling)
+    plens = get_lens_symbol(bp.lens)
     printstyled(io, bp.type, " - Period-Doubling ", color=:cyan, bold = true)
-    println("bifurcation point at ", get_lens_symbol(bp.lens), " ≈ $(bp.p)")
-    println(io, "┌─ Normal form:\n├\t x ─▶ x⋅(a⋅δp - 1 + c⋅x²)")
+    println("bifurcation point at $plens ≈ $(bp.p)")
+    println(io, "┌─ Normal form:\n├\t x ─▶ x⋅(a⋅δ$plens - 1 + c⋅x²)")
     if ~isnothing(bp.nf)
         println(io, "├─ a = ", bp.nf.a)
         println(io, "└─ c = ", bp.nf.b3)
@@ -273,9 +275,10 @@ function Base.show(io::IO, bp::PeriodDoubling)
 end
 
 function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+    plens = get_lens_symbol(bp.lens)
     printstyled(io, bp.type, " - Branch point ", color=:cyan, bold = true)
-    println(io, "(Maps) bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
-    println(io, "Normal form x ─▶ a⋅δp + x⋅(b1⋅δp + b3⋅x²/6):")
+    println(io, "(Maps) bifurcation point at $plens ≈ $(bp.p)")
+    println(io, "Normal form x ─▶ a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
@@ -342,9 +345,10 @@ type(bp::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint)
-    println(io, "Non simple bifurcation point at ", get_lens_symbol(bp.lens), " ≈ $(bp.p). \nKernel dimension = ", length(bp))
+    plens = get_lens_symbol(bp.lens)
+    println(io, "Non simple bifurcation point at ", plens, " ≈ $(bp.p). \nKernel dimension = ", length(bp))
     println(io, "Normal form:")
-    println(io, mapreduce(x -> x * "\n", *, nf(bp)) )
+    println(io, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
 end
 ####################################################################################################
 """
@@ -396,11 +400,12 @@ type(bp::Hopf) = :Hopf
 Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::Hopf)
+    plens = get_lens_symbol(bp.lens)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p).")
+    println(io, " bifurcation point at $plens ≈ $(bp.p).")
     println(io, "Frequency ω ≈ ", abs(bp.ω))
     println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
-    println(io, "Normal form z⋅(iω + a⋅δp + b⋅|z|²):")
+    println(io, "Normal form z⋅(iω + a⋅δ$plens + b⋅|z|²):")
     if ~isnothing(bp.nf)
         println(io,"┌─ a = ", bp.nf.a)
         println(io,"└─ b = ", bp.nf.b)
@@ -457,10 +462,11 @@ type(bp::NeimarkSacker) = :NeimarkSacker
 
 function Base.show(io::IO, bp::NeimarkSacker)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)
-    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p).")
+    plens = get_lens_symbol(bp.lens)
+    println(io, " bifurcation point at $plens ≈ $(bp.p).")
     println(io, "Frequency θ ≈ ", abs(bp.ω))
     println(io, "Period of the periodic orbit ≈ ", abs(2pi/bp.ω))
-    println(io, "Normal form z ─▶ z⋅eⁱᶿ(1 + a⋅δp + b⋅|z|²)")
+    println(io, "Normal form z ─▶ z⋅eⁱᶿ(1 + a⋅δ$plens + b⋅|z|²)")
     if ~isnothing(bp.nf)
         println(io,"┌─ a = ", bp.nf.a)
         println(io,"└─ b = ", bp.nf.b)
