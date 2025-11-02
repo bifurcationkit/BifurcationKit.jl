@@ -345,11 +345,12 @@ end
 type(bp::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
-function Base.show(io::IO, bp::NdBranchPoint)
+function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
     plens = get_lens_symbol(bp.lens)
-    println(io, "Non simple bifurcation point at ", plens, " ≈ $(bp.p). \nKernel dimension = ", length(bp))
-    println(io, "Normal form:")
-    println(io, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
+    printstyled(io, prefix, bp.type, color=:cyan, bold = true)
+    println(io, " (non simple) bifurcation point at ", plens, " ≈ $(bp.p). \nKernel dimension = ", length(bp))
+    println(io, prefix, "Normal form:")
+    println(io, prefix, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
 end
 ####################################################################################################
 """

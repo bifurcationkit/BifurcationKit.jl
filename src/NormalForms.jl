@@ -336,13 +336,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("└─── b3/6 = ", b30/6)
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a01, a02, b11, b20, b30, Ψ01, Ψ02), :NA)
-    if abs(a01) + abs(b11) > 1e-10
+    if max(abs(a01), abs(b11)) > 1e-10
         if abs(a01) < tol_fold
             return 100abs(b20/2) < abs(b30/6) ? Pitchfork(bp[begin:end-1]...) : Transcritical(bp...) #!!! TYPE UNSTABLE
         else
             return Fold(bp...)
         end
     else
+        typebp = abs(a02) < tol_fold ? :NonQuadraticParameter : :NA
+        @reset bp[end] = typebp
         return BranchPoint(bp...)
     end
     # we should never hit this
@@ -856,12 +858,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         end
     end
 
+    typebp = max(norminf(∂gᵢ∂p), norminf(∂²gᵢ∂p²), norminf(∂²gᵢ∂xj∂pₖ)) < tol_fold ? :NonQuadraticParameter :  Symbol("$N-d")
+
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gᵢ∂p,
                                                            a02 = ∂²gᵢ∂p²,
                                                            b11 = ∂²gᵢ∂xj∂pₖ,
                                                            b20 = ∂²gᵢ∂xⱼ∂xₖ,
                                                            b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
-                        Symbol("$N-d"))
+                        typebp)
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
