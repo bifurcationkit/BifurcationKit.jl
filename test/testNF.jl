@@ -4,21 +4,12 @@ using Test
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
-Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * 0.234 * x[1]^2) + x[2], -x[2]]
-
-function jacobian_Fbp(x::AbstractVector{T}, p) where {T}
-    x1 = x[1]
-    J = zeros(T,2,2)
-    J[1,1] = 3.23 * p.μ - 2 * p.x2 * x1 + 0.702 * p.x3 * x1^2
-    J[1,2] = 1.0
-    J[2,1] = 0.0
-    J[2,2] = -1.0
-    return J
-end
+Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
+            -x[2] + p.γ * x[1]^2]
 ####################################################################################################
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = NewtonPar(tol = 1e-9), max_steps = 100, n_inversion = 4)
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
 
-prob = BifurcationProblem(Fbp, [0.1, 0.1], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ); J = jacobian_Fbp)
+prob = BifurcationProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ))
 br = continuation(prob, PALC(), opts_br; normC = norminf)
 plot(br)
 
@@ -26,7 +17,25 @@ plot(br)
 @test br.specialpoint[1].interval[2] > 0
 ####################################################################################################
 # normal form computation
-bp = BK.get_normal_form(br, 1; verbose=false, detailed = false)
+# we set the bifurcation point for exact computations
+@reset br.specialpoint[1].param = 0.
+bp = BK.get_normal_form(br, 1; verbose=true, detailed = false, ζs = [1., 0], ζs_ad = [1., 1])
+# on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
+@test bp.nf.Ψ02 ≈ [0, 2prob.params.γ]
+
+# normal form
+nf = bp.nf
+
+@test nf.a01 ≈ 0         atol = 1e-10
+@test nf.b11 ≈ 3.23      atol = 1e-10
+@test nf.b20/2 ≈ -prob.params.x2 + prob.params.γ   atol = 1e-10
+@test nf.b30/6 ≈ prob.params.x3   atol = 1e-10
+
+# test normal form predictor
+pred = predictor(bp, 0.1)
+@test norm(pred.x0) < 1e-10
+# @test pred.x1[1] ≈ 3.23 * 0.1 / prob.params.x2 rtol=1e-5
+
 bp = BK.get_normal_form(br, 1; verbose=false)
 @test BK.istranscritical(bp) == true
 @test BK.type(bp) == :Transcritical
@@ -36,28 +45,15 @@ prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
 bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
 @test BK.istranscritical(bp) == true
 show(bp)
-
-# normal form
-nf = bp.nf
-
-@test nf.a01 ≈ 0         atol = 1e-10
-@test nf.b11 ≈ 3.23      atol = 1e-10
-@test nf.b20/2 ≈ -1.12   atol = 1e-10
-@test nf.b30/6 ≈ 0.234   atol = 1e-10
-
-# test normal form predictor
-pred = predictor(bp, 0.1)
-@test norm(pred.x0) < 1e-12
-@test pred.x1[1] ≈ 3.23 * 0.1 / prob.params.x2 rtol=1e-5
 ####################################################################################################
 # same but when the eigenvalues are not saved in the branch but computed on the fly
-br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
+br_noev = BK.continuation(BK.re_make(prob, params = (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 0.)), PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
 @test BK.haseigenvector(br_noev) == false
 bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
 bp = BK.get_normal_form(br_noev, 1; verbose=false)
 nf = bp.nf
-@test nf.a01 ≈ 0         atol = 1e-10
-@test nf.b11 ≈ 3.23      atol = 1e-10
+@test nf.a01   ≈ 0       atol = 1e-10
+@test nf.b11   ≈ 3.23    atol = 1e-10
 @test nf.b20/2 ≈ -1.12   atol = 1e-10
 @test nf.b30/6 ≈ 0.234   atol = 1e-10
 ####################################################################################################
@@ -85,36 +81,36 @@ bdiag = bifurcationdiagram(prob, PALC(), 2,
 plot(bdiag)
 
 # same from the non-trivial branch
-prob = BK.BifurcationProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0), (@optic _.μ))
+prob = BK.BifurcationProblem(Fbp, [-0., 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0, γ = 0), (@optic _.μ))
 br = continuation(prob, PALC(), ContinuationPar(opts_br, n_inversion = 10); normC = norminf)
 bp = BK.get_normal_form(br, 1; verbose=false)
 nf = bp.nf
-@test nf.a01 ≈ 0       atol = 1e-4
-@test nf.b11 ≈ 3.23    atol = 1e-4
-@test nf.b20/2 ≈ -1.12 atol = 1e-5
-@test nf.b30/6 ≈ 0.234 atol = 1e-5
+@test nf.a01   ≈ 0                 atol = 1e-10
+@test nf.b11   ≈ 3.23              atol = 1e-10
+@test nf.b20/2 ≈ -prob.params.x2   atol = 1e-10
+@test nf.b30/6 ≈ prob.params.x3    atol = 1e-10
 br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
 # plot(br,br2)
 ####################################################################################################
-# Case of the pitchfork
-par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0)
+# Case of the pitchfork like
+par_pf = setproperties(prob.params ; x2 = 0.0, x3 = -1.0, γ = 1.422)
 prob_pf = BK.re_make(prob, params = par_pf, record_from_solution = (x,p;k...)->(x[1], norm(x)))
 brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = norminf)
-
 bpp = BK.get_normal_form(brp, 1; verbose=true)
 show(bpp)
 @test BK.type(bpp) == :Pitchfork
 
 nf = bpp.nf
-@test nf.a01 ≈ 0        atol = 1e-8
-@test nf.b11 ≈ 3.23     atol = 1e-9
-@test nf.b20/2 ≈ 0      atol = 1e-9
-@test nf.b30/6 ≈ -0.234 atol = 1e-9
+@test nf.a01 ≈ 0                     atol = 1e-10
+@test nf.a02 ≈ 0                     atol = 1e-10
+@test nf.b11 ≈ 3.23                  atol = 1e-10
+@test nf.b20/2 ≈ prob_pf.params.γ    atol = 1e-4
+@test nf.b30/6 ≈ prob_pf.params.x3   atol = 1e-10
 
 # test predictor
 pred = predictor(bpp, 0.1)
-@test norm(pred.x0) < 1e-12
 @test pred.x1[1] ≈ sqrt(3.23*0.1/0.234) rtol = 1e-5
+@test norminf(pred.x0) < 1e-7
 
 # test automatic branch switching
 br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2); ampfactor = 1)

@@ -68,10 +68,10 @@ begin
     @test br_po.specialpoint[2].type == :bp
 
     bp = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(true))
-    @test bp.nf.nf.a ≈ 1e-5 atol = 1e-5
-    @test bp.nf.nf.b1 ≈ 219 rtol = 1e-2
-    @test bp.nf.nf.b2 ≈ -4e-4 atol = 1e-2
-    @test bp.nf.nf.b3 ≈ 1657 rtol = 1e-4
+    @test bp.nf.nf.a01 ≈ 1e-5  atol = 1e-5
+    @test bp.nf.nf.b11 ≈ 219   rtol = 1e-2
+    @test bp.nf.nf.b20 ≈ -4e-4 atol = 1e-2
+    @test bp.nf.nf.b30 ≈ 1657  rtol = 1e-4
 
     bppo = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(false))
     BK.predictor(bppo, 0.01, 0.1)

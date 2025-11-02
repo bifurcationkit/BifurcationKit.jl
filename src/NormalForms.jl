@@ -83,7 +83,7 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
 
     # we switch to another algo if the above fails
     if norminf(G - LA.I) >= 1e-5 || switch_algo
-        @warn "Gram matrix not equal to identity. Switching to LU algorithm."
+        @warn "Gram matrix not equal to identity. Switching to LU algorithm.\n This modifies the basis of right eigenvectors!"
         println("G (det = $(LA.det(G))) = "); display(G)
         G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
         _F = LA.lu(G; check = true)
@@ -196,8 +196,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     lens = getlens(br),
                     tol_fold = 1e-3,
                     scaleζ = LA.norm,
+
                     ζ = nothing,
                     ζ_ad = nothing,
+
                     autodiff::Bool = true,
                     detailed::Bool = true,
                     ) where {𝒯eigvec}
@@ -467,29 +469,27 @@ function (bp::NdBranchPoint)(::Val{:reducedForm}, x::AbstractVector, p::𝒯) wh
     if ~(N == length(x))
         error("N = $N and length(x) = $(length(x)) should match!")
     end
-    out = zero(x)
-    # normal form
+    out = zero(x .* p)
     nf = bp.nf
-    # coefficient p
-    out .= p .* nf.a01
-
-    # factor to account for factorials
     factor = one(𝒯)
 
     @inbounds for ii in 1:N
         factor = one(𝒯)
-        out[ii] = 0
+        # coefficient p
+        out[ii] = p .* (nf.a01[ii] + 0p .* nf.a02[ii] / 2)
         for jj in 1:N
             # coefficient x*p
             out[ii] += p * nf.b11[ii, jj] * x[jj]
             for kk in 1:N
                 # coefficients of x^2
-                factor = jj == kk ? 1//2 : 1
-                out[ii] += nf.b20[ii, jj, kk] * x[jj] * x[kk] * factor / 2
+                # nf.b20[ii,:,:] is symmetric hence the factor
+                factor = 1//2
+                out[ii] += nf.b20[ii, jj, kk] * x[jj] * x[kk] * factor
 
                 for ll in 1:N
                     # coefficients of x^3
-                    factor = factor3d(ii, jj, kk)
+                    # nf.b30[ii,:,:,:] is symmetric hence the factor
+                    factor = 1//6
                     out[ii] += nf.b30[ii, jj, kk, ll] * x[jj] * x[kk]  * x[ll] * factor
                 end
             end
@@ -507,7 +507,7 @@ function (bp::NdBranchPoint)(x::AbstractArray, δp::Real)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Print the normal form `bp` with a nice string.
 """
@@ -523,9 +523,10 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
             out[ii] *= "$(round(nf.a01[ii]; digits))⋅$plens"
         end
         for jj in 1:N
-            coeff = round(nf.b11[ii,jj]; digits)
+            coeff = round(nf.b11[ii, jj]; digits)
+            sp = coeff > 0 ? " + " : " - "
             if abs(coeff) > tol
-                out[ii] *= " + $coeff * x$jj⋅$plens"
+                out[ii] *= sp * "$(abs(coeff)) * x$jj⋅$plens"
             end
         end
 
@@ -542,21 +543,19 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
 
                 for ll in kk:N
                     coeff = round(nf.b30[ii,jj,kk,ll] / 6; digits)
-                    _pow = zeros(Int64,N)
-                    _pow[jj] += 1;_pow[kk] += 1;_pow[ll] += 1;
-
+                    sp = coeff > 0 ? " + " : " - "
+                    coeff = abs(coeff)
                     if abs(coeff) > tol
                         if jj == kk == ll
-                            out[ii] *= " + $coeff"
-                        else
-                            out[ii] *= " + $(round(3coeff, digits = digits))"
-                        end
-                        for mm in 1:N
-                            if _pow[mm] > 1
-                                out[ii] *= "⋅x$mm" * (superDigits[_pow[mm]+1])
-                            elseif _pow[mm] == 1
-                                out[ii] *= "⋅x$mm"
-                            end
+                            out[ii] *= sp * "$coeff⋅x$(jj)³"
+                        elseif (jj==kk && jj != ll)
+                            out[ii] *= sp * "$(round(3coeff; digits))⋅x$(jj)²⋅x$ll"
+                        elseif (jj==ll && jj != kk)
+                            out[ii] *= sp * "$(round(3coeff; digits))⋅x$(jj)²⋅x$kk"
+                        elseif (kk==ll && kk != jj)
+                            out[ii] *= sp * "$(round(3coeff; digits))⋅x$(kk)²⋅x$jj"
+                        elseif jj < kk < ll
+                            out[ii] *= sp * "$(round(6coeff; digits))⋅x$jj⋅x$kk⋅x$ll"
                         end
                     end
                 end
@@ -570,12 +569,13 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
                             id_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            ζs = nothing,
-                            ζs_ad = nothing,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
                             tol_fold = 1e-3,
+
+                            ζs = nothing,
+                            ζs_ad = nothing,
                             scaleζ = LA.norm,
                             autodiff = false
                             ) where {𝒯eigvec}
@@ -682,9 +682,9 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
     verbose && printstyled(color=:green,"──▶ a01 (∂/∂p) = ", dgidp, "\n")
 
-    # coefficients of x*p
-    d2gidxjdpk = zeros(Tvec, N, N)
-    d2gidp2 = Vector{Tvec}(undef, N)
+    # coefficients of x*p and p^2
+    d²gidxjdpk = zeros(Tvec, N, N)
+    ∂²gi∂p² = Vector{Tvec}(undef, N)
     for jj in 1:N
         if autodiff
             R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
@@ -696,18 +696,21 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         Ψ01, cv, it = ls(L_fact, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         for ii in 1:N
-            d2gidxjdpk[ii,jj] = VI.inner(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
+            d²gidxjdpk[ii,jj] = VI.inner(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
         end
     end
-    verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( d2gidp2 ))
-    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p)  = \n"); Base.display( d2gidxjdpk ))
+    verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gi∂p² ))
+    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p)  = \n"); Base.display( d²gidxjdpk ))
 
     # coefficients of x^2
     d2gidxjdxk = zeros(Tvec, N, N, N)
     for jj in 1:N, kk in 1:N
-        b2v = R2(ζs[jj], ζs[kk])
-        for ii in 1:N
-            d2gidxjdxk[ii, jj, kk] = VI.inner(b2v, ζ★s[ii])
+        if kk >= jj
+            b2v = R2(ζs[jj], ζs[kk])
+            for ii in 1:N
+                d2gidxjdxk[ii, jj, kk] = VI.inner(b2v, ζ★s[ii])
+                d2gidxjdxk[ii, kk, jj] = d2gidxjdxk[ii, jj, kk]
+            end
         end
     end
 
@@ -722,22 +725,34 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # coefficient of x^3
     d3gidxjdxkdxl = zeros(Tvec, N, N, N, N)
     for jj in 1:N, kk in 1:N, ll in 1:N
-        b3v = R3(ζs[jj], ζs[kk], ζs[ll])
+        if jj==kk==ll || jj==kk || jj<kk<ll
+            b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[kk])))
-        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
-        b3v .-= R2(ζs[jj], wst)
+            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            b3v .-= R2(ζs[jj], wst)
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[jj])))
-        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
-        b3v .-= R2(ζs[kk], wst)
+            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            b3v .-= R2(ζs[kk], wst)
 
         wst, flag, it = ls(L_fact, E(R2(ζs[kk], ζs[jj])))
-        ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
-        b3v .-= R2(ζs[ll], wst)
+            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            b3v .-= R2(ζs[ll], wst)
 
-        for ii in 1:N
-            d3gidxjdxkdxl[ii, jj, kk, ll] = VI.inner(b3v, ζ★s[ii])
+            for ii in 1:N
+                c = VI.inner(b3v, ζ★s[ii])
+                for I in [
+                        (jj,kk,ll),
+                        (jj,ll,kk),
+                        (kk,jj,ll),
+                        (kk,ll,jj),
+                        (ll,jj,kk),
+                        (ll,kk,jj)
+                        ]
+                    d3gidxjdxkdxl[ii, I...] = c
+                end
+            end
         end
     end
     if verbose
@@ -748,7 +763,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         end
     end
 
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = dgidp, a02 = d2gidp2, b11 = d2gidxjdpk, b20 = d2gidxjdxk, b30 = d3gidxjdxkdxl), Symbol("$N-d"))
+    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = dgidp, a02 = ∂²gi∂p², b11 = d²gidxjdpk, b20 = d2gidxjdxk, b30 = d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
@@ -1379,8 +1394,8 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev."
