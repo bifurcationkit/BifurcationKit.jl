@@ -100,14 +100,14 @@ end
 
 # Compute M(u)
 # optimized version which does not allocate much
-function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot, T, vectype}
-    length(df.roots) == 0 && return T(1)
-    M(u) = T(1) / df.dot(u, u)^df.power + df.α
+function (df::DeflationOperator{𝒯p, Tdot, 𝒯})(::Val{:inplace}, u, tmp) where {𝒯p, Tdot, 𝒯}
+    length(df.roots) == 0 && return 𝒯(1)
+    M(u) = 𝒯(1) / df.dot(u, u)^df.power + df.α
     # compute u - df.roots[1]
-    _copyto!(tmp, u); VI.add!(tmp, df.roots[1], T(-1))
+    _copyto!(tmp, u); VI.add!(tmp, df.roots[1], 𝒯(-1))
     out = M(tmp)
     for ii in 2:length(df.roots)
-        _copyto!(tmp, u); VI.add!(tmp, df.roots[ii], T(-1))
+        _copyto!(tmp, u); VI.add!(tmp, df.roots[ii], 𝒯(-1))
         out *= M(tmp)
     end
     return out

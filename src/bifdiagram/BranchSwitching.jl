@@ -6,12 +6,12 @@ $(TYPEDSIGNATURES)
 This function is the analog of [`continuation`](@ref) when the first two points on the branch are passed (instead of a single one). Hence `x0` is the first point on the branch (with pseudo arc length `s=0`) with parameter `par0` and `x1` is the second point with parameter `set(par0, lens, p1)`.
 """
 function continuation(prob::AbstractBifurcationProblem,
-                        x0::Tv, par0,     # first point on the branch
-                        x1::Tv, p1::Real, # second point on the branch
-                        alg, lens::AllOpticTypes,
-                        contParams::ContinuationPar;
-                        bothside::Bool = false,
-                        kwargs...) where Tv
+                      x0::Tv, par0,     # first point on the branch
+                      x1::Tv, p1::Real, # second point on the branch
+                      alg, lens::AllOpticTypes,
+                      contParams::ContinuationPar;
+                      bothside::Bool = false,
+                      kwargs...) where Tv
     # update alg linear solver with contParams.newton_options.linsolver
     alg = update(alg, contParams, nothing)
     # check the sign of ds
@@ -255,13 +255,13 @@ multicontinuation(br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, opti
 
 # general function for branching from Nd bifurcation points
 function multicontinuation(br::AbstractBranchResult,
-                        bpnf::NdBranchPoint,
-                        options_cont::ContinuationPar = br.contparams;
-                        δp = nothing,
-                        ampfactor = _getvectoreltype(br)(1),
-                        perturb = identity,
-                        plot_solution = plot_solution(br.prob),
-                        kwargs...)
+                           bpnf::NdBranchPoint,
+                           options_cont::ContinuationPar = br.contparams;
+                           δp = nothing,
+                           ampfactor = _getvectoreltype(br)(1),
+                           perturb = identity,
+                           plot_solution = plot_solution(br.prob),
+                           kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
 
@@ -297,16 +297,18 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     rootsNFm = solfromRE.before
     rootsNFp = solfromRE.after
 
+    𝒯 = VI.scalartype(bpnf.x0)
+
     # attempting now to convert the guesses from the normal form into true zeros of F
     optn = options_cont.newton_options
+    optnDf = setproperties(optn; max_iterations = max_iter_deflation, verbose = verbosedeflation)
 
     # options for newton
     cbnewton = get(kwargs, :callback_newton, cb_default)
     normn = get(kwargs, :normC, norm)
 
     printstyled(color = :magenta, "──▶ Looking for solutions after the bifurcation point...\n")
-    defOpp = DeflationOperator(2, one(eltype(bpnf.x0)), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
-    optnDf = setproperties(optn; max_iterations = max_iter_deflation, verbose = verbosedeflation)
+    defOpp = DeflationOperator(2, one(𝒯), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 
     for (ind, xsol) in pairs(rootsNFp)
         probp = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
@@ -320,7 +322,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     end
 
     printstyled(color = :magenta, "──▶ Looking for solutions before the bifurcation point...\n")
-    defOpm = DeflationOperator(2, one(eltype(bpnf.x0)), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
+    defOpm = DeflationOperator(2, one(𝒯), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
     for (ind, xsol) in pairs(rootsNFm)
         probm = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p - ds))
@@ -376,28 +378,28 @@ Automatic branch switching at branch points based on a computation of the normal
 # Arguments
 - `br` branch result from a call to [`continuation`](@ref)
 - `bpnf` normal form
-- `defOpm::DeflationOperator, defOpp::DeflationOperator` to specify converged points on nonn-trivial branches before/after the bifurcation points.
+- `defOpm::DeflationOperator, defOpp::DeflationOperator` to specify converged points on non-trivial branches before/after the bifurcation points. The points are located in `defOpm.roots` and `defOpp.roots`. Note that we only continue from the second points in the roots vectors, the first one is meant to be the trivial branch.
 
 The rest is as the regular `multicontinuation` function.
 """
 function multicontinuation(br::AbstractBranchResult,
-                            bpnf::NdBranchPoint,
-                            defOpm::DeflationOperator,
-                            defOpp::DeflationOperator,
-                            options_cont::ContinuationPar = br.contparams ;
-                            alg = getalg(br),
-                            δp = nothing,
-                            Teigvec = _getvectortype(br),
-                            verbosedeflation = false,
-                            max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
-                            lsdefop = DeflatedProblemCustomLS(),
-                            plot_solution = plot_solution(br.prob),
-                            kwargs...)
+                           bpnf::NdBranchPoint,
+                           defOpm::DeflationOperator,
+                           defOpp::DeflationOperator,
+                           options_cont::ContinuationPar = br.contparams ;
+                           alg = getalg(br),
+                           δp = nothing,
+                           Teigvec = _getvectortype(br),
+                           verbosedeflation = false,
+                           max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
+                           lsdefop = DeflatedProblemCustomLS(),
+                           plot_solution = plot_solution(getprob(br)),
+                           kwargs...)
 
     ds = isnothing(δp) ? options_cont.ds : δp |> abs
     dscont = abs(options_cont.ds)
     par = bpnf.params
-    prob = re_make(br.prob; plot_solution = plot_solution)
+    prob = re_make(br.prob; plot_solution)
 
     # compute the different branches
     function _continue(_sol, _dp, _ds)
@@ -413,12 +415,12 @@ function multicontinuation(br::AbstractBranchResult,
     branches = Branch[]
     for id in 2:length(defOpm)
         br = _continue(defOpm[id], -ds, -dscont); push!(branches, Branch(br, bpnf))
-        # br, = _continue(defOpm[id], -ds, dscont); push!(branches, Branch(br, bpnf))
+        # br = _continue(defOpm[id], -ds, dscont); push!(branches, Branch(br, bpnf))
     end
 
     for id in 2:length(defOpp)
         br = _continue(defOpp[id], ds, dscont); push!(branches, Branch(br, bpnf))
-        # br, = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
+        # br = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
     end
 
     return branches

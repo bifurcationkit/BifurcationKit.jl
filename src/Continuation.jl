@@ -40,17 +40,17 @@ end
 
 # constructor
 function ContIterable(prob::AbstractBifurcationProblem,
-                    alg::AbstractContinuationAlgorithm,
-                    contparams::ContinuationPar{T, S, E};
-                    kind = EquilibriumCont(),
-                    filename = "branch-" * string(Dates.now()),
-                    plot = false,
-                    normC = norm,
-                    finalise_solution = finalise_default,
-                    callback_newton = cb_default,
-                    event = nothing,
-                    verbosity = 0, 
-                    kwargs...) where {T <: Real, S, E}
+                      alg::AbstractContinuationAlgorithm,
+                      contparams::ContinuationPar{T, S, E};
+                      kind = EquilibriumCont(),
+                      filename = "branch-" * string(Dates.now()),
+                      plot = false,
+                      normC = norm,
+                      finalise_solution = finalise_default,
+                      callback_newton = cb_default,
+                      event = nothing,
+                      verbosity = 0, 
+                      kwargs...) where {T <: Real, S, E}
     if ~isempty(kwargs)
         @error "Unrecognized keyword arguments found."
         print("Unrecognized keyword arguments: ")
@@ -61,16 +61,16 @@ function ContIterable(prob::AbstractBifurcationProblem,
     end
 
     return ContIterable(;kind,
-                prob,
-                alg,
-                contparams,
-                plot,
-                normC,
-                finalise_solution,
-                callback_newton,
-                event,
-                verbosity = convert(UInt8, verbosity),
-                filename)
+                        prob,
+                        alg,
+                        contparams,
+                        plot,
+                        normC,
+                        finalise_solution,
+                        callback_newton,
+                        event,
+                        verbosity = convert(UInt8, verbosity),
+                        filename)
 end
 
 Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T

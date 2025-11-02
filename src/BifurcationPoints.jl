@@ -278,7 +278,7 @@ function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - 
     plens = get_lens_symbol(bp.lens)
     printstyled(io, bp.type, " - Branch point ", color=:cyan, bold = true)
     println(io, "(Maps) bifurcation point at $plens ≈ $(bp.p)")
-    println(io, "Normal form x ─▶ a⋅δ$plens + x⋅(b1⋅δ$plens + b3⋅x²/6):")
+    println(io, "Normal form x ─▶ a01⋅δ$plens + x⋅(b11⋅δ$plens + b30⋅x²/6):")
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf)
     end
