@@ -113,17 +113,20 @@ end
 # this function updates the section during the continuation run
 function updatesection!(sh::ShootingProblem, x, pars)
     @debug "Update section shooting"
-    xt = get_time_slices(sh, x)
-    @views update!(sh.section, vf(sh.flow, xt[:, 1], pars), xt[:, 1])
+    x1 = get_time_slice(sh, x, 1)
+    @views update!(sh.section, vf(sh.flow, x1, pars), x1)
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
 
 @inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
-@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = xc[ii]
+# orbit stored as [x1, x2, ...] where x1 is N-dimensional
+@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = x[ii]
+@inline get_time_slice(sh::ShootingProblem, x::AbstractVector{<:Real}, ii::Int) = get_time_slices(sh, x)[:, ii]
 @inline get_time_slice(::ShootingProblem, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
+
 @inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
-@views function get_time_slices(sh::ShootingProblem, x::AbstractVector)
+@views function get_time_slices(sh::ShootingProblem, x::AbstractVector{<:Real})
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     return reshape(x[begin:end-1], N, M)
@@ -172,7 +175,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            copyto!(_getindex(out.u, ii), evolve(sh.flow, _getindex(x.u, ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
+            _copyto!(_getindex(out.u, ii), evolve(sh.flow, _getindex(x.u, ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
         end
     else
         @assert false "Not implemented yet. Try to use an AbstractVector instead"
@@ -233,7 +236,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, _getindex(x.u, ii), pars, _getindex(dx.u, ii), sh.ds[ii] * T)
-            _copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- _getindex(dx.u, ip1))
+            _copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* (sh.ds[ii] * dT) .- _getindex(dx.u, ip1))
         end
     else
         error("Not implemented yet. Try using AbstractVectors instead")

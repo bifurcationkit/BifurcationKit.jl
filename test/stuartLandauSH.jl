@@ -215,12 +215,11 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 
 @info "Test newton"
 ls = DefaultLS()
-    eil = EigKrylovKit(dim = 1, x₀ = rand(1))
-    optn = NewtonPar(verbose = false, tol = 1e-8,  max_iterations = 140, linsolver = ls, eigsolver = eil)
-    deflationOp = BK.DeflationOperator(2, dot, 1.0, [zero(initpo_bar)])
-    outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
-    @test BK.converged(outpo)
-
+eil = EigKrylovKit(dim = 1, x₀ = rand(1))
+optn = NewtonPar(verbose = false, tol = 1e-8,  max_iterations = 140, linsolver = ls, eigsolver = eil)
+deflationOp = BK.DeflationOperator(2, dot, 1.0, [zero(initpo_bar)])
+outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
+@test BK.converged(outpo)
 
 BK.getperiod(probPsh, outpo.u, par_hopf)
 BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
@@ -267,20 +266,20 @@ _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
 ls = DefaultLS()
-    eil = EigKrylovKit(dim = 1, x₀=rand(1))
-    optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 140, linsolver = ls, eigsolver = eil)
-    deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
+eil = EigKrylovKit(dim = 1, x₀=rand(1))
+optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 140, linsolver = ls, eigsolver = eil)
+deflationOp = DeflationOperator(2.0, dot, 1.0, [zero(initpo_bar)])
 
-    outpo = newton(probPsh2, initpo_bar, optn; normN = norminf)
-    @test BK.converged(outpo)
+outpo = newton(probPsh2, initpo_bar, optn; normN = norminf)
+@test BK.converged(outpo)
 
-    outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
-    @test BK.converged(outpo)
+outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
+@test BK.converged(outpo)
 
 getperiod(probPsh, outpo.u, par_hopf)
 
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max = 4.0, max_steps = 5, newton_options = (@set optn.tol = 1e-9), detect_bifurcation = 3, nev = 2)
-    br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
+br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
         opts_po_cont; verbosity = 0,
         plot = false, normC = norminf)
 @test br_pok2.prob isa BK.WrapPOSh
@@ -349,14 +348,20 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
     @info M, jacobianPO
 
     # specific to Poincaré Shooting
-    jacPO = jacobianPO isa BK.AutoDiffMF ? BK.FiniteDifferences() : jacobianPO
-    _parallel = jacPO isa BK.MatrixFree ? false : false
+    jacPOps = jacobianPO isa BK.AutoDiffMF ? BK.FiniteDifferences() : jacobianPO
+    _parallel = jacPOps isa BK.MatrixFree ? false : false
 
-    local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO, update_section_every_step = 2); normC = norminf, linear_algo = BorderingBLS(solver = (@set ls.N = M), check_precision = false), verbosity = 0)
+    local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), 
+            PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPOps, update_section_every_step = 2); 
+            normC = norminf,
+            linear_algo = BorderingBLS(solver = (@set ls.N = M), check_precision = false),
+            verbosity = 0)
 
     local br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
-    ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPO, update_section_every_step = 2); normC = norminf,
-    linear_algo = BorderingBLS(solver = (@set ls.N = 2M + 1), check_precision = false), verbosity = 0)
+            ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacobianPO, update_section_every_step = 2); 
+            normC = norminf,
+            linear_algo = BorderingBLS(solver = (@set ls.N = 2M + 1), check_precision = false), 
+            verbosity = 0)
 
     # test different versions of newton
     newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newton_options)
