@@ -364,6 +364,7 @@ let
         br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 
         hp = BK.get_normal_form(br, 1; detailed = Val(false))
+        hp = BK.get_normal_form(br, 1; autodiff, start_with_eigen = Val(false))
         hp = BK.get_normal_form(br, 1; autodiff)
         BK.type(hp)
 

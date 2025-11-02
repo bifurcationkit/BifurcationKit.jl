@@ -310,7 +310,6 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
     end
     b11 = VI.inner(R11 .+ R2(ζ, Ψ01), ζ★)
-    verbose && println("├─── b11   = ", b11)
 
     # coefficient of p² (see markdown)
     if autodiff
@@ -322,6 +321,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     a2v =  R02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
     a02 = VI.inner(a2v, ζ★)
     verbose && println("├─── a02   = ", a02)
+    verbose && println("├─── b11   = ", b11)
 
     # coefficient of x^2
     b2v = R2(ζ, ζ)
@@ -413,6 +413,11 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
         xm1 = @. bp.x0 - amp * real(bp.ζ) - ds * Ψ01
     end
 
+    if amp == 0
+        amp = convert(𝒯, abs(ds))
+        @warn "Singular normal form (`amp = 0`)!! Defaulting to `amp = $amp`."
+    end
+
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
     return (;x0, x1, xm1, p = pnew, pm1 = bp.p - ds, dsfactor, amp, p0 = bp.p)
 end
@@ -454,6 +459,10 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
     #     # we solve b11 * ds + b30 * amp^2 / 6 = 0
     #     amp = ampfactor * abs(ds)
     #     pnew = bp.p + dsfactor * ds^2 * abs(b30/b11/6)
+    end
+    if amp == 0
+        amp = convert(𝒯, abs(ds))
+        @warn "Singular normal form (`amp = 0`)!! Defaulting to `amp = $amp`."
     end
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
     return (;x0 = bp.x0, 
@@ -565,6 +574,9 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
     for ii = 1:N
         if abs(nf.a01[ii]) > tol
             out[ii] *= "$(round(nf.a01[ii]; digits))⋅$plens"
+        end
+        if abs(nf.a02[ii]) > tol
+            out[ii] *= " + $(round(nf.a02[ii]/2; digits))⋅$(plens)²"
         end
         for jj in 1:N
             coeff = round(nf.b11[ii, jj]; digits)
@@ -1049,7 +1061,7 @@ Compute the Hopf normal form.
 - `lens` parameter axis
 - `detailed::Val{Bool} = Val(true)` compute a simplified normal form or not
 - `Teigvec` vector type of the eigenvectors
-- `start_with_eigen = Val(true)` start with the eigen basis from the eigensolver. In case `Val(false)` is pased, the eigenbasis is computed using bordered vectors.
+- `start_with_eigen = Val(true)` start with the eigen basis from the eigensolver. In case `Val(false)` is pased, the eigenbasis is computed using a bordered linear system.
 - `scaleζ = norm` norm to normalise the eigenvectors
 
 # Available method
@@ -1119,8 +1131,17 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     # left eigen-elements
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(𝒯eigvec, bifpt.x), parbif) : adjoint(L)
+    if start_with_eigen_type
+        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
+    else
+        a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
+        b = ζ
+        (; v, w, itv, itw) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        ζ = v
+        ζ★ = w
+        λ★ = conj(λ)
+    end
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @debug "[Hopf normal form] We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
