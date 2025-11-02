@@ -71,10 +71,10 @@ end
 
 # we put type information to ensure the user pass a correct u0
 function updatesection!(pb::TWProblem{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {Tprob, Tu0, TDu0, TD}
-    copyto!(pb.u₀, u₀)
+    _copyto!(pb.u₀, u₀)
     for (∂, ∂u₀) in zip(pb.∂, pb.∂u₀)
         # pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
-        copyto!(∂u₀, ∂ * u₀)
+        _copyto!(∂u₀, ∂ * u₀)
     end
 end
 

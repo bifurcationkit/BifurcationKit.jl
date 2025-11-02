@@ -41,8 +41,8 @@ _isempty(sect::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
 
 # we update the field of Section, useful during continuation procedure for updating the section
 function update!(sect::SectionSS, normal, center)
-    copyto!(sect.normal, normal)
-    copyto!(sect.center, center)
+    _copyto!(sect.normal, normal)
+    _copyto!(sect.center, center)
     sect
 end
 
@@ -106,11 +106,11 @@ _select_index(v) = argmax(abs.(v))
 function _duplicate!(x::AbstractVector)
     n = length(x)
     for ii in 1:n
-        push!(x, copy(x[ii]))
+        push!(x, _copy(x[ii]))
     end
     x
 end
-_duplicate(x::AbstractVector) = _duplicate!(copy(x))
+_duplicate(x::AbstractVector) = _duplicate!(_copy(x))
 _duplicate(hyp::SectionPS) = SectionPS(_duplicate(hyp.normals), _duplicate(hyp.centers))
 _duplicate(hyp::SectionSS) = SectionSS(_duplicate(hyp.normals), _duplicate(hyp.centers))
 # ==================================================================================================

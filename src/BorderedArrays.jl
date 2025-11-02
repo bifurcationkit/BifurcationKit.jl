@@ -32,6 +32,7 @@ _copy(::Nothing) = nothing
 _copy(b::AbstractArray) = copy(b)
 
 _copyto!(dest::AbstractArray, src::AbstractArray) = copyto!(dest, src)
+_copyto!(dest::VI.MinimalVec, src::VI.MinimalVec) = VI.add!(dest, src, VI.One(), VI.Zero())
 
 function _copyto!(dest::BorderedArray{𝒯v, 𝒯1}, src::BorderedArray{𝒯v, 𝒯2}) where {𝒯v, 𝒯1, 𝒯2 }
     _copyto!(dest.u, src.u)
@@ -53,7 +54,8 @@ VI.inner(a::BorderedArray, b::BorderedArray) = VI.inner(a.u, b.u) + VI.inner(a.p
 
 function LA.norm(b::BorderedArray{Tv, Tp}, p::Real = 2) where {Tv, Tp}
     if p == 2
-        return sqrt(norm(b.u, 2)^2 + norm(b.p, 2)^2)
+        # not using norm(⋅,2) is useful to avoid a fallback for MinimalVec
+        return sqrt(norm(b.u)^2 + norm(b.p, 2)^2)
     elseif p == 1
         return LA.norm1(b.u) + LA.norm1(b.p)
     elseif p == Inf
@@ -85,11 +87,8 @@ minus(x::T, y::T) where {T <:Real} = (return x - y)
 ################################################################################
 # implements interface from VectorInterface for BorderedArray
 # KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl
-
 @inline VI.scalartype(W::BorderedArray) = promote_type(VI.scalartype(W.u), VI.scalartype(W.p))
-
 @inline VI.scalartype(::Type{BorderedArray{Tv, Tp}}) where {Tv, Tp} = promote_type(VI.scalartype(Tv), VI.scalartype(Tp))
-
 ########################
 function VI.zerovector(b::BorderedArray, S::Type{<:Number} = VI.scalartype(b)) 
     return BorderedArray(VI.zerovector(b.u, S), VI.zerovector(b.p, S))
@@ -107,7 +106,6 @@ function VI.zerovector!(b::BorderedArray{𝒯v, 𝒯p})  where {𝒯v, 𝒯p <: 
     return b
 end
 VI.zerovector!!(b::BorderedArray) = VI.zerovector!(b)
-
 ########################
 VI.scale(x::BorderedArray, α::Number) = BorderedArray(VI.scale(x.u, α), VI.scale(x.p, α))
 
@@ -226,9 +224,13 @@ $(TYPEDSIGNATURES)
 Initialize a vector like `randn!`.
 """
 _randn(x) = randn!(_copy(x))
-function _randn(y::BorderedArray{T, V}) where {T <: AbstractArray, V}
-    x = _copy(y)
-    randn!(x.u)
+_randn(x::VI.MinimalVec) = randn!(_copy(x.vec))
+_randn!(x::VI.MinimalVec) = (randn!(x.vec);x)
+
+_randn(y::BorderedArray{T, V}) where {T, V} = (x = _copy(y);_randn!(x);x)
+
+function _randn!(x::BorderedArray{T, V}) where {T, V}
+    _randn!(x.u)
     if V <: Number
         x.p = randn(V)
     elseif T <: AbstractArray

@@ -444,9 +444,9 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
         bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
-        copyto!(𝐅.a, bd_vec.w); VI.scale!(𝐅.a, 1 / normC(bd_vec.w))
+        _copyto!(𝐅.a, bd_vec.w); VI.scale!(𝐅.a, 1 / normC(bd_vec.w))
         # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
-        copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / normC(bd_vec.v))
+        _copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / normC(bd_vec.v))
 
         # call the user-passed finalizer
         if isnothing(finaliseUser) == false

@@ -263,7 +263,7 @@ function generate_ci_problem(shooting::ShootingProblem,
     end
     
     # points for the sections
-    centers = [copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[begin:end-1]]
+    centers = [_copy(sol(t)) for t in LinRange(tspan[1], tspan[2], M+1)[begin:end-1]]
     
     # shooting kwargs
     sh_kw = (lens = getlens(prob_bif), 

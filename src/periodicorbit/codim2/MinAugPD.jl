@@ -372,9 +372,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
         # normalization
         (;v, w) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
-        copyto!(𝐏𝐝.a, w); LA.rmul!(𝐏𝐝.a, 1/normC(w))
+        _copyto!(𝐏𝐝.a, w); LA.rmul!(𝐏𝐝.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
-        copyto!(𝐏𝐝.b, v); LA.rmul!(𝐏𝐝.b, 1/normC(v))
+        _copyto!(𝐏𝐝.b, v); LA.rmul!(𝐏𝐝.b, 1/normC(v))
 
         # call the user-passed finalizer
         final_result = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)

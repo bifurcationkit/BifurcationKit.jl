@@ -111,7 +111,7 @@ function SpecialPoint(it::ContIterable,
                     status::Symbol,
                     interval; 
                     ind_ev = 0,
-                    δ = (0,0),
+                    δ = (0, 0),
                     idx = state.step )
     return SpecialPoint(;
                         type,
@@ -235,9 +235,9 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
     plens = get_lens_symbol(bp.lens)
     println(io, " bifurcation point at $plens ≈ $(bp.p)")
     if bp isa AbstractSimpleBranchPointForMaps
-        println(io, prefix*"Normal form x ─▶ x + (a01⋅δ$plens + a02⋅δ$(plens)² + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
+        println(io, prefix*"Normal form x ─▶ x + (a01⋅δ$plens + a02⋅δ$(plens)²/2 + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
     else
-        println(io, prefix*"Normal form (a01⋅δ$plens + a02⋅δ$(plens)² + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
+        println(io, prefix*"Normal form (a01⋅δ$plens + a02⋅δ$(plens)²/2 + b10⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6)")
     end
     if ~isnothing(bp.nf)
         printnf1d(io, bp.nf; prefix)

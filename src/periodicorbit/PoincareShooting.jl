@@ -258,7 +258,7 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
 end
 
 function residual!(pb::PoincareShootingProblem, out, x, p)
-    copyto!(out, pb(x, p))
+    _copyto!(out, pb(x, p))
     out
 end
 
@@ -459,7 +459,7 @@ function generate_ci_problem(pb::PoincareShootingProblem,
     M = pb.M
 
     ts = LinRange(tspan[1], tspan[2], M+1)[begin:end-1]
-    centers = [copy(sol(t)) for t in ts]
+    centers = [_copy(sol(t)) for t in ts]
     normals = [residual(bifprob, c, sol.prob.p) for c in centers]
     # normals = [sol(t, Val{1}) for t in ts]
     for n in normals; n ./= norm(n); end

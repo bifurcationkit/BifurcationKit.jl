@@ -564,7 +564,7 @@ function bogdanov_takens_normal_form(_prob,
                 @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
                 display(_λ[1:N] .- 0)
             end
-            ζs = [copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
+            ζs = [_copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
         else
             # "zero" eigenvalues at bifurcation point
             rightEv = br.eig[bifpt.idx].eigenvals
@@ -574,7 +574,7 @@ function bogdanov_takens_normal_form(_prob,
             ind0 = Ind[1]
             ind1 = Ind[2]
             verbose && (println("────▶ eigenvalues = ", rightEv[Ind[1:2]]))
-            ζs = [copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
+            ζs = [_copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
         end
     end
     ###########################
@@ -703,7 +703,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     else
         _λ = br.eig[bifpt.idx].eigenvals
         _ind = argmin(abs.(_λ .- λ))
-        ζ = copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, _ind))
+        ζ = _copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, _ind))
     end
     ζ ./= scaleζ(ζ)
 
@@ -1032,7 +1032,7 @@ function zero_hopf_normal_form(_prob,
         verbose && @info "Second eigenvalue = $(λI)"
     else
         error("This case has not been done. Please open an issue on the website.")
-        ζ = copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+        ζ = _copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
     end
 
     # normalise for easier debugging

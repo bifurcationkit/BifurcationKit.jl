@@ -5,15 +5,15 @@ deepcollect(x::BK.BorderedArray) = vcat(x.u, x.p)
 deepcollect(x::Number) = x
 
 let
-    LA.norm(BorderedArray(rand(2),0),0)
-    LA.norm(BorderedArray(rand(2),0),1)
-    LA.norm(BorderedArray(rand(2),0),2)
-    LA.norm(BorderedArray(rand(2),0),Inf)
-    LA.norm(BorderedArray(rand(2),0),-Inf)
+    LA.norm(BorderedArray(rand(2), 0), 0)
+    LA.norm(BorderedArray(rand(2), 0), 1)
+    LA.norm(BorderedArray(rand(2), 0), 2)
+    LA.norm(BorderedArray(rand(2), 0), Inf)
+    LA.norm(BorderedArray(rand(2), 0), -Inf)
 end
 
-for (x,y) in [(BK.BorderedArray([1., 2.], 3.), BK.BorderedArray([4., 5.], 6.)),
-                (BK.BorderedArray([1., 2.], [3.]), BK.BorderedArray([4., 5.], [6.]))]
+for (x,y) in [(BK.BorderedArray([1., 2.], 3.),   BK.BorderedArray([4., 5.],  6.)),
+              (BK.BorderedArray([1., 2.], [3.]), BK.BorderedArray([4., 5.], [6.]))]
 
     # @error "" x y
 

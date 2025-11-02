@@ -233,7 +233,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, _getindex(x.u, ii), pars, _getindex(dx.u, ii), sh.ds[ii] * T)
-            copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- _getindex(dx.u, ip1))
+            _copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- _getindex(dx.u, ip1))
         end
     else
         error("Not implemented yet. Try using AbstractVectors instead")
@@ -283,7 +283,7 @@ end
 (sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, pars)
 
 function residual!(pb::ShootingProblem, out, x, p)
-    copyto!(out, pb(x, p))
+    _copyto!(out, pb(x, p))
     out
 end
 residual(pb::ShootingProblem, x, p) = pb(x, p)
@@ -364,7 +364,7 @@ function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, peri
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
-    section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), copy(orbitguess_a[1])) : prob.section
+    section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), _copy(orbitguess_a[1])) : prob.section
     # update the problem but not the section if the user passed one
     probSh = setproperties(prob; 
                             section = section, 

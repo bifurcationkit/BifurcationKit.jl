@@ -119,7 +119,7 @@ function updatebranch!(dcIter::DefContIterable,
 
     if converged(sol1)
         # record previous parameter (cheap) and update current solution
-        copyto!(state.z.u, sol1.u); state.z.p = current_param
+        _copyto!(state.z.u, sol1.u); state.z.p = current_param
         state.z_old.p = current_param
 
         # get tangent, it only mutates tau
@@ -158,7 +158,7 @@ function _get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) whe
         error("You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process.")
     end
     contIt = iter.it
-    copyto!(contIt.prob.u0, roots[1])
+    _copyto!(contIt.prob.u0, roots[1])
     states = [DCState(rt, iterate(contIt)[1]) for rt in roots]
     # allocate branches to hold the result
     branches = [ContResult(contIt, st.state) for st in states]

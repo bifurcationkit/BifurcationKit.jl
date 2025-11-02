@@ -28,7 +28,7 @@ function finaliser_sae(event_point, it, state, success)
                             iterationC = 0,
                             p = p)
     if converged(sol)
-        copyto!(event_point.x, sol.u)
+        _copyto!(event_point.x, sol.u)
         @reset event_point.param = p
         @reset event_point.precision = newton_options.tol
         state.z.p = p

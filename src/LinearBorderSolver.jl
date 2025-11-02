@@ -304,7 +304,7 @@ end
 
 function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
     out = VI.zerovector(x)
-    copyto!(out.u, apply(lbmap.J, x.u))
+    _copyto!(out.u, apply(lbmap.J, x.u))
     VI.add!(out.u, lbmap.a, x.p)
     if isnothing(lbmap.shift) == false
         VI.add!(out.u, x.u, lbmap.shift)
@@ -319,7 +319,7 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     out = VI.zerovector(x)
     xu = @view x[begin:end-1]
     xp = x[end]
-    # copyto!(out.u, apply(lbmap.J, x.u))
+    # _copyto!(out.u, apply(lbmap.J, x.u))
     if isnothing(lbmap.shift)
         out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
     else # we do this to fuse for-loops
@@ -332,7 +332,7 @@ end
 # case matrix by blocks
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
     out = VI.zerovector(x)
-    copyto!(out.u, apply(lbmap.J, x.u))
+    _copyto!(out.u, apply(lbmap.J, x.u))
     for ii in eachindex(lbmap.a)
         VI.add!(out.u, lbmap.a[ii], x.p[ii])
     end
@@ -415,7 +415,7 @@ function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  applyξu! = nothing
                                  ) where {𝒯 <: Number, 𝒯ξ, S}
     linearmap = MatrixFreeBLSmap(J, dR, VI.scale(dzu, ξu), dzp * ξp, shift, dotp)
-    rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
+    rhs = lbs.use_bordered_array ? BorderedArray(_copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol), get_par_bls(sol), cv, it
 end
@@ -428,7 +428,7 @@ function solve_bls_block(lbs::MatrixFreeBLS,
                                 shift::𝒯s = nothing, 
                                 dotp = LA.dot) where {𝒯s}
     linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
-    rhs = lbs.use_bordered_array ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
+    rhs = lbs.use_bordered_array ? BorderedArray(_copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it
 end

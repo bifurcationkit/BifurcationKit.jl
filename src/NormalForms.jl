@@ -150,7 +150,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         ) where {𝒯eigvec}
     bifpt = br.specialpoint[id_bif]
 
-    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd))
+    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd, :fold))
         error("Normal form for $(bifpt.type) not implemented")
     end
 
@@ -689,9 +689,9 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
-            ζs = [copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
+            ζs = [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
         else
-            ζs = [copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev]
+            ζs = [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev]
         end
     end
 
@@ -764,7 +764,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gᵢ∂p, "\n")
 
     # coefficients of x*p and p^2
-    ∂²gᵢ∂xj∂pₖ = zeros(𝒯vec, N, N)
+    ∂²gᵢ∂xⱼ∂pₖ = zeros(𝒯vec, N, N)
     ∂²gᵢ∂p² = zeros(𝒯vec, N)
     for jj in 1:N
         if autodiff
@@ -778,7 +778,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
         tmp = R11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
-            ∂²gᵢ∂xj∂pₖ[ii, jj] = VI.inner(tmp, ζ★s[ii])
+            ∂²gᵢ∂xⱼ∂pₖ[ii, jj] = VI.inner(tmp, ζ★s[ii])
         end
 
         # coefficient of p²
@@ -792,7 +792,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         ∂²gᵢ∂p²[jj] = VI.inner(a2v, ζ★s[jj])
     end
     verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gᵢ∂p² ))
-    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p) = \n"); Base.display( ∂²gᵢ∂xj∂pₖ ))
+    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p) = \n"); Base.display( ∂²gᵢ∂xⱼ∂pₖ ))
 
     # coefficients of x^2
     ∂²gᵢ∂xⱼ∂xₖ = zeros(𝒯vec, N, N, N)
@@ -858,14 +858,13 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         end
     end
 
-    typebp = max(norminf(∂gᵢ∂p), norminf(∂²gᵢ∂p²), norminf(∂²gᵢ∂xj∂pₖ)) < tol_fold ? :NonQuadraticParameter :  Symbol("$N-d")
-
+    bp_type = max(norminf(∂gᵢ∂p), norminf(∂²gᵢ∂p²), norminf(∂²gᵢ∂xⱼ∂pₖ)) < tol_fold ? :NonQuadraticParameter :  Symbol("$N-d")   
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gᵢ∂p,
                                                            a02 = ∂²gᵢ∂p²,
-                                                           b11 = ∂²gᵢ∂xj∂pₖ,
+                                                           b11 = ∂²gᵢ∂xⱼ∂pₖ,
                                                            b20 = ∂²gᵢ∂xⱼ∂xₖ,
                                                            b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
-                        typebp)
+                        bp_type)
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)

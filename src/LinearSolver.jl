@@ -274,7 +274,7 @@ function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
             out = l.Pl \ Jdx
             LA.axpby!(a₀, dx, a₁, out)
         end
-        res, info = KrylovKit.linsolve(_linmap, LA.ldiv!(similar(rhs), l.Pl, copy(rhs));
+        res, info = KrylovKit.linsolve(_linmap, LA.ldiv!(similar(rhs), l.Pl, _copy(rhs));
                                 rtol = l.rtol,
                                 verbosity = l.verbose,
                                 krylovdim = l.dim,

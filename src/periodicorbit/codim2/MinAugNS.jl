@@ -347,9 +347,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
 
         (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
-        copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/normC(w))
+        _copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/normC(w))
         # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/normC(v))
+        _copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/normC(v))
 
         # we stop continuation at R1, PD points
         # test if we jumped to PD branch

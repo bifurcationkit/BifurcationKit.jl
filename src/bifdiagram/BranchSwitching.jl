@@ -180,7 +180,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
         if ~converged(solbif[1])
             @warn "Deflated newton did not converge for the first guess on the bifurcated branch."
         end
-        copyto!(pred.x1, solbif[1].u)
+        _copyto!(pred.x1, solbif[1].u)
     end
 
     # perform continuation
