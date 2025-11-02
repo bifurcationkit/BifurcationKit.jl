@@ -14,8 +14,8 @@ Compute the period of the periodic orbit associated to `x`.
 @inline _extract_period(x::BorderedArray)  = x.p
 
 # next method only used just in the file. Allows to set the parameters, like during aBS
-_set_params_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
-_set_params_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
+_set_params_in_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
+_set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 # function to extract trajectories from branch
 get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
@@ -139,7 +139,7 @@ mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp} # REMOVE BY DISPATCH
     "Current parameters."
     par::Tp
 end
-FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> pb(x, par, dx), x, par)
+FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> jvp(pb, x, par, dx), x, par)
 _get_matrix(pb::AbstractMatrix) = pb
 _get_matrix(pb::FloquetWrapper) = pb.jacpb
 
@@ -202,7 +202,7 @@ function _generate_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ =
     elseif jacobianPO isa FiniteDifferencesMF
         jac = (x, p) -> dx -> (prob(x .+ δ .* dx, p) .- prob(x .- δ .* dx, p)) ./ (2δ)
     else
-        jac = (x, p) -> (dx -> prob(x, p, dx))
+        jac = (x, p) -> (dx -> jvp(prob, x, p, dx))
     end
 end
 
@@ -400,10 +400,6 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       pbPO::AbstractPeriodicOrbitProblem ;
                       bif_prob = br.prob,
-                      alg = getalg(br),
-                      δp = nothing,
-                      ampfactor = 1,
-                      usedeflation = false,
                       detailed = true,
                       use_normal_form = true,
                       autodiff_nf = true,
@@ -415,6 +411,19 @@ function continuation(br::AbstractBranchResult,
 
     detailed = detailed && use_normal_form
     hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
+    return _po_from_hopf(bif_prob, hopfpt, _contParams, pbPO; verbose, alg = getalg(br), kwargs...)
+end
+
+function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
+                      hopfpt::Hopf,
+                      _contParams::ContinuationPar,
+                      pbPO::AbstractPeriodicOrbitProblem;
+                      verbose = false,
+                      alg = PALC(),
+                      δp = nothing,
+                      ampfactor = 1,
+                      usedeflation = false,
+                      kwargs...)
     par_hopf = hopfpt.params
 
     # compute predictor for point on new branch
@@ -432,8 +441,8 @@ function continuation(br::AbstractBranchResult,
     verbose && printstyled(color = :green, "━"^55*
             "\n┌─ Start branching from Hopf bif. point to periodic orbits.",
             "\n├─ Bifurcation type = ", hopfpt.type,
-            "\n├─── Hopf param  p0 = ", br.specialpoint[ind_bif].param,
-            "\n├─── new param    p = ", pred.p, ", p - p0 = ", pred.p - br.specialpoint[ind_bif].param,
+            "\n├─── Hopf param  p0 = ", hopfpt.p,
+            "\n├─── new param    p = ", pred.p, ", p - p0 = ", pred.p - hopfpt.p,
             "\n├─── amplitude p.o. = ", pred.amp,
             "\n├─── period       T = ", pred.period,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
@@ -444,7 +453,7 @@ function continuation(br::AbstractBranchResult,
     end
 
     # extract the vector field and use it possibly to affect the PO functional
-    bif_prob_rm = re_make(bif_prob; params = setparam(br, pred.p))
+    bif_prob_rm = re_make(bif_prob; params = setparam(bif_prob, pred.p)) # TODO Not good: we cannot change lens
 
     # build the initial guess
     M = get_mesh_size(pbPO)
@@ -517,9 +526,6 @@ $(TYPEDSIGNATURES)
 
 Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
-!!! note "deep copy"
-    We deepcopy the underlying periodic orbit functional to prevent mutation
-
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
 - `ind_bif` index of the branch point
@@ -531,8 +537,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 
 ## For normal form
-- `detailed = false` whether to fully compute the normal form.
-- `record_from_solution = (u, p) -> u[end]`, record method used in the bifurcation diagram, by default this records the period of the periodic orbit.
+- `detailed = false` whether to fully compute the normal form or a very simplified version.
 - `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
 
 ## For continuation
@@ -540,18 +545,18 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
-                    ind_bif::Int,
-                    _contParams::ContinuationPar;
-                    alg = getalg(br),
-                    δp = _contParams.ds, 
-                    ampfactor = 1,
-                    usedeflation = false,
-                    linear_algo = nothing,
-                    detailed = true,
-                    prm = getprob(br) isa WrapPOColl ? false : true,
-                    use_normal_form = true,
-                    autodiff_nf = true,
-                    kwargs...) where Tprob
+                      ind_bif::Int,
+                      _contParams::ContinuationPar;
+                      alg = getalg(br),
+                      δp = _contParams.ds, 
+                      ampfactor = 1,
+                      usedeflation = false,
+                      linear_algo = nothing,
+                      detailed = true,
+                      prm = getprob(br) isa WrapPOColl ? false : true,
+                      use_normal_form = true,
+                      autodiff_nf = true,
+                      kwargs...) where {Tprob <: AbstractWrapperPOProblem}
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
@@ -562,9 +567,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         error("Only simple bifurcation points are handled properly")
     end
 
-    # we copy the problem for not mutating the one passed by the user. This is an AbstractPeriodicOrbitProblem.
-    pb = deepcopy(br.prob.prob)
-
     detailed = detailed && use_normal_form
     nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
@@ -574,7 +576,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
-            "\n┌─ Start branching from $(bptype) point to periodic orbits.\n├─ Bifurcation type = ", bifpt.type,
+            "\n┌─ Start branching from $(bptype) point to periodic orbits.",
+            "\n├─ Bifurcation type = ", bifpt.type,
             "\n├─── normal form    = ", use_normal_form ? "based on $(prm ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
@@ -589,12 +592,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact)
     _contParams = _update_cont_params(_contParams, pbnew, orbitguess)
+    pbnew = _set_params_in_po(pbnew, setparam(br, newp))
 
     if usedeflation
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newton_options
         # find point on the first branch
-        pbnew = _set_params_po(pbnew, setparam(br, newp))
         sol0 = newton(pbnew, pred.po, optn; kwargs...)
         if converged(sol0) == false
             error("The first guess did not converge")
@@ -611,17 +614,18 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         orbitguess .= solbif.u
     end
 
-    # perform continuation
-    pbnew = _set_params_po(pbnew, setparam(br, newp))
-
     residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
+    wrap = br.prob
+
     branch = continuation( pbnew, orbitguess, alg, _contParams;
-        kwargs..., # put this first to be overwritten just below!
+        kwargs..., # put this first to be overwritten by the following
         linear_algo = _linear_algo,
-        kind = br.kind
+        kind = br.kind,
+        # record_from_solution = record_from_solution,
+        # plot_solution = wrap.plotSolution,
     )
 
     return Branch(branch, nf)

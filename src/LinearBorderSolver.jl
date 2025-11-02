@@ -131,11 +131,9 @@ function BEC(lbs::BorderingBLS,
     else
         x1, δx, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
     end
-
     ~success && @debug "Linear solver failed to converge in BorderingBLS."
 
     dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
-
     # dX = x1 .- dl .* δx
     VI.add!(x1, δx, -dl)
     return x1, dl, success, itlinear
@@ -159,9 +157,7 @@ function residualBEC(lbs::BorderingBLS,
     end
     VI.add!(δX, dR, dl)
     VI.add!(δX, R, 1, -1)
-
     δl = n - ξp * dzp * dl - ξu * dotp(dzu, dX)
-
     return δX, δl
 end
 

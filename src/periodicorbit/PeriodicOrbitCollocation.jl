@@ -858,7 +858,7 @@ end
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
@@ -881,7 +881,7 @@ end
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Function needed for automatic Branch switching from Hopf bifurcation point.
 """

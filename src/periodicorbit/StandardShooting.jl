@@ -5,12 +5,12 @@ Create a problem to implement the Simple / Parallel Multiple Standard Shooting m
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
-- `pb(orbitguess, par)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, par, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`.
+- `residual(pb, orbitguess, par)` evaluates the functional G on `orbitguess`
+- `jvp(pb, orbitguess, par, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`.
 - `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
 - `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
 
-You can then call `pb(orbitguess, par)` to apply the functional to a guess. Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
+You can then call `residual(pb, orbitguess, par)` to apply the functional to a guess. Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
 
 ## Allowed types
 
@@ -184,7 +184,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 end
 
 # jacobian of the shooting functional
-@views function (sh::ShootingProblem)(x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
+@views function jvp(sh::ShootingProblem, x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
     # period of the cycle
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
@@ -220,7 +220,7 @@ end
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function (sh::ShootingProblem)(x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), 1e-8))
+function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), 1e-8))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)

@@ -37,9 +37,9 @@ resi = BK.residual(pbi, orbitguess_f, par)
 @test res == resi
 @test res == resg
 
-res = pb(orbitguess_f, par, orbitguess_f)
-resg = pbg(orbitguess_f, par, orbitguess_f)
-resi = pbi(orbitguess_f, par, orbitguess_f)
+res = BK.jvp(pb, orbitguess_f, par, orbitguess_f)
+resg = BK.jvp(pbg, orbitguess_f, par, orbitguess_f)
+resi = BK.jvp(pbi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 @test res == resg
 
@@ -146,13 +146,12 @@ function _dfunctional(poPb, u0, p, du)
 
 end
 
-
 res = BK.residual(pb, orbitguess_f, par)
 _res = _functional(pb, orbitguess_f, par)
 @test res ≈ _res
 
 _du = rand(length(orbitguess_f))
-res = pb(orbitguess_f, par, _du)
+res = BK.jvp(pb, orbitguess_f, par, _du)
 _res = _dfunctional(pb, orbitguess_f, par, _du)
 @test res ≈ _res
 
@@ -163,7 +162,7 @@ _res = _functional(pbmass, orbitguess_f, par)
 @test res ≈ _res
 
 _du = rand(length(orbitguess_f))
-res = pbmass(orbitguess_f, par, _du)
+res = BK.jvp(pbmass, orbitguess_f, par, _du)
 _res = _dfunctional(pbmass, orbitguess_f, par, _du)
 @test res ≈ _res
 ####################################################################################################

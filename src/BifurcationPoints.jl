@@ -151,14 +151,14 @@ end
 # types for bifurcation point with 1d kernel for the jacobian
 
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
-                    (:Pitchfork, AbstractSimpleBranchPoint),
-                    (:Fold, AbstractSimpleBranchPoint),
-                    (:Transcritical, AbstractSimpleBranchPoint),
-                    (:PeriodDoubling, AbstractSimpleBranchPointForMaps),
-                    (:BranchPointMap, AbstractSimpleBranchPointForMaps),
-                    (:PitchforkMap, AbstractSimpleBranchPointForMaps),
-                    (:TranscriticalMap, AbstractSimpleBranchPointForMaps)
-                    )
+                  (:Pitchfork, AbstractSimpleBranchPoint),
+                  (:Fold, AbstractSimpleBranchPoint),
+                  (:Transcritical, AbstractSimpleBranchPoint),
+                  (:PeriodDoubling, AbstractSimpleBranchPointForMaps),
+                  (:BranchPointMap, AbstractSimpleBranchPointForMaps),
+                  (:PitchforkMap, AbstractSimpleBranchPointForMaps),
+                  (:TranscriticalMap, AbstractSimpleBranchPointForMaps)
+                  )
     @eval begin
         """
         $(TYPEDEF)
@@ -242,19 +242,20 @@ function Base.show(io::IO, bp::AbstractBifurcationPoint; prefix = "")
     end
 end
 
-function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}) #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
-    printstyled(io, bp.type, " - Pitchfork", color=:cyan, bold = true)
+function Base.show(io::IO, bp::Union{Pitchfork, PitchforkMap}; prefix = "") #a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
+    printstyled(io, prefix, bp.type, " - Pitchfork", color=:cyan, bold = true)
     if bp isa PitchforkMap
         printstyled(io, " (Maps)", color=:cyan, bold = true)
     end
-    println(io, " bifurcation point at ", get_lens_symbol(bp.lens)," ≈ $(bp.p)")
+    println(io, " bifurcation point")
+    println(io, prefix, get_lens_symbol(bp.lens)," ≈ $(bp.p)")
     if bp isa PitchforkMap
-        println(io, "Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+        println(io, prefix*"Normal form x ─▶ x + a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
     else
-        println(io, "Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
+        println(io, prefix*"Normal form a⋅δp + x⋅(b1⋅δp + b3⋅x²/6)")
     end
     if ~isnothing(bp.nf)
-        printnf1d(io, bp.nf)
+        printnf1d(io, bp.nf; prefix)
     end
 end
 

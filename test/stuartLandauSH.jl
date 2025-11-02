@@ -70,15 +70,15 @@ BK.jvp(_pb_par.flow, initpo, par_hopf, initpo, 0.1)
 _dx = rand(3)
 resAD = FD.derivative(z -> _pb(initpo .+ z .* _dx, par_hopf), 0.)
 resFD = (_pb(initpo .+ 1e-8 .* _dx, par_hopf) - _pb(initpo, par_hopf)) .* 1e8
-resAN = _pb(initpo, par_hopf, _dx; δ = 1e-8)
+resAN = BK.jvp(_pb, initpo, par_hopf, _dx; δ = 1e-8)
 @test norm(resAN - resFD, Inf) < 5e-5
 @test norm(resAN - resAD, Inf) < 5e-5
 ####################################################################################################
 # test shooting interface M = 1
 @info "Single Shooting"
 _pb = ShootingProblem(prob, Rodas4(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@optic _.r))
-res = _pb(initpo, par_hopf)
-res = _pb(initpo, par_hopf, initpo)
+res = BK.residual(_pb, initpo, par_hopf)
+res = BK.jvp(_pb, initpo, par_hopf, initpo)
 @test _pb.flow.odeprob.p == _pb.par
 
 # test the jacobian of the functional in the case M=1
@@ -87,8 +87,8 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 
 _pb2 = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
-res = _pb2(initpo, par_hopf)
-res = _pb2(initpo, par_hopf, initpo)
+res = BK.residual(_pb2, initpo, par_hopf)
+res = BK.jvp(_pb2, initpo, par_hopf, initpo)
 @test BK.issimple(_pb2)
 @test _pb2.flow.odeprob.p == _pb2.par
 
@@ -148,8 +148,8 @@ br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = fal
 initpo = [0.13, 0., 6.]
 _pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
-res = _pb(initpo, par_hopf)
-res = _pb(initpo, par_hopf, initpo)
+res = BK.residual(_pb, initpo, par_hopf)
+res = BK.jvp(_pb, initpo, par_hopf, initpo)
 # test the jacobian of the functional
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
@@ -160,7 +160,7 @@ initpo = [0.13, 0., 6.]
 _pb = ShootingProblem(prob, KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
-res = _pb(initpo, par_hopf, initpo)
+res = BK.jvp(_pb, initpo, par_hopf, initpo)
 # test the jacobian of the functional
 _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
@@ -217,8 +217,8 @@ probPsh = PoincareShootingProblem(prob, Rodas4(),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
         lens = (@optic _.r))
 
-probPsh(outpo.u, par_hopf)
-probPsh(outpo.u, par_hopf, outpo.u)
+BK.residual(probPsh, outpo.u, par_hopf)
+BK.jvp(probPsh, outpo.u, par_hopf, outpo.u)
 # probPsh([0.30429879744900434], par_hopf)
 # probPsh([0.30429879744900434], (r = 0.09243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0))
 # BK.evolve(probPsh.flow,[0.0, 0.30429879744900434], (r = 0.094243096156871472, μ = 0.0, ν = 1.0, c3 = 1.0, c5 = 0.0), Inf64) # this gives an error in DiffEqBase

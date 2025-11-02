@@ -79,7 +79,7 @@ julia> br.param
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
   - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)"
-    branch::StructArrays.StructArray{Tbr} # TODO remove StructArray makes it type stable
+    branch::StructArrays.StructArray{Tbr}
 
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}

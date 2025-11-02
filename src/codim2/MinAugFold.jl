@@ -197,7 +197,9 @@ save_solution(::FoldMAProblem, x, p) = x
 
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = foldpb.prob)
 
-jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff, Tu0, Tp, Tl, Tplot, Trecord}, x, p) where {Tprob, Tu0, Tp, Tl <: Union{AllOpticTypes, Nothing}, Tplot, Trecord} = ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
+function jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff}, x, p) where {Tprob}
+    return DI.jacobian(foldpb.prob, DI.AutoForwardDiff(), x, DI.Constant(p))
+end
 
 jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
 

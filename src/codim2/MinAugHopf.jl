@@ -63,16 +63,23 @@ Compute the solution of
 and the same for the adjoint system.
 """
 function _compute_bordered_vectors(𝐇::HopfProblemMinimallyAugmented, J_at_xp, JAd_at_xp, ω)
-    a = 𝐇.a
-    b = 𝐇.b
-    𝒯 = eltype(𝐇)
+    return __compute_bordered_vectors(𝐇.linbdsolver,
+                                      𝐇.linbdsolverAdjoint,
+                                      J_at_xp,
+                                      JAd_at_xp,
+                                      ω,
+                                      𝐇.a,
+                                      𝐇.b,
+                                      𝐇.zero)
+end
 
+function __compute_bordered_vectors(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
      # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
-    v, _, cv, itv = 𝐇.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
-    w, _, cv, itw = 𝐇.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, ω))
+    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, ω))
     ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
     return (; v, w, itv, itw)
@@ -97,7 +104,7 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
-             apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
+            apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
     σₚ = -VI.inner(w, dₚJv)
 
     # case of sigma_omega
@@ -210,7 +217,7 @@ end
 @inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
 @inline getdelta(hopfpb::HopfMAProblem) = getdelta(hopfpb.prob)
 residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
-residual!(hopfpb::HopfMAProblem, out, x, p) = (copyto!(out, hopfpb.prob(x, p)); out)
+residual!(hopfpb::HopfMAProblem, out, x, p) = (_copyto!(out, hopfpb.prob(x, p)); out)
 save_solution(::HopfMAProblem, x ,p) = x
 
 # jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
@@ -588,26 +595,21 @@ function continuation_hopf(prob,
         # we use a minimally augmented formulation to set the initial vectors
         # we start with a vector similar to an eigenvector, we must ensure that
         # it is complex valued
-        ζ = _copy(getu0(br.prob))
-        ζ = VI.scale(ζ, one(Complex{VI.scalartype(ζ)}))
+        ζ = VI.scale(_copy(getu0(br.prob)), one(Complex{VI.scalartype(getu0(br.prob))}))
         a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
         b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
-        𝒯 = typeof(ω)
         L = jacobian(prob, bifpt.x, parbif)
-        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), VI.zerovector(a), one(𝒯); shift = Complex{𝒯}(0, -ω))
-        ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
-
-        @debug "RIGHT EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,newb) - complex(0,ω)*newb) norminf(apply(L,newb) + complex(0,ω)*newb)
-
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), VI.zerovector(a), one(𝒯); shift = Complex{𝒯}(0, ω))
-        ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
-        @debug "LEFT  EIGENVECTORS" ω cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★,newa) - complex(0,ω)*newa) norminf(apply(L★,newa) + complex(0,ω)*newa)
+        (; v, w, itv, itw) = __compute_bordered_vectors(bdlinsolver, bdlinsolver_adjoint, L, L★, ω, a, b, VI.zerovector(a))
 
-        ζad = newa ./ normC(newa)
-        ζ   = newb ./ normC(newb)
+        @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*v) norminf(apply(L,v) + complex(0,ω)*v)
+
+        @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*w) norminf(apply(L★,w) + complex(0,ω)*w)
+
+        ζad = VI.scale(w,  1 / normC(w))
+        ζ   = VI.scale(v,  1 / normC(v))
     end
 
     return continuation_hopf(br.prob, alg,

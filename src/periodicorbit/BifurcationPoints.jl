@@ -2,7 +2,6 @@ abstract type AbstractBifurcationPointOfPO <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBifurcationPointPO <: AbstractBifurcationPointOfPO end
 ####################################################################################################
 # types for bifurcation point with 1d kernel for the jacobian
-
 for op in (:BranchPointPO, :PeriodDoublingPO,)
     @eval begin
         """
@@ -38,7 +37,7 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
             "Periodic orbit problem"
             prob::Tprob
 
-            "Normal form computed using Poincaré return map"
+            "Is normal form computed using Poincaré return map?"
             prm::Bool
         end
     end

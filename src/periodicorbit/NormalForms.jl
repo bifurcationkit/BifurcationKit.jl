@@ -178,6 +178,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     λ₁ = F.values[ind] # λ₁ ≈ 1
     verbose && println("├─── [PRM] closest to 1 eigenvalue is ", λ₁)
     verbose && println("└─── [PRM] computing the non trivial null vector")
+
     # get the scalar products
     ev = F.vectors[:, ind]
     
@@ -237,20 +238,19 @@ function branch_normal_form(pbwrap::WrapPOColl,
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
     end
-    # method based on Poincaré Return Map (PRM)
-    # newton parameter
+    # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
     @error "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form."
     return branch_normal_form_iooss(pbwrap, bp0; verbose, nev, kwargs_nf...)
 end
 
 function branch_normal_form_iooss(pbwrap::WrapPOColl,
-                            bp0::BranchPoint;
-                            nev = 3,
-                            δ = getdelta(pbwrap),
-                            verbose = false,
-                            lens = getlens(pbwrap),
-                            kwargs_nf...)
+                                    bp0::BranchPoint;
+                                    nev = 3,
+                                    δ = getdelta(pbwrap),
+                                    verbose = false,
+                                    lens = getlens(pbwrap),
+                                    kwargs_nf...)
     @debug "BP normal form collocation, method Iooss"
     coll = pbwrap.prob
     𝒯 = eltype(coll)
@@ -317,8 +317,9 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
 
     _ps = (LA.dot(q₀, Fu₀), LA.dot(q₁, Fu₀))
     ind = argmin(abs, _ps)
-    v₁ = q₁#ind==1 ? q₀ : q₁
-    v₁ ./= norminf(v₁)
+    # v₁ = q₁#ind==1 ? q₀ : q₁
+    v₁ = q₁ ./ norminf(q₁)
+    v₀ = q₀ ./ norminf(q₀)
     
     # plot(layout = @layout [a;b;c;d])
     # vsol = get_periodic_orbit(coll, bp0.x0,1)
@@ -329,9 +330,9 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     # plot!(vsol, linewidth=2, ylabel = "q₁", subplot=3, labels = collect(1:4)', legend = :topright)
     # vsol = get_periodic_orbit(coll, vcat(v₁,period), 1)
     # plot!(vsol, linewidth=2, ylabel = "v₁", subplot=4, labels = collect(1:4)') |> display
-    # @assert 1==0
+    # @assert false
 
-    return BranchPointPO(bp0.x0, period, v₁, nothing, bp0, coll, true)
+    return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, true)
 end
 ####################################################################################################
 function period_doubling_normal_form(pbwrap,
@@ -1365,7 +1366,7 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
                     ampfactor;
                     override = false)
     orbitguess = copy(nf.po)
-    orbitguess[begin:end-1] .+= ampfactor .* nf.ζ
+    orbitguess[begin:end-1] .+= ampfactor .* nf.ζ[2]
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
 ####################################################################################################

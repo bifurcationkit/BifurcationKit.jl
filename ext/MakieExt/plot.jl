@@ -115,7 +115,8 @@ end
 function plot_branch_cont(contres::ContResult,
                           state,
                           iter,
-                          plotuserfunction; plotfold = false,
+                          plotuserfunction; 
+                          plotfold = false,
                           plotstability = true,
                           plotspecialpoints = true,
                           putspecialptlegend = true,

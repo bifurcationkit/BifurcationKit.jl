@@ -1,4 +1,5 @@
 function get_adjoint_basis(L★, λs, eigsolver; nev = 3, verbose = false)
+    # same as function below but for a list of eigenvalues
     # we compute the eigen-elements of the adjoint of L
     λ★, ev★, cv, = eigsolver(L★, nev)
     ~cv && @warn "Adjoint eigen solver did not converge"
@@ -24,7 +25,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more eigenvalues than necessary.
+Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
 """
 function get_adjoint_basis(L★, λ::Number, eigsolver; nev = 3, verbose = false)
     λ★, ev★, cv, = eigsolver(L★, nev)
@@ -36,6 +37,67 @@ function get_adjoint_basis(L★, λ::Number, eigsolver; nev = 3, verbose = false
     abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
     ζ★ = geteigenvector(eigsolver, ev★, I)
     return copy(ζ★), λ★[I]
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Bi-orthogonalise the two sets of vectors.
+
+# Optional argument
+- `_dot = VectorInterface.inner` specify your own dot product
+"""
+function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
+    # change only the ζ★s to have bi-orthogonal left/right eigenvectors
+    # we could use projector P=A(AᵀA)⁻¹Aᵀ
+    # we use Gram-Schmidt algorithm instead
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    if abs(LA.det(G)) <= 1e-14
+        error("The Gram matrix is not invertible! det(G) = $(LA.det(G)), G = \n$G $(display(G))")
+    end
+
+    # save those in case the first algo fails
+    _ζs = deepcopy(ζs)
+    _ζ★s = deepcopy(ζ★s)
+
+    # first algo
+    switch_algo = false
+    tmp = copy(ζ★s[begin])
+    for ii in eachindex(ζ★s)
+        tmp .= ζ★s[ii]
+        for jj in eachindex(ζs)
+            if ii != jj
+                tmp .-= _dot(tmp, ζs[jj]) .* ζs[jj] ./ _dot(ζs[jj], ζs[jj])
+            end
+        end
+        α = _dot(tmp, ζs[ii])
+        if α ≈ 0
+            switch_algo = true
+            break
+        end
+        ζ★s[ii] .= tmp ./ α
+    end
+
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+
+    # we switch to another algo if the above fails
+    if norminf(G - LA.I) >= 1e-5 || switch_algo
+        @warn "Gram matrix not equal to identity. Switching to LU algorithm."
+        println("G (det = $(LA.det(G))) = "); display(G)
+        G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
+        _F = LA.lu(G; check = true)
+        display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
+        ζs = inv(_F.L) * inv(_F.P) * _ζs
+        ζ★s = inv(_F.U)' * _ζ★s
+    end
+
+    # test the bi-orthogonalization
+    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    verbose && (printstyled(color=:green, "──▶ Gram matrix = \n"); Base.display(G))
+    if ~(norminf(G - LA.I) < 1e-5)
+        error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
+    end
+    return ζs, ζ★s
 end
 ####################################################################################################
 """
@@ -409,67 +471,6 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Bi-orthogonalise the two sets of vectors.
-
-# Optional argument
-- `_dot = VectorInterface.inner` specify your own dot product
-"""
-function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
-    # change only the ζ★s to have bi-orthogonal left/right eigenvectors
-    # we could use projector P=A(AᵀA)⁻¹Aᵀ
-    # we use Gram-Schmidt algorithm instead
-    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-    if abs(LA.det(G)) <= 1e-14
-        error("The Gram matrix is not invertible! det(G) = $(LA.det(G)), G = \n$G $(display(G))")
-    end
-
-    # save those in case the first algo fails
-    _ζs = deepcopy(ζs)
-    _ζ★s = deepcopy(ζ★s)
-
-    # first algo
-    switch_algo = false
-    tmp = copy(ζ★s[begin])
-    for ii in eachindex(ζ★s)
-        tmp .= ζ★s[ii]
-        for jj in eachindex(ζs)
-            if ii != jj
-                tmp .-= _dot(tmp, ζs[jj]) .* ζs[jj] ./ _dot(ζs[jj], ζs[jj])
-            end
-        end
-        α = _dot(tmp, ζs[ii])
-        if α ≈ 0
-            switch_algo = true
-            break
-        end
-        ζ★s[ii] .= tmp ./ α
-    end
-
-    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-
-    # we switch to another algo if the above fails
-    if norminf(G - LA.I) >= 1e-5 || switch_algo
-        @warn "Gram matrix not equal to identity. Switching to LU algorithm."
-        println("G (det = $(LA.det(G))) = "); display(G)
-        G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
-        _F = LA.lu(G; check = true)
-        display(inv(_F.L) * inv(_F.P) * G * inv(_F.U))
-        ζs = inv(_F.L) * inv(_F.P) * _ζs
-        ζ★s = inv(_F.U)' * _ζ★s
-    end
-
-    # test the bi-orthogonalization
-    G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
-    verbose && (printstyled(color=:green, "──▶ Gram matrix = \n"); Base.display(G))
-    if ~(norminf(G - LA.I) < 1e-5)
-        error("Failure in bi-orthogonalisation of the right / left eigenvectors.\nThe left eigenvectors do not form a basis.\nYou may want to increase `nev`, G = \n $(display(G))")
-    end
-    return ζs, ζ★s
-end
-
-"""
-$(TYPEDSIGNATURES)
-
 Compute the normal form of the bifurcation point located at `br.specialpoint[ind_bif]`.
 
 # Arguments
@@ -533,7 +534,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff, bls, bls_adjoint = bls_adjoint, bls_block = bls_block, ζs, ζs_ad)
+        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
     elseif bifpt.type == :gh
         return bautin_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
     elseif bifpt.type == :zh
@@ -945,7 +946,7 @@ Compute the Hopf normal form.
 
 # Available method
 
-Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf, ds)` to obtain an estimate of the bifurcating periodic orbit.
+Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf, ds)` to obtain an estimate of the bifurcating periodic orbit, note that this predictor is second order accurate.
 
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem,
@@ -978,6 +979,18 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     parbif = setparam(br, p)
     L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
 
+    if ~detailed # CA FAIT PAS TYPE STABLE??
+        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+                ω,
+                parbif, lens,
+                zero(bifpt.x), zero(bifpt.x),
+                (a = missing, 
+                b = missing
+                        ),
+                Symbol("?")
+            )
+    end
+
     # right eigenvector
     if ~haseigenvector(br)
         # we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -992,11 +1005,10 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     # left eigen-elements
-    _Jt = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
-    # @debug instead of @warn makes it type stable
     abs(λ + λ★) > 1e-2 && @debug "[Hopf normal form] We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
 
     # normalise left eigenvector
@@ -1016,25 +1028,13 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         :SuperCritical
     )
 
-    if ~detailed
-        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
-                ω,
-                parbif, lens,
-                ζ, ζ★,
-                (a = missing, 
-                b = missing
-                        ),
-                :SuperCritical
-            )
-    end
-
     return hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-This function provides prediction for the periodic orbits branching off the Hopf bifurcation point. If the hopf normal form does not contain the `a,b` coefficients, then a guess if formed with the eigenvector and `ampfactor`. In case it does, a second order predictor is computed.
+This function provides prediction for the periodic orbits branching off the Hopf bifurcation point. If the hopf normal form does not contain the `a, b` coefficients, then a guess if formed with the eigenvector and `ampfactor`. In case it does, a second order predictor is computed.
 
 # Arguments
 - `bp::Hopf` bifurcation point

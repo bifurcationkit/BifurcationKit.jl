@@ -41,6 +41,8 @@ get_contresult(br::Branch) = br.γ
 getalg(tree::BifDiagNode) = tree.γ.alg
 Base.getindex(tree::BifDiagNode, code...) = get_branch(tree, code)
 get_solution(tree::BifDiagNode, ind) = get_solution(tree.γ, ind)
+get_normal_form(tree::BifDiagNode, args...; kwargs...) = get_normal_form(tree.γ, args...; kwargs...)
+
 
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
