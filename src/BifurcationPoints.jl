@@ -79,7 +79,7 @@ $(TYPEDFIELDS)
     interval::Tuple{T, T} = (0, 0)
 end
 
-_getvectortype(::Type{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = Tvτ
+_getvectortype(::Vector{SpecialPoint{T, Tp, Tv, Tvτ}}) where {T, Tp, Tv, Tvτ} = Tvτ
 type(bp::SpecialPoint) = bp.type
 
 """

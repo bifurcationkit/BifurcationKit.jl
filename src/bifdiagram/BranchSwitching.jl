@@ -69,11 +69,12 @@ Automatic branch switching at branch points based on a computation of the normal
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`get_normal_form`](@ref).
 
 !!! tip "Advanced use"
-    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to discouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
+    In the case of a very large model and use of special hardware (GPU, cluster), we suggest to decouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
 function continuation(br::AbstractResult{EquilibriumCont, Tprob}, 
                       ind_bif::Int, 
-                      options_cont::ContinuationPar = br.contparams ;
+                      options_cont::ContinuationPar = br.contparams,
+                      Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                       alg = getalg(br),
                       δp = nothing, 
                       ampfactor::Real = 1,
@@ -84,12 +85,11 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       max_iter_deflation::Int = min(50, 15options_cont.newton_options.max_iterations),
                       perturb = identity,
                       plot_solution = plot_solution(br.prob),
-                      Teigvec = _getvectortype(br),
                       scaleζ = norm,
                       autodiff = true,
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
-                      kwargs...) where {Tprob}
+                      kwargs...) where {Tprob, 𝒯eigvec}
     # The usual branch switching algorithm is described in the work of Keller. 
     # Numerical solution of bifurcation and nonlinear eigenvalue problems.
     # We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
@@ -123,10 +123,9 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
     Ty = typeof(ds)
 
     # compute the normal form of the bifurcation point
-    bp = get_normal_form1d(br, ind_bif; 
+    bp = get_normal_form1d(br.prob, br, ind_bif, Teigvec; 
                             nev,
                             verbose,
-                            Teigvec,
                             scaleζ,
                             autodiff,
                             tol_fold)
@@ -219,31 +218,35 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function multicontinuation(br::AbstractBranchResult,
                             ind_bif::Int, 
-                            options_cont::ContinuationPar = br.contparams;
+                            options_cont::ContinuationPar = br.contparams,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+
                             δp = nothing,
                             ampfactor::Real = _getvectoreltype(br)(1),
+
                             nev::Int = options_cont.nev,
-                            Teigvec = _getvectortype(br),
                             ζs = nothing,
-                            verbosedeflation::Bool = false,
                             scaleζ = norm,
-                            perturb_guess = identity,
-                            plot_solution = plot_solution(br.prob),
                             autodiff = true,
-                            kwargs...)
+
+                            verbosedeflation::Bool = false,
+                            perturb_guess = identity,
+
+                            plot_solution = plot_solution(br.prob),
+                            kwargs...) where {𝒯eigvec}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-    bpnf = get_normal_form(br, ind_bif; nev, verbose, Teigvec, ζs, scaleζ, autodiff)
+    bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff)
 
     return multicontinuation(br,
                             bpnf,
                             options_cont;
-                            Teigvec = Teigvec,
-                            δp = δp,
-                            ampfactor = ampfactor,
-                            verbosedeflation = verbosedeflation,
-                            plot_solution = plot_solution,
+                            Teigvec,
+                            δp,
+                            ampfactor,
+                            verbosedeflation,
+                            plot_solution,
                             kwargs...)
 end
 

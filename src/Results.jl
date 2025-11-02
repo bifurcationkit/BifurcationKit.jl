@@ -146,7 +146,7 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline _hasstability(::StructArrays.StructArray{T,N,C,I}) where {T,N,C,I} = fieldtype(T, fieldcount(T) - 1) == Bool
 
 _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
-@inline _getvectortype(br::AbstractBranchResult) = _getvectortype(eltype(br.specialpoint))
+@inline _getvectortype(br::AbstractBranchResult) = _getvectortype(br.specialpoint)
 @inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
 
 """

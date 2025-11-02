@@ -103,20 +103,101 @@ end
 """
 $(TYPEDSIGNATURES)
 
+Compute the normal form of the bifurcation point located at `br.specialpoint[ind_bif]`.
+
+# Arguments
+- `prob::AbstractBifurcationProblem`
+- `br` result from a call to [`continuation`](@ref)
+- `ind_bif` index of the bifurcation point in `br.specialpoint`
+
+# Optional arguments
+- `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
+- `verbose` whether to display information
+- `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful for enforcing the kernel basis used for the normal form.
+- `lens::Lens` specify which parameter to take the partial derivative ∂pF
+- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficients being super small.
+- `autodiff = true` whether to use ForwardDiff for the differentiations. Used for example for Bogdanov-Takens point.
+- `detailed = Val(true)` whether to compute only a simplified normal form whern only basic information is required. This can be useful is cases the computation is long. Used for example for Bogdanov-Takens point.
+- `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
+- `bls_adjoint = bls` specify Bordered linear solver for the adjoint problem.
+- `bls_block = bls` specify Bordered linear solver when the border has dimension 2 (1 for `bls`).
+
+# Available method
+
+You can directly call 
+
+    get_normal_form(br, ind_bif ; kwargs...)
+
+which is a shortcut for `get_normal_form(getprob(br), br, ind_bif ; kwargs...)`.
+
+Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
+
+"""
+function get_normal_form(prob::AbstractBifurcationProblem,
+                        br::AbstractBranchResult,
+                        id_bif::Int,
+                        Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                        nev = length(eigenvalsfrombif(br, id_bif)),
+                        verbose = false,
+                        lens = getlens(br),
+                        scaleζ = LA.norm,
+
+                        detailed = Val(true),
+                        autodiff = true,
+
+                        ζs = nothing,
+                        ζs_ad = nothing,
+
+                        bls = MatrixBLS(),
+                        bls_adjoint = bls,
+                        bls_block = bls,
+
+                        start_with_eigen = Val(true), # FIND A BETTER NOUN
+                        ) where {𝒯eigvec}
+    bifpt = br.specialpoint[id_bif]
+
+    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd))
+        error("Normal form for $(bifpt.type) not implemented")
+    end
+
+    # parameters for normal form
+    kwargs_nf = (;nev, verbose, lens, scaleζ)
+
+    if bifpt.type == :hopf
+        return hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, start_with_eigen, bls, bls_adjoint)
+    elseif bifpt.type == :cusp
+        return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf...)
+    elseif bifpt.type == :bt
+        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
+    elseif bifpt.type == :gh
+        return bautin_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed)
+    elseif bifpt.type == :zh
+        return zero_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
+    elseif bifpt.type == :hh
+        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
+    elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
+        return get_normal_form1d(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf...)
+    end
+    return get_normal_formNd(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf..., ζs, ζs_ad)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
 Compute a normal form based on Golubitsky, Martin, David G Schaeffer, and Ian Stewart. Singularities and Groups in Bifurcation Theory. New York: Springer-Verlag, 1985, VI.1.d page 295.
 """
 function get_normal_form1d(prob::AbstractBifurcationProblem,
                     br::AbstractBranchResult,
-                    ind_bif::Int;
+                    ind_bif::Int,
+                    Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),
-                    Teigvec::Type = _getvectortype(br),
                     tol_fold = 1e-3,
                     scaleζ = LA.norm,
                     autodiff::Bool = true,
                     detailed::Bool = true,
-                    )
+                    ) where {𝒯eigvec}
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     if bifpt.type ∉ (:bp, :fold)
@@ -132,7 +213,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     options = br.contparams.newton_options
 
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(Teigvec, bifpt.x)
+    x0 = convert(𝒯eigvec, bifpt.x)
     p = bifpt.param
 
     # parameter for vector field
@@ -467,98 +548,19 @@ function nf(bp::NdBranchPoint; tol = 1e-6, digits = 4)
     return out
 end
 
-"""
-$(TYPEDSIGNATURES)
-
-Compute the normal form of the bifurcation point located at `br.specialpoint[ind_bif]`.
-
-# Arguments
-- `prob::AbstractBifurcationProblem`
-- `br` result from a call to [`continuation`](@ref)
-- `ind_bif` index of the bifurcation point in `br.specialpoint`
-
-# Optional arguments
-- `nev` number of eigenvalues used to compute the spectral projection. This number has to be adjusted when used with iterative methods.
-- `verbose` whether to display information
-- `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful for enforcing the kernel basis used for the normal form.
-- `lens::Lens` specify which parameter to take the partial derivative ∂pF
-- `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficients being super small.
-- `autodiff = true` whether to use ForwardDiff for the differentiations. Used for example for Bogdanov-Takens point.
-- `detailed = true` whether to compute only a simplified normal form whern only basic information is required. This can be useful is cases the computation is long. Used for example for Bogdanov-Takens point.
-- `bls = MatrixBLS()` specify Bordered linear solver. Used for example for Bogdanov-Takens point.
-- `bls_adjoint = bls` specify Bordered linear solver for the adjoint problem.
-- `bls_block = bls` specify Bordered linear solver when the border has dimension 2 (1 for `bls`).
-
-# Available method
-
-You can directly call 
-
-    get_normal_form(br, ind_bif ; kwargs...)
-
-which is a shortcut for `get_normal_form(getprob(br), br, ind_bif ; kwargs...)`.
-
-Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
-
-"""
-function get_normal_form(prob::AbstractBifurcationProblem,
-                        br::AbstractBranchResult,
-                        id_bif::Int ;
-                        nev = length(eigenvalsfrombif(br, id_bif)),
-                        verbose = false,
-                        lens = getlens(br),
-                        Teigvec::Type = _getvectortype(br),
-                        scaleζ = LA.norm,
-
-                        detailed = true,
-                        autodiff = true,
-
-                        ζs = nothing,
-                        ζs_ad = nothing,
-
-                        bls = MatrixBLS(),
-                        bls_adjoint = bls,
-                        bls_block = bls,
-                        )
-    bifpt = br.specialpoint[id_bif]
-
-    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd))
-        error("Normal form for $(bifpt.type) not implemented")
-    end
-
-    # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, Teigvec, scaleζ)
-
-    if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
-    elseif bifpt.type == :cusp
-        return cusp_normal_form(prob, br, id_bif; kwargs_nf...)
-    elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
-    elseif bifpt.type == :gh
-        return bautin_normal_form(prob, br, id_bif; kwargs_nf..., detailed)
-    elseif bifpt.type == :zh
-        return zero_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
-    elseif bifpt.type == :hh
-        return hopf_hopf_normal_form(prob, br, id_bif; kwargs_nf..., detailed, autodiff)
-    elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
-        return get_normal_form1d(prob, br, id_bif ; autodiff, kwargs_nf...)
-    end
-    return get_normal_formNd(prob, br, id_bif ; autodiff, kwargs_nf..., ζs, ζs_ad)
-end
-
 function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
-                            id_bif::Int;
+                            id_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             ζs = nothing,
                             ζs_ad = nothing,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
-                            Teigvec::Type = _getvectortype(br),
                             tol_fold = 1e-3,
                             scaleζ = LA.norm,
                             autodiff = false
-                            )
+                            ) where {𝒯eigvec}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
@@ -575,10 +577,10 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     ls = options.linsolver
 
     # bifurcation point
-    if ~(bifpt.x isa Teigvec)
-        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(Teigvec).\nYou can keep your choice by using the option `Teigvec` in `get_normal_form` to specify the type of the equilibrum."
+    if ~(bifpt.x isa 𝒯eigvec)
+        @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
-    x0 = convert(Teigvec, bifpt.x)
+    x0 = convert(𝒯eigvec, bifpt.x)
 
     # parameter for vector field
     p = bifpt.param
@@ -725,7 +727,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a = dgidp, b1 = d2gidxjdpk, b2 = d2gidxjdxk, b3 = d3gidxjdxkdxl), Symbol("$N-d"))
 end
 
-get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(br.prob, br, id_bif; kwargs...)
+get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
 
 """
 $(TYPEDSIGNATURES)
@@ -840,6 +842,14 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::𝒯;
     return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################
+@with_kw struct HopfNormalForm{𝒯, 𝒯a, 𝒯b}
+    a::𝒯
+    b::𝒯
+    Ψ001::𝒯a
+    Ψ110::𝒯b
+    Ψ200::𝒯b
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -912,7 +922,7 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     b = VI.inner(bv, ζ★)
 
     verbose && println((;a, b))
-    @reset pt.nf = (;a, b, Ψ110, Ψ001, Ψ200)
+    @reset pt.nf = HopfNormalForm(;a, b, Ψ110, Ψ001, Ψ200)
     if real(b) < 0
         pt.type = :SuperCritical
     elseif real(b) > 0
@@ -939,25 +949,27 @@ Compute the Hopf normal form.
 - `nev::Int` number of eigenvalues to compute to estimate the spectral projector
 - `verbose::Bool` bool to print information
 - `lens` parameter axis
-- `detailed::Bool = true` compute a simplified normal form or not
+- `detailed::Val{Bool} = Val(true)` compute a simplified normal form or not
 - `Teigvec` vector type of the eigenvectors
 - `scaleζ = norm` norm to normalise the eigenvectors
 
 # Available method
 
 Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf, ds)` to obtain an estimate of the bifurcating periodic orbit, note that this predictor is second order accurate.
-
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem,
                           br::AbstractBranchResult,
-                          ind_hopf::Int;
-                          nev = length(eigenvalsfrombif(br, ind_hopf)),
+                          ind_hopf::Int,
+                          Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                          nev::Int = length(eigenvalsfrombif(br, ind_hopf)),
                           verbose::Bool = false,
                           lens = getlens(br),
-                          Teigvec::Type = _getvectortype(br),
-                          detailed = true,
                           autodiff = true,
-                          scaleζ = norm)
+                          detailed::Val{detailed_type} = Val(true),
+                          start_with_eigen::Val{start_with_eigen_type} = Val(true),
+                          scaleζ = LA.norm,
+                          bls = MatrixBLS(),
+                          bls_adjoint = bls) where {detailed_type, 𝒯eigvec, start_with_eigen_type}
     if ~(br.specialpoint[ind_hopf].type == :hopf)
         error("The provided index does not refer to a Hopf Point")
     end
@@ -967,6 +979,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_hopf]
+    𝒯 = VI.scalartype(bifpt.x)
     eigRes = br.eig
 
     # eigenvalue
@@ -976,15 +989,18 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = setparam(br, p)
-    L = jacobian(prob, convert(Teigvec, bifpt.x), parbif)
+    L = jacobian(prob, convert(𝒯eigvec, bifpt.x), parbif)
 
     if ~detailed # CA FAIT PAS TYPE STABLE??
         return Hopf(bifpt.x, bifpt.τ, bifpt.param,
                 ω,
                 parbif, lens,
                 zero(bifpt.x), zero(bifpt.x),
-                (a = missing, 
-                b = missing
+                HopfNormalForm(a = missing, 
+                               b = missing,
+                               Ψ110 = missing,
+                               Ψ001 = missing,
+                               Ψ200 = missing
                         ),
                 Symbol("?")
             )
@@ -1016,15 +1032,15 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("Error of precision in normalization")
     end
 
-    𝒯 = eltype(bifpt.x)
     hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
-        ω,
-        parbif, lens,
-        ζ, ζ★,
-        (a = zero(Complex{𝒯}), 
-         b = zero(Complex{𝒯})
-                 ),
-        :SuperCritical
+                  ω,
+                  parbif, lens,
+                  ζ, ζ★,
+                  (
+                    a = zero(Complex{𝒯}), 
+                    b = zero(Complex{𝒯})
+                  ),
+                :SuperCritical
     )
 
     return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)

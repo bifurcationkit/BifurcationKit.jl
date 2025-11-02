@@ -13,14 +13,14 @@ Compute the Cusp normal form.
 - `verbose` bool to print information
 """
 function cusp_normal_form(_prob,
-                            br::AbstractBranchResult, ind_bif::Int;
+                            br::AbstractBranchResult, ind_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             δ = 1e-8,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
                             lens = getlens(br),
-                            Teigvec::Type = _getvectortype(br),
-                            scaleζ = norm)
+                            scaleζ = norm) where {𝒯eigvec}
     if br.specialpoint[ind_bif].type != :cusp 
         error("The provided index does not refer to a Cusp Point")
     end
@@ -34,7 +34,7 @@ function cusp_normal_form(_prob,
     prob_vf = prob_ma.prob_vf
 
     # scalar type
-    𝒯 = VI.scalartype(Teigvec)
+    𝒯 = VI.scalartype(𝒯eigvec)
 
     # linear solvers
     ls = prob_ma.linsolver
@@ -138,11 +138,11 @@ function bogdanov_takens_normal_form(prob_ma, L,
                                     pt::BogdanovTakens;
                                     δ = 1e-8,
                                     verbose = false,
-                                    detailed = true,
+                                    detailed::Val{detailed_type} = Val(true),
                                     autodiff = true,
                                     # bordered linear solver
                                     bls = prob_ma.linbdsolver,
-                                    bls_block = bls)
+                                    bls_block = bls) where {detailed_type}
     x0 = pt.x0
     parbif = pt.params
     Ty = VI.scalartype(x0)
@@ -183,7 +183,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # return the normal form coefficients
     pt.nf = (; a, b)
-    if detailed == false
+    if detailed_type == false # THIS MAKES IT TYPE UNSTABLE
         return pt
     end
 
@@ -498,21 +498,21 @@ Compute the Bogdanov-Takens normal form.
 - `bls_adjoint` specify Bordered linear solver for transpose(dF).
 """
 function bogdanov_takens_normal_form(_prob,
-                                    br::AbstractBranchResult, ind_bif::Int;
+                                    br::AbstractBranchResult, ind_bif::Int,
+                                    Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                     δ = 1e-8,
                                     nev = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
                                     ζs = nothing,
                                     ζs_ad = nothing,
                                     lens = getlens(br),
-                                    Teigvec::Type = _getvectortype(br),
                                     scaleζ = norm,
                                     # bordered linear solver
                                     bls = _prob.prob.linbdsolver,
                                     bls_adjoint = bls,
                                     bls_block = bls,
-                                    detailed = true,
-                                    autodiff = true)
+                                    detailed::Val{detailed_type} = Val(true),
+                                    autodiff = true) where {𝒯eigvec, detailed_type}
     @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
     # functional
@@ -540,13 +540,13 @@ function bogdanov_takens_normal_form(_prob,
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
+    if 𝒯eigvec <: BorderedArray
+        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
+        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
     end
 
-    𝒯 = VI.scalartype(Teigvec)
+    𝒯 = VI.scalartype(𝒯eigvec)
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
@@ -633,15 +633,15 @@ function bogdanov_takens_normal_form(_prob,
 end
 ####################################################################################################
 function bautin_normal_form(_prob::HopfMAProblem,
-                            br::AbstractBranchResult, ind_bif::Int;
+                            br::AbstractBranchResult, ind_bif::Int,
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                             δ = 1e-8,
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
                             lens = getlens(br),
-                            Teigvec::Type = _getvectortype(br),
                             scaleζ = norm,
-                            detailed = false)
+                            detailed = false) where {𝒯eigvec}
     @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
@@ -653,7 +653,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     prob_vf = prob_ma.prob_vf
 
     # scalar type
-    𝒯 = VI.scalartype(Teigvec)
+    𝒯 = VI.scalartype(𝒯eigvec)
     ϵ = 𝒯(δ)
 
     # functional
@@ -682,10 +682,10 @@ function bautin_normal_form(_prob::HopfMAProblem,
     x0, parbif = get_bif_point_codim2(br, ind_bif)
 
     # jacobian at bifurcation point
-    if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
+    if 𝒯eigvec <: BorderedArray
+        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
+        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
     end
 
     # jacobian at bifurcation point
@@ -954,17 +954,17 @@ function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T;
 end
 ####################################################################################################
 function zero_hopf_normal_form(_prob,
-                                br::AbstractBranchResult, ind_bif::Int;
+                                br::AbstractBranchResult, ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 δ = 1e-8,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,
                                 lens = getlens(br),
-                                Teigvec::Type = _getvectortype(br),
                                 scaleζ = norm,
                                 bls = _prob.prob.linbdsolver,
                                 autodiff = true,
-                                detailed = false)
+                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
@@ -1082,7 +1082,7 @@ function zero_hopf_normal_form(_prob,
         :none
     )
 
-    if ~detailed
+    if ~detailed_type
         return pt
     end
 
@@ -1304,22 +1304,22 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
 end
 ####################################################################################################
 function hopf_hopf_normal_form(_prob,
-                                br::AbstractBranchResult, ind_bif::Int;
+                                br::AbstractBranchResult, ind_bif::Int,
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 δ = 1e-8,
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,
                                 lens = getlens(br),
-                                Teigvec::Type = _getvectortype(br),
                                 scaleζ = norm,
                                 autodiff = true,
-                                detailed = false)
+                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type}
     @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
 
     # scalar type
-    𝒯 = VI.scalartype(Teigvec)
+    𝒯 = VI.scalartype(𝒯eigvec)
     ϵ = 𝒯(δ)
 
     # get the MA problem
@@ -1351,10 +1351,10 @@ function hopf_hopf_normal_form(_prob,
 
     # parameter for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], getvec(bifpt.x, prob_ma))
+    if 𝒯eigvec <: BorderedArray
+        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
     else
-        x0 = convert(Teigvec, getvec(bifpt.x , prob_ma))
+        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
     end
 
     # jacobian at bifurcation point
@@ -1443,7 +1443,7 @@ function hopf_hopf_normal_form(_prob,
     )
 
     # case of simplified normal form
-    if detailed == false
+    if detailed_type == false
         return pt
     end
 

@@ -333,7 +333,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         scaleζ = norm,
                         start_with_eigen = false,
                         autodiff_nf = false,
-                        detailed = true,
+                        detailed = Val(true),
                         ζs = nothing,
                         ζs_ad = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
@@ -363,10 +363,9 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     Ty = eltype(Teigvec)
 
     # compute the normal form of the bifurcation point
-    nf = get_normal_form(br, ind_bif; 
+    nf = get_normal_form(getprob(br), br, ind_bif, Teigvec; 
                             nev,
                             verbose,
-                            Teigvec,
                             scaleζ,
                             autodiff = autodiff_nf,
                             detailed,
