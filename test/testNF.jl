@@ -52,6 +52,7 @@ br_noev = BK.continuation(BK.re_make(prob, params = (μ = -0.2, ν = 0, x2 = 1.1
 @test BK.haseigenvector(br_noev) == false
 bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
 bp = BK.get_normal_form(br_noev, 1; verbose=false)
+BK._predictor(bp, 0.01)
 nf = bp.nf
 @test nf.a01   ≈ 0       atol = 1e-10
 @test nf.b11   ≈ 3.23    atol = 1e-10
@@ -100,6 +101,7 @@ brp = BK.continuation(prob_pf, PALC(tangent=Bordered()), opts_br; normC = normin
 bpp = BK.get_normal_form(brp, 1; verbose=true)
 show(bpp)
 BK.type(bpp)
+BK._predictor(bpp, 0.01)
 
 nf = bpp.nf
 @test nf.a01 ≈ 0                     atol = 1e-10
@@ -132,7 +134,20 @@ BK.getalg(bdiag)
 BK.get_solution(bdiag, 1)
 bdiag[1]
 ####################################################################################################
-begin
+# Automatic branch switching, degenerate case. The quadratic parameter makes it difficult for aBS 
+# based on the order one (in parameter) predictor
+let
+    Fdegenerate(x, p) = [x[1]^2 - p[1]^2]
+    prob = BK.BifurcationProblem(Fdegenerate, [1.], (-1.0), 1; record_from_solution = (x,p;k...)->x[1])
+    br = continuation(prob, PALC(), ContinuationPar(n_inversion = 6); normC = norminf)
+    br1 = continuation(br, 1, verbosity = 3, bothside = true)
+    bp = get_normal_form(br, 1; verbose = true)
+    show(bp)
+    predictor(bp, 0.1)
+    # plot(br, br1)
+end
+####################################################################################################
+let
     function symmetrize3!(a)
         n1, n2, n3 = size(a)
         @assert n1 == n2 == n3

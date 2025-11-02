@@ -287,9 +287,13 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
+        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)),Val(2))(p)
     else
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        R02 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+          2 .* residual(prob, x0, set(parbif, lens, p + 0)) .+
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
     end
     a01 = VI.inner(R01, ζ★)
     verbose && println("├─── a01   = ", a01)
@@ -308,8 +312,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     b11 = VI.inner(R11 .+ R2(ζ, Ψ01), ζ★)
     verbose && println("├─── b11   = ", b11)
 
-    # coefficient of p²
-    a02 = zero(𝒯)
+    # coefficient of p² (see markdown)
+    if autodiff
+        R11Ψ = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), Ψ01), p)
+    else
+        R11Ψ = (dF(prob, x0, set(parbif, lens, p + δ), Ψ01) - 
+                dF(prob, x0, set(parbif, lens, p - δ), Ψ01)) ./ (2δ)
+    end
+    a2v =  R02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
+    a02 = VI.inner(a2v, ζ★)
     verbose && println("├─── a02   = ", a02)
 
     # coefficient of x^2
@@ -325,10 +336,14 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("└─── b3/6 = ", b30/6)
 
     bp = (x0, τ, p, parbif, lens, ζ, ζ★, (;a01, a02, b11, b20, b30, Ψ01, Ψ02), :NA)
-    if abs(a01) < tol_fold
-        return 100abs(b20/2) < abs(b30/6) ? Pitchfork(bp[begin:end-1]...) : Transcritical(bp...) #!!! TYPE UNSTABLE
+    if abs(a01) + abs(b11) > 1e-10
+        if abs(a01) < tol_fold
+            return 100abs(b20/2) < abs(b30/6) ? Pitchfork(bp[begin:end-1]...) : Transcritical(bp...) #!!! TYPE UNSTABLE
+        else
+            return Fold(bp...)
+        end
     else
-        return Fold(bp...)
+        return BranchPoint(bp...)
     end
     # we should never hit this
     return nothing
@@ -452,6 +467,44 @@ end
 function predictor(bp::Fold, ds::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
     @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is a01⋅δμ + b11⋅x⋅δμ + b20⋅x² + b30⋅x³\n with coefficients \n a01 = $(bp.nf.a01), b11 = $(bp.nf.b11), b20 = $(bp.nf.b20), b30 = $(bp.nf.b30)."
     return nothing
+end
+
+predictor(br::BranchPoint, args...; k...) = _predictor(br::BranchPoint, args...; k...) 
+
+function _predictor(bp::AbstractSimpleBranchPoint, 
+                    ds::𝒯; 
+                    verbose = false, 
+                    ampfactor = one(𝒯)) where {𝒯}
+    nf = bp.nf
+    τ = bp.τ
+    (;a01, a02, b11, b20, b30, Ψ01) = nf
+    pnew = bp.p + ds
+
+    ads = abs(ds)
+    dsfactor = one(𝒯)
+    g(x,p) = (a01 + a02*p/2)*p + (b11*p + b20*x/2 + b30*x^2/6)*x
+    Θ = LinRange(0,2pi, 10_000_000)
+    solutions = Vector{𝒯}[]
+    θ = Θ[end-1]
+    pred_val = g(ads*cos(θ), ads*sin(θ))
+    for θ in Θ
+        s,c = sincos(θ)
+        val = g(ads*c, ads*s)
+        if val * pred_val < 0
+            push!(solutions, [ads*c, ads*s, θ])
+        end
+        pred_val = val
+    end
+    @assert length(solutions) == 4 #!! euh
+    dotps = [VI.inner(τ.u, bp.ζ) * sol[1] + sol[2] * τ.p for sol in solutions]
+    I = argmin(abs.(dotps))
+    pnew = bp.p + solutions[I][2]
+
+    return (;x0 = bp.x0, 
+            x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ), 
+            p = pnew, dsfactor, 
+            amp = one(𝒯), 
+            δp = pnew - bp.p)
 end
 ####################################################################################################
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x::AbstractVector, p::𝒯) where 𝒯
@@ -678,23 +731,27 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     𝒯vec = VI.scalartype(ζs[1])
 
     # coefficients of p
-    ∂gi∂p = Vector{𝒯vec}(undef, N)
+    ∂gᵢ∂p = Vector{𝒯vec}(undef, N)
     δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
+        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
     else
         R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- 
                residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        R02 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
+          2 .* residual(prob, x0, set(parbif, lens, p + 0)) .+
+               residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
     end
    
     for ii in 1:N
-        ∂gi∂p[ii] = VI.inner(R01, ζ★s[ii])
+        ∂gᵢ∂p[ii] = VI.inner(R01, ζ★s[ii])
     end
-    verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gi∂p, "\n")
+    verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gᵢ∂p, "\n")
 
     # coefficients of x*p and p^2
-    ∂²gi∂xj∂pk = zeros(𝒯vec, N, N)
-    ∂²gi∂p² = zeros(𝒯vec, N)
+    ∂²gᵢ∂xj∂pₖ = zeros(𝒯vec, N, N)
+    ∂²gᵢ∂p² = zeros(𝒯vec, N)
     for jj in 1:N
         if autodiff
             R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
@@ -705,21 +762,32 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
         Ψ01, _, cv, it  = bls(-E(R01))
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
+        tmp = R11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
-            ∂²gi∂xj∂pk[ii, jj] = VI.inner(R11 .+ R2(ζs[jj], Ψ01), ζ★s[ii])
+            ∂²gᵢ∂xj∂pₖ[ii, jj] = VI.inner(tmp, ζ★s[ii])
         end
+
+        # coefficient of p²
+        if autodiff
+            R11Ψ = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), Ψ01), p)
+        else
+            R11Ψ = (dF(prob, x0, set(parbif, lens, p + δ), Ψ01) - 
+                    dF(prob, x0, set(parbif, lens, p - δ), Ψ01)) ./ (2δ)
+        end
+        a2v = R02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
+        ∂²gᵢ∂p²[jj] = VI.inner(a2v, ζ★s[jj])
     end
-    verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gi∂p² ))
-    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p) = \n"); Base.display( ∂²gi∂xj∂pk ))
+    verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gᵢ∂p² ))
+    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p) = \n"); Base.display( ∂²gᵢ∂xj∂pₖ ))
 
     # coefficients of x^2
-    ∂²gi∂xj∂xk = zeros(𝒯vec, N, N, N)
+    ∂²gᵢ∂xⱼ∂xₖ = zeros(𝒯vec, N, N, N)
     for jj in 1:N, kk in 1:N
         if kk >= jj
             b2v = R2(ζs[jj], ζs[kk])
             for ii in 1:N
-                ∂²gi∂xj∂xk[ii, jj, kk] = VI.inner(b2v, ζ★s[ii])
-                ∂²gi∂xj∂xk[ii, kk, jj] = ∂²gi∂xj∂xk[ii, jj, kk]
+                ∂²gᵢ∂xⱼ∂xₖ[ii, jj, kk] = VI.inner(b2v, ζ★s[ii])
+                ∂²gᵢ∂xⱼ∂xₖ[ii, kk, jj] = ∂²gᵢ∂xⱼ∂xₖ[ii, jj, kk]
             end
         end
     end
@@ -728,12 +796,12 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         printstyled(color=:green, "\n──▶ b20 (∂²/∂x²) = \n")
         for ii in 1:N
             printstyled(color=:blue, "──▶ component $ii\n")
-            Base.display( ∂²gi∂xj∂xk[ii,:,:] ./ 2)
+            Base.display( ∂²gᵢ∂xⱼ∂xₖ[ii,:,:] ./ 2)
         end
     end
 
     # coefficient of x^3
-    ∂³gi∂xj∂xk∂xl = zeros(𝒯vec, N, N, N, N)
+    ∂³gᵢ∂xⱼ∂xₖk∂xₗ = zeros(𝒯vec, N, N, N, N)
     for jj in 1:N, kk in 1:N, ll in 1:N
         if jj==kk==ll || jj==kk || jj<kk<ll
             b3v = R3(ζs[jj], ζs[kk], ζs[ll])
@@ -763,7 +831,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                         (ll, jj, kk),
                         (ll, kk, jj)
                         ]
-                    ∂³gi∂xj∂xk∂xl[ii, I...] = c
+                    ∂³gᵢ∂xⱼ∂xₖk∂xₗ[ii, I...] = c
                 end
             end
         end
@@ -772,15 +840,15 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         printstyled(color=:green, "\n──▶ b30 (∂³/∂x³) = \n")
         for ii in 1:N
             printstyled(color=:blue, "──▶ component $ii\n")
-            Base.display( ∂³gi∂xj∂xk∂xl[ii,:,:,:] ./ 6 )
+            Base.display( ∂³gᵢ∂xⱼ∂xₖk∂xₗ[ii, :, :, :] ./ 6 )
         end
     end
 
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gi∂p,
-                                                           a02 = ∂²gi∂p²,
-                                                           b11 = ∂²gi∂xj∂pk,
-                                                           b20 = ∂²gi∂xj∂xk,
-                                                           b30 = ∂³gi∂xj∂xk∂xl), 
+    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gᵢ∂p,
+                                                           a02 = ∂²gᵢ∂p²,
+                                                           b11 = ∂²gᵢ∂xj∂pₖ,
+                                                           b20 = ∂²gᵢ∂xⱼ∂xₖ,
+                                                           b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
                         Symbol("$N-d"))
 end
 
