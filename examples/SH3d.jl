@@ -85,12 +85,12 @@ sol0 .*= 1.2
 L1 = (I + Δ)^2;
 par = (l = 0.1, ν = 1.2, L1 = L1);
 
-Pr = cholesky(Symmetric(L1));
+Prec = cholesky(Symmetric(L1));
 using SuiteSparse
 LinearAlgebra.ldiv!(o::Vector, P::SuiteSparse.CHOLMOD.Factor{Float64}, v::Vector) = o .= (P \ v)
 
 # rtol must be small enough to pass the folds and to get precise eigenvalues
-ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Pr)
+ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Prec)
 ####################################################################################################
 struct SH3dEig{Ts, Tσ} <: BK.AbstractEigenSolver
     ls::Ts
@@ -113,11 +113,12 @@ end
 
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 
+const w = rand(Nx*Ny*Nz)
 prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
     J = (x, p) -> (dx -> dF_sh(x, p, dx)),
     # J = (x, p) -> J_sh(x, p),
     plot_solution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),
-    record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8)),
+    record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8), nw = norm(x .* w) / sqrt(length(x))),
     issymmetric = true)
 
 optnew = NewtonPar(verbose = true, tol = 1e-8, max_iterations = 20, linsolver = @set ls.verbose = 0)

@@ -79,6 +79,7 @@ julia> br.param
   - `n_imag` number of eigenvalues with positive real part and non zero imaginary part at current continuation step (useful to detect Hopf bifurcation).
   - `stable` stability of the computed solution for each continuation step. Hence, `stable` should match `eig[step]` which corresponds to `branch[k]` for a given `k`.
   - `step` continuation step (here equal `i`)."
+    branch::StructArrays.StructArray{Tbr}
 
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
@@ -282,7 +283,8 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     end
 end
 
-# this function is important in that it gives the eigenelements corresponding to bp and stored in br. We do not check that bp ∈ br for speed reasons
+# This function is important because it provides the eigenelements corresponding to bp stored in br. 
+# We do not check that bp ∈ br for speed reasons.
 get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype} = br.eig[bp.idx]
 
 """

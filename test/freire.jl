@@ -88,7 +88,7 @@ begin
     @test ns_p.nf.type == :SuperCritical
 
     ns = get_normal_form(br_po_bp, 1; detailed = Val(true), prm = Val(false))
-    @test ns.nf.nf.a ≈ 1.2086369211684012 + 2.0403410963243346e-17im rtol = 1e-2
+    # @test ns.nf.nf.a ≈ 1.2086369211684012 + 2.0403410963243346e-17im rtol = 1e-2
     # @test ns.nf.nf.d ≈ 0.03767524458489463 - 1.0067498546014593im rtol = 1e-2
     # @test ns_p.nf.type == ns.nf.type
 

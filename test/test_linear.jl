@@ -159,7 +159,7 @@ let
     @test _sol ≈ sol_explicit
 end
 
-begin
+let
     J0 = rand(100, 100) * 0.1 - I
     rhs = rand(100)
     ls = KrylovLSInplace(rtol = 1e-16, m = 100, n = 100, verbose = 2)

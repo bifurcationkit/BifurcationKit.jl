@@ -13,7 +13,10 @@ end
 $(TYPEDEF)
 
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
-``F(u) \\cdot Π_i(\\|u - root_i\\|^{-2p} + \\alpha) := F(u) \\cdot M(u)`` where ``\\|u\\|^2 = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
+
+``F(u) ⋅ Πᵢ(||u - rootᵢ||⁻²ᵖ + α) := F(u) ⋅ M(u)`` 
+
+where ``||u||² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
 ## Fields
 
@@ -49,25 +52,25 @@ When used with newton, you have access to the following linear solvers
 - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
 struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflationFactor
-    "power `p`. You can use an `Int` for example"
+    "power `p`. You can use an `Int` for example."
     power::Tp
 
-    "function, this function has to be bilinear and symmetric for the linear solver to work well"
+    "function, this function has to be bilinear and symmetric for the linear solver to work well."
     dot::Tdot
 
-    "shift"
+    "shift."
     α::T
 
-    "roots"
+    "roots."
     roots::Vector{vectype}
 
-    # internal, to reduce allocations during computation
+    "[internal] to reduce allocations during computation."
     tmp::vectype
 
-    # internal, to reduce allocations during computation
+    "[internal] to reduce allocations during computation."
     autodiff::Bool
 
-    # internal, for finite differences
+    "[internal] for finite differences."
     δ::T
 end
 
@@ -99,10 +102,10 @@ function Base.show(io::IO, df::DeflationOperator; prefix = "")
 end
 
 # Compute M(u)
-# optimized version which does not allocate much
+# optimized version which does not allocate much.
 function (df::DeflationOperator{𝒯p, Tdot, 𝒯})(::Val{:inplace}, u, tmp) where {𝒯p, Tdot, 𝒯}
-    length(df.roots) == 0 && return 𝒯(1)
-    M(u) = 𝒯(1) / df.dot(u, u)^df.power + df.α
+    length(df.roots) == 0 && return one(𝒯)
+    M(u) = one(𝒯) / df.dot(u, u)^df.power + df.α
     # compute u - df.roots[1]
     _copyto!(tmp, u); VI.add!(tmp, df.roots[1], 𝒯(-1))
     out = M(tmp)
@@ -119,8 +122,8 @@ end
 
 # version when a custom distance is passed
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot <: CustomDist, T, vectype}
-    length(df.roots) == 0 && return T(1)
-    M(u, v) = T(1) / df.dot(u, v)^df.power + df.α
+    length(df.roots) == 0 && return one(T)
+    M(u, v) = one(T) / df.dot(u, v)^df.power + df.α
     out = M(u, df.roots[1])
     for ii in 2:length(df.roots)
         out *= M(u, df.roots[ii])
@@ -128,9 +131,9 @@ function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) 
     return out
 end
 
-# Compute dM(u)⋅du. We use tmp for storing intermediate values
+# Compute jvp(M(u),du). We use tmp for storing intermediate values
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
-    length(df) == 0 && return T(0)
+    length(df) == 0 && return zero(T)
     if df.autodiff
         return ForwardDiff.derivative(t -> df(u .+ t .* du), 0)
     else
@@ -275,12 +278,12 @@ function (dfl::DeflatedProblemCustomLS)(J, rhs)
     z = z1 / (Mu + z2)
 
     # we extract the type of defPb
-    _T = eltype(defPb.M)
+    𝒯 = eltype(defPb.M)
 
     # return (h1 - z * h2) / Mu, true, (it1, it2)
     _copyto!(tmp, h1)
     VI.add!(tmp, h2, -z)
-    VI.scale!(tmp, _T(1) / Mu)
+    VI.scale!(tmp, 𝒯(1) / Mu)
     return tmp, true, (it1, it2)
 end
 

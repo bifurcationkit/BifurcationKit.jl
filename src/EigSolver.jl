@@ -191,19 +191,19 @@ More information is available at [ArnoldiMethod.jl](https://github.com/haampie/A
 `EigArnoldiMethod(;sigma = nothing, which = ArnoldiMethod.LR(), x₀ = nothing, kwargs...)`
 """
 struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractIterativeEigenSolver
-    "Shift for Shift-Invert method"
+    "Shift for Shift-Invert method."
     sigma::T
 
     "Which eigen-element to extract LR(), LM(), ..."
     which::Tw
 
-    "How do we sort the computed eigenvalues, defaults to real"
+    "How do we sort the computed eigenvalues, defaults to real."
     by::Tby
 
-    "Key words arguments passed to EigArpack"
+    "Key words arguments passed to EigArpack."
     kwargs::Tkw
 
-    "Example of vector used for Krylov iterations"
+    "Example of vector used for Krylov iterations."
     x₀::vectype
 end
 
@@ -216,7 +216,7 @@ function (eig::EigArnoldiMethod)(J, nev; kwargs...)
                                                          which = eig.which,
                                                          eig.kwargs...)
         else
-            F = LA.factorize(eig.sigma * LinearAlgebra.I - J)
+            F = LA.factorize(eig.sigma * LA.I - J)
             Jmap = LinearMaps.LinearMap{eltype(J)}((y, x) -> LA.ldiv!(y, F, x), size(J, 1);
                                         ismutating = true)
             decomp, history = ArnoldiMethod.partialschur(Jmap; nev, 
@@ -225,7 +225,7 @@ function (eig::EigArnoldiMethod)(J, nev; kwargs...)
         end
     else
         N = length(eig.x₀)
-        𝒯 = eltype(eig.x₀)
+        𝒯 = VI.scalartype(eig.x₀)
         if isnothing(eig.sigma) == false
             @warn "Shift-Invert strategy not implemented for maps"
         end

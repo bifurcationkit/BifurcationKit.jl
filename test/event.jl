@@ -2,28 +2,29 @@
 # using Plots
 using Test
 using BifurcationKit
-
 const BK = BifurcationKit
 ###################################################################################################
 # general interface
-_eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
-_eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
-@test BK.has_custom_labels(_eve) == false
-@test BK.compute_eigenelements(_eve) == false
-BK.labels(_eve, 1)
+let
+    _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1))
+    _eved = BK.DiscreteEvent(1, (iter, state) -> getp(state)>-2)
+    @test BK.has_custom_labels(_eve) == false
+    @test BK.compute_eigenelements(_eve) == false
+    BK.labels(_eve, 1)
 
-_eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1), ("event1", "event2"))
-BK.labels(_eve, 1)
-BK.labels(_eve, [])
+    _eve = BK.ContinuousEvent(2, (iter, state) -> (getp(state)+2, getx(state)[1]-1), ("event1", "event2"))
+    BK.labels(_eve, 1)
+    BK.labels(_eve, [])
 
-SetOfEvents()
-SetOfEvents(nothing)
-SetOfEvents(_eve)
-SetOfEvents(_eved)
-BK.split_events(_eve, _eved, nothing)
-BK.has_custom_labels(BK.BifEvent(1,1))
-BK.compute_eigenelements(BK.BifEvent(0,nothing))
-BK.has_custom_labels(BK.BifEvent(0,nothing))
+    SetOfEvents()
+    SetOfEvents(nothing)
+    SetOfEvents(_eve)
+    SetOfEvents(_eved)
+    BK.split_events(_eve, _eved, nothing)
+    BK.has_custom_labels(BK.BifEvent(1,1))
+    BK.compute_eigenelements(BK.BifEvent(0,nothing))
+    BK.has_custom_labels(BK.BifEvent(0,nothing))
+end
 ####################################################################################################
 function testBranch(br)
     # test if stability works

@@ -4,7 +4,7 @@ import LinearAlgebra as LA
 deepcollect(x::BK.BorderedArray) = vcat(x.u, x.p)
 deepcollect(x::Number) = x
 
-begin
+let
     LA.norm(BorderedArray(rand(2),0),0)
     LA.norm(BorderedArray(rand(2),0),1)
     LA.norm(BorderedArray(rand(2),0),2)

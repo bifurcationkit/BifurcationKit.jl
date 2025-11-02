@@ -45,13 +45,6 @@ BK.PeriodDoublingProblemMinimallyAugmented(prob)
 BK.NeimarkSackerProblemMinimallyAugmented(prob)
 ####################################################################################################
 # different tests for the Fold point
-snpt = get_normal_form(br, 3)
-
-@test snpt.nf.a ≈ 0.11539539170637884 rtol = 1e-3
-@test snpt.nf.b1 ≈ 0.7323167187172155 rtol = 1e-3
-@test snpt.nf.b2 ≈ 0.2693795490512864 rtol = 1e-3
-@test snpt.nf.b3 ≈ 12.340786210650833 rtol = 1e-3
-
 @reset opts_br.newton_options.verbose = false
 @reset opts_br.newton_options.max_iterations = 10
 

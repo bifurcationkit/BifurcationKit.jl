@@ -49,9 +49,9 @@ $(TYPEDSIGNATURES)
 Automatic branch switching at branch points based on a computation of the normal form. More information is provided in [Branch switching](@ref Branch-switching-page). An example of use is provided in [2d generalized Bratu–Gelfand problem](@ref).
 
 # Arguments
-- `br` branch result from a call to [`continuation`](@ref)
-- `ind_bif` index of the bifurcation point in `br` from which you want to branch from
-- `options_cont` options for the call to [`continuation`](@ref)
+- `br`: branch result from a call to [`continuation`](@ref) containing the bifurcation point
+- `ind_bif`: index of the bifurcation point in `br` from which to branch
+- `options_cont`: continuation parameters for the new branch
 
 # Optional arguments
 - `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
@@ -59,13 +59,13 @@ Automatic branch switching at branch points based on a computation of the normal
 - `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations. See also `use_normal_form` below.
 - `use_normal_form = true`. If `use_normal_form = true`, the normal form is computed as well as its predictor and a guess is automatically formed. If `use_normal_form = false`, the parameter value `p = p₀ + δp` and the guess `x = x₀ + ampfactor .* e` (where `e` is a vector of the kernel) are used as initial guess. This is useful in case automatic branch switching does not work.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
+- `scaleζ = norm` pass a norm to normalize vectors during normal form computation
+- `plot_solution` change plot solution method in the problem `br.prob`
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
 - `max_iter_deflation` number of newton steps in deflated newton
 - `perturb = identity` which perturbation function to use during deflated newton
 - `Teigvec = _getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
-- `scaleζ = norm` pass a norm to normalize vectors during normal form computation
-- `plot_solution` change plot solution method in the problem `br.prob`
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`get_normal_form`](@ref).
 
 !!! tip "Advanced use"
@@ -75,18 +75,26 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       ind_bif::Int, 
                       options_cont::ContinuationPar = br.contparams,
                       Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+
                       alg = getalg(br),
+
                       δp = nothing, 
                       ampfactor::Real = 1,
                       use_normal_form = true,
+                      bls = MatrixBLS(),
+                      bls_block = bls,
+
+
                       nev = options_cont.nev,
+                      scaleζ = norm,
+                      autodiff = true,
+
                       usedeflation::Bool = false,
                       verbosedeflation::Bool = false,
                       max_iter_deflation::Int = min(50, 15options_cont.newton_options.max_iterations),
                       perturb = identity,
+
                       plot_solution = plot_solution(br.prob),
-                      scaleζ = norm,
-                      autodiff = true,
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
                       kwargs...) where {Tprob, 𝒯eigvec}
@@ -103,17 +111,20 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
     if kernel_dimension(br, ind_bif) > 1
         return multicontinuation(br,
                                 ind_bif,
-                                options_cont; 
+                                options_cont;
+                                Teigvec,
+                                alg,
+
                                 δp,
                                 ampfactor,
                                 nev,
                                 scaleζ,
+                                autodiff,
+                                bls_block,
+
                                 verbosedeflation,
                                 max_iter_deflation,
-                                autodiff,
                                 perturb,
-                                Teigvec,
-                                alg,
                                 plot_solution,
                                 kwargs...)
     end
@@ -127,6 +138,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                             nev,
                             verbose,
                             scaleζ,
+                            bls,
                             autodiff,
                             tol_fold)
 
@@ -222,12 +234,13 @@ function multicontinuation(br::AbstractBranchResult,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
 
                             δp = nothing,
-                            ampfactor::Real = _getvectoreltype(br)(1),
+                            ampfactor::Real = 1,
 
                             nev::Int = options_cont.nev,
                             ζs = nothing,
                             scaleζ = norm,
                             autodiff = true,
+                            bls_block = MatrixBLS(),
 
                             verbosedeflation::Bool = false,
                             perturb_guess = identity,
@@ -237,7 +250,7 @@ function multicontinuation(br::AbstractBranchResult,
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
 
-    bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff)
+    bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff, bls_block)
 
     return multicontinuation(br,
                             bpnf,
@@ -250,15 +263,15 @@ function multicontinuation(br::AbstractBranchResult,
                             kwargs...)
 end
 
-# for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing
+# for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing to prevent from calling the function
 multicontinuation(br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, options_cont::ContinuationPar; kwargs...) = nothing
 
 # general function for branching from Nd bifurcation points
 function multicontinuation(br::AbstractBranchResult,
-                           bpnf::NdBranchPoint,
+                           bp::NdBranchPoint,
                            options_cont::ContinuationPar = br.contparams;
                            δp = nothing,
-                           ampfactor = _getvectoreltype(br)(1),
+                           ampfactor = 1,
                            perturb = identity,
                            plot_solution = plot_solution(br.prob),
                            kwargs...)
@@ -269,9 +282,9 @@ function multicontinuation(br::AbstractBranchResult,
     ds = abs(isnothing(δp) ? options_cont.ds : δp)
 
     # get prediction from solving the reduced equation
-    rootsNFm, rootsNFp = predictor(bpnf, ds;  verbose, perturb, ampfactor)
+    rootsNFm, rootsNFp = predictor(bp, ds;  verbose, perturb, ampfactor)
 
-    return multicontinuation(br, bpnf, (before = rootsNFm, after = rootsNFp), options_cont; δp, plot_solution, kwargs...)
+    return multicontinuation(br, bp, (before = rootsNFm, after = rootsNFp), options_cont; δp, plot_solution, kwargs...)
 end
 
 """
