@@ -441,7 +441,7 @@ Same as `_cat!` but determine the ordering so that the branches merge properly.
 """
 function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
     # find the intersection point
-    dst(x1, p1, x2, p2) = max(abs(x1 - x2), abs(p1 - p2))
+    dst(x1, p1, x2, p2) = max(norminf(x1 - x2), abs(p1 - p2))
     dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
     ind = (1, 1)
     for i in [1, length(br1)], j in [1, length(br2)]
