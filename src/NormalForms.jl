@@ -1,4 +1,4 @@
-function get_adjoint_basis(L★, λs, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
+function get_adjoint_basis(L★, λs::AbstractVector, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
     𝒯 = VI.scalartype(λs)
     # same as function below but for a list of eigenvalues
     # we compute the eigen-elements of the adjoint of L
@@ -15,9 +15,9 @@ function get_adjoint_basis(L★, λs, eigsolver::AbstractEigenSolver; nev = 3, v
         abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
         verbose && println("──▶ VP[$idvp] paired with VP★[$I]")
         ζ★ = geteigenvector(eigsolver, ev★, I)
-        push!(ζ★s, copy(ζ★))
+        push!(ζ★s, _copy(ζ★))
         push!(λ★s, λ★[I])
-        # we change λ★ so that it is not used twice
+        # we modify λ★ so that it is not used twice
         λ★[I] = 1e9 # typemax(𝒯) does not work for complex numbers here
     end
     return ζ★s, λ★s
@@ -50,11 +50,13 @@ Bi-orthogonalise the two sets of vectors.
 """
 function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
-    # we could use projector P=A(AᵀA)⁻¹Aᵀ
+    # we could use the projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
+    @assert length(ζs) == length(ζ★s) "The Gram matrix is not square! G = \n$G $(display(G))"
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    @debug "[biorthogonalise] Initial Gram matrix" G
     if abs(LA.det(G)) <= 1e-14
-        error("The Gram matrix is not invertible! det(G) = $(LA.det(G)), G = \n$G $(display(G))")
+        error("The Gram matrix is not invertible! det(G) = $(LA.det(G)), G = \n$G $(display(G)).\n You can perhaps increase the argument `nev`.")
     end
 
     # save those in case the first algo fails
@@ -62,27 +64,14 @@ function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
     _ζ★s = deepcopy(ζ★s)
 
     # first algo
-    switch_algo = false
-    tmp = copy(ζ★s[begin])
-    for ii in eachindex(ζ★s)
-        tmp .= ζ★s[ii]
-        for jj in eachindex(ζs)
-            if ii != jj
-                tmp .-= _dot(tmp, ζs[jj]) .* ζs[jj] ./ _dot(ζs[jj], ζs[jj])
-            end
-        end
-        α = _dot(tmp, ζs[ii])
-        if α ≈ 0
-            switch_algo = true
-            break
-        end
-        ζ★s[ii] .= tmp ./ α
-    end
+    Q = LA.pinv(G)
+    ζ★s = Q' * ζ★s
 
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
+    @debug "[biorthogonalise] algo 1: " G
 
     # we switch to another algo if the above fails
-    if norminf(G - LA.I) >= 1e-5 || switch_algo
+    if norminf(G - LA.I) >= 1e-5
         @warn "Gram matrix not equal to identity. Switching to LU algorithm.\n This modifies the basis of right eigenvectors!"
         println("G (det = $(LA.det(G))) = "); display(G)
         G = [ _dot(ζ, ζ★) for ζ in _ζs, ζ★ in _ζ★s]
@@ -309,10 +298,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     b20 = VI.inner(b2v, ζ★)
     verbose && println("├─── b20/2 = ", b20/2)
 
-    # coefficient of x^3, recall b2v = R2(ζ, ζ)
     wst, cv, it = ls(L, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
-    ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
+    # coefficient of x^3, recall b2v = R2(ζ, ζ), Golub. Schaeffer Vol 1 page 33, eq 3.22
+    ~cv && @debug "[Normal form Ψ02] Linear solver for J did not converge. it = $it"
     b30 = VI.inner(b3v, ζ★)
     verbose && println("└─── b3/6 = ", b30/6)
 
@@ -540,7 +529,11 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
                         out[ii] *= " + $(round(2coeff; digits))⋅x$jj⋅x$kk"
                     end
                 end
+            end
+        end
 
+        for jj in 1:N
+            for kk in jj:N
                 for ll in kk:N
                     coeff = round(nf.b30[ii,jj,kk,ll] / 6; digits)
                     sp = coeff > 0 ? " + " : " - "
@@ -599,6 +592,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
     x0 = convert(𝒯eigvec, bifpt.x)
+    𝒯 = VI.scalartype(x0)
 
     # parameter for vector field
     p = bifpt.param
@@ -616,7 +610,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # and corresponding eigenvectors
     if isnothing(ζs) # do we have a basis for the kernel?
         if haseigenvector(br) == false # are the eigenvector saved in the branch?
-            @info "No eigenvector recorded, computing them on the fly"
+            @info "No eigenvector recorded, computing them on the fly..."
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             _λ, _ev, _ = options.eigsolver(L, max(nev, max(nev, length(rightEv))))
             verbose && (println("──▶ (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
@@ -664,11 +658,11 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         return out
     end
 
-    # vector eltype
-    Tvec = VI.scalartype(ζs[1])
+    # eigenvector eltype
+    𝒯vec = VI.scalartype(ζs[1])
 
     # coefficients of p
-    dgidp = Vector{Tvec}(undef, N)
+    ∂gi∂p = Vector{𝒯vec}(undef, N)
     δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
@@ -678,13 +672,13 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
    
     for ii in 1:N
-        dgidp[ii] = VI.inner(R01, ζ★s[ii])
+        ∂gi∂p[ii] = VI.inner(R01, ζ★s[ii])
     end
-    verbose && printstyled(color=:green,"──▶ a01 (∂/∂p) = ", dgidp, "\n")
+    verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gi∂p, "\n")
 
     # coefficients of x*p and p^2
-    d²gidxjdpk = zeros(Tvec, N, N)
-    ∂²gi∂p² = Vector{Tvec}(undef, N)
+    d²gidxjdpk = zeros(𝒯vec, N, N)
+    ∂²gi∂p² = Vector{𝒯vec}(undef, N)
     for jj in 1:N
         if autodiff
             R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
@@ -696,14 +690,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         Ψ01, cv, it = ls(L_fact, E(R01))
         ~cv && @warn "[Normal form Nd Ψ01] linear solver did not converge"
         for ii in 1:N
-            d²gidxjdpk[ii,jj] = VI.inner(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
+            d²gidxjdpk[ii, jj] = VI.inner(R11 .- R2(ζs[jj], Ψ01), ζ★s[ii])
         end
     end
     verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gi∂p² ))
-    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p)  = \n"); Base.display( d²gidxjdpk ))
+    verbose && (printstyled(color=:green, "\n──▶ b11 (∂²/∂x∂p) = \n"); Base.display( d²gidxjdpk ))
 
     # coefficients of x^2
-    d2gidxjdxk = zeros(Tvec, N, N, N)
+    d2gidxjdxk = zeros(𝒯vec, N, N, N)
     for jj in 1:N, kk in 1:N
         if kk >= jj
             b2v = R2(ζs[jj], ζs[kk])
@@ -723,34 +717,34 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
 
     # coefficient of x^3
-    d3gidxjdxkdxl = zeros(Tvec, N, N, N, N)
+    ∂³gi∂xj∂xk∂xl = zeros(𝒯vec, N, N, N, N)
     for jj in 1:N, kk in 1:N, ll in 1:N
         if jj==kk==ll || jj==kk || jj<kk<ll
             b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[kk])))
-            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            ~flag && @warn "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[jj], wst)
 
         wst, flag, it = ls(L_fact, E(R2(ζs[ll], ζs[jj])))
-            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            ~flag && @warn "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[kk], wst)
 
         wst, flag, it = ls(L_fact, E(R2(ζs[kk], ζs[jj])))
-            ~flag && @warn "[Normal Form Nd (wst)]linear solver did not converge"
+            ~flag && @warn "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[ll], wst)
 
             for ii in 1:N
                 c = VI.inner(b3v, ζ★s[ii])
                 for I in [
-                        (jj,kk,ll),
-                        (jj,ll,kk),
-                        (kk,jj,ll),
-                        (kk,ll,jj),
-                        (ll,jj,kk),
-                        (ll,kk,jj)
+                        (jj, kk, ll),
+                        (jj, ll, kk),
+                        (kk, jj, ll),
+                        (kk, ll, jj),
+                        (ll, jj, kk),
+                        (ll, kk, jj)
                         ]
-                    d3gidxjdxkdxl[ii, I...] = c
+                    ∂³gi∂xj∂xk∂xl[ii, I...] = c
                 end
             end
         end
@@ -759,11 +753,16 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         printstyled(color=:green, "\n──▶ b30 (∂³/∂x³) = \n")
         for ii in 1:N
             printstyled(color=:blue, "──▶ component $ii\n")
-            Base.display( d3gidxjdxkdxl[ii,:,:,:] ./ 6 )
+            Base.display( ∂³gi∂xj∂xk∂xl[ii,:,:,:] ./ 6 )
         end
     end
 
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = dgidp, a02 = ∂²gi∂p², b11 = d²gidxjdpk, b20 = d2gidxjdxk, b30 = d3gidxjdxkdxl), Symbol("$N-d"))
+    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gi∂p,
+                                                           a02 = ∂²gi∂p²,
+                                                           b11 = d²gidxjdpk,
+                                                           b20 = d2gidxjdxk,
+                                                           b30 = ∂³gi∂xj∂xk∂xl), 
+                        Symbol("$N-d"))
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
@@ -817,7 +816,8 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
     rootsNFm = _get_roots_nf(-abs(δp))
     rootsNFp = _get_roots_nf(abs(δp))
     println("\n──▶ BS from Non simple branch point")
-    printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
+    printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (reduced equation).\n    Needs to be transformed as solutions of the full functional.\n")
+        @error "" rootsNFm rootsNFp
     return (before = rootsNFm, after = rootsNFp)
 end
 
@@ -879,7 +879,7 @@ function predictor(bp::NdBranchPoint, ::Val{:exhaustive}, δp::𝒯;
     rootsNFm = _get_roots_nf(-abs(δp))
     rootsNFp = _get_roots_nf(abs(δp))
     println("\n──▶ BS from Non simple branch point")
-    printstyled(color=:green, "──▶ we found $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (Reduced equation).\n")
+    printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (reduced equation).\n    Needs to be transformed as solutions of the full functional.\n")
     return (before = rootsNFm, after = rootsNFp)
 end
 ####################################################################################################
@@ -927,7 +927,7 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
 
-    # −LΨ001 = R01 #AD
+    # −L⋅Ψ001 = R01 #AD
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
     else
@@ -937,7 +937,7 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     Ψ001, cv, it = ls(L, -R01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
-    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001), ζ∗⟩
+    # a = ⟨R11(ζ) + 2R20(ζ, Ψ001), ζ∗⟩
     if autodiff
         av = ForwardDiff.derivative(z -> R1(set(parbif, lens, z))(ζ), p)
     else
@@ -947,13 +947,12 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     av .+= 2 .* R2(ζ, Ψ001)
     a = VI.inner(av, ζ★)
 
-    # (2iω−L)Ψ200 = R20(ζ, ζ)
+    # (2iω − L)⋅Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
     Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
     ~cv && @debug "[Hopf Ψ200] Linear solver for J did not converge. it = $it"
-    # @assert Ψ200 ≈ (Complex(0, 2ω)*I - L) \ R20
 
-    # −LΨ110 = 2R20(ζ, cζ)
+    # −L⋅Ψ110 = 2R20(ζ, cζ)
     R20 = 2 .* R2(ζ, cζ)
     Ψ110, cv, it = ls(L, -R20)
     ~cv && @debug "[Hopf Ψ110] Linear solver for J did not converge. it = $it"

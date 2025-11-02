@@ -302,6 +302,22 @@ let
         @test sol_explicit[end-m+1:end] ≈ sol_bd2p
     end
 end
+
+# idem but with AbtractArrays
+let
+    N = 10
+    J = I(N^2) + 0.1*rand(N^2, N^2)
+    
+    Jmf = x -> reshape(J*vec(x), N, N)
+    a = (rand(N,N), rand(N,N))
+    b = (rand(N,N), rand(N,N))
+    c = rand(2,2)
+    sol, _, cv, it = BK.solve_bls_block(BK.BorderingBLS(solver = GMRESKrylovKit()), Jmf, a, b, c, rand(N, N), rand(2))
+    @test cv
+
+    sol, _, cv, it = BK.solve_bls_block(MatrixFreeBLS(GMRESKrylovKit()), Jmf, a, b, c, rand(N, N), rand(2))
+    @test cv
+end
 ####################################################################################################
 # test the bordered linear solvers, Complex case
 # we test the linear system with MA formulation of Hopf bifurcation

@@ -35,12 +35,12 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                  applyξu!)
 end
 
-update_bls(lbs::AbstractBorderedLinearSolver, ls) = throw("")
+update_bls(lbs::AbstractBorderedLinearSolver, ls) = error("update_bls not implemented for $(typeof(lbs))")
 ####################################################################################################
 """
 $(TYPEDEF)
 
-This struct is used to provide the bordered linear solver based on the Bordering Method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
+This struct is used to provide the bordered linear solver based on the Bordering method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
 
 $(TYPEDFIELDS)
 
@@ -49,9 +49,11 @@ $(TYPEDFIELDS)
 - there is a  simple constructor `BorderingBLS(ls)` where `ls` is a linear solver, for example `ls = DefaultLS()`
 - you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
 
-# Reference
+# Reference(s)
 
-This is the solver BEC + k in Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
+This is the solver BEC + k in:
+
+Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
 """
 @with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol <: Real, Tdot, Tnorm} <: AbstractBorderedLinearSolver
     "Linear solver for the Bordering method."
@@ -162,47 +164,43 @@ function residualBEC(lbs::BorderingBLS,
     return δX, δl
 end
 
-# specific version with b,c,d being matrices / tuples of vectors
+# specific version with b, c, d being matrices / tuples of vectors
 # ┌         ┐
 # │  J    b │
 # │  c'   d │
 # └         ┘
 function solve_bls_block(lbs::BorderingBLS, 
-                            J, 
-                            b::NTuple{M, AbstractVector}, 
-                            c::NTuple{M, AbstractVector}, 
-                            d::AbstractMatrix, 
-                            rhst, 
-                            rhsb) where M
+                         J, 
+                         b::NTuple{M, 𝒯vec}, 
+                         c::NTuple{M, 𝒯vec}, 
+                         d::AbstractMatrix, 
+                         rhst, 
+                         rhsb) where {M, 𝒯vec <: AbstractArray}
     m = size(d, 1)
-    @assert length(b) == length(c) == m == M
-    x1 = lbs.solver(J, rhst)[1]
-    x2s = typeof(b[1])[]
+    if ~(length(b) == length(c) == m == M)
+        error("Linear bordered solver, wrong sizes!")
+    end
+
+    x1, cv, it = lbs.solver(J, rhst)
+    x2s = Vector{𝒯vec}()
     its = Int[]
     cv = true
-    δx = VI.zerovector(x2s)
     for ii in eachindex(b)
-        x2, success, it = lbs.solver(J, b[ii])
+        x2, flag, it = lbs.solver(J, b[ii])
         push!(x2s, x2)
         push!(its, it)
-        cv = cv & success
+        cv = cv & flag
     end
-    # we compute c*x2 in M_m(R)
-    # ∑_k c[i,k] x2[k,j]
-    c_mat  = hcat(c...)
-    x2_mat = hcat(x2s...)
-    # TODO USE mul!
-    δd = d - c_mat' * x2_mat
-
-    cx1 = zeros(eltype(d), m)
+    # produce Schur complement
+    S = [ d[i,j] - VI.inner(c[i], x2s[j])  for i in 1:m, j in 1:m ]
+    # reduce rhs
+    h = [ rhst[i] - VI.inner(c[i], x1)  for i in 1:m ]
+    # solve Schur complement
+    u2 = S \ h
+    u1 = x1
     for ii in eachindex(c)
-        cx1[ii] = LA.dot(c[ii], x1)
+        u1 .-= h[ii] .* x2s[ii]
     end
-
-    u2 = δd \ (rhsb - cx1)
-    # TODO USE mul!
-    u1 = x1 - x2_mat * u2
-
     return u1, u2, cv, (its...)
 end
 ####################################################################################################
