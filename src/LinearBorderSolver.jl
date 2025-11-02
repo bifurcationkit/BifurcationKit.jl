@@ -42,10 +42,6 @@ $(TYPEDEF)
 
 This struct is used to provide the bordered linear solver based on the Bordering Method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
 
-# Reference
-
-This is the solver BEC + k in Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
-
 $(TYPEDFIELDS)
 
 # Constructors
@@ -53,8 +49,11 @@ $(TYPEDFIELDS)
 - there is a  simple constructor `BorderingBLS(ls)` where `ls` is a linear solver, for example `ls = DefaultLS()`
 - you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
 
+# Reference
+
+This is the solver BEC + k in Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
 """
-@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol, Tdot} <: AbstractBorderedLinearSolver
+@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol <: Real, Tdot, Tnorm} <: AbstractBorderedLinearSolver
     "Linear solver for the Bordering method."
     solver::S = nothing
 
@@ -69,6 +68,9 @@ $(TYPEDFIELDS)
 
     "Inner product used in by the solver."
     dot::Tdot = VI.inner
+
+    "Norm used in by the solver."
+    norm::Tnorm = VI.norm
 
     @assert k > 0 "Number of recursions must be positive"
 end
@@ -93,20 +95,19 @@ function (lbs::BorderingBLS)(J, dR,
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
     # in which the dot product is dotp(x,y) = dot(x,y) / length(x). For more general 
-    # dot products like dotp(x,y) = dot(x, S, y)
+    # dot products like dotp(x, y) = dot(x, S, y)
     # it is better to directly use dotp instead of rescaling ξu
 
     k = 0 # number of BEC iterations
     BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift, dotp)
     res_bec(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift, dotp)
-    mynorm(x) = sqrt(dotp(x,x))
 
     dX, dl, cv, itlinear = BEC0(R, n)
 
     failBLS::Bool = true
     while lbs.check_precision && k < lbs.k && failBLS
         δX, δl = res_bec(dX, dl)
-        failBLS = mynorm(δX) > lbs.tol || abs(δl) > lbs.tol
+        failBLS = lbs.norm(δX) > lbs.tol || abs(δl) > lbs.tol
         if failBLS
             dX1, dl1, cv, itlinear = BEC0(δX, δl)
             # axpy!(1, dX1, dX)

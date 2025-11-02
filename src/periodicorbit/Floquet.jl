@@ -1,5 +1,5 @@
 # This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behavior which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
-function check_floquet_options(eigls::AbstractEigenSolver)
+function _check_floquet_options(eigls::AbstractEigenSolver)
     if eigls isa DefaultEig
         return @set eigls.which = abs
     elseif eigls isa EigArpack
@@ -18,22 +18,36 @@ end
 
 ####################################################################################################
 """
-    floquet = FloquetQaD(eigsolver::AbstractEigenSolver, matrix_free = ~(eigls isa AbstractDirectEigenSolver)
+$(TYPEDEF)
 
-This composite type implements the computation of the eigenvalues of the monodromy matrix in the case of periodic orbits problems (based on the Shooting method or Finite Differences (Trapeze method)), also called the Floquet multipliers. The method, dubbed Quick and Dirty (QaD), is not numerically very precise for large / small Floquet exponents when the number of time sections is large because of many matrix products. It allows, nevertheless, to detect bifurcations. The arguments are as follows:
-- `eigsolver::AbstractEigenSolver` solver used to compute the eigenvalues.
-- `matrix_free::Bool` whether to use matrix-free linear operator
+Computes Floquet multipliers (eigenvalues of the monodromy matrix) for periodic orbit problems using the Shooting method or Finite Differences (Trapezoid method).
 
-If `eigsolver == DefaultEig()`, then the monodromy matrix is formed and its eigenvalues are computed. Otherwise, a Matrix-Free version of the monodromy is used.
+## Method Description
+
+The "Quick and Dirty" (QaD) method computes Floquet multipliers through sequential matrix products along the periodic orbit. This approach has numerical limitation:
+
+- **Precision issues**: Accuracy degrades for large or small Floquet exponents when using many time sections, due to accumulated errors from repeated matrix multiplications
+
+Despite precision limitations, the method is sufficient for bifurcation detection in most cases
+
+## Fields
+
+- `eigsolver::AbstractEigenSolver`: Eigensolver used to compute the eigenvalues of the monodromy matrix
+- `matrix_free::Bool`: Whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver)
+
+## Implementation Details
+
+- If `eigsolver == DefaultEig()`, the full monodromy matrix is explicitly formed and its eigenvalues are computed
+- Otherwise, a matrix-free formulation is used, applying the monodromy operator via sequential time evolution
 
 !!! danger "Floquet multipliers computation"
-    The computation of Floquet multipliers is necessary for the detection of bifurcations of periodic orbits (which is done by analyzing the Floquet exponents obtained from the Floquet multipliers). Hence, the eigensolver `eigsolver` needs to compute the eigenvalues with largest modulus (and not with largest real part which is their default behavior). This can be done by changing the option `which = :LM` of `eigsolver`. Nevertheless, note that for most implemented eigensolvers in the current Package, the proper option is set.
+    The computation of Floquet multipliers is necessary for the detection of bifurcations of periodic orbits (which is done by analyzing the Floquet exponents obtained from the Floquet multipliers). Hence, the eigensolver `eigsolver` needs to compute the eigenvalues with largest modulus (and not the ones with largest real part which is their default behavior). This can be done by changing the option `which = :LM` of `eigsolver`. Nevertheless, note that for most implemented eigensolvers in `BifurcationKit`, the proper option is properly set.
 """
 struct FloquetQaD{E <: AbstractEigenSolver } <: AbstractFloquetSolver
     eigsolver::E
     matrix_free::Bool
     function FloquetQaD(eigls::AbstractEigenSolver, matrix_free = ~(eigls isa AbstractDirectEigenSolver))
-        eigls2 = check_floquet_options(eigls)
+        eigls2 = _check_floquet_options(eigls)
         return new{typeof(eigls2)}(eigls2, matrix_free)
     end
     FloquetQaD(eigls::AbstractFloquetSolver) = eigls
@@ -50,7 +64,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
     vals, vecs, cv, info = fl.eigsolver(monodromy, nev; kwargs...)
 
     if Inf in vals
-        @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients"
+        @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients."
     end
 
     # the `vals` should be sorted by largest modulus, but we need the log of them sorted this way
@@ -61,7 +75,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
     σ = logvals[I]
     vp0 = minimum(abs, σ)
     if (J isa FloquetWrapper{ShootingProblem}) && vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`"
+        @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
@@ -385,21 +399,40 @@ end
 """
  $(TYPEDEF)
 
-Computation of Floquet exponents. The method is based on a formulation through a generalised eigenvalue problem (GEV) of large dimension. Relatively slow but quite precise. Use `FloquetColl()` instead when possible.
+Computes Floquet exponents for periodic orbits using a Generalized Eigenvalue Problem (GEV) formulation.
 
-This is a simplified version of [1].
+## Method Description
+
+This method reformulates the Floquet multiplier computation as a large-dimensional generalized eigenvalue problem. The approach is based on a simplified version of the algorithm described in [1].
+
+**Performance characteristics**:
+- **Accuracy**: More numerically precise than `FloquetQaD`, especially for extreme Floquet exponents.
+- **Speed**: Slower due to the large dimension of the eigenvalue problem.
+- **Recommendation**: Use `FloquetColl()` when possible for better performance with similar accuracy.
 
 ## Fields
-- `eigls` an eigensolver
-- `ntot` total number of unknowns (without counting the period), ie `length(::PeriodicOrbitOCollProblem)` for example.
-- `n` space dimension
-- `array_zeros` useful for sparse matrices
+
+- `eigsolver::AbstractEigenSolver`: Eigensolver used to solve the generalized eigenvalue problem
+- `B::Tb`: Mass matrix for the generalized eigenvalue formulation
+
+## Constructor
+
+```julia
+FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
+```
+
+**Arguments**:
+- `eigls`: Eigensolver to use
+- `ntot`: Total dimension of the generalized eigenvalue problem
+- `n`: State space dimension
+- `array_zeros`: Function to allocate zero arrays (defaults to `zeros`)
 
 ## Example
 
-You can create such solver like this (here `n = 2`):
-
-    eigfloquet = BifurcationKit.FloquetGEV(DefaultEig(), (30 * 4 + 1) * 2, 2))
+```julia
+# For a 2D system with 30 time sections and 4 collocation points:
+eigfloquet = FloquetGEV(DefaultEig(), (30 * 4 + 1) * 2, 2)
+```
 
 ## References
 [1] Fairgrieve, Thomas F., and Allan D. Jepson. “O. K. Floquet Multipliers.” SIAM Journal on Numerical Analysis 28, no. 5 (October 1991): 1446–62. https://doi.org/10.1137/0728075.
@@ -408,7 +441,7 @@ struct FloquetGEV{E <: AbstractEigenSolver, Tb} <: AbstractFloquetSolver
     eigsolver::E
     B::Tb
     function FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
-        eigls2 = check_floquet_options(eigls)
+        eigls2 = _check_floquet_options(eigls)
         # build the mass matrix
         B = array_zeros(ntot, ntot)
         B[end-n+1:end, end-n+1:end] .= LA.I(n)
@@ -448,10 +481,41 @@ end
 """
 $(TYPEDEF)
 
-Computation of Floquet exponents for the orthogonal collocation method. The method is based on the condensation of parameters described in [1] and used in Auto07p with a twist from [2,3].
+Computes Floquet exponents for periodic orbits discretized with the orthogonal collocation method.
 
-# Fields
+## Method Description
+
+This method uses the **condensation of parameters** technique, originally described in [1] and implemented in AUTO07p, with improvements from [2,3]. The approach efficiently computes Floquet multipliers by exploiting the structure of the collocation discretization.
+
+**Performance characteristics**:
+- **Accuracy**: High precision, comparable to `FloquetGEV`.
+- **Speed**: Faster than `FloquetGEV` by exploiting collocation structure.
+- **Recommendation**: Preferred method for collocation-based periodic orbit problems.
+
+## Fields
+
 $(TYPEDFIELDS)
+
+## Constructor
+
+```julia
+FloquetColl(; eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_n = true)
+```
+
+**Keyword Arguments**:
+- `eigls`: Eigensolver to use (defaults to `DefaultEig()`)
+- `cache`: Optional cache for optimization (set to `COPCACHE`; automatically configured when using `COPBLS`)
+- `small_n`: Whether to use optimized algorithm for small state dimensions (defaults to `true`)
+
+## Example
+
+```julia
+# Default constructor (recommended)
+floquet_solver = FloquetColl()
+
+# With custom eigensolver
+floquet_solver = FloquetColl(eigls = EigArpack())
+```
 
 ## References
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «NUMERICAL ANALYSIS AND CONTROL OF BIFURCATION PROBLEMS (II): BIFURCATION IN INFINITE DIMENSIONS». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.
@@ -470,7 +534,7 @@ struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
 end
 
 function FloquetColl(;eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_n = true)
-    eigls2 = check_floquet_options(eigls)
+    eigls2 = _check_floquet_options(eigls)
     return FloquetColl(eigls2, cache, small_n)
 end
 FloquetColl(eigls::FloquetColl) = eigls

@@ -68,7 +68,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     end
 
     @testset "Periodic orbits BP-PO" begin
-        # for testing BP-PO aBS
+        # for testing BP-PO aBS for coll/Shooting/Trapezoidal
         include("freire.jl")
     end
 

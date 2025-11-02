@@ -12,6 +12,7 @@ $(TYPEDFIELDS)
 struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
     "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
     alg::Talg
+
     "tolerance for switching to PALC(), default value = 0.5"
     tol_param::T
 end

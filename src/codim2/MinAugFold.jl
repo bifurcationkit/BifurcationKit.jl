@@ -198,7 +198,7 @@ save_solution(::FoldMAProblem, x, p) = x
 jacobian(foldpb::FoldMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = foldpb.prob)
 
 function jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff}, x, p) where {Tprob}
-    return DI.jacobian(foldpb.prob, DI.AutoForwardDiff(), x, DI.Constant(p))
+    ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
 end
 
 jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)

@@ -434,7 +434,7 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    minus!(dFdp, res_f) # dFdp = dFdp - res_f
+    dFdp = minus!(dFdp, res_f) # dFdp = dFdp - res_f
     VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
@@ -449,7 +449,7 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+        _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
         minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
@@ -468,10 +468,10 @@ function newton_palc(iter::AbstractContinuationIterable,
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
-                copyto!(x_pred, x); VI.add!(x_pred, u, -α)
+                _copyto!(x_pred, x); VI.add!(x_pred, u, -α)
 
                 p_pred = p - α * up
-                copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
                 res = normAC(res_f, res_n)
@@ -481,7 +481,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                         α *= 2
                     end
                     line_step = true
-                    copyto!(x, x_pred)
+                    _copyto!(x, x_pred)
 
                     # p = p_pred
                     p  = clamp(p_pred, p_min, p_max)
@@ -494,7 +494,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         else
             minus!(x, u)
             p = clamp(p - up, p_min, p_max)
-            copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 

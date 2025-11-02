@@ -179,7 +179,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+        _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
         minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
@@ -217,7 +217,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         if method === iterative
             # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
-            copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+            _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
             minus!(dFdp, res_f); VI.scale!(dFdp, 1 / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)
