@@ -188,7 +188,7 @@ end
 orbitguess_f = vcat(vec(orbitguess), 2pi/ωH) |> vec
 
 # test guess using function
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
+# l_hopf, Th, orbitguess2s, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
 hopf_nf = BK.hopf_normal_form(br.prob, br, ind_hopf; detailed = Val(false))
 pred = BK.predictor(hopf_nf, 0.01)
 

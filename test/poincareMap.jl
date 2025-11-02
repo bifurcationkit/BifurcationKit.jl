@@ -20,7 +20,7 @@ dFsl(x, dx, p) = ForwardDiff.derivative(t -> Fsl(x .+ t .* dx, p), 0.)
 # function to compute differentials
 function diffAD(f, x, dx)
     # Zygote.pullback(t->f(x .+ t.* dx), 0.)[1]
-    ForwardDiff.derivative(t -> f(x .+ t.* dx), 0.)
+    ForwardDiff.derivative(t -> f(x .+ t .* dx), 0.)
 end
 
 ####################################################################################################
