@@ -99,14 +99,14 @@ function (lbs::BorderingBLS)(J, dR,
     k = 0 # number of BEC iterations
     BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift, dotp)
     res_bec(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift, dotp)
+    mynorm(x) = sqrt(dotp(x,x))
 
     dX, dl, cv, itlinear = BEC0(R, n)
 
     failBLS::Bool = true
     while lbs.check_precision && k < lbs.k && failBLS
         δX, δl = res_bec(dX, dl)
-        failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
-        @debug k, norm(δX), abs(δl)
+        failBLS = mynorm(δX) > lbs.tol || abs(δl) > lbs.tol
         if failBLS
             dX1, dl1, cv, itlinear = BEC0(δX, δl)
             # axpy!(1, dX1, dX)

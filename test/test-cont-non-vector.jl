@@ -7,6 +7,8 @@ const BK = BifurcationKit
 # test Bordered Arrays
 _a = BorderedArray(zeros(2), zeros(2))
 _b = BorderedArray(zeros(2), zeros(2))
+BK.VI.scale!(_a, _b, 1.)
+BK.VI.add!(_a, _b, 1., 1.)
 BK.getvec(_a)
 BK.getvec(_a.u)
 BK.getvec(BorderedArray(rand(2),1.))
