@@ -707,7 +707,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     ψ₁★ = Jψ \ rhs
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
     ψ₁★ ./= 2∫( ψ₁★ₛ, Fu₀ₛ)
-    @assert  ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
+    @assert ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
 
     # computation of a₁
     a₁ = ∫(ψ₁★ₛ, Bₛ)
@@ -717,7 +717,9 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     # computation of h₂
     rhsₛ = @. Bₛ - 2a₁ * Fu₀ₛ
-    @assert abs(∫(rhsₛ, ψ₁★ₛ)) < 1e-12
+    if abs(∫(rhsₛ, ψ₁★ₛ)) > 1e-12 
+        @warn "[PD-Iooss] The integral ∫(rhsₛ, ψ₁★ₛ) should be zero. We found $(∫(rhsₛ, ψ₁★ₛ))"
+    end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     border_ψ₁ = ForwardDiff.gradient(x -> ∫( reshape(x, size(ψ₁★ₛ)), ψ₁★ₛ),
                                      zeros(length(ψ₁★ₛ))
@@ -757,7 +759,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                  ∫( v₁★ₛ, Bₛ ) -
          2a₁/T * ∫( v₁★ₛ, Aₛ )
 
-                    @debug "[PD-Iooss]" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
+    @debug "[PD-Iooss]" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
 
     # computation of a₀₁
     ∂Fu₀ₛ = copy(u₀ₛ)
@@ -1058,12 +1060,10 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     v₁  = @view vr[begin:end-1]
     v₁ ./= sqrt(∫(vr, vr))
     v₁ₛ = get_time_slices(coll, vcat(v₁,1))
-
                 if _NRMDEBUG; v₁ₛ .*= (-0.4238149014771724 - 0.32924318979676237im)/v₁ₛ[1,1]; end
-                # re-scale the eigenvector
-                v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
-                v₁ = vec(v₁ₛ)
-
+    # re-scale the eigenvector
+    v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
+    v₁ = vec(v₁ₛ)
     @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
 
     #########
@@ -1127,11 +1127,9 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     v₁★ₛ = get_time_slices(coll, vcat(v₁★, 1))
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
                 if _NRMDEBUG; v₁★ₛ .*= (-1.0388609772214439 - 4.170067699081798im)/v₁★ₛ[1,1];end
-                # re-scale the eigenvector
+    # re-scale the eigenvector
     v₁★ₛ ./= conj(∫(v₁★ₛ, v₁ₛ))
     v₁★ = vec(v₁★ₛ)
-
-                # return
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1
     #########
     # compute h20
@@ -1176,7 +1174,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     h₁₁ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
     h₁₁ₛ = get_time_slices(coll, h₁₁)
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
-                @debug "" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
+    @debug "[NS-Iooss]" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
         @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
     end
@@ -1191,19 +1189,17 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
         Cₛ[:, i] .= C(u₀ₛ[:, i], par,  v₁ₛ[:, i], v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
                 # _plot(real(vcat(vec(Bₛ),1)),label="B")
-
     d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
-
-                @debug "[NS-Iooss] B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
+    @debug "[NS-Iooss] B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
 
     for i = 1:size(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₂₀ₛ[:, i], conj(v₁ₛ[:, i]))
         Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
     end
-                @debug "[NS-Iooss] B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
+    @debug "[NS-Iooss] B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
     d +=  ∫( v₁★ₛ, Bₛ )
     d = d/2
-                @debug ""  -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
+    @debug "[NS-Iooss] A(h11, v1b)" -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
     d += -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2
 
     nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2

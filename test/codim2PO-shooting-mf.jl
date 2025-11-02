@@ -23,12 +23,12 @@ prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4)
 @reset opts_br.newton_options.verbose = true
 ################################################################################
-using OrdinaryDiffEq
-prob_de = ODEProblem(Pop!, z0, (0, 600.), par_pop)
-alg = Rodas5()
-sol = OrdinaryDiffEq.solve(prob_de, alg)
-prob_de = ODEProblem(Pop!, sol.u[end], (0, 5), par_pop, reltol = 1e-10, abstol = 1e-12)
-sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
+import OrdinaryDiffEq as ODE
+prob_de = ODE.ODEProblem(Pop!, z0, (0, 600.), par_pop)
+alg = ODE.Rodas5()
+sol = ODE.solve(prob_de, alg)
+prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0, 5), par_pop, reltol = 1e-10, abstol = 1e-12)
+sol = ODE.solve(prob_de, ODE.Rodas5())
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -43,7 +43,7 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 # using Zygote, SciMLSensitivity
 
 probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
-    alg = Rodas5(),
+    alg = ODE.Rodas5(),
     jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF(),
     # parallel = true,
@@ -51,7 +51,7 @@ probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepco
 
 function flow(x0, prob0, tm, p = prob0.p)
     prob = remake(prob0, u0 = x0, tspan = (0, tm), p = p)
-    sol = OrdinaryDiffEq.solve(prob, Rodas5())
+    sol = ODE.solve(prob, Rodas5())
     return sol[end]
 end
 
@@ -122,11 +122,11 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
 #####
 # find the PD NS case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
+probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5(),
             jacobian = BK.AutoDiffMF()
             )
 
