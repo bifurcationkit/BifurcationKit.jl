@@ -149,6 +149,29 @@ function branch_normal_form(pbwrap::WrapPOSh,
     branch_point_normal_form(pbwrap, bp0, (ζ, ζs, ζ₀), optn, bifpt.τ; verbose, nev, kwargs_nf...)
 end
 
+function _get_spectral_basis_prm_bp(dΠ, verbose)
+    # the spectrum of  M is {1,1,...} (M is the Monodromy matrix)
+    # the spectrum of dΠ is {1,0,...}
+    F  = LA.eigen(dΠ)
+    
+    ind = argmin(abs.(F.values .- 1))
+    λ₁ = F.values[ind] # λ₁ ≈ 1
+    verbose && println("├─── [PRM] eigenvalue closest to 1 is ", λ₁)
+    verbose && println("└─── [PRM] computing the non trivial null vector")
+
+    # get the scalar products
+    ev = F.vectors[:, ind]
+
+    Fp = LA.eigen(dΠ')
+    indp = argmin(abs.(Fp.values .- λ₁)) # eigenvalue closest to λ₁
+    ev★ = Fp.vectors[:, indp]
+
+    # normalize eigenvectors
+    ev ./= sqrt(LA.dot(ev, ev))
+    ev★ ./= LA.dot(ev★, ev)
+    return (;ev, ev★)
+end
+
 function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                     bp0::BranchPoint,
                                     (ζ₁, ζs, ζₚₒ),
@@ -173,31 +196,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     _nrm > 1e-12 && @warn  "[BP normal form PRM], residual = $_nrm"
     
     dΠ = jacobian(Π, xₛ ,pars) # this is close to the finite differences, hence analytical expression should be good
-    M = MonodromyQaD(jacobian(pbwrap, bp0.x0, pars))
-    
-    # the spectrum of  M is {1,1,...}
-    # the spectrum of dΠ is {1,0,...}
-    Fₘ = LA.eigen(M)
-    F  = LA.eigen(dΠ)
-    
-    ind = argmin(abs.(F.values .- 1))
-    λ₁ = F.values[ind] # λ₁ ≈ 1
-    verbose && println("├─── [PRM] closest to 1 eigenvalue is ", λ₁)
-    verbose && println("└─── [PRM] computing the non trivial null vector")
-
-    # get the scalar products
-    ev = F.vectors[:, ind]
-    
-    Fp = LA.eigen(dΠ')
-    indp = argmin(abs.(Fp.values .- λ₁)) # eigenvalue closest to λ₁
-    evp = Fp.vectors[:, indp]
-    
-    # normalize eigenvectors
-    ev ./= sqrt(LA.dot(ev, ev))
-    evp ./= LA.dot(evp, ev)
-    
-    # @debug "" xₛ ev evp dΠ _nrm pars F.values[ind] Fp.values[indp]
-    # @debug "" F.values bp0.x0
+    (;ev, ev★) = _get_spectral_basis_prm_bp(dΠ, verbose)
 
     probΠ = BifurcationProblem(
                     (x,p) -> Π(x,p).u,
@@ -225,6 +224,8 @@ function branch_normal_form(pbwrap::WrapPOColl,
                             prm = false,
                             detailed = true,
                             kwargs_nf...)
+    @debug "BP-PO normal form for Collocation: use prm by default"
+    prm = true
     # first, get the bifurcation point parameters
     verbose && println("━"^53*"\n──▶ Branch point normal form computation")
     bifpt = br.specialpoint[ind_bif]
@@ -245,18 +246,13 @@ function branch_normal_form(pbwrap::WrapPOColl,
     end
     # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
-    @error "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form."
-    return branch_normal_form_iooss(pbwrap, bp0; verbose, nev, kwargs_nf...)
+    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # A VIRER
+    return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 
-function branch_normal_form_iooss(pbwrap::WrapPOColl,
-                                    bp0::BranchPoint;
-                                    nev = 3,
-                                    δ = getdelta(pbwrap),
-                                    verbose = false,
-                                    lens = getlens(pbwrap),
-                                    kwargs_nf...)
-    @debug "BP normal form collocation, method Iooss"
+function _get_spectral_basis_iooss_bp(pbwrap::WrapPOColl,
+                                      bp0::BranchPoint;
+                                        )
     coll = pbwrap.prob
     𝒯 = eltype(coll)
     N, m, Ntst = size(coll)
@@ -325,6 +321,74 @@ function branch_normal_form_iooss(pbwrap::WrapPOColl,
     # v₁ = q₁#ind==1 ? q₀ : q₁
     v₁ = q₁ ./ norminf(q₁)
     v₀ = q₀ ./ norminf(q₀)
+    @debug "" ind _ps J0 * v₁|>norminf J0*v₀|>norminf
+    return (;v₁, v₀, coll, period, p₀, p₁, u₀ₛ, Fu₀ₛ, Fu₀)
+end
+
+function branch_normal_form_prm(pbwrap::WrapPOColl,
+                                bp0::BranchPoint,
+                                optn::NewtonPar;
+                                nev = 3,
+                                δ = 1e-7,
+                                verbose = false,
+                                lens = getlens(pbwrap),
+                                autodiff = false,
+                                scaleζ = norminf,
+                                detailed = true,
+                                kwargs_nf...)
+    @debug "PD normal form collocation, method PRM"
+    coll = pbwrap.prob
+    𝒯 = eltype(coll)
+    N, m, Ntst = size(coll)
+    pars = bp0.params
+    period = getperiod(coll, bp0.x0, pars)
+    # compute the Poincaré return map, the section is on the first time slice
+    Π = PoincareMap(pbwrap, bp0.x0, pars, optn)
+    xₛ = bp0.x0[1:N]
+
+    _nrm = norm(Π(xₛ, pars).u .- xₛ, Inf)
+    _nrm > 1e-12 && @warn  "[BP normal form PRM], residual = $_nrm"
+
+    dΠ = finite_differences(x -> Π(x, pars).u, xₛ)
+    (;ev, ev★) = _get_spectral_basis_prm_bp(dΠ, verbose)
+
+    δ1 = convert(𝒯, δ)
+    δ2 = sqrt(δ1)
+    δ3 = δ1^(1/3)
+    d1Π(x,p,dx) = (Π(x .+ δ1 .* dx, p).u .- Π(x .- δ1 .* dx, p).u) ./ (2δ1)
+    d2Π(x,p,dx1,dx2) = (d1Π(x .+ δ2 .* dx2, p, dx1) .- d1Π(x .- δ2 .* dx2, p, dx1)) ./ (2δ2)
+    d3Π(x,p,dx1,dx2,dx3) = (d2Π(x .+ δ3 .* dx3, p, dx1, dx2) .- d2Π(x .- δ3 .* dx3, p, dx1, dx2)) ./ (2δ3)
+
+    probΠ = BifurcationProblem(
+            (x,p) -> Π(x,p).u,
+            xₛ, pars, lens ;
+            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
+            jvp = d1Π,
+            # d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
+            # d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
+            d2F = d2Π,
+            d3F = d3Π,
+            )
+
+    ζ★ = nothing
+    bp1 = BranchPointMap(xₛ, nothing, bp0.p, pars, lens, ev, ev★, nothing, :none)
+    if detailed
+        bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose, autodiff)
+        (;v₁, v₀, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
+        return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp, coll, true)
+    end
+    return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, nothing, coll, true)
+end
+
+function branch_normal_form_iooss(pbwrap::WrapPOColl,
+                                    bp0::BranchPoint;
+                                    nev = 3,
+                                    δ = getdelta(pbwrap),
+                                    verbose = false,
+                                    lens = getlens(pbwrap),
+                                    kwargs_nf...)
+    @debug "BP normal form collocation, method Iooss"
+    (;v₁, v₀, coll, period, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
     
     # plot(layout = @layout [a;b;c;d])
     # vsol = get_periodic_orbit(coll, bp0.x0,1)
@@ -1362,6 +1426,28 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
                     δp,
                     ampfactor;
                     override = false)
+    pbnew = deepcopy(nf.prob)
+    N, m, Ntst = size(nf.prob)
+    orbitguess0 = _getsolution(nf.po)[begin:end-1]
+
+    # we update the problem by doubling Ntst
+    # we need to save the mesh for adaptation
+    old_mesh = getmesh(pbnew)
+    new_mesh = vcat(old_mesh[begin:end-1]/2, old_mesh ./2 .+ 1/2)
+    pbnew = set_collocation_size(pbnew, 2Ntst, m)
+    update_mesh!(pbnew, new_mesh)
+
+    if ~override # we use predictor from normal form
+        if nf.prm == true && ~isnothing(nf.nf.nf)
+            # normal form based on Poincaré return map
+            pred = predictor(nf.nf, δp)
+            ampfactor *= pred.amp
+            δp = pred.δp
+        elseif nf.prm == false 
+            error("Not available yet!! WIP !!")
+        end
+    end
+
     orbitguess = copy(nf.po)
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ[2]
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
@@ -1406,7 +1492,15 @@ function predictor(nf::BranchPointPO{ <: ShootingProblem },
                     δp,
                     ampfactor;
                     override = false)
-    ζs = nf.ζ
+    if ~isnothing(nf.nf.nf) && ~override
+        pred = predictor(nf.nf, δp)
+        ampfactor = pred.amp * ampfactor
+        δp = pred.δp
+    end
+
+    pbnew = deepcopy(nf.prob)
+    pnew = nf.nf.p + δp
+    ζs = nf.ζ .* ampfactor
     orbitguess = copy(nf.po)
     orbitguess[eachindex(ζs)] .+= ζs
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)

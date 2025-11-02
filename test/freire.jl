@@ -30,7 +30,11 @@ begin
     @test br_po.specialpoint[2].type == :bp
     # plot(br, br_po)
     
-    get_normal_form(br_po, 2, detailed = true)
+    bp = get_normal_form(br_po, 2, detailed = true)
+    @test bp.nf.nf.a ≈ 1e-6 atol = 1e-5
+    @test bp.nf.nf.b1 ≈ 200 rtol = 1e-2
+    @test bp.nf.nf.b2 ≈ 4e-4 atol = 1e-2
+    @test bp.nf.nf.b3 ≈ 20811 rtol = 1e-5
     
     br_po_bp = continuation(deepcopy(br_po), 2;
                     δp = -0.001, ampfactor = 0.01,
@@ -40,8 +44,15 @@ begin
     @test br_po_bp.specialpoint[1].type == :ns
     @test br_po_bp.specialpoint[2].type == :pd
 
-    get_normal_form(br_po_bp, 1; detailed = true)
-    get_normal_form(br_po_bp, 2; detailed = true)
+    ns = get_normal_form(br_po_bp, 1; detailed = true)
+    @test ns.nf.type == :SubCritical
+    @test ns.nf.nf.b ≈ 68.8696641601362 + 288.2521772452238im rtol = 1e-2
+
+    pd = get_normal_form(br_po_bp, 2; detailed = true)
+    @test pd.nf.type == :SuperCritical
+    @test pd.nf.nf.a ≈ -1254 rtol = 1e-2
+    @test pd.nf.nf.b3 ≈ 5548 rtol = 1e-2
+
     # plot(br, br_po, br_po_bp, xlims = (-0.7,-0.5))
 end
 ##################################################################################
@@ -49,16 +60,21 @@ begin
     br_po = continuation(br, 1, 
                 ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
                 PeriodicOrbitOCollProblem(30,4; jacobian = BK.DenseAnalyticalInplace());
-                δp = 0.001, 
+                δp = 0.001,
     )
-    
+
     @test br_po.specialpoint[1].type == :bp
     @test br_po.specialpoint[2].type == :bp
-    
-    get_normal_form(br_po, 2; detailed = true, prm = true)
+
+    bp = get_normal_form(br_po, 2; detailed = true, prm = true)
+    @test bp.nf.nf.a ≈ 1e-5 atol = 1e-5
+    @test bp.nf.nf.b1 ≈ 219 rtol = 1e-2
+    @test bp.nf.nf.b2 ≈ -4e-4 atol = 1e-2
+    @test bp.nf.nf.b3 ≈ 1657 rtol = 1e-4
+
     bppo = get_normal_form(br_po, 2; detailed = true, prm = false)
     BK.predictor(bppo, 0.01, 0.1)
-    
+
     br_po_bp = continuation(deepcopy(br_po), 2; 
                     δp = -0.001, ampfactor = 0.01,
                     use_normal_form = true, detailed = false,
