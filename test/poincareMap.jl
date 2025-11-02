@@ -33,7 +33,7 @@ algsl = ODE.KenCarp4()#Rodas4P()
 sol = ODE.solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
 function flowTS(x, t, pb; alg = algsl, kwargs...)
-    _pb = remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
+    _pb = ODE.remake(pb; u0 = x, tspan = (zero(eltype(t)), t) )
     sol = ODE.solve(_pb, alg; abstol=1e-10, reltol=1e-9, save_everystep = false, kwargs...)
     return sol.t, sol
 end

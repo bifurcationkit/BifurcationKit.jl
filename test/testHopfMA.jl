@@ -223,7 +223,7 @@ Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.
 floquetES = FloquetQaD(DefaultEig())
 
 # calcul des exposants de Floquet, extract full vector
-pbwrap = BK.WrapPOTrap(poTrap, :dense, nothing, orbitguess_f, par_bru, nothing, nothing, nothing)
+pbwrap = BK.WrapPOTrap(poTrap, :dense, orbitguess_f, par_bru, nothing, nothing, nothing)
 floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
 # continuation of periodic orbits using :BorderedLU linear algorithm

@@ -478,6 +478,35 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
     return log.(μ[Ind]), geteigenvector(fl.eigsolver, vecs, indvalid[Ind]), true, 1
 end
 
+@views function (fl::FloquetGEV)(JacSH::FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp}, nev; kwargs...) where {Tpb <: AbstractShootingProblem, Tjacpb <: AbstractMatrix, Torbitguess, Tp}
+    prob = JacSH.pb
+    _J = _get_matrix(JacSH)
+    n = length(prob.flow.odeprob.u0)
+    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
+    # case of v(0)
+    # J[end-n+1:end, 1:n] .= I(n)
+    # case of v(1)
+    # J[end-n+1:end, end-n+1:end] .= -I(n)
+    # solve generalized eigenvalue problem
+    # @error "" size(J) size(fl.B)
+    # @assert false
+    values, vecs = gev(fl.eigsolver, J, fl.B, nev;)
+    # remove infinite eigenvalues
+    indvalid = findall(isfinite, values)
+    vals = values[indvalid]
+    # @error "" J vals (1 ./ (1 .+ vals))
+    # these are the Floquet multipliers
+    μ = @. Complex((1 + vals))
+    vp0 = minimum(abs ∘ log, μ)
+    if vp0 > 1e-8
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
+    end
+    Ind = sortperm(log.(μ); by = real, rev = true)
+    nev2 = min(nev, length(Ind))
+    Ind = Ind[begin:nev2]
+    return log.(μ[Ind]), geteigenvector(fl.eigsolver, vecs, indvalid[Ind]), true, 1
+end
+
 """
 $(TYPEDEF)
 

@@ -13,7 +13,7 @@ Compute the period of the periodic orbit associated to `x`.
 @inline _extract_period(x::AbstractVector) = x[end]
 @inline _extract_period(x::BorderedArray)  = x.p
 
-# next method only used just in the file. Allows to set the parameters, like during aBS
+# The next method only used just in the current file. Allows to set the parameters, like during aBS
 _set_params_in_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
 _set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
