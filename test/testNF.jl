@@ -145,7 +145,7 @@ let
         br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 2, save_eigenvectors = saveev);
             plot = false, verbosity = 0, normC = norminf)
         # we have to be careful to have the same basis as for Fbp2d or the NF will not match Fbp2d
-        bp2d = BK.get_normal_form(br, 1; verbose = true, detailed = false);
+        bp2d = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false));
         bp2d = BK.get_normal_form(br, 1; verbose = true);
         bp2d = BK.get_normal_form(br, 1; ζs = [[1, 0, 0.], [0, 1, 0.]], autodiff);
         show(bp2d)
@@ -283,7 +283,7 @@ let
 
         br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 
-        hp = BK.get_normal_form(br, 1; detailed = false)
+        hp = BK.get_normal_form(br, 1; detailed = Val(false))
         hp = BK.get_normal_form(br, 1; autodiff)
         BK.type(hp)
 
@@ -308,7 +308,6 @@ Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
 par = (β1 = 0.0, β2 = -0.01, c = 3.)
 prob = BK.BifurcationProblem(Fcusp, [0.01], par, (@optic _.β1))
 br = continuation(prob, PALC(), opts_br;)
-BK.jacobian(br.prob, prob.u0, prob.params)
 
 sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
     update_minaug_every_step = 1,
@@ -497,7 +496,7 @@ let
         br_codim2 = continuation(br, 2, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
 
         @test br_codim2.specialpoint[1].type == :zh
-        zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
+        zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true))
         @test zh.nf.G200 ≈ par_zh.G200
         @test zh.nf.G110 ≈ par_zh.G110
         @test zh.nf.G011/2 ≈ par_zh.G011
@@ -545,7 +544,7 @@ let
         br_codim2 = continuation(br, 1, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 2, update_minaug_every_step = 1)
 
         @test br_codim2.specialpoint[1].type == :hh
-        hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = true)
+        hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true))
         BK.type(hh)
         # @test hh.nf.G2100 == par_hh.G2100
         # @test hh.nf.G0021 == par_hh.G0021

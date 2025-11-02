@@ -179,7 +179,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-    nf = get_normal_form(getprob(br), br, ind_bif; detailed = true, autodiff)
+    nf = get_normal_form(getprob(br), br, ind_bif; detailed = Val(true), autodiff)
     _contParams = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
     @reset _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
     return _continuation(nf, br, _contParams, probPO; kwargs...)

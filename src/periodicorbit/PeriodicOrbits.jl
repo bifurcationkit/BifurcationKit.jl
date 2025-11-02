@@ -400,16 +400,16 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       pbPO::AbstractPeriodicOrbitProblem ;
                       bif_prob = br.prob,
-                      detailed = true,
+                      detailed::Val{detailed_type} = Val(true),
                       use_normal_form = true,
                       autodiff_nf = true,
                       nev = length(eigenvalsfrombif(br, ind_bif)),
-                      kwargs...)
+                      kwargs...) where {detailed_type}
     # compute the normal form of the branch point
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
-    detailed = detailed && use_normal_form
+    detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
     hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
     return _po_from_hopf(bif_prob, hopfpt, _contParams, pbPO; verbose, alg = getalg(br), kwargs...)
 end

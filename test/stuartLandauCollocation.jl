@@ -15,12 +15,29 @@ function Fsl!(f, u, p, t = 0)
     f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1)
     return f
 end
+
+function Jsl!(J, u, p, t = 0)
+    (; r, μ, ν, c3) = p
+    u1 = u[1]
+    u2 = u[2]
+    ua = u1^2 + u2^2
+    A = c3*u1 - μ*u2
+    B = c3*u2 + μ*u1
+
+    J[1,1] = r - (2*u1*A + ua*c3)
+    J[1,2] = -ν - (2*u2*A - ua*μ)
+    J[2,1] =  ν - (2*u1*B + ua*μ)
+    J[2,2] = r - (2*u2*B + ua*c3)
+
+    return J
+end
+Jsl(u, p, t = 0) = Jsl!(zeros(2,2), u, p, t)
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
 par_hopf = (@set par_sl.r = 0.1)
-probsl = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
-probsl_ip = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true)
+probsl = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), J=Jsl, J! = Jsl!)
+probsl_ip = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true, J! = Jsl!)
 ####################################################################################################
 # continuation, Hopf bifurcation point detection
 optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)

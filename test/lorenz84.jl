@@ -89,7 +89,7 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
 ####################################################################################################
 """
 This function test if the eigenvalues are well computed during a branch of Hopf/Fold.
-This test works if the problem is not updated because we dont record prob.a and prob.b
+This test works if the problem is not updated because we don't record prob.a and prob.b
 """
 function testEV(br, verbose = false)
     verbose && println("\n\n\n"*"="^50)
@@ -316,7 +316,7 @@ nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
 _pred = BK.predictor(nf, Val(:FoldPeriodicOrbitCont), 0.1)
 _pred.orbit(0.1)
 
-nf = get_normal_form(hp_codim2_1, 4; nev = 4, verbose = true, detailed = true)
+nf = get_normal_form(hp_codim2_1, 4; nev = 4, verbose = true, detailed = Val(true))
 _pred = predictor(nf, Val(:NS), .01)
 _pred.ns1(0.1)
 _pred.ns2(0.1)
@@ -337,7 +337,7 @@ sn_from_bt = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, 
 @test sn_from_bt.kind isa BK.FoldCont
 
 # curve of Hopf points from ZH
-zh = get_normal_form(sn_codim2, 2, detailed = true)
+zh = get_normal_form(sn_codim2, 2, detailed = Val(true))
 _pred = BK.predictor(zh, Val(:NS), 0.1)
 _pred.orbit(0.1)
 

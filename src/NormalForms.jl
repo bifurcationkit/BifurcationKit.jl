@@ -951,6 +951,7 @@ Compute the Hopf normal form.
 - `lens` parameter axis
 - `detailed::Val{Bool} = Val(true)` compute a simplified normal form or not
 - `Teigvec` vector type of the eigenvectors
+- `start_with_eigen = Val(true)` start with the eigen basis from the eigensolver. In case `Val(false)` is pased, the eigenbasis is computed using bordered vectors.
 - `scaleζ = norm` norm to normalise the eigenvectors
 
 # Available method
@@ -991,7 +992,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     parbif = setparam(br, p)
     L = jacobian(prob, convert(𝒯eigvec, bifpt.x), parbif)
 
-    if ~detailed # CA FAIT PAS TYPE STABLE??
+    if ~detailed_type
         return Hopf(bifpt.x, bifpt.τ, bifpt.param,
                 ω,
                 parbif, lens,
