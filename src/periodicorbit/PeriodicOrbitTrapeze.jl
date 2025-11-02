@@ -907,7 +907,7 @@ newton(probPO::PeriodicOrbitTrapProblem,
         orbitguess::vectype,
         defOp::DeflationOperator{Tp, Tdot, T, vectype},
         options::NewtonPar;
-        kwargs...) where {Tp, Tdot, T, vectype} = _newton_trap(probPO, orbitguess, options; defOp = defOp, kwargs...)
+        kwargs...) where {Tp, Tdot, T, vectype} = _newton_trap(probPO, orbitguess, options; defOp, kwargs...)
 
 ####################################################################################################
 # continuation wrapper

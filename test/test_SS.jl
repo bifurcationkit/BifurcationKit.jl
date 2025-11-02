@@ -6,7 +6,7 @@ M = 5
 # test AbstractFlow interface
 struct MyFlow <: BK.AbstractFlow end
 let
-fl = MyFlow()
+    fl = MyFlow()
     x0 = 0
     p0 = 0
     BK.jvp(fl, x0, p0, 0, 0)
@@ -23,6 +23,7 @@ end
 # test the jacobian of the multiple shooting functional using Linear flow
 # TODO do example with A matrix and exp(At)
 let
+    δ = 1e-8
     vf(x, p) = x
     flow(x, p, t) = (u=exp(t) .* x, t=t)
     dflow(x, p, dx, t) = (flow(x, p, t)..., du = exp(t) .* dx)
