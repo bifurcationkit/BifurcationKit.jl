@@ -32,10 +32,10 @@ begin
     # plot(br, br_po)
     
     bp = get_normal_form(br_po, 2, detailed = Val(true))
-    # @test bp.nf.nf.a ≈ 1e-6 atol = 1e-5
-    # @test bp.nf.nf.b1 ≈ 200 rtol = 1e-2
-    # @test bp.nf.nf.b2 ≈ 4e-4 atol = 1e-2
-    # @test bp.nf.nf.b3 ≈ 20811 rtol = 1e-5
+    # @test bp.nf.nf.a01 ≈ 1e-6    atol = 1e-5
+    # @test bp.nf.nf.b11 ≈ 200     rtol = 1e-2
+    # @test bp.nf.nf.b20 ≈ 4e-4    atol = 1e-2
+    # @test bp.nf.nf.b30 ≈ 20811   rtol = 1e-5
     
     br_po_bp = continuation(deepcopy(br_po), 2;
                     δp = -0.001, ampfactor = 0.01,
@@ -99,11 +99,11 @@ begin
 
     pd = get_normal_form(br_po_bp, 2; detailed = Val(true), prm = Val(false))
     @test pd.nf.type == :SuperCritical == pd_p.nf.type
-    @test pd.nf.nf.a₀₁ ≈ 2.06888 rtol = 1e-1
-    @test pd.nf.nf.a ≈ 0.3043419215670348 rtol = 1e-1
+    @test pd.nf.nf.a₀₁ ≈ 2.06888            rtol = 1e-1
+    @test pd.nf.nf.a   ≈ 0.3043419215670348 rtol = 1e-1
     @test pd.nf.nf.c₁₁ ≈ -247.7313562613303 rtol = 1e-1
-    @test pd.nf.nf.b3 ≈ -6.736 rtol = 1e-2
 end
+    @test pd.nf.nf.b3  ≈ -6.736             rtol = 1e-2
 ##################################################################################
 begin
     br_po = continuation(br, 1, 

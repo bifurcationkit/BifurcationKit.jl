@@ -504,7 +504,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
         end
         pred_val = val
     end
-    @assert length(solutions) == 4 #!! euh
+    @assert length(solutions) == 4 #!! huh
     dotps = [VI.inner(τ.u, bp.ζ) * sol[1] + sol[2] * τ.p for sol in solutions]
     I = argmin(abs.(dotps))
     pnew = bp.p + solutions[I][2]
@@ -519,7 +519,7 @@ end
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x::AbstractVector, p::𝒯) where 𝒯
     # dimension of the kernel
     N = length(bp.ζ)
-    if ~(N == length(x))
+    if N != length(x)
         error("N = $N and length(x) = $(length(x)) should match!")
     end
     out = zero(x .* p)
@@ -1314,7 +1314,7 @@ end
 function predictor(pd::PeriodDoubling, δp; verbose = false, ampfactor = 1 )
     # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
     # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
-    #               = (1-2∂p)x -2cx^3 + h.o.t.
+    #               = (1-2∂p)x - 2cx^3 + h.o.t.
     # the predictor is sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2))
     c = pd.nf.b3
     ∂p = pd.nf.a * δp
@@ -1557,7 +1557,6 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     # coefficient of x*p
     if autodiff
         R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
-        # R11 = DI.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), prob.VF.ad_backend, p)
     else
         R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
@@ -1578,7 +1577,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     b30 = LA.dot(b3v, ζ★)
     verbose && println("└─── b30/6 = ", b30/6)
 
-    bp_args = (x0, bp.τ, p, parbif, lens, ζ, ζ★, (;a01, a02 = missing, b11, b20, b30, Ψ01, wst), :NA)
+    bp_args = (x0, bp.τ, p, parbif, lens, ζ, ζ★, (; a01, a02 = missing, b11, b20, b30, Ψ01, wst), :NA)
     if abs(a01) < tol_fold #MAKES IT TYPE UNSTABLE
         return 100abs(b20/2) < abs(b30/6) ? PitchforkMap(bp_args[begin:end-1]...) : TranscriticalMap(bp_args...)
     else

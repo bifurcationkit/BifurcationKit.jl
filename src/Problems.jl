@@ -396,9 +396,7 @@ getu0(pb::AbstractBifurcationProblem) = pb.u0
 """
 Return the parameters of the bifurcation problem.
 """
-function getparams(pb::AbstractBifurcationProblem) 
-    pb.params
-end
+@inline getparams(pb::AbstractBifurcationProblem) = pb.params
 @inline getlens(pb::AbstractBifurcationProblem) = pb.lens
 getparam(pb::AbstractBifurcationProblem) = _get(getparams(pb), getlens(pb))
 setparam(pb::AbstractBifurcationProblem, p0) = set(getparams(pb), getlens(pb), p0)

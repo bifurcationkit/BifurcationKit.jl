@@ -109,14 +109,18 @@ clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams
 """
 Allows to alter the continuation parameters based on the bifurcation problem and the continuation algorithm.
 """
-function init(contparams::ContinuationPar{T,S,E}, 
+function init(contparams::ContinuationPar,
                prob::AbstractBifurcationProblem, 
-               alg::AbstractContinuationAlgorithm) where {T,S,E}
+               alg::AbstractContinuationAlgorithm) 
+    return contparams
+end
+
+function init(contparams::ContinuationPar, 
+               prob::Union{ODEBifProblem, DAEBifProblem},
+               alg::AbstractContinuationAlgorithm) 
     if E <: DefaultEig
         n = length(getu0(prob))
-        if n <= 50
-            @reset contparams.nev = n
-        end
+        @reset contparams.nev = n
     end
     return contparams
 end

@@ -121,7 +121,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     usehessian = get(kwargs, :usehessian, false)
     if ~usehessian
-        @warn("You should pass `usehessian = true`.")
+        @warn("[Fold PO collocation] You should pass `usehessian = true`.")
     end
 
     # wrap of collocation functional
