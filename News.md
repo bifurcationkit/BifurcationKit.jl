@@ -3,6 +3,15 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.5.5]
+- most Standard shooting code works with `VI.MinimalVec`
+## [0.5.4]
+- modify dispatch for get_time_slice and get_time_slices
+## [0.5.3]
+- make BorderedArray comply with VectorInterface.jl (VI)
+- most of BK code complies with VI
+- bug correction in mesh adaptation for collocation
+- massive improvement in computation of reduced equations. Improve type stability as well.
 ## [0.5.2]
 - export `ODEBifProblem`
 - add new jacobian types
