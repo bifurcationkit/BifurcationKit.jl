@@ -99,10 +99,12 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       kwargs_deflated_newton = (),
                       kwargs...) where {Tprob, 𝒯eigvec}
     # The usual branch switching algorithm is described in the work of Keller. 
-    # Numerical solution of bifurcation and nonlinear eigenvalue problems.
+    # "Numerical solution of bifurcation and nonlinear eigenvalue problems."
     # We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
 
-    ~(br.specialpoint[ind_bif].type in (:bp, :nd)) && error("You cannot banch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n ")
+    if (br.specialpoint[ind_bif].type in (:bp, :nd)) == false 
+        error("You cannot branch from a :$(br.specialpoint[ind_bif].type) point using these arguments.\n")
+    end
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && println("──▶ Considering bifurcation point:")
@@ -146,11 +148,12 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
     if ~use_normal_form
         pred = (;x0 = bp.x0, 
                 x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
-                p =  bp.p + δp, 
+                p =  bp.p + ds, 
                 amp = ampfactor)
     else
         pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
     end
+
     if isnothing(pred)
         @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"
         return nothing

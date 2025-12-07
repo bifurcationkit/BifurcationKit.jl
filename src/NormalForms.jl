@@ -26,7 +26,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Return a left eigenvector for an eigenvalue closest to λ. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
+Return a left eigenvector for an eigenvalue closest to `λ`. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
 """
 function get_adjoint_basis(L★, λ::Number, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
     λ★, ev★, cv, = eigsolver(L★, nev)
@@ -151,7 +151,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     bifpt = br.specialpoint[id_bif]
 
     if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd, :fold))
-        error("Normal form for $(bifpt.type) not implemented")
+        error("Normal form for $(bifpt.type) not implemented.")
     end
 
     # parameters for normal form

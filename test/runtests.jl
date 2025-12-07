@@ -33,6 +33,7 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
     @testset "plot-utils" begin
         include("plots-utils.jl")
+        include("plot_makie.jl")
     end
 
     @testset "Normal forms" begin

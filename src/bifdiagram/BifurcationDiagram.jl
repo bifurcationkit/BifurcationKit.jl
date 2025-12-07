@@ -155,14 +155,16 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
-                            node::BifDiagNode,
-                            maxlevel::Int,
-                            options;
-                            code = "0",
-                            halfbranch = false,
-                            verbosediagram = false,
-                            kwargs...)
-    if node.level >= maxlevel || isnothing(node.γ); return node; end
+                             node::BifDiagNode,
+                             maxlevel::Int,
+                             options;
+                             code = "0",
+                             halfbranch = false,
+                             verbosediagram = false,
+                             kwargs...)
+    if node.level >= maxlevel || isnothing(node.γ)
+        return node
+    end
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
 
     # current level of recursion
@@ -188,7 +190,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 if verbose
                     println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", 
                                 kernel_dimension(pt), 
-                                    ", code = $code, from bp #",id,
+                                    ", code = $code, from bp #", id,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
@@ -212,13 +214,13 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 end
 
             catch ex
-                @error "Failed to compute new branch at p = $(pt.param)" exception=ex
+                @error "Failed to compute new branch at p = $(pt.param)" exception = ex
             end
         end
     end
-    for (ii, _node) in enumerate(node.child)
+    for (ii, nd) in enumerate(node.child)
         bifurcationdiagram!(prob, 
-                            _node, 
+                            nd, 
                             maxlevel, 
                             options; 
                             code = (code..., ii), 

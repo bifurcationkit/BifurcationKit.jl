@@ -5,7 +5,7 @@ function Makie.convert_arguments(::PointBased, contres::AbstractBranchResult, va
     return ([Point2{Float32}(i, j) for (i, j) in zip(map(applytoX, getproperty(contres.branch, ind1)), map(applytoY, getproperty(contres.branch, ind2)))],)
 end
 
-function isplit(x::AbstractVector{T}, indices::AbstractVector{<:Integer}, splitval::Bool = true) where {T<:Real}
+function isplit(x::AbstractVector{T}, indices::AbstractVector{<: Integer}, splitval::Bool = true) where {T <: Real}
     # Adapt behavior for CairoMakie only
     if !isempty(indices) && isdefined(Main, :CairoMakie) && Makie.current_backend() == Main.CairoMakie
         xx = similar(x, length(x) + 2 * (length(indices)))
@@ -37,7 +37,7 @@ $(SIGNATURES)
 Plot the branch of solutions.
 
 # Arguments
-- `plotcirclesbif = true`, indicates the special points well determined by bisection (cirlce) versus not well determined (square).
+- `plotcirclesbif = true`, indicates the special points well determined by bisection (circle) versus not well determined (square).
 - `branchlabel` example `["Fold", "Hopf"]` assigns label to branch.
 - `branchcolor` assign color to a branch without affecting the color of the special points.
 """
@@ -74,9 +74,9 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
     xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
     ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
     if isnothing(branchcolor)
-        lines!(ax1, xbranch, ybranch; linewidth = linewidth, label = branchlabel)
+        lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel)
     else
-        lines!(ax1, xbranch, ybranch; linewidth = linewidth, label = branchlabel, color = branchcolor)
+        lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel, color = branchcolor)
     end
     ax1.xlabel = xlab
     ax1.ylabel = ylab
@@ -137,15 +137,12 @@ function plot_branch_cont(contres::ContResult,
 
     # stability linewidth
     linewidth = linewidthunstable
-    if _hasstability(contres) && plotstability
-        linewidth = map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
-    end
 
     fig = Figure(size = (1200, 700))
     ax1 = fig[1:2, 1] = Axis(fig, xlabel = String(xlab), ylabel = String(ylab), tellheight = true)
 
     ax2 = fig[1, 2] = Axis(fig, xlabel = "step [$(state.step)]", ylabel = String(xlab))
-    lines!(ax2, contres.step, contres.param, linewidth = linewidth)
+    lines!(ax2, contres.step, contres.param)
 
     if compute_eigenelements(iter)
         eigvals = contres.eig[end].eigenvals
@@ -157,7 +154,7 @@ function plot_branch_cont(contres::ContResult,
         if maxIm - minIm < 1e-6
             maxIm, minIm = 1, -1
         end
-        lines!(ax_ev, [0, 0], [maxIm, minIm], color = :blue, linewidth = linewidthunstable)
+        lines!(ax_ev, [0, 0], [maxIm, minIm]; color = :blue, linewidth = linewidthunstable)
     end
 
     # plot arrow to indicate the order of computation
@@ -269,9 +266,9 @@ function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, app
     p = getproperty(br.branch, var)
     data = mapreduce(x -> applyY.(x.eigenvals), hcat, br.eig)
     if with_param
-        series(p, real.(data); k...)
+        series(p, real.(data); color = Makie.distinguishable_colors(size(data,1)), k...)
     else
-        series(real.(data); k...)
+        series(real.(data); color = Makie.distinguishable_colors(size(data,1)), k...)
     end
 end
 ####################################################################################################
