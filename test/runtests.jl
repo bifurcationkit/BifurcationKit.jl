@@ -68,9 +68,9 @@ using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
     end
 
     @testset "Periodic orbits BP-PO" begin
-        # for testing BP-PO aBS for coll/Shooting/Trapezoidal
-        # test BP/PD/NS normal form for Shooting/Collocation
-        include("freire.jl")
+        # for testing BP-PO aBS for coll/shooting/trapezoidal
+        # test BP/PD/NS normal form for shooting/collocation
+        
     end
 
     @testset "Periodic orbits function SH1" begin
