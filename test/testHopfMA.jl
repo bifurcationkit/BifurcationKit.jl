@@ -151,8 +151,8 @@ outhopf = BK.solve(pb_hopf_perso, Newton(), NewtonPar(verbose = false, linsolver
 function d2F(x, p1, du1, du2)
     n = div(length(x), 2)
     out = 2 .* x[n+1:end] .* du1[1:n] .* du2[1:n] .+
-                       2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
-                       2 .* x[1:n] .* du2[1:n] .* du1[1:n]
+              2 .* x[1:n] .* du1[1:n] .* du2[n+1:end] .+
+              2 .* x[1:n] .* du2[1:n] .* du1[1:n]
     return vcat(out, -out)
 end
 
@@ -202,7 +202,7 @@ jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf +
 
 # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
 # test jacobian expression for Periodic Orbit solve problem
-@test norm(jac_PO_fd - jac_PO_sp, Inf64) < 1e-4
+@test norm(jac_PO_fd - jac_PO_sp, Inf) < 1e-4
 
 # test various jacobians and methods
 jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
