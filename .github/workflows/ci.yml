@@ -37,7 +37,40 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+      - name: Run tests
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
+        run: |
+          julia --color=yes --project=@. -e '
+            using Pkg, JSON
+
+            # Parse labels from the environment variable
+            labels_json = get(ENV, "PR_LABELS", "[]")
+            labels = isempty(labels_json) ? [] : JSON.parse(labels_json)
+
+            # Extract test names from labels with the specific prefix
+            prefix = "Run test(s): "
+            test_args = String[]
+
+            if labels !== nothing && isa(labels, Vector)
+                for label in labels
+                    name = get(label, "name", "")
+                    if startswith(name, prefix)
+                        push!(test_args, strip(replace(name, prefix => "")))
+                    end
+                end
+            end
+
+            # Log what we are doing
+            if isempty(test_args)
+                println("No specific test labels found. Running all tests.")
+            else
+                println("Detected labels for specific tests. Running: ", join(test_args, ", "))
+            end
+
+            # Run tests
+            Pkg.test(coverage=true, test_args=test_args)
+          '
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v4
         env:
