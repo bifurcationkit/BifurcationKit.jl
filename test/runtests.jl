@@ -4,114 +4,114 @@ using Test
 
 using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
-@testset "BifurcationKit" begin
-    @testset "Linear Solvers" begin
-        include("problems.jl")
-        include("precond.jl")
-        include("bordered_arrays.jl")
-        include("test_linear.jl")
-    end
+# Extract options
+const DRY_RUN = "-n" in ARGS || "--dryrun" in ARGS
+const RUN_ALL = "-a" in ARGS || "--all" in ARGS
 
-    @testset "RecordFromSolution" begin
-        @info "Entry in test-record-from-solution.jl"
-        include("test-record-from-solution.jl")
-    end
+# Filter out flags
+const RAW_ARGS = filter(arg -> arg ∉ ["-n", "--dryrun", "-a", "--all"], ARGS)
 
-    @testset "Results" begin
-        include("test_results.jl")
-    end
+# If RUN_ALL is set, ignore other arguments (set to empty so all tests run)
+# Otherwise use the filtered arguments
+const TEST_ARGS = RUN_ALL ? String[] : RAW_ARGS
 
-    @testset "Newton" begin
-        include("test_newton.jl")
-    end
+if DRY_RUN
+    println("--> Dry run mode active. Tests will be listed but not executed.")
+end
 
-    @testset "Continuation" begin
-        include("simple_continuation.jl")
-        include("test_bif_detection.jl")
-        include("test-cont-non-vector.jl")
-    end
+if RUN_ALL && !isempty(RAW_ARGS)
+    println("--> Running all tests (-a/--all specified), ignoring filters: ", join(RAW_ARGS, " "))
+end
 
-    @testset "plot-utils" begin
-        include("plots-utils.jl")
-        include("plot_makie.jl")
-    end
+# Helper to convert glob pattern to regex
+function glob_to_regex(pattern::AbstractString)
+    # Escape special regex characters except * and ?
+    regex_str = replace(pattern, 
+        "." => "\\.", 
+        "+" => "\\+", 
+        "(" => "\\(", 
+        ")" => "\\)", 
+        "[" => "\\[", 
+        "]" => "\\]", 
+        "{" => "\\{", 
+        "}" => "\\}", 
+        "^" => "\\^", 
+        "\$" => "\\\$"
+    )
+    # Convert glob wildcards to regex wildcards
+    regex_str = replace(regex_str, "*" => ".*", "?" => ".")
+    # Anchor to full string
+    return Regex("^" * regex_str * "\$")
+end
 
-    @testset "Normal forms" begin
-        # we test Plots.jl here
-        include("testNF.jl")
-        include("testNF_maps.jl")
-    end
-
-    @testset "Events / User function" begin
-        include("event.jl")
-    end
-
-    @testset "Fold Codim 2" begin
-        include("codim2_core.jl")
-        include("testJacobianFoldDeflation.jl")
-        include("codim2.jl")
-    end
-
-    @testset "Hopf Codim 2" begin
-        include("testHopfMA.jl")
-        include("lorenz84.jl")
-        include("COModel.jl")
-    end
-
-    @testset "Periodic orbits function FD" begin
-        include("test_potrap.jl")
-        include("stuartLandauTrap.jl")
-        include("stuartLandauCollocation.jl")
-    end
-
-    @testset "Condensation of parameters" begin
-        include("cop.jl")
-    end
-
-    @testset "Periodic orbits BP-PO" begin
-        # for testing BP-PO aBS for coll/shooting/trapezoidal
-        # test BP/PD/NS normal form for shooting/collocation
-        
-    end
-
-    @testset "Periodic orbits function SH1" begin
-        @info "Entry in test_SS.jl"
-        include("test_SS.jl")
-    end
-
-    @testset "Periodic orbits function SH2" begin
-        @info "Entry in poincareMap.jl"
-        include("poincareMap.jl")
-    end
-
-    @testset "Periodic orbits function SH3" begin
-        @info "Entry in stuartLandauSH.jl"
-        include("stuartLandauSH.jl")
-    end
-
-    @testset "Periodic orbits function SH4 - and Collocation" begin
-        # for testing period doubling aBS, NF for SH/Coll
-        @info "Entry in testLure.jl"
-        include("testLure.jl")
-    end
-
-    @testset "codim 2 PO Shooting MF" begin
-        @info "Entry in codim2PO-shooting-mf.jl"
-        include("codim2PO-shooting-mf.jl")
+function should_run(file_path, args)
+    if isempty(args)
+        return true
     end
     
-    @testset "codim 2 PO Shooting" begin
-        @info "Entry in codim2PO-shooting.jl"
-        include("codim2PO-shooting.jl")
-    end
+    # file_path is like "folder/file.jl"
+    dir, file = splitdir(file_path)
+    file_no_ext = replace(file, ".jl" => "")
+    path_no_ext = joinpath(dir, file_no_ext)
+    
+    for arg in args
+        # Convert argument to regex assuming it is a glob pattern
+        regex = glob_to_regex(arg)
+        
+        # Match directory (e.g. "continuation" matches "continuation")
+        # OR "cont*" matches "continuation"
+        if !isnothing(match(regex, dir))
+            return true
+        end
 
-    @testset "codim 2 PO Collocation" begin
-        @info "Entry in codim2PO-OColl.jl"
-        include("codim2PO-OColl.jl")
+        # Match full path either as "folder/file.jl" or "folder/file"
+        # e.g. "cont*/simple*" matches "continuation/simple_continuation.jl"
+        if !isnothing(match(regex, file_path)) || !isnothing(match(regex, path_no_ext))
+             return true
+        end
+        
+        # Also support matching just the filename part for convenience? 
+        # The user requested "plutôt que d'utiliser les regexp... utiliser globbing".
+        # Let's stick to full path matching as per previous logic but with globs.
     end
+    return false
+end
 
-    @testset "Wave" begin
-        @info "Entry in wave.jl"
-        include("test_wave.jl")
+
+@testset "BifurcationKit" begin
+    # Iterate over all items in the test directory
+    # Sort to ensure deterministic order
+    for item in sort(readdir(@__DIR__))
+        dir_path = joinpath(@__DIR__, item)
+        
+        # process only directories
+        if isdir(dir_path)
+            files_to_run = []
+            
+            # Find all .jl files in this subdirectory
+            # Sort files for deterministic order
+            for file in sort(readdir(dir_path))
+                if endswith(file, ".jl")
+                    file_rel_path = joinpath(item, file)
+                    if should_run(file_rel_path, TEST_ARGS)
+                        push!(files_to_run, file)
+                    end
+                end
+            end
+            
+            # If we found relevant files, run them in a testset
+            if !isempty(files_to_run)
+                @testset "$item" begin
+                    for file in files_to_run
+                        if DRY_RUN
+                            @info "Dry run: would run $item/$file"
+                        else
+                            @info "Running $item/$file"
+                            include(joinpath(dir_path, file))
+                        end
+                    end
+                end
+            end
+        end
     end
 end
