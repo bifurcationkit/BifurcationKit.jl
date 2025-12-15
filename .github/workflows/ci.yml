@@ -58,7 +58,11 @@ jobs:
                 for label in labels
                     name = get(label, "name", "")
                     if startswith(name, prefix)
-                        push!(test_args, strip(replace(name, prefix => "")))
+                        # Remove prefix and split by space, comma, or slash
+                        arg_str = strip(replace(name, prefix => ""))
+                        for arg in split(arg_str, r"[\s,/]+"; keepempty=false)
+                            push!(test_args, arg)
+                        end
                     end
                 end
             end
