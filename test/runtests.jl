@@ -26,16 +26,16 @@ end
 # Helper to convert glob pattern to regex
 function glob_to_regex(pattern::AbstractString)
     # Escape special regex characters except * and ?
-    regex_str = replace(pattern, 
-        "." => "\\.", 
-        "+" => "\\+", 
-        "(" => "\\(", 
-        ")" => "\\)", 
-        "[" => "\\[", 
-        "]" => "\\]", 
-        "{" => "\\{", 
-        "}" => "\\}", 
-        "^" => "\\^", 
+    regex_str = replace(pattern,
+        "." => "\\.",
+        "+" => "\\+",
+        "(" => "\\(",
+        ")" => "\\)",
+        "[" => "\\[",
+        "]" => "\\]",
+        "{" => "\\{",
+        "}" => "\\}",
+        "^" => "\\^",
         "\$" => "\\\$"
     )
     # Convert glob wildcards to regex wildcards
@@ -48,16 +48,16 @@ function should_run(file_path, args)
     if isempty(args)
         return true
     end
-    
+
     # file_path is like "folder/file.jl"
     dir, file = splitdir(file_path)
     file_no_ext = replace(file, ".jl" => "")
     path_no_ext = joinpath(dir, file_no_ext)
-    
+
     for arg in args
         # Convert argument to regex assuming it is a glob pattern
         regex = glob_to_regex(arg)
-        
+
         # Match directory (e.g. "continuation" matches "continuation")
         # OR "cont*" matches "continuation"
         if !isnothing(match(regex, dir))
@@ -69,8 +69,8 @@ function should_run(file_path, args)
         if !isnothing(match(regex, file_path)) || !isnothing(match(regex, path_no_ext))
              return true
         end
-        
-        # Also support matching just the filename part for convenience? 
+
+        # Also support matching just the filename part for convenience?
         # The user requested "plutôt que d'utiliser les regexp... utiliser globbing".
         # Let's stick to full path matching as per previous logic but with globs.
     end
@@ -83,11 +83,11 @@ end
     # Sort to ensure deterministic order
     for item in sort(readdir(@__DIR__))
         dir_path = joinpath(@__DIR__, item)
-        
+
         # process only directories
         if isdir(dir_path)
             files_to_run = []
-            
+
             # Find all .jl files in this subdirectory
             # Sort files for deterministic order
             for file in sort(readdir(dir_path))
@@ -98,7 +98,7 @@ end
                     end
                 end
             end
-            
+
             # If we found relevant files, run them in a testset
             if !isempty(files_to_run)
                 @testset "$item" begin
