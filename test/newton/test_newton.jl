@@ -3,30 +3,20 @@ const BK = BifurcationKit
 
 function test_newton(x0)
     Ty = eltype(x0)
-    F(x, p) = @. x^3 - 1
-    J0 = zeros(Ty, length(x0), length(x0))
-    function Jac(x, p)
-        for i in eachindex(x)
-            J0[i, i] = 3 * x[i]^2
-        end
-        J0
-    end
-
-    opts = NewtonPar( tol = Ty(1e-8), verbose = false)
+    F(x, p) = @. x^3 - Ty(1.234)^3
+    Jac(x, p) = diagm(@. 3x^2)
+    opts = NewtonPar( tol = 2nextfloat(Ty(0)), verbose = false, max_iterations = 5)
     prob = BifurcationProblem(F, x0, nothing; J = Jac)
     BK.solve(prob, Newton(), opts; callback = BK.cbMaxNorm(100.0), normN = norminf)
 end
 ####################################################################################################
 # we test the regular newton algorithm
-# simple case
 let
-    test_newton(ones(10) .+ rand(10) * 0.1)
-
     # test types for newton
-    # test type
     for T in (Float64, Float32, Float16)
-        sol = test_newton(T.(ones(10) .+ rand(10) .* 0.1)).u
-        @test eltype(sol) == T
+        sol = test_newton(T.(ones(5) .+ rand(5) .* 0.01))
+        @test BK.converged(sol)
+        @test eltype(sol.u) == T
     end
 end
 ####################################################################################################
@@ -38,27 +28,26 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     dotθ = BK.DotTheta(dot)
 
     F(x, p) = @. x^3 - 13 * x - p
-    Jac(x, p) = diagm(0 => 3 .* x.^2 .- 13)
+    Jac(x, p) = diagm(@. 3x^2 - 13)
 
     z0 = BorderedArray(x0, p0)
-    τ0 = BorderedArray(rand(T, N), convert(typeof(p0), 0.2))
-    zpred = BorderedArray(x0, convert(typeof(p0), 0.3))
-    optn  = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = T(1e-6))
-    optc  = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = 0.001,)
+    τ0 = BorderedArray(rand(T, N), convert(T, 0.2))
+    zpred = BorderedArray(x0, convert(T, 0.3))
+    optn  = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = 1e-6)
+    optc  = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = T(0.01), η = 10)
 
-    prob  = BifurcationProblem(F, x0, p0, (@optic _); J = Jac)
+    prob  = BifurcationProblem(F, x0, p0, (@optic _); J = Jac, delta = (T(0.01)))
     iter  = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
     state = iterate(iter)[1]
     BK.newton_palc(iter, state)
 end
 
 let
-    test_newton_palc(-ones(10) .* 0.04, 0.5)
-
     # test type
     for T in (Float64, Float32, Float16)
-        local sol = test_newton_palc(T.(-ones(10) .*0.04), T(0.5)).u
-        @test typeof(sol) == BorderedArray{Vector{T}, T}
+        sol = test_newton_palc(T.(-ones(10) .* 0.04), T(0.5))
+        @test BK.converged(sol) || T == Float16
+        @test typeof(sol.u) == BorderedArray{Vector{T}, T}
     end
 end
 ####################################################################################################

@@ -1,63 +1,47 @@
+# The next type is for holding the methods related to the vector field.
+# So, the residual, its jacobian and higher differentials.
+# It is a convenience for a bifurcation problem so it is not strictly necessary albeit useful.
 abstract type AbstractBifurcationFunction end
+# This is the abstract type for a bifurcation problem. It should implement
+#   - getparams(pb::AbstractBifurcationProblem) 
+#   - getlens(pb::AbstractBifurcationProblem)
+#   - record_from_solution(pb::AbstractBifurcationProblem)
+#   - plot_solution(pb::AbstractBifurcationProblem)
+#   - residual(pb::AbstractAllJetBifProblem, x, p)
+#   - jacobian(pb::AbstractAllJetBifProblem, x, p)
+#   - jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p)
+#   - getdelta(pb::AbstractAllJetBifProblem)
+#   - dF(pb::AbstractAllJetBifProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
+#   - vjp(pb::AbstractAllJetBifProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
-abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
-# this type is based on the type BifFunction, see below
-# it provides all derivatives
+# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
+# of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
+# The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+# This is the abstract type for Minimally Augmented problems. See codimension two continuation.
+abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 ################################################################################
 abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
-# Periodic orbit computations by finite differences
+# Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
 abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 #####################################
-# Periodic orbit computations by shooting
+# Periodic orbit computations by shooting method
 abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
 #####################################
-# wrapper problems for periodic orbits
+# wrapper problems for periodic orbits, basically making them a BifurcationProblem
 abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
 abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
 ################################################################################
 import SciMLBase
 
+# const type to hold "all" the types of optics. Note that we relied on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
-
-_getvectortype(::AbstractBifurcationProblem) = Nothing
-isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
-
-save_solution_default(x, p) = x
-update_default(args...; kwargs...) = true
-
-const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
-
-@eval begin
-    """
-    $(TYPEDEF)
-
-    Structure to hold the jet of a vector field. It saves the different functions `Rᵢⱼ` which correspond to the following (i+j) linear form 
-
-    Rᵢⱼ(x,p)(dx₁, ⋅⋅⋅, dxᵢ, dp₁, ⋅⋅⋅, dpⱼ)
-
-    More precisely
-
-    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
-
-    ## Note
-
-    For now, we ask the user to pass an out-of-place formulation of the functions.
-
-    ## Fields
-
-    $(TYPEDFIELDS)
-    """
-    @with_kw_noshow struct Jet{$(_type_jet...)}
-        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
-    end
-end
 
 """
 Determine if the vector field is of the form `f!(out, z, p)`.
@@ -81,9 +65,9 @@ $(TYPEDFIELDS)
 
 ## Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
-- `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o,x,p)`
+- `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o, x, p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
-- `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x,p,dx)`
+- `dF(pb::BifFunction, x, p, dx)` calls `pb.dF(x, p, dx)`
 - `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other jet functions.
 - etc
 """
@@ -124,8 +108,18 @@ struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td
 end
 
 # getters
+is_symmetric(pb::BifFunction) = pb.isSymmetric
+has_hessian(pb::BifFunction) = ~isnothing(pb.d2F)
+has_adjoint(pb::BifFunction) = ~isnothing(pb.Jᵗ)
+has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.dFad)
+isinplace(pb::BifFunction) = pb.inplace
+getdelta(pb::BifFunction) = pb.δ
+
 residual(pb::BifFunction, x, p) = pb.F(x, p)
-residual!(pb::BifFunction, o, x, p) = (pb.F!(o, x, p); o)
+function residual!(pb::BifFunction, o, x, p)
+    pb.F!(o, x, p)
+    return o
+end
 #####
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
 
@@ -142,7 +136,7 @@ end
 """
 $(SIGNATURES)
 
-Return the adjoint `dx -> dFᵗ(x,p)⋅dx`
+Return the adjoint `dx -> dFᵗ(x, p)⋅dx`. This is also called the vector jacobian product (VJP).
 """
 jacobian_adjoint(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
 dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx) #vpj change name!!
@@ -174,13 +168,35 @@ function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc
     ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
 end
 #####
-is_symmetric(pb::BifFunction) = pb.isSymmetric
 
-has_hessian(pb::BifFunction) = ~isnothing(pb.d2F)
-has_adjoint(pb::BifFunction) = ~isnothing(pb.Jᵗ)
-has_adjoint_MF(pb::BifFunction) = ~isnothing(pb.dFad)
-isinplace(pb::BifFunction) = pb.inplace
-getdelta(pb::BifFunction) = pb.δ
+
+const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
+const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
+
+@eval begin
+    """
+    $(TYPEDEF)
+
+    Structure to hold the jet of a vector field. It saves the different functions `Rᵢⱼ` which correspond to the following (i+j) linear form 
+
+    Rᵢⱼ(x,p)(dx₁, ⋅⋅⋅, dxᵢ, dp₁, ⋅⋅⋅, dpⱼ)
+
+    More precisely
+
+    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
+
+    ## Note
+
+    For now, we ask the user to pass an out-of-place formulation of the functions.
+
+    ## Fields
+
+    $(TYPEDFIELDS)
+    """
+    @with_kw_noshow struct Jet{$(_type_jet...)}
+        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
+    end
+end
 
 # getters for the jet
 for Rij in _field_jet
@@ -191,16 +207,19 @@ for Rij in _field_jet
     end
 end
 
-record_sol_default(x, p; kwargs...) = norm(x)
-plot_default(x, p; kwargs...) = nothing              # for Plots.jl
-plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
-
 const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
     :ODEBifProblem => "Specific to Ordinary Differential Equations (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
     :PDEBifProblem => "Specific to Partial Differential Equations (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
     :DAEBifProblem => "Specific to Differential Algebraic Equations (DAE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
 )
+
+save_solution_default(x, p) = x
+update_default(args...; kwargs...) = true
+record_sol_default(x, p; kwargs...) = norm(x)
+plot_default(x, p; kwargs...) = nothing              # for Plots.jl
+plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
+
 
 # create specific problems where pretty much is available
 for (op, at) in (

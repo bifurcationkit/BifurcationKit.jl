@@ -19,17 +19,27 @@ jobs:
         os:
           - self-hosted
           - ubuntu-latest
-          # - macos-15-intel # for fun and knowl
+          # - macos-15-intel # for fun and knowledge
           # - ubuntu-latest
         # arch:
           # - x64
     steps:
-      - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup julia
+        uses: julia-actions/setup-julia@v5
         with:
           version: ${{ matrix.version }}
-          # arch: ${{ matrix.arch }}
-      - uses: actions/cache@v6
+          # arch: ${{ matrix.arch }} \todo required? 
+
+      - name: Cache Julia packages (GitHub-hosted runners)
+        if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'windows') || contains(matrix.os, 'macOs')
+        uses: julia-actions/cache@v2
+
+      - name: Cache Julia artifacts (self-hosted runners)
+        if: contains(matrix.os, 'self-hosted')
+        uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
         with:
@@ -39,33 +49,45 @@ jobs:
             ${{ runner.os }}-test-${{ env.cache-name }}-
             ${{ runner.os }}-test-
             ${{ runner.os }}-
-      - uses: julia-actions/julia-buildpkg@v1
+
+      - name: Cache Julia compiled code (self-hosted runners)
+        if: contains(matrix.os, 'self-hosted')
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia/compiled
+          key: ${{ runner.os }}-julia-compiled-${{ matrix.version }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-compiled-${{ matrix.version }}-
+
+      - name: Build julia package
+        uses: julia-actions/julia-buildpkg@v1
+
       - name: Run tests
         env:
+          JULIA_NUM_THREADS: auto
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
         run: |
           julia --color=yes --project=@. -e '
             import Pkg
-            Pkg.add("JSON")
-            import JSON
 
-            # Parse labels from the environment variable
+            # Parse labels from the environment variable using Regex to avoid JSON dependency
             labels_json = get(ENV, "PR_LABELS", "[]")
-            labels = isempty(labels_json) ? [] : JSON.parse(labels_json)
+
+            # Regex to match "name": "value" pattern in the JSON string
+            # Handles escaped quotes if necessary, though simple labels rarely have them
+            name_pattern = r"\"name\"\s*:\s*\"((?:\\.|[^\"\\])*)\""
 
             # Extract test names from labels with the specific prefix
             prefix = "Run test(s): "
             test_args = String[]
 
-            if labels !== nothing && isa(labels, Vector)
-                for label in labels
-                    name = get(label, "name", "")
-                    if startswith(name, prefix)
-                        # Remove prefix and split by space, comma, or slash
-                        arg_str = strip(replace(name, prefix => ""))
-                        for arg in split(arg_str, r"[\s,/]+"; keepempty=false)
-                            push!(test_args, arg)
-                        end
+            for m in eachmatch(name_pattern, labels_json)
+                name = m.captures[1]
+                if startswith(name, prefix)
+                    # Remove prefix and split by space, comma, or slash
+                    arg_str = strip(replace(name, prefix => ""))
+                    for arg in split(arg_str, r"[\s,|]+"; keepempty=false)
+                        push!(test_args, arg)
                     end
                 end
             end
@@ -80,8 +102,11 @@ jobs:
             # Run tests
             Pkg.test(coverage=true, test_args=test_args)
           '
-      - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v4
+      - name: Compute coverage
+        uses: julia-actions/julia-processcoverage@v1
+
+      - name: Process coverage
+        uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:

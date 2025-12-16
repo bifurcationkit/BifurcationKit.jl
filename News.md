@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file (hopefully).
   - the test directory arborescence reflects this organisation
   - the runtests.jl file is now generic and runs accepts arguments which define which tests will be run
   - the .github/workflows/ci.yml can now run a subset of tests (using the previous runtests.jl modifications) bases on the labels of PR/commit/..
+  - examples of valid labels: `Run test(s): wave`,  `Run test(s): wave | newton`
 ## [0.5.5]
 - most Standard shooting code works with `VI.MinimalVec`
 ## [0.5.4]
