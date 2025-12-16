@@ -61,6 +61,7 @@ jobs:
 
       - name: Run tests
         env:
+          JULIA_NUM_THREADS: auto
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
         run: |
           julia --color=yes --project=@. -e '
