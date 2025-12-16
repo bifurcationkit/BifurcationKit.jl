@@ -134,11 +134,9 @@ end
 """
 $(TYPEDSIGNATURES)
 
-[Internal] In case `save_mem = true`, we do not allocate the identity matrix.
+[Internal] In case `save_mem = true`, we do not allocate the identity matrix. Indeed think about `n = 100_000`.
 """
 function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
-    # in case save_mem = true, we do not allocate the identity matrix
-    # indeed think about n = 100_000
     gj  = DiffCache(zeros(𝒯, n, m))
     gi  = DiffCache(zeros(𝒯, n, m))
     ∂gj = DiffCache(zeros(𝒯, n, m))
