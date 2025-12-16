@@ -3,6 +3,13 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.5.6] (future)
+- reorganise tests:
+  - each test belongs to a test category (like in previous versions)
+  - the test directory arborescence reflects this organisation
+  - the runtests.jl file is now generic and runs accepts arguments which define which tests will be run
+  - the .github/workflows/ci.yml can now run a subset of tests (using the previous runtests.jl modifications) bases on the labels of PR/commit/..
+  - examples of valid labels: `Run test(s): wave`,  `Run test(s): wave | newton`
 ## [0.5.5]
 - most Standard shooting code works with `VI.MinimalVec`
 ## [0.5.4]
@@ -79,19 +86,19 @@ All notable changes to this project will be documented in this file (hopefully).
 
 ## [0.2.8] - 2023-05-18
 - add `getDelta` to the interface of `AbstractFlow`
-- remove `finDiffEps` from `ContinuationPar`. 
+- remove `finDiffEps` from `ContinuationPar`.
 
 ## [0.2.8] - 2023-04-23
 - use jvp function name in `Flow` interface
 - add radius to section of Poincare Shooting
 - add _mesh field to reconstruct POColl problem (adapted mesh) from previous solution
-- add new jacobian parametrization using `struct`s instead of Symbol 
+- add new jacobian parametrization using `struct`s instead of Symbol
 - remove `θ` from ContinuationPar
 
 ## [0.2.8] - 2023-04-17
 - add delta keyword to BifurcationProblem constructor
 
-MISSSINF 
+MISSSINF
 
 ## [0.2.0] - 2022-07-23
 - new interface based on the problem `BifurcationProblem`
@@ -112,7 +119,7 @@ MISSSINF
 - add abstract types `AbstractDirectLinearSolver` and `AbstractIterativeLinearSolver`
 - the function `getTrajectory` becomes `getPeriodicOrbit`
 - add struct `SolPeriodicOrbit` to allow for unified plotting interface with all methods for computing periodic orbits
-- ⛳️ the keyword argument 	`linearPO` is renamed into `jacobianPO`
+- ⛳️ the keyword argument   `linearPO` is renamed into `jacobianPO`
 - add newton / continuation methods for `TWProblem`
 - add `GEigArpack` generalized eigensolver
 
