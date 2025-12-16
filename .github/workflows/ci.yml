@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -21,16 +21,15 @@ jobs:
           - ubuntu-latest
           # - macos-15-intel # for fun and knowl
           # - ubuntu-latest
-      runs-on: ${{ matrix.os }}
         # arch:
           # - x64
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
-      - uses: actions/cache@v3
+          # arch: ${{ matrix.arch }}
+      - uses: actions/cache@v6
         env:
           cache-name: cache-artifacts
         with:
