@@ -31,11 +31,11 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Cache Julia packages (GitHub-hosted runners)
-        if: inputs.runner_type == 'github'
+        if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'windows') || contains(matrix.os, 'macOs')
         uses: julia-actions/cache@v2
 
       - name: Cache Julia artifacts (self-hosted runners)
-        if: inputs.runner_type == 'self-hosted'
+        if: contains(matrix.os, 'self-hosted')
         uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
@@ -48,7 +48,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Cache Julia compiled code (self-hosted runners)
-        if: inputs.runner_type == 'self-hosted'
+        if: contains(matrix.os, 'self-hosted')
         uses: actions/cache@v4
         with:
           path: ~/.julia/compiled
