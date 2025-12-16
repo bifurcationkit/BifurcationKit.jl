@@ -60,7 +60,7 @@ jobs:
                     if startswith(name, prefix)
                         # Remove prefix and split by space, comma, or slash
                         arg_str = strip(replace(name, prefix => ""))
-                        for arg in split(arg_str, r"[\s,/]+"; keepempty=false)
+                        for arg in split(arg_str, r"[\s,|]+"; keepempty=false)
                             push!(test_args, arg)
                         end
                     end
