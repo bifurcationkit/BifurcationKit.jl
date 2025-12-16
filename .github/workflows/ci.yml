@@ -42,6 +42,8 @@ jobs:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
         run: |
           julia --color=yes --project=@. -e '
+            import JSON
+
             # Parse labels from the environment variable
             labels_json = get(ENV, "PR_LABELS", "[]")
             labels = isempty(labels_json) ? [] : JSON.parse(labels_json)
