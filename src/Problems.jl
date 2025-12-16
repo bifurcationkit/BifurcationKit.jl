@@ -2,11 +2,6 @@
 # So, the residual, its jacobian and higher differentials.
 # It is a convenience for a bifurcation problem so it is not strictly necessary albeit useful.
 abstract type AbstractBifurcationFunction end
-# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
-# It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
-# of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
-# The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
-abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 # This is the abstract type for a bifurcation problem. It should implement
 #   - getparams(pb::AbstractBifurcationProblem) 
 #   - getlens(pb::AbstractBifurcationProblem)
@@ -19,6 +14,11 @@ abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 #   - dF(pb::AbstractAllJetBifProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
 #   - vjp(pb::AbstractAllJetBifProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
+# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
+# of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
+# The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
+abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 ################################################################################
@@ -42,49 +42,6 @@ import SciMLBase
 
 # const type to hold "all" the types of optics. Note that we relied on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
-
-_getvectortype(::AbstractBifurcationProblem) = Nothing
-isinplace(::Union{AbstractBifurcationProblem, Nothing}) = false
-
-save_solution_default(x, p) = x
-update_default(args...; kwargs...) = true
-
-const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
-
-@eval begin
-    """
-    $(TYPEDEF)
-
-    Structure to hold the jet of a vector field. It saves the different functions `Rᵢⱼ` which correspond to the following (i+j) linear form 
-
-    Rᵢⱼ(x,p)(dx₁, ⋅⋅⋅, dxᵢ, dp₁, ⋅⋅⋅, dpⱼ)
-
-    More precisely
-
-    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
-
-    ## Note
-
-    For now, we ask the user to pass an out-of-place formulation of the functions.
-
-    ## Fields
-
-    $(TYPEDFIELDS)
-    """
-    @with_kw_noshow struct Jet{$(_type_jet...)}
-        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
-    end
-end
-
-# getters for the jet
-for Rij in _field_jet
-    @eval begin
-        $(Rij[1])(pb::Jet, args...; kwargs...) = pb.$(Rij[1])(args...; kwargs...)
-        @inline $(Rij[1])(pb::BifFunction, args...; kwargs...) = $(Rij[1])(pb.jet, args...; kwargs...)
-        @inline $(Rij[1])(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij[1])(pb.VF, args...; kwargs...)
-    end
-end
 
 """
 Determine if the vector field is of the form `f!(out, z, p)`.
@@ -212,6 +169,44 @@ function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc
 end
 #####
 
+
+const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
+const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
+
+@eval begin
+    """
+    $(TYPEDEF)
+
+    Structure to hold the jet of a vector field. It saves the different functions `Rᵢⱼ` which correspond to the following (i+j) linear form 
+
+    Rᵢⱼ(x,p)(dx₁, ⋅⋅⋅, dxᵢ, dp₁, ⋅⋅⋅, dpⱼ)
+
+    More precisely
+
+    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
+
+    ## Note
+
+    For now, we ask the user to pass an out-of-place formulation of the functions.
+
+    ## Fields
+
+    $(TYPEDFIELDS)
+    """
+    @with_kw_noshow struct Jet{$(_type_jet...)}
+        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
+    end
+end
+
+# getters for the jet
+for Rij in _field_jet
+    @eval begin
+        $(Rij[1])(pb::Jet, args...; kwargs...) = pb.$(Rij[1])(args...; kwargs...)
+        @inline $(Rij[1])(pb::BifFunction, args...; kwargs...) = $(Rij[1])(pb.jet, args...; kwargs...)
+        @inline $(Rij[1])(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij[1])(pb.VF, args...; kwargs...)
+    end
+end
+
 const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
     :ODEBifProblem => "Specific to Ordinary Differential Equations (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
@@ -219,9 +214,12 @@ const _dict_doc_string_prob = Dict(
     :DAEBifProblem => "Specific to Differential Algebraic Equations (DAE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
 )
 
+save_solution_default(x, p) = x
+update_default(args...; kwargs...) = true
 record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
+
 
 # create specific problems where pretty much is available
 for (op, at) in (
