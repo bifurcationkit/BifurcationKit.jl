@@ -191,7 +191,7 @@ function _secant_tangent!(τ::M,
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
     _copyto!(τ, z₁)
-    minus!(τ, z₀)
+    minus!!(τ, z₀)
     α = sign(ds) / dotθ(τ, θ)
     VI.scale!(τ, α)
 end
@@ -237,7 +237,7 @@ function gettangent!(state::AbstractContinuationState,
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
     dFdl = residual(it.prob, state.z.u, setparam(it, state.z.p + ϵ))
-    minus!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
+    minus!!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
     VI.scale!(dFdl, 1/ϵ)
 
     # compute jacobian at the current solution
@@ -434,7 +434,7 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    dFdp = minus!(dFdp, res_f) # dFdp = dFdp - res_f
+    dFdp = minus!!(dFdp, res_f) # dFdp = dFdp - res_f
     VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
@@ -450,7 +450,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+        minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -492,7 +492,7 @@ function newton_palc(iter::AbstractContinuationIterable,
             # we put back the initial value
             α = α0
         else
-            minus!(x, u)
+            minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
             _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)

@@ -13,7 +13,7 @@ BK._print_line(1, nothing, 1)
 let
     z_pred = BorderedArray(rand(10), 1.0)
     tau_pred = BorderedArray(rand(10), 2.0)
-    BK.minus!(z_pred, tau_pred)
+    BK.minus!!(z_pred, tau_pred)
     BK.eltype(z_pred)
 
     BK.VI.add!(z_pred, tau_pred, 2.0/3)
@@ -32,8 +32,8 @@ let
     @test length(z_pred) == 11
 
     BK._copyto!(z,z2)
-    BK.minus(z.u,z2.u); BK.minus!(z.u,z2.u)
-    BK.minus(1.,2.); BK.minus!(1.,2.)
+    BK.minus(z.u,z2.u); BK.minus!!(z.u,z2.u)
+    BK.minus(1.,2.); BK.minus!!(1.,2.)
     BK.VI.scale!(z_pred, 1.0)
     BK.VI.scale!(z_pred, true)
     BK.VI.scale!(z_pred, tau_pred, 1.0)

@@ -287,7 +287,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
-        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)),Val(2))(p)
+        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
     else
         R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
