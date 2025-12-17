@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup julia
-        uses: julia-actions/setup-julia@v5
+        uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           # arch: ${{ matrix.arch }} \todo required? 
