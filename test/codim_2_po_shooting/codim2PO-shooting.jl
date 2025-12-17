@@ -20,12 +20,12 @@ z0 = [0.1, 0.1, 1, 0]
 prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, nev = 4, max_steps = 200)
 ################################################################################
-using OrdinaryDiffEq
-prob_de = ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
-alg = Rodas5()
-sol = OrdinaryDiffEq.solve(prob_de, alg)
-prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abstol = 1e-10)
-sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
+import OrdinaryDiffEq as ODE
+prob_de = ODE.ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
+alg = ODE.Rodas5()
+sol = ODE.solve(prob_de, alg)
+prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abstol = 1e-10)
+sol = ODE.solve(prob_de, alg)
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -41,7 +41,7 @@ argspo = (record_from_solution = (x, p; k...) -> begin
     end)
 ################################################################################
 ######    Shooting ########
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
+probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = ODE.Rodas5(), parallel = true)
 
 solpo = newton(probsh, cish, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -100,7 +100,6 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
 _pdma = pd_po_sh.prob
 BK.is_symmetric(_pdma)
 BK.has_adjoint(_pdma.prob)
-BK.isinplace(_pdma)
 
 # plot(pd_po_sh)
 # plot(fold_po_sh1, fold_po_sh2, branchlabel = ["FOLD", "FOLD"])
@@ -109,11 +108,11 @@ BK.isinplace(_pdma)
 #####
 # find the PD NS case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1, 0.1, 1, 0], tspan = (0, 1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
@@ -172,11 +171,11 @@ J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
 
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0, 1000)), Rodas5())
-sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0, 1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
