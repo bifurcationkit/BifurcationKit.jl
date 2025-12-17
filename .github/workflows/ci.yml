@@ -81,7 +81,7 @@ jobs:
             for m in eachmatch(name_pattern, labels_json)
                 name = m.captures[1]
                 if startswith(name, prefix)
-                    # Remove prefix and split by space, comma, or slash
+                    # Remove prefix and split by space, comma, or pipe
                     arg_str = strip(replace(name, prefix => ""))
                     for arg in split(arg_str, r"[\s,|]+"; keepempty=false)
                         push!(test_args, arg)
