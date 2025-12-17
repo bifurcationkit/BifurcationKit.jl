@@ -1,5 +1,6 @@
 import BifurcationKit as BK
 import LinearAlgebra as LA
+import BifurcationKit.BorderedArray as BorderedArray
 
 deepcollect(x::BK.BorderedArray) = vcat(x.u, x.p)
 deepcollect(x::Number) = x
