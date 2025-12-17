@@ -135,8 +135,6 @@ end
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 @views function (sh::ShootingProblem)(x::AbstractVector, pars)
     T = getperiod(sh, x)
-    M = get_mesh_size(sh)
-    N = div(length(x) - 1, M)
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
     xc = get_time_slices(sh, x)
@@ -145,6 +143,15 @@ end
     out = similar(x)
     outc = get_time_slices(sh, out)
 
+    po_residual_bare!(sh, outc, xc, pars, T)
+
+    # add constraint
+    out[end] = @views sh.section(get_time_slice(sh, xc, 1), T)
+    return out
+end
+
+@views function po_residual_bare!(sh::ShootingProblem, outc, xc, pars, T)
+    N, M = size(xc)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
@@ -157,10 +164,6 @@ end
             outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]
         end
     end
-
-    # add constraint
-    out[end] = @views sh.section(get_time_slice(sh, xc, 1), T)
-    return out
 end
 
 # shooting functional for BorderedArray
