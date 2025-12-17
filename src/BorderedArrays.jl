@@ -76,14 +76,10 @@ getvec(x::BorderedArray) = x.u
 getp(x::BorderedArray{vectype, T}) where {vectype, T <: Number} = x.p
 ################################################################################
 # computes x-y into x and returns x
-minus!(x, y) = VI.add!(x, y, -1)
-minus!(x::vec, y::vec) where {vec <: AbstractArray} = (x .= x .- y)
-minus!(x::T, y::T) where {T <: Number} = (x = x - y)
+minus!!(x, y) = VI.add!!(x, y, -VI.One())
 ################################################################################
 # returns x - y
-minus(x, y) = VI.add(x, y, -1)
-minus(x::vec, y::vec) where {vec <: AbstractArray} = (return x .- y)
-minus(x::T, y::T) where {T <:Real} = (return x - y)
+minus(x, y) = VI.add(x, y, -VI.One())
 ################################################################################
 # implements interface from VectorInterface for BorderedArray
 # KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl

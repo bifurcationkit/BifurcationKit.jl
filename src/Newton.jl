@@ -96,8 +96,8 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
         itlineartot += sum(itlinear)
 
         # x = x - J \ fx
-        x = minus!(x, u) # we use this form instead of just `minus!(x,u)` to deal
-        # with out-of-place functional
+        minus!!(x, u) # we use this form instead of just `x .= x .- u` to deal
+        # with out-of-place functionals
 
         fx = residual(prob, x, p0)
         res = normN(fx)

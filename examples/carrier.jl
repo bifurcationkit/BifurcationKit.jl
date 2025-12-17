@@ -63,7 +63,7 @@ optdef = setproperties(optnew; tol = 1e-7, max_iterations = 200)
 
 function perturbsol(sol, p, id)
     sol0 = @. exp(-.01/(1-par_car.X^2)^2)
-    solp = 0.02*rand(length(sol))
+    solp = 0.5*rand(length(sol))
     return sol .+ solp .* sol0
 end
 
@@ -94,7 +94,7 @@ alg = DefCont(deflation_operator = deflationOp,
 
 brdc = @time continuation(
     (@set prob.params.ϵ = 0.6), alg,
-    setproperties(optcont; ds = -0.0001, dsmin = 1e-5, max_steps = 20000,
+    setproperties(optcont; ds = -0.0005, dsmin = 1e-5, max_steps = 20000,
         p_max = 0.7, p_min = 0.05, detect_bifurcation = 0, plot_every_step = 40,
         newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 100, verbose = false)),
     ;verbosity = 1,

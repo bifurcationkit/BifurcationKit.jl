@@ -141,7 +141,7 @@ Return the adjoint `dx -> dFᵗ(x, p)⋅dx`. This is also called the vector jaco
 jacobian_adjoint(pb::BifFunction, x, p) = pb.Jᵗ(x, p)
 dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx) #vpj change name!!
 #####
-dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx)
+dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx) # 🚧🚧 TODO call it jvp ! 🚧🚧
 
 function dF(pb::BifFunction{Tf, TFinp, Nothing}, x, p, dx) where {Tf, TFinp}
     ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(eltype(dx)))
