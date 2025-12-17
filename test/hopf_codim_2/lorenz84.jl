@@ -386,14 +386,12 @@ for probPO in (
                 PeriodicOrbitOCollProblem(20, 3), 
                 ShootingProblem(9, prob_ode, Rodas5(), parallel = true)
               )
-    @info probPO
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
             normC = norminf,
             δp = 0.02,
             update_minaug_every_step = 0,
             jacobian_ma = BK.MinAug(),
             # callback_newton =  BK.cbMaxNormAndΔp(1e1, 0.025),
-            # verbosity = 2, plot = true,
             )
     
     @test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
