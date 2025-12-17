@@ -19,7 +19,7 @@ jobs:
         os:
           - self-hosted
           - ubuntu-latest
-          # - macos-15-intel # for fun and knowledge
+          - macos-15-intel # for fun and knowledge
           # - ubuntu-latest
         # arch:
           # - x64
