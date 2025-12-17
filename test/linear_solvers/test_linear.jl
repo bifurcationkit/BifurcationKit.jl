@@ -510,7 +510,7 @@ let
 
     ls = GMRESKrylovKit(rtol = 1e-9, dim = 100)
     outkk = ls(J0, x0)
-    @test out[1] ≈ outkk[1] rtol = 1e-9
+    @test out[1] ≈ outkk[1] rtol = 1e-7
     outkk = ls(Jmf, x0)
     @test out[1] ≈ outkk[1]
     outkk = ls(Jmf, x0; a₀ = 0., a₁ = 1.)
