@@ -188,24 +188,6 @@ residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOSh) = false
 
-function _generate_jacobian(prob::AbstractShootingProblem, orbitguess, par; δ = convert(eltype(orbitguess), 1e-8))
-    jacobianPO = prob.jacobian
-    if jacobianPO isa AutoDiffDenseAnalytical
-        _J = prob(Val(:JacobianMatrix), orbitguess, par)
-        jac = (x, p) -> prob(Val(:JacobianMatrixInplace), _J, x, p)
-    elseif jacobianPO isa AutoDiffDense
-        jac = (x, p) -> ForwardDiff.jacobian(z -> prob(z, p), x)
-    elseif jacobianPO isa AutoDiffMF
-        jac = (x, p) -> (dx -> ForwardDiff.derivative(z -> prob((@. x + z * dx), p), 0))
-    elseif jacobianPO isa FiniteDifferences
-        jac = (x, p) -> finite_differences(z -> prob(z, p), x; δ = δ)
-    elseif jacobianPO isa FiniteDifferencesMF
-        jac = (x, p) -> dx -> (prob(x .+ δ .* dx, p) .- prob(x .- δ .* dx, p)) ./ (2δ)
-    else
-        jac = (x, p) -> (dx -> jvp(prob, x, p, dx))
-    end
-end
-
 """
 $(TYPEDSIGNATURES)
 
@@ -230,9 +212,10 @@ function newton(prob::AbstractShootingProblem,
                 lens::OpticType = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
-    jac = _generate_jacobian(prob, orbitguess, getparams(prob); δ)
+    jac = generate_jacobian(prob, orbitguess, getparams(prob); δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    return solve(probw, Newton(), options; kwargs...)
+    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
+    return solve(probw, Newton(), new_options; kwargs...)
 end
 
 """
@@ -257,9 +240,10 @@ function newton(prob::AbstractShootingProblem,
                 lens::OpticType = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
-    jac = _generate_jacobian(prob, orbitguess, getparams(prob))
+    jac = generate_jacobian(prob, orbitguess, getparams(prob))
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    return solve(probw, defOp, options; kwargs...)
+    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
+    return solve(probw, defOp, new_options; kwargs...)
 end
 
 ####################################################################################################

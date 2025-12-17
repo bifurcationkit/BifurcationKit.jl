@@ -1,4 +1,4 @@
-# using Revise, Plots
+# using Revise
 using ForwardDiff, Test
 using BifurcationKit, LinearAlgebra
 import OrdinaryDiffEq as ODE
@@ -37,7 +37,7 @@ br = continuation(prob_vf, PALC(), optconteq)
 prob = ODE.ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODE.ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 BK._apply_vector_field(ODE.ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
-BK._apply_vector_field(EnsembleProblem(ODE.ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
+BK._apply_vector_field(ODE.EnsembleProblem(ODE.ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
 ####################################################################################################
 sol = ODE.solve(prob, ODE.KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
@@ -53,14 +53,14 @@ section(x, T, dx, dT) = dx[1] #* x[end]
 # standard simple shooting
 M = 1
 dM = 1
-_pb = ShootingProblem(prob, KenCarp4(), 1, section; abstol = 1e-10, reltol=1e-9)
+_pb = ShootingProblem(prob, ODE.KenCarp4(), 1, section; abstol = 1e-10, reltol=1e-9)
 BifurcationKit.has_monodromy_DE(_pb.flow)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
 
 # test the flowDE interface
-_pb_par = ShootingProblem(prob, KenCarp4(), 1, section; abstol=1e-10, reltol=1e-9, parallel = true)
+_pb_par = ShootingProblem(prob, ODE.KenCarp4(), 1, section; abstol=1e-10, reltol=1e-9, parallel = true)
 _flow = _pb_par.flow; @reset _flow.vjp = (args...; kw...) -> nothing
 BK.vjp(_flow, initpo, par_hopf, initpo, 0.1)
 BK.jvp(_pb_par.flow, initpo, par_hopf, initpo, 0.1)
@@ -181,7 +181,7 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 
 # test flowDE interface
-_pb2_par = ShootingProblem(prob, Rodas4(), probMono, Rodas4(autodiff=false), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
+_pb2_par = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
 BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
 
 ####################################################################################################
@@ -190,14 +190,14 @@ BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
 normals = [[-1., 0.]]
 centers = [zeros(2)]
 
-probPsh = PoincareShootingProblem(2, prob, Rodas4(), probMono, Rodas4(autodiff=false); abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
+probPsh = PoincareShootingProblem(2, prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false); abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
 @test probPsh.par == probPsh.flow.prob1.p
 
-probPsh = PoincareShootingProblem(2, prob, Rodas4(); rtol = abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
+probPsh = PoincareShootingProblem(2, prob, ODE.Rodas4(); rtol = abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
 @test probPsh.par == probPsh.flow.prob.p
 
-probPsh = PoincareShootingProblem(prob, Rodas4(),
-        probMono, Rodas4(autodiff=false),
+probPsh = PoincareShootingProblem(prob, ODE.Rodas4(),
+        probMono, ODE.Rodas4(autodiff=false),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
         jacobian = BK.AutoDiffDenseAnalytical())
 
@@ -225,7 +225,7 @@ outpo = newton(probPsh, initpo_bar, optn; normN = norminf)
 BK.getperiod(probPsh, outpo.u, par_hopf)
 BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
 
-probPsh = PoincareShootingProblem(prob, Rodas4(),
+probPsh = PoincareShootingProblem(prob, ODE.Rodas4(),
         # probMono, Rodas4(autodiff=false),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
         lens = (@optic _.r))
@@ -326,14 +326,14 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
 @info "Multiple Poincaré Shooting aBS"
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
+br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, ODE.KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
 @reset opts_po_cont.newton_options.eigsolver.dim = 20
 @reset opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
-br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @optic _.r); normC = norminf)
+br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, ODE.KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @optic _.r); normC = norminf)
 @test br_psh.prob isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
@@ -353,13 +353,13 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
     _parallel = jacPOps isa BK.MatrixFree ? false : false
 
     local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), 
-            PoincareShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPOps, update_section_every_step = 2); 
+            PoincareShootingProblem(M, prob, ODE.Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPOps, update_section_every_step = 2); 
             normC = norminf,
             linear_algo = BorderingBLS(solver = (@set ls.N = M), check_precision = false),
             verbosity = 0)
 
     local br_ssh = continuation(br, 1, (@set opts_po_cont.ds = 0.005),
-            ShootingProblem(M, prob, Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacobianPO, update_section_every_step = 2); 
+            ShootingProblem(M, prob, ODE.Rodas4P(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacobianPO, update_section_every_step = 2); 
             normC = norminf,
             linear_algo = BorderingBLS(solver = (@set ls.N = 2M + 1), check_precision = false), 
             verbosity = 0)
