@@ -67,7 +67,7 @@ jobs:
           JULIA_NUM_THREADS: auto
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
         run: |
-          julia --color=yes --project=@. -e '
+          julia --math-mode=ieee --color=yes --project=@. -e '
             import Pkg
 
             # Parse labels from the environment variable using Regex to avoid JSON dependency
