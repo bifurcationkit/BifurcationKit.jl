@@ -40,7 +40,7 @@ opts_pocoll_fold = @time ContinuationPar(br_po.contparams, max_steps = 10, p_max
 println("L$(@__LINE__() + 1) continuation ")
 fold_po_coll = @time continuation(deepcopy(br_po), 1, (@optic _.c5), opts_pocoll_fold;
                                   detect_codim2_bifurcation = 0,
-                                  jacobian_ma = :minaug,
+                                  jacobian_ma = BifurcationKit.MinAug(),
                                   usehessian = true,
                                   bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
                                   )
