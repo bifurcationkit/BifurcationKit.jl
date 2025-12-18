@@ -242,7 +242,7 @@ function _continuation(gh::Bautin,
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
+    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
@@ -360,7 +360,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
+    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper

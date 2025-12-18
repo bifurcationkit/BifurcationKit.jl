@@ -21,17 +21,17 @@ $(TYPEDFIELDS)
 - `Ty` type of the time variable
 """
 struct MeshCollocationCache{𝒯}
-    "Coarse mesh size"
+    "Coarse mesh size."
     Ntst::Int
-    "Collocation degree, usually called m"
+    "Collocation degree, usually named `m`."
     degree::Int
-    "Lagrange matrix"
+    "Lagrange matrix."
     lagrange_vals::Matrix{𝒯}
-    "Lagrange matrix for derivative"
+    "Lagrange matrix for derivative."
     lagrange_∂::Matrix{𝒯}
-    "Gauss nodes"
+    "Gauss nodes."
     gauss_nodes::Vector{𝒯}
-    "Gauss weights"
+    "Gauss weights."
     gauss_weight::Vector{𝒯}
     "Values of the coarse mesh, call τj. This can be adapted."
     τs::Vector{𝒯}
@@ -304,30 +304,30 @@ get_times(pb::PeriodicOrbitOCollProblem) = get_times(pb.mesh_cache)
 """
 Returns the vector of size m+1,  0 = τ₁ < τ₂ < ... < τₘ < τₘ₊₁ = 1
 """
-getmesh(pb::PeriodicOrbitOCollProblem) = getmesh(pb.mesh_cache)
-get_mesh_coll(pb::PeriodicOrbitOCollProblem) = get_mesh_coll(pb.mesh_cache)
-get_max_time_step(pb::PeriodicOrbitOCollProblem) = get_max_time_step(pb.mesh_cache)
-update_mesh!(pb::PeriodicOrbitOCollProblem, mesh) = update_mesh!(pb.mesh_cache, mesh)
-@inline isinplace(pb::PeriodicOrbitOCollProblem) = isinplace(pb.prob_vf)
-@inline is_symmetric(pb::PeriodicOrbitOCollProblem) = is_symmetric(pb.prob_vf)
-@inline getdelta(pb::PeriodicOrbitOCollProblem) = getdelta(pb.prob_vf)
-@inline get_state_dim(pb::PeriodicOrbitOCollProblem) = pb.N
+getmesh(coll::PeriodicOrbitOCollProblem) = getmesh(coll.mesh_cache)
+get_mesh_coll(coll::PeriodicOrbitOCollProblem) = get_mesh_coll(coll.mesh_cache)
+get_max_time_step(coll::PeriodicOrbitOCollProblem) = get_max_time_step(coll.mesh_cache)
+update_mesh!(coll::PeriodicOrbitOCollProblem, mesh) = update_mesh!(coll.mesh_cache, mesh)
+@inline isinplace(coll::PeriodicOrbitOCollProblem) = isinplace(coll.prob_vf)
+@inline is_symmetric(coll::PeriodicOrbitOCollProblem) = is_symmetric(coll.prob_vf)
+@inline getdelta(coll::PeriodicOrbitOCollProblem) = getdelta(coll.prob_vf)
+@inline get_state_dim(coll::PeriodicOrbitOCollProblem) = coll.N
 
-function Base.show(io::IO, pb::PeriodicOrbitOCollProblem)
-    N, m, Ntst = size(pb)
+function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
+    N, m, Ntst = size(coll)
     println(io, "┌─ Collocation functional for periodic orbits")
-    println(io, "├─ type               : Vector{", eltype(pb), "}")
+    println(io, "├─ type               : Vector{", eltype(coll), "}")
     println(io, "├─ time slices (Ntst) : ", Ntst)
     println(io, "├─ degree      (m)    : ", m)
-    println(io, "├─ dimension   (N)    : ", pb.N)
-    println(io, "├─ inplace            : ", isinplace(pb))
-    println(io, "├─ update section     : ", pb.update_section_every_step)
-    println(io, "├─ jacobian           : ", pb.jacobian)
-    println(io, "├─ mesh adaptation    : ", pb.meshadapt)
-    if pb.meshadapt
-        println(io, "├───── K              : ", pb.K)
+    println(io, "├─ dimension   (N)    : ", coll.N)
+    println(io, "├─ inplace            : ", isinplace(coll))
+    println(io, "├─ update section     : ", coll.update_section_every_step)
+    println(io, "├─ jacobian           : ", coll.jacobian)
+    println(io, "├─ mesh adaptation    : ", coll.meshadapt)
+    if coll.meshadapt
+        println(io, "├───── K              : ", coll.K)
     end
-    println(io, "└─ # unknowns (without phase condition) : ", pb.N * (1 + m * Ntst))
+    println(io, "└─ # unknowns (without phase condition) : ", coll.N * (1 + m * Ntst))
 end
 
 """
@@ -894,7 +894,7 @@ function re_make(coll::PeriodicOrbitOCollProblem,
     N = length(ζr)
 
     _, m, Ntst = size(coll)
-    n_unknows = N * (1 + m * Ntst)
+    n_unknows = length(coll)
 
     # update the problem
     probPO = setproperties(coll; N, prob_vf, 
@@ -916,7 +916,8 @@ end
 ##########################
 # problem wrappers
 residual(prob::WrapPOColl, x, p) = residual(prob.prob, x, p)
-jacobian(prob::WrapPOColl, x, p) = prob.jacobian(x, p)
+jacobian(prob::WrapPOColl, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
+
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
 @inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
 @inline has_adjoint(::WrapPOColl) = false # it is in problems.jl
@@ -933,43 +934,70 @@ function save_solution(wrap::WrapPOColl, x, pars)
         return x
     end
 end
+
+####
+_generate_jacobian(coll::PeriodicOrbitOCollProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, DenseAnalytical, FullSparse}, o, pars; k...) = J
+
+function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::FullSparseInplace, orbitguess, pars; k...)
+    _J = analytical_jacobian_sparse(coll, orbitguess, pars)
+    indx = get_blocks(coll, _J)
+    return (FullSparseInplace(), _J, indx)
+end
+
+function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::DenseAnalyticalInplace, orbitguess, pars; Jcoll_matrix = nothing, k...)
+    _Jcoll_matrix = isnothing(Jcoll_matrix) ? analytical_jacobian(coll, orbitguess, pars) : Jcoll_matrix
+    floquet_wrap = FloquetWrapper(coll, _Jcoll_matrix, orbitguess, pars)
+    return (DenseAnalyticalInplace(), floquet_wrap, _Jcoll_matrix)
+end
+####
+
+function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{DenseAnalyticalInplace, Tj, Tind}, x, p) where {Tj, Tind}
+    floquet_wrap = J[2]
+    _Jcoll_matrix = J[3]
+    analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
+    floquet_wrap.x .= x
+    floquet_wrap.par = p
+    return floquet_wrap
+end
+
+function jacobian(coll::PeriodicOrbitOCollProblem, ::DenseAnalytical, x, p)
+    return FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
+end
+
+function jacobian(coll::PeriodicOrbitOCollProblem, ::FullSparse, x, p)
+    return FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
+end
+
+function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{FullSparseInplace, Tj, Tind}, x, p) where {Tj, Tind}
+    _J = J[2]
+    indx = J[3]
+    return FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
+end
 ####################################################################################################
 const DocStringJacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
+
 function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
                         orbitguess,
                         options::NewtonPar;
                         defOp::Union{Nothing, DeflationOperator} = nothing,
                         kwargs...)
-    jacobianPO = probPO.jacobian
-
-    if jacobianPO isa DenseAnalytical
-        jac = (x, p) -> analytical_jacobian(probPO, x, p)
-    elseif jacobianPO isa DenseAnalyticalInplace
-        _J = analytical_jacobian(probPO, orbitguess, getparams(probPO))
-        jac = (x, p) -> analytical_jacobian!(_J, probPO, x, p)
-    elseif jacobianPO isa FullSparse
-        jac = (x, p) -> analytical_jacobian_sparse(probPO, x, p)
-    elseif jacobianPO isa FullSparseInplace
-        _J = analytical_jacobian_sparse(probPO, orbitguess, par)
-        jac = (x, p) -> analytical_jacobian!(_J, probPO, x, p)
-    else
-        jac = (x, p) -> ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
-    end
+    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO))
 
     if options.linsolver isa COPLS
         @reset options.linsolver = COPLS(probPO)
     end
 
     prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
+    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
 
     if isnothing(defOp)
-        return solve(prob, Newton(), options; kwargs...)
+        return solve(prob, Newton(), new_options; kwargs...)
     else
-        return solve(prob, defOp, options; kwargs...)
+        return solve(prob, defOp, new_options; kwargs...)
     end
 end
 
@@ -1008,40 +1036,6 @@ function newton(probPO::PeriodicOrbitOCollProblem,
     _newton_pocoll(probPO, orbitguess, options; defOp, kwargs...)
 end
 
-# function used in _continuation(gh::Bautin
-function generate_jacobian(coll::PeriodicOrbitOCollProblem, 
-                        orbitguess, 
-                        par; 
-                        δ = convert(eltype(orbitguess), 1e-8),
-                        Jcoll_matrix = nothing
-                        )
-    jacobianPO = coll.jacobian
-    @assert jacobianPO in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one among $_pocoll_jacobian_types."
-
-    if jacobianPO isa DenseAnalytical
-        jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
-    elseif jacobianPO isa DenseAnalyticalInplace
-        # we reduce allocations to the minimum here
-        _Jcoll_matrix = isnothing(Jcoll_matrix) ? analytical_jacobian(coll, orbitguess, par) : Jcoll_matrix
-        floquet_wrap = FloquetWrapper(coll, _Jcoll_matrix, orbitguess, par)
-        function jac(x, p)
-            analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
-            floquet_wrap.x .= x
-            floquet_wrap.par = p
-            floquet_wrap
-        end
-    elseif jacobianPO isa FullSparse
-        jac = (x, p) -> FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
-    elseif jacobianPO isa FullSparseInplace
-        _J = analytical_jacobian_sparse(coll, orbitguess, par)
-        indx = get_blocks(coll, _J)
-        jac = (x, p) -> FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
-    else
-        # if you use jacobian!, it has issues with DDEBifurcationKit
-        jac = (x, p) -> FloquetWrapper(coll, ForwardDiff.jacobian(z -> residual(coll, z, p), x), x, p)
-    end
-end
-
 """
 $(TYPEDSIGNATURES)
 
@@ -1075,7 +1069,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                         solver = FloquetWrapperLS(nothing),
                         J = similar(_Jcoll, Nbls, Nbls)
                         )
-        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); 
+        jacPO = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll); 
                         δ,
                         Jcoll_matrix = @view linear_algo.J[begin:end-1, begin:end-1]
                         )
@@ -1088,7 +1082,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
         end
     else
         linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
-        jacPO = generate_jacobian(coll, orbitguess, getparams(coll); δ)
+        jacPO = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll); δ)
     end
     contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
 

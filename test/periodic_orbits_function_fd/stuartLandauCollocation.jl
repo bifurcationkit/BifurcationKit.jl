@@ -224,15 +224,15 @@ begin
     # 0.131970 seconds (32.51 k allocations: 309.737 MiB, 14.97% gc time)
     @reset prob_col2.update_section_every_step = 1
     br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
-    verbosity = 0, plot = false,
-    args...,
-    );
+            verbosity = 0, plot = false,
+            args...,
+            );
 
     br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
-    verbosity = 0, plot = false,
-    args...,
-    linear_algo  = COPBLS(),
-    );
+            verbosity = 0, plot = false,
+            args...,
+            linear_algo  = COPBLS(),
+            );
 
     # test the values of the Floquet exponents
     for k in 1:length(br_po)-1
@@ -317,7 +317,7 @@ end
 ####################################################################################################
 # test Hopf aBS
 let
-    for jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical(), BK.FullSparse()), use_nf in (true, false)
+    for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), ), use_nf in (true, false)
         useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
         _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
         for lspo in (BK.MatrixBLS(), BK.COPBLS())

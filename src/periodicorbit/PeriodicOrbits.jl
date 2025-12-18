@@ -184,9 +184,44 @@ const DocStringJacobianPOSh = """
     - For `FiniteDifferencesMF()`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 """
 ##########################
-residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
-jacobian(prob::WrapPOSh, x, p) = prob.jacobian(x, p)
 @inline is_symmetric(prob::WrapPOSh) = false
+residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
+jacobian(prob::WrapPOSh, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
+
+_generate_jacobian(probPO::AbstractShootingProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree}, o, pars; k...) = J
+_generate_jacobian(probPO::AbstractShootingProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+
+function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
+    _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
+    return (AutoDiffDenseAnalytical(), _J)
+end
+
+function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffDense, x, p)
+    return FloquetWrapper(probPO, ForwardDiff.jacobian(z -> residual(probPO, z, p), x), x, p)
+end
+
+function jacobian(probPO::AbstractShootingProblem, ::FiniteDifferences, x, p)
+    return FloquetWrapper(probPO, finite_differences(z -> residual(probPO, z, p), x), x, p)
+end
+
+function jacobian(probPO::AbstractShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
+    probPO(Val(:JacobianMatrixInplace), J[2], x, p)
+    return FloquetWrapper(probPO, J[2], x, p)
+end
+
+function jacobian(probPO::AbstractShootingProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
+    δ = J[2]
+    return FloquetWrapper(probPO, dx -> (residual(probPO, x .+ δ .* dx, p) .-
+                                         residual(probPO, x .- δ .* dx, p)) ./ (2δ), x, p)
+end
+
+function jacobian(probPO::AbstractShootingProblem, ::AutoDiffMF, x, p)
+    return FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)), x, p)
+end
+
+function jacobian(probPO::AbstractShootingProblem, ::MatrixFree, x, p)
+    return FloquetWrapper(probPO, x, p)
+end
 
 """
 $(TYPEDSIGNATURES)
@@ -212,7 +247,7 @@ function newton(prob::AbstractShootingProblem,
                 lens::OpticType = nothing,
                 δ = convert(eltype(orbitguess), 1e-8),
                 kwargs...)
-    jac = generate_jacobian(prob, orbitguess, getparams(prob); δ)
+    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
     return solve(probw, Newton(), new_options; kwargs...)
@@ -240,7 +275,7 @@ function newton(prob::AbstractShootingProblem,
                 lens::OpticType = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
-    jac = generate_jacobian(prob, orbitguess, getparams(prob))
+    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob))
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
     new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
     return solve(probw, defOp, new_options; kwargs...)
@@ -248,27 +283,6 @@ end
 
 ####################################################################################################
 # Continuation for shooting problems
-function generate_jacobian(probPO::AbstractShootingProblem, 
-                        orbitguess, 
-                        pars;
-                        δ = convert(eltype(orbitguess), 1e-8))
-    jacobianPO = probPO.jacobian
-    if jacobianPO isa AutoDiffDenseAnalytical
-        _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
-        jac = (x, p) -> (probPO(Val(:JacobianMatrixInplace), _J, x, p); FloquetWrapper(probPO, _J, x, p));
-    elseif jacobianPO isa AutoDiffDense
-        jac = (x, p) -> FloquetWrapper(probPO, ForwardDiff.jacobian(z -> probPO(z, p), x), x, p)
-    elseif jacobianPO isa FiniteDifferences
-        jac = (x, p) -> FloquetWrapper(probPO, finite_differences(z -> probPO(z, p), x), x, p)
-    elseif jacobianPO isa AutoDiffMF
-        jac = (x, p) -> FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> probPO(x .+ z .* dx, p), 0)), x, p)
-    elseif jacobianPO isa FiniteDifferencesMF
-        jac = (x, p) -> FloquetWrapper(probPO, dx -> (probPO(x .+ δ .* dx, p) .- probPO(x .- δ .* dx, p)) ./ (2δ), x, p)
-    else
-        jac = (x, p) -> FloquetWrapper(probPO, x, p)
-    end
-end
-
 """
 $(TYPEDSIGNATURES)
 
@@ -292,12 +306,11 @@ function continuation(probPO::AbstractShootingProblem,
                         record_from_solution = nothing,
                         plot_solution = nothing,
                         kwargs...)
-    jacobianPO = probPO.jacobian
     if isnothing(getlens(probPO)) 
         error("You need to provide a lens for your periodic orbit problem.")
     end
-
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ)
+    jacobianPO = probPO.jacobian
+    jac = _generate_jacobian(probPO, jacobianPO, orbitguess, getparams(probPO); δ)
 
     if compute_eigenelements(contParams)
         contParams = @set contParams.newton_options.eigsolver = eigsolver
