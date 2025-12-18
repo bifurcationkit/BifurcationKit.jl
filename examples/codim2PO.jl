@@ -28,12 +28,12 @@ prob_bif = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solu
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, nev = 4, max_steps = 20000)
 ################################################################################
-using OrdinaryDiffEq
-prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
-alg = Rodas5()
-sol = OrdinaryDiffEq.solve(prob_de, alg)
-prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
-sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
+import OrdinaryDiffEq as ODE
+prob_de = ODE.ODEProblem(Pop!, z0, (0, 600), par_pop)
+alg = ODE.Rodas5()
+sol = ODE.solve(prob_de, alg)
+prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0,5), par_pop, reltol = 1e-8, abstol = 1e-10)
+sol = ODE.solve(prob_de, ODE.Rodas5())
 plot(sol)
 ################################################################################
 function recordFromSolution(x, p; k...)

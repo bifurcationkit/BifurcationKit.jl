@@ -30,10 +30,10 @@ br = continuation(prob, PALC(), optconteq)
 ####################################################################################################
 prob2 = BK.BifurcationProblem(Fsl, u0, par_hopf, (@optic _.r); J = (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)))# we put sparse to try the different linear solvers
 poTrap = PeriodicOrbitTrapProblem(
-    prob2,
-    [1., 0.],
-    zeros(2),
-    10, 2; update_section_every_step = 1)
+                        prob2,
+                        [1., 0],
+                        zeros(2),
+                        100, 2; update_section_every_step = 1)
 
 show(poTrap)
 BK.isinplace(poTrap)
@@ -43,10 +43,10 @@ catch
 end
 
 # guess for the periodic orbit
-orbitguess_f = reduce(vcat, [√(par_hopf.r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
+orbitguess_f = reduce(vcat, [√(getparams(poTrap).r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
 push!(orbitguess_f, 2pi)
 
-optn_po = NewtonPar()
+optn_po = NewtonPar(tol = 1e-9, verbose = true)
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 1)
 
 let
@@ -80,6 +80,16 @@ let
                 normC = norminf)
             BK.get_periodic_orbit(br_po, 1)
             @test _test_sorted(BK.eigenvals(br_po, 1))
+
+            for k in 1:length(br_po)-1
+                _eigvals = br_po[k].eigenvals
+                μ1_bk = minimum(real, _eigvals)
+                valid = minimum(abs, _eigvals) < 1e-9 # Floquet exponent not precise?
+                μ1 = -2*br_po[k].param*(br_po[k].period)
+                # @error "" k _eigvals μ1_bk μ1 eig
+                # we have large atol because the method is not that precise, ~1/M
+                @test isapprox(μ1_bk, μ1, atol = 5e-2) || (eig isa EigArnoldiMethod) || (eig isa EigArpack) || ~valid
+            end
         end
     end
 end
@@ -92,12 +102,19 @@ let poTrap = poTrap
     br_po = continuation(
                 poTrap, 
                 outpo_f.u,
-                PALC(),
+                PALC(bls =  BorderingBLS(solver = DefaultLS(), check_precision = false)),
                 (@set opts_po_cont.newton_options.linsolver = DefaultLS());
                 # verbosity = 2, plot = false,
                 # eigsolver = FloquetGEV(optn_po.eigsolver, length(poTrap), 2),
-                linear_algo = BorderingBLS(solver = DefaultLS(), check_precision = false),
                 normC = norminf)
+
+        for k in 1:length(br_po)-1
+            _eigvals = br_po[k].eigenvals
+            μ1_bk = minimum(real, _eigvals)
+            μ1 = -2*br_po[k].param*(br_po[k].period)
+            # we have large atol because the method is not that precise, ~1/M
+            @test μ1_bk ≈ μ1 atol = 5e-2
+        end
 
 
     outpo_f = @time newton(poTrap, orbitguess_f, optn_po);

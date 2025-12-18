@@ -115,6 +115,11 @@ _sol(0.1)
 # plot(br_pok2)
 
 # test of all matrix-based jacobians 
+# \dot z = (r + iν)z - (1+iβ)|z|^2 z, r>0
+# limit cycle :
+# r = r_0 = √r, \theta(t) = (ν - β r)t
+# exposant de Floquet radial
+# μ_1 = -2r
 let
     for jacPO in (BK.AutoDiffDense(), 
                     BK.FiniteDifferences(), 
@@ -126,6 +131,14 @@ let
             # verbosity = 0, plot = false,
             eigsolver = eig,
             normC = norminf)
+
+            # test the values of the Floquet exponents
+            for k in 1:length(br_po)-1
+                _eigvals = br_po[k].eigenvals
+                μ1_bk = minimum(real, _eigvals)
+                μ1 = -2*br_po[k].param*(br_po[k].period)
+                @test μ1_bk ≈ μ1 atol = 1e-5
+            end
         end
     end
 end
