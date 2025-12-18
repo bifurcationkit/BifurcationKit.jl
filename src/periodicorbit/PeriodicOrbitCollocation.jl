@@ -881,7 +881,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Function needed for automatic Branch switching from Hopf bifurcation point.
+Function needed for automatic branch switching from a Hopf bifurcation point.
 """
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
@@ -904,7 +904,7 @@ function re_make(coll::PeriodicOrbitOCollProblem,
                 cache = POCollCache(eltype(coll), Ntst, N, m)
                 )
 
-    ϕ0 = generate_solution(probPO, t -> orbit(2pi*t/period + pi), period)
+    ϕ0 = generate_solution(probPO, t -> orbit(2pi * t / period + pi), period)
     updatesection!(probPO, ϕ0, nothing)
 
     # append period at the end of the initial guess

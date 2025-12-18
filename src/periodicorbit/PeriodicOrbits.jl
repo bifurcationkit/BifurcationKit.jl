@@ -349,7 +349,6 @@ function continuation(prob::AbstractPeriodicOrbitProblem,
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
     return continuation(prob, orbitguess, alg, _contParams, _linear_algo; kwargs...)
 end
-
 ####################################################################################################
 """
 $(TYPEDSIGNATURES)
