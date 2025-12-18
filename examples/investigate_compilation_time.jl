@@ -3,7 +3,8 @@
 # issue: https://github.com/bifurcationkit/BifurcationKit.jl/issues/210
 #
 
-
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."))
 using BifurcationKit
 using Revise
 
