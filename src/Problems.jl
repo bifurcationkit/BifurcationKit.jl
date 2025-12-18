@@ -27,6 +27,7 @@ abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
 # Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
 abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
+# finite differences is a sub-case of Diff discretization
 abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 #####################################
 # Periodic orbit computations by shooting method
