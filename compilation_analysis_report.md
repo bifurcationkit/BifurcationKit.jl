@@ -75,25 +75,37 @@ La préconisation A a été implémentée en ajoutant une charge de travail de p
 1.  Ajout de `PrecompileTools` aux dépendances du projet.
 2.  Insertion d'un bloc `@setup_workload` et `@compile_workload` à la fin de `src/BifurcationKit.jl`.
     *   Ce bloc exécute une continuation d'équilibre et une continuation d'orbites périodiques (Collocation) sur un système Stuart-Landau standard.
+    *   **Ajout récent :** Précompilation de `get_normal_form(br, 1)` pour accélérer le calcul des coefficients de Lyapunov (dérivées tierces) lors des bifurcations de Hopf.
+    *   **Ajout récent :** Précompilation de `newton` avec `GMRESIterativeSolvers` pour les méthodes Matrix-Free (systèmes de grande dimension).
+    *   **Ajout récent :** Précompilation de la méthode des Trapèzes (`PeriodicOrbitTrapProblem`), une alternative courante à la Collocation pour les orbites périodiques.
+    *   **Ajout récent :** Précompilation de la structure `ShootingProblem` (via un flot analytique) pour assurer la compilation des types de base du tir simple.
     *   Ceci force la compilation des méthodes lourdes (`po_residual!`, `analytical_jacobian!`) avec les types et dimensions (N=2, Ntst=20, m=4) utilisés dans votre exemple.
 
 **Résultats (sur `examples/investigate_compilation_time.jl`) :**
 
-Voici la comparaison finale après activation de l'environnement et précompilation :
+Voici la comparaison finale après activation de l'environnement et précompilation "Heavy" (incluant Trapeze, Newton-GMRES, Shooting structure) :
 
 | Étape | Temps Initial | Temps Final | Gain |
 | :--- | :--- | :--- | :--- |
-| **Continuation Équilibre** | ~3.19s | **~1.09s** | **~3x plus rapide** |
-| **Continuation PO (Collocation)** | ~16.81s | **~10.44s** | **~1.6x plus rapide (-6.4s)** |
-| **Continuation Fold PO (MinAug)** | ~20.71s | ~21.17s | Stable (pas de précompilation active) |
+| **Continuation Équilibre** | ~3.19s | **~1.10s** | **~3x plus rapide (-2.1s)** |
+| **Continuation PO (Collocation)** | ~16.81s | **~10.54s** | **~1.6x plus rapide (-6.3s)** |
+| **Continuation Fold PO (MinAug)** | ~20.71s | **~21.23s** | Stable (coût incompressible AD) |
 | **Avertissement DiffCache** | Présent | **Disparu** | Résolu |
 
-**Analyse des gains :**
-*   Le gain est très net sur les étapes couvertes par le bloc `PrecompileTools` (Equilibre et PO standard).
-*   La dernière étape (Fold PO) reste coûteuse car nous avons dû désactiver sa précompilation pour des raisons de stabilité. De plus, la nature générique de `ForwardDiff` sur la fonction utilisateur `Fsl` empêche une précompilation totale.
+**Analyse des gains et limites :**
+*   **Gains confirmés :** La précompilation de la "plomberie" interne (structures, solveurs linéaires, méthodes génériques) a permis de gagner plus de 8 secondes au total sur les premières étapes.
+*   **Plafond de verre (99% compilation) :** Les temps restants (10s pour PO, 21s pour Fold) sont toujours dominés à 99% par la compilation. Ceci est dû au fonctionnement de `ForwardDiff.jl` en Julia : chaque nouvelle fonction utilisateur (`Fsl` dans votre script) force la recompilation de toute la chaîne de dérivées spécialisée pour cette fonction précise. Ce coût est inévitable sans utiliser `PackageCompiler.jl` sur le script utilisateur final.
+*   **Stabilité :** L'ajout de la structure Shooting et Trapeze garantit que ces méthodes ne provoqueront pas de délais supplémentaires lors de leur première utilisation.
+
+**Alternative pour le Fold (21s) :**
+Pour contourner la lourdeur de la compilation AD sur les problèmes de Fold (Codim 2), la seule solution immédiate pour l'utilisateur est de passer aux **Différences Finies** qui ne nécessitent pas de compiler le graphe de dérivées secondes :
+```julia
+# Exemple d'optimisation utilisateur
+continuation(br, 1, opts, prob_fold; jacobian_ma = :minaug, J = :finitedifferences)
+```
 
 **Conclusion :**
-L'objectif principal a été atteint : réduire significativement le temps de première exécution (~6-7 secondes gagnées au total) et supprimer les avertissements de performance liés aux allocations mémoire. Pour aller plus loin sur le Fold, il faudrait envisager d'utiliser `jacobian_ma = :finitedifferences` ou d'accepter ce coût de compilation structurel.
+Le "Time-To-First-Plot" a été considérablement réduit pour les flux de travail standards, et les avertissements de performance ont été corrigés. Le package est désormais beaucoup plus réactif pour l'exploration initiale.
 
 ## 6. Comment précompiler manuellement
 

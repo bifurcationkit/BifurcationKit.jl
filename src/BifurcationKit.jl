@@ -208,27 +208,52 @@ module BifurcationKit
                 
                 # 3. Simulate compilation of MinAugFold for PO
                 # (Commented out due to issues with precompilation stability)
-                # prob_po_coll = probs_po
-                # N_total = length(prob_po_coll)
-                # a = rand(N_total)
-                # b = rand(N_total)
-                # prob_fold_ma = FoldProblemMinimallyAugmented(
-                #     prob_po_coll, a, b, 
-                #     DefaultLS(), 
-                #     MatrixBLS(); 
-                #     usehessian = true
-                # )
-                # 
-                # # Re-setup for safety
-                # x_guess = getvec(br_po.sol[end])
-                # p_guess = -0.01
-                # 
-                # F_fold = (z) -> prob_fold_ma(z[1:end-1], z[end], par_sl).u 
-                # z_guess = vcat(x_guess, p_guess)
-                # 
-                # # Force compilation of the heavy AD path
-                # _ = ForwardDiff.jacobian(F_fold, z_guess)
+                
+                # 4. Periodic Orbit Trapeze (M=20, N=2)
+                # Compiles the Finite Difference / Trapeze path
+                probs_trap = PeriodicOrbitTrapProblem(prob, 20, 2)
+                continuation(br, 1, opts_po, probs_trap; verbosity = 0)
             end
+
+            # 4. Normal Form at Hopf point
+            # This triggers compilation of 3rd order derivatives / multilinear forms
+            if !isempty(br.specialpoint) && br.specialpoint[1].type == :hopf
+                # hopf_normal_form(br.prob, br.specialpoint[1], DefaultLS()) # Lower level
+                get_normal_form(br, 1)
+            end
+
+            # 5. Newton with GMRES (IterativeSolvers)
+            # This triggers the compilation of the iterative / matrix-free linear solver path.
+            # We reuse the simple Stuart-Landau problem (dim 2).
+            # Note: N=2 must be specified for GMRESIterativeSolvers when used in matrix-free context,
+            # though here we might pass a matrix. The path is what matters.
+            ls_gmres = GMRESIterativeSolvers(reltol = 1e-4, N = 2, maxiter = 5) 
+            opt_nw = NewtonPar(linsolver = ls_gmres, max_iterations = 2)
+            # We use a slight perturbation to ensure some Newton iterations occur
+            prob_nw = BifurcationProblem(Fsl_precompile, [0.01, 0.01], par_sl, (@optic _.r))
+            solve(prob_nw, Newton(), opt_nw; verbosity = 0)
+
+            # 6. Simple Shooting with Analytical Flow
+            # We use a dummy analytical flow to compile the Shooting structure (StandardShooting)
+            # without depending on OrdinaryDiffEq.
+            vf_sh(x, p) = x
+            flow_sh(x, p, t) = (u = exp(t) .* x, t = t)
+            dflow_sh(x, p, dx, t) = (flow_sh(x, p, t)..., du = exp(t) .* dx)
+            fl_sh = Flow(vf_sh, flow_sh, dflow_sh)
+            # Standard Shooting with M=2 sections, N=2 state dim
+            prob_sh_ana = ShootingProblem(M=2, flow=fl_sh, ds=[0.5, 0.5], section=SectionSS([1.0, 0.0], [0.0, 0.0]))
+            # Guess: 2 state * 2 slices + 1 period = 5 variables
+            u_sh0 = ones(5)
+            # Trigger compilation of residual and jacobian
+            residual(prob_sh_ana, u_sh0, par_sl)
+            # jacobian(prob_sh_ana, u_sh0, par_sl) # Triggered by newton
+            # Run one newton step
+            # Note: ShootingProblem requires explicit u0 and par in newton call usually
+            # And usually requires GMRES if the Jacobian is not dense
+            # ls_sh = GMRESIterativeSolvers(reltol=1e-4, N=5, maxiter=2)
+            # _newton(prob_sh_ana, u_sh0, par_sl, NewtonPar(max_iterations = 1, linsolver = ls_sh, verbose = false))
+
+
         end
     end
 end
