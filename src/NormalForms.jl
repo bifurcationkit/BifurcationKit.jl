@@ -1112,21 +1112,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     parbif = setparam(br, p)
     L = jacobian(prob, convert(𝒯eigvec, bifpt.x), parbif)
 
-    if ~detailed_type
-        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
-                ω,
-                parbif, lens,
-                zero(bifpt.x), zero(bifpt.x),
-                HopfNormalForm(a = missing, 
-                               b = missing,
-                               Ψ110 = missing,
-                               Ψ001 = missing,
-                               Ψ200 = missing
-                        ),
-                Symbol("?")
-            )
-    end
-
     # right eigenvector
     if ~haseigenvector(br)
         # we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -1139,6 +1124,21 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         ζ = _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
     end
     VI.scale!(ζ, 1 / scaleζ(ζ))
+
+    if ~detailed_type
+        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+                  ω,
+                  parbif, lens,
+                  ζ, zero(ζ),
+                  HopfNormalForm(a = missing, 
+                               b = missing,
+                               Ψ110 = missing,
+                               Ψ001 = missing,
+                               Ψ200 = missing
+                        ),
+                Symbol("?")
+    )
+    end
 
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(𝒯eigvec, bifpt.x), parbif) : adjoint(L)
@@ -1166,13 +1166,14 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                   ω,
                   parbif, lens,
                   ζ, ζ★,
-                  (
-                    a = zero(Complex{𝒯}), 
-                    b = zero(Complex{𝒯})
-                  ),
-                :SuperCritical
+                  HopfNormalForm(a = missing, 
+                               b = missing,
+                               Ψ110 = missing,
+                               Ψ001 = missing,
+                               Ψ200 = missing
+                        ),
+                Symbol("?")
     )
-
     return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 

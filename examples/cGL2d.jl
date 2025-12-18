@@ -167,12 +167,18 @@ plot!(hopf_from_zh)
 ind_hopf = 1
 # number of time slices
 M = 30
-r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 22*sqrt(0.1); phase = 0.25)
 
-orbitguess_f2 = reduce(hcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
+nf_hopf = BK.get_normal_form(br, ind_hopf; detailed = Val(false))
+pred = predictor(nf_hopf, 1; ampfactor = 22*sqrt(0.1))
+list_of_time_steps = [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
+orbitguess_f = vcat(reduce(vcat, list_of_time_steps), pred.period)
+r_hopf = nf_hopf.params.r
 
-poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = BK.FullMatrixFree())
+poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
+                    BK.residual(prob, orbitguess_a[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
+                    zeros(2n), 
+                    M, 
+                    2n; jacobian = BK.FullMatrixFree())
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
@@ -323,7 +329,7 @@ ls(Jpo, rand(ls.N))
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMFi = PeriodicOrbitTrapProblem(
             probInplace,
-            real.(vec_hopf), hopfpt.u,
+            poTrap.ϕ , poTrap.xπ,
             M, 2n, ls0; jacobian = BK.FullMatrixFree())
 
 # ca ne devrait pas allouer!!!

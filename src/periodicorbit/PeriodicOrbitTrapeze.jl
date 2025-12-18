@@ -261,39 +261,45 @@ potrap_scheme!(pb::AbstractPOFDProblem, dest, u1, u2, par, h, tmp, linear::Bool 
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 function residual!(pb::AbstractPOFDProblem, out, u, par)
-        M, N = size(pb)
-        T = getperiod(pb, u, nothing)
+    T = getperiod(pb, u, nothing)
+    M, N = size(pb)
 
-        uc = get_time_slices(pb, u)
-        outc = get_time_slices(pb, out)
+    uc = get_time_slices(pb, u)
+    outc = get_time_slices(pb, out)
 
-        # outc[:, M] plays the role of tmp until it is used just after the for-loop
-        @views residual!(pb.prob_vf, outc[:, M], uc[:, M-1], par)
+    po_residual_bare!(pb, outc, uc, par, T)
 
-        h = T * get_time_step(pb, 1)
-        # fastest is to do out[:, i] = x
-        @views potrap_scheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
+    # closure condition ensuring a periodic orbit
+    outc[:, M] .= @views uc[:, M] .- uc[:, 1]
 
-        for ii in 2:M-1
-            h = T * get_time_step(pb, ii)
-            # this function avoids computing F(uc[:, ii]) twice
-            @views potrap_scheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
-        end
+    # this is for CuArrays.jl to work in the mode allowscalar(false)
+    if on_gpu(pb)
+        return @views vcat(out[begin:end-1], LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)) # this is the phase condition
+    else
+        out[end] = @views LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)
+        return out
+    end
+end
 
-        # closure condition ensuring a periodic orbit
-        outc[:, M] .= @views uc[:, M] .- uc[:, 1]
+function po_residual_bare!(pb::AbstractPOFDProblem, outc, uc, par, T)
+    M, N = size(pb)
 
-        # this is for CuArrays.jl to work in the mode allowscalar(false)
-        if on_gpu(pb)
-            return @views vcat(out[begin:end-1], LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)) # this is the phase condition
-        else
-            out[end] = @views LA.dot(u[begin:end-1], pb.ϕ) - LA.dot(pb.xπ, pb.ϕ)
-            return out
-        end
+    # outc[:, M] plays the role of tmp until it is used just after the for-loop
+    @views residual!(pb.prob_vf, outc[:, M], uc[:, M-1], par)
+
+    h = T * get_time_step(pb, 1)
+    # fastest is to do out[:, i] = x
+    @views potrap_scheme!(pb, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
+
+    for ii in 2:M-1
+        h = T * get_time_step(pb, ii)
+        # this function avoids computing F(uc[:, ii]) twice
+        @views potrap_scheme!(pb, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
+    end
 end
 
 """
-Matrix free expression (jvp) of the Jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
+Matrix free expression (jvp) of the jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
 """
 function jvp!(pb::PeriodicOrbitTrapProblem, out, u, par, du)
     M, N = size(pb)

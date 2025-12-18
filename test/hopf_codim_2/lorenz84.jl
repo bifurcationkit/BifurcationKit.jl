@@ -45,10 +45,10 @@ br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)
 @test br.alg.tangent isa Bordered
 @test br.alg.bls isa MatrixBLS
 
-@test prod(br.specialpoint[2].interval .≈ (2.8598634135619982, 2.859897757930758))
+@test prod(br.specialpoint[2].interval .≈ (2.859863413561998, 2.859897757930758))
 @test prod(br.specialpoint[3].interval .≈ (2.467211879219629, 2.467246154619121))
 @test prod(br.specialpoint[4].interval .≈ (1.619657484413436, 1.6196654620692468))
-@test prod(br.specialpoint[5].interval .≈ (1.5466483726208073, 1.5466483727182652))
+@test prod(br.specialpoint[5].interval .≈ (1.546648372620807, 1.5466483727182652))
 ####################################################################################################
 # this part is for testing the spectrum
 @reset opts_br.newton_options.verbose = false
@@ -85,7 +85,6 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
 @test hp_codim2_test.specialpoint[3].param ≈ -0.02627430 atol = 1e-8
 
 @test hp_codim2_test.eig[1].eigenvecs != nothing
-
 ####################################################################################################
 """
 This function test if the eigenvalues are well computed during a branch of Hopf/Fold.
@@ -145,6 +144,7 @@ testEV(hp_codim2_test)
 ####################################################################################################
 @reset opts_br.newton_options.verbose = false
 sn_codim2 = nothing
+
 for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrixBased())
     # be careful here, Bordered predictor not good for Fold continuation
     sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
@@ -209,19 +209,19 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     @test bpbt_2.nf.b ≈ 0.6065145518280868
 
     @test bpbt_2.nfsupp.γ ≈ -1.2655376039398163 rtol = 1e-3
-    @test bpbt_2.nfsupp.c ≈ 12.35040633066114 rtol = 1e-3
-    @test bpbt_2.nfsupp.K10 ≈ [10.994145052508442, 5.261454635012957] rtol = 1e-3
+    @test bpbt_2.nfsupp.c ≈ 12.35040633066114   rtol = 1e-3
+    @test bpbt_2.nfsupp.K10 ≈ [10.994145052508442, 5.261454635012957]   rtol = 1e-3
     @test bpbt_2.nfsupp.K11 ≈ [1.4057052343089358, 0.24485405521091583] rtol = 1e-3
-    @test bpbt_2.nfsupp.K2 ≈ [2.445742562066124, 1.1704560432349538] rtol = 1e-3
+    @test bpbt_2.nfsupp.K2 ≈ [2.445742562066124, 1.1704560432349538]    rtol = 1e-3
     @test bpbt_2.nfsupp.d ≈ -0.23814643486558454 rtol = 1e-3
-    @test bpbt_2.nfsupp.e ≈ -2.8152510696740043 rtol = 1e-3
-    @test bpbt_2.nfsupp.a1 ≈ 0.588485870443459 rtol = 1e-3
-    @test bpbt_2.nfsupp.b1 ≈ 1.2381458099504048 rtol = 1e-3
+    @test bpbt_2.nfsupp.e ≈ -2.8152510696740043  rtol = 1e-3
+    @test bpbt_2.nfsupp.a1 ≈ 0.588485870443459   rtol = 1e-3
+    @test bpbt_2.nfsupp.b1 ≈ 1.2381458099504048  rtol = 1e-3
     @test bpbt_2.nfsupp.H0001 ≈ [1.2666466468447481, -0.11791034083511988, -0.26313225842609955, -0.5338271838915466] rtol = 1e-3
-    @test bpbt_2.nfsupp.H0010 ≈ [15.651509120793042, -1.1750214928055762, -3.2016608356146423, -6.424103770005164] rtol = 1e-3
-    @test bpbt_2.nfsupp.H0002 ≈ [-0.34426541029040103, 0.7403628764888541, 0.5020796040084594, 0.7211107457956355] rtol = 1e-3 rtol = 1e-3
-    @test bpbt_2.nfsupp.H1001 ≈ [0.8609019479520158, 0.3666091456682787, 0.09272126477464948, -1.1252591151814477] rtol = 1e-3
-    @test bpbt_2.nfsupp.H2000 ≈ [-1.1430891994241816, 0.5090981254844374, 0.4300904962638521, -0.4240003230561569] rtol = 1e-3
+    @test bpbt_2.nfsupp.H0010 ≈ [15.651509120793042, -1.1750214928055762, -3.2016608356146423, -6.424103770005164]    rtol = 1e-3
+    @test bpbt_2.nfsupp.H0002 ≈ [-0.34426541029040103, 0.7403628764888541, 0.5020796040084594, 0.7211107457956355]    rtol = 1e-3
+    @test bpbt_2.nfsupp.H1001 ≈ [0.8609019479520158, 0.3666091456682787, 0.09272126477464948, -1.1252591151814477]    rtol = 1e-3
+    @test bpbt_2.nfsupp.H2000 ≈ [-1.1430891994241816, 0.5090981254844374, 0.4300904962638521, -0.4240003230561569]    rtol = 1e-3
     # test branch switching from BT points
     hp_codim2_2 = continuation(sn_codim2, 1, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, p_max = 15.) ;
         normC = norminf,
@@ -306,13 +306,13 @@ get_normal_form(hp_codim2_1, 2)
 get_normal_form(hp_codim2_1, 2; nev = 4, verbose = true)
 
 nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
-@test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
+@test nf.nf.ω ≈ 0.6903636672622595   atol = 1e-5
 @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
-@test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im atol = 1e-3
-@test nf.nf.γ₁₀₁ ≈ 0.41675854806948004 - 0.3691568377673768im atol = 1e-3
+@test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im    atol = 1e-3
+@test nf.nf.γ₁₀₁ ≈ 0.41675854806948004 - 0.3691568377673768im  atol = 1e-3
 @test nf.nf.γ₁₁₀ ≈ 0.03210697158629905 + 0.34913987438180344im atol = 1e-3
-@test nf.nf.γ₂₀₁ ≈ 6.5060917177185535 - 1.276445931785017im atol = 1e-3
-@test nf.nf.γ₂₁₀ ≈ -2.005158175714135 - 1.8446801200912402im atol = 1e-3
+@test nf.nf.γ₂₀₁ ≈ 6.5060917177185535 - 1.276445931785017im    atol = 1e-3
+@test nf.nf.γ₂₁₀ ≈ -2.005158175714135 - 1.8446801200912402im   atol = 1e-3
 _pred = BK.predictor(nf, Val(:FoldPeriodicOrbitCont), 0.1)
 _pred.orbit(0.1)
 
@@ -323,7 +323,7 @@ _pred.ns2(0.1)
 
 # locate BT point with newton algorithm
 _bt = BK.bt_point(hp_codim2_1, 2)
-solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newton_options;verbose = true))
+solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newton_options; verbose = true))
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
 
@@ -375,8 +375,8 @@ BK.getlens(hp_from_hh)
 BK.getparams(hp_from_hh)
 ####################################################################################################
 # branching from Bautin to Fold of periodic orbits
-using OrdinaryDiffEq
-prob_ode = ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
+import OrdinaryDiffEq as ODE
+prob_ode = ODE.ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifurcation = 0, max_steps = 3, detect_event = 0, ds = 0.001)
 @reset opts_fold_po.newton_options.verbose = false
@@ -384,7 +384,7 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifu
 
 for probPO in (
                 PeriodicOrbitOCollProblem(20, 3), 
-                ShootingProblem(9, prob_ode, Rodas5(), parallel = true)
+                ShootingProblem(9, prob_ode, ODE.Rodas5(), parallel = true)
               )
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
             normC = norminf,
@@ -398,12 +398,12 @@ for probPO in (
 end 
 ####################################################################################################
 # branching HH to NS of periodic orbits
-prob_ode = ODEProblem(Lor, z0, (0, 1), hp_codim2_1.contparams, reltol = 1e-8, abstol = 1e-10)
+prob_ode = ODE.ODEProblem(Lor, z0, (0, 1), hp_codim2_1.contparams, reltol = 1e-8, abstol = 1e-10)
 opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurcation = 1, max_steps = 10, ds = -0.01, detect_event = 0)
 # @reset opts_ns_po.newton_options.verbose = true
 @reset opts_ns_po.newton_options.tol = 1e-12
 @reset opts_ns_po.newton_options.max_iterations = 10
-for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), ShootingProblem(5, prob_ode, Rodas5(), parallel = true, update_section_every_step = 1))
+for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), ShootingProblem(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
         probPO;
         usehessian = false,
