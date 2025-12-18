@@ -137,12 +137,15 @@ $(TYPEDSIGNATURES)
 [Internal] In case `save_mem = true`, we do not allocate the identity matrix. Indeed think about `n = 100_000`.
 """
 function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
-    gj  = DiffCache(zeros(𝒯, n, m))
-    gi  = DiffCache(zeros(𝒯, n, m))
-    ∂gj = DiffCache(zeros(𝒯, n, m))
-    uj  = DiffCache(zeros(𝒯, n, m+1))
-    vj  = DiffCache(zeros(𝒯, n, m+1))
-    tmp = DiffCache(zeros(𝒯, n))
+    # The chunk size must be adapted to the total number of variables because
+    # we differentiate with respect to all variables in the continuation / Newton
+    chunk_size = ForwardDiff.pickchunksize(n * (1 + m * Ntst))
+    gj  = DiffCache(zeros(𝒯, n, m), chunk_size)
+    gi  = DiffCache(zeros(𝒯, n, m), chunk_size)
+    ∂gj = DiffCache(zeros(𝒯, n, m), chunk_size)
+    uj  = DiffCache(zeros(𝒯, n, m+1), chunk_size)
+    vj  = DiffCache(zeros(𝒯, n, m+1), chunk_size)
+    tmp = DiffCache(zeros(𝒯, n), chunk_size)
     ∇phase = zeros(𝒯, n * (1 + m * Ntst))
     In = Array(LA.I(save_mem ? 1 : n))
     return POCollCache(gj, gi, ∂gj, uj, vj, tmp, ∇phase, In)
