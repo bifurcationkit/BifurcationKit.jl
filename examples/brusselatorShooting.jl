@@ -101,7 +101,8 @@ br = @time continuation(
     opts_br_eq, verbosity = 0,
     plot = true,
     normC = norminf)
-#################################################################################################### Continuation of Periodic Orbit
+###################################################################################################
+# Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
 l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
@@ -110,14 +111,14 @@ orbitguess_f2 = reduce(hcat, orbitguess2)
 orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
 ####################################################################################################
 # Standard Shooting
-using OrdinaryDiffEq, ForwardDiff
+import OrdinaryDiffEq as ODE
+# ForwardDiff
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
-prob = ODEProblem(Fbru!, u0, (0., 520.), par_hopf) # gives 0.68s
+prob = ODE.ODEProblem(Fbru!, u0, (0, 520), par_hopf) # gives 0.68s
 ####################################################################################################
 # this part allows to have AD derive the sparse jacobian for us with very few allocations
-import OrdinaryDiffEq as ODE
 import DifferentiationInterface as DI
 using SparseConnectivityTracer, SparseMatrixColorings
 
@@ -145,8 +146,8 @@ function JlgvfColorsAD(J, x, p)
 end
 
 
-vf = ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_colors(jac_prep_sparse_nonallocating))
-prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
+vf = ODE.ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_colors(jac_prep_sparse_nonallocating))
+prob = ODE.ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 #####
 # solve the Brusselator
 sol = @time ODE.solve(prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);

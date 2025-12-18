@@ -320,7 +320,6 @@ function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     println(io, "├─ time slices (Ntst) : ", Ntst)
     println(io, "├─ degree      (m)    : ", m)
     println(io, "├─ dimension   (N)    : ", coll.N)
-    println(io, "├─ inplace            : ", isinplace(coll))
     println(io, "├─ update section     : ", coll.update_section_every_step)
     println(io, "├─ jacobian           : ", coll.jacobian)
     println(io, "├─ mesh adaptation    : ", coll.meshadapt)
@@ -892,25 +891,24 @@ function re_make(coll::PeriodicOrbitOCollProblem,
                  orbit = identity,
                  k...)
     N = length(ζr)
-
     _, m, Ntst = size(coll)
-    n_unknows = length(coll)
+    n_unknows = N * (1 + m * Ntst) # careful, we need to do that here instead of length(coll)
 
     # update the problem
-    probPO = setproperties(coll; N, prob_vf, 
+    new_coll = setproperties(coll; N, prob_vf, 
                 ϕ = zeros(n_unknows), 
                 xπ = zeros(n_unknows), 
                 ∂ϕ = zeros(N, Ntst * m),
                 cache = POCollCache(eltype(coll), Ntst, N, m)
                 )
 
-    ϕ0 = generate_solution(probPO, t -> orbit(2pi * t / period + pi), period)
-    updatesection!(probPO, ϕ0, nothing)
+    ϕ0 = generate_solution(new_coll, t -> orbit(2pi * t / period + pi), period)
+    updatesection!(new_coll, ϕ0, nothing)
 
     # append period at the end of the initial guess
-    orbitguess = generate_solution(probPO, t -> orbit(2pi*t/period), period)
+    orbitguess = generate_solution(new_coll, t -> orbit(2pi*t/period), period)
 
-    return probPO, orbitguess
+    return new_coll, orbitguess
 end
 
 ##########################
@@ -1118,15 +1116,13 @@ end
     @debug "[collocation] update section"
     # update the reference point
     coll.xπ .= 0
-
     # update the "normals"
     coll.ϕ .= x[eachindex(coll.ϕ)]
-
     # update ∂ϕ
     ϕ = coll.ϕ
     L, ∂L = get_Ls(coll.mesh_cache)
     n, m, Ntst = size(coll)
-    ϕc = get_time_slices(coll.ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
+    ϕc = get_time_slices(ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
     pϕ = get_tmp(coll.cache.∂gj, ϕc) # zeros(𝒯, n, m)
     rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
     @inbounds for j in 1:Ntst
