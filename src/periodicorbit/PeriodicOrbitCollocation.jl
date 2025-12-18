@@ -191,19 +191,19 @@ Note that you can generate this guess from a function using `generate_solution` 
 - `residual!(pb, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractPODiffProblem
-    "`prob` a bifurcation problem"
+    "Bifurcation problem."
     prob_vf::Tprob = nothing
 
-    "used to set a section for the phase constraint equation"
+    "Used to set a section for the phase constraint equation."
     ϕ::vectype = nothing
 
-    "used in the section for the phase constraint equation"
+    "Used in the section for the phase constraint equation."
     xπ::vectype = nothing
 
-    "we store the derivative of ϕ, no need to recompute it each time."
+    "We store the derivative of ϕ, no need to recompute it each time."
     ∂ϕ::∂vectype = nothing
 
-    "dimension of the state space"
+    "Dimension of the state space."
     N::Int = 0
 
     # whether the problem is nonautonomous
@@ -211,26 +211,26 @@ Note that you can generate this guess from a function using `generate_solution` 
 
     massmatrix::Tmass = nothing
 
-    "updates the section every `update_section_every_step` step during continuation"
+    "Update the section every `update_section_every_step` step during continuation."
     update_section_every_step::UInt = 1
 
-    "describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()`."
+    "Describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()`."
     jacobian::Tjac = DenseAnalytical()
 
-    "cache for collocation. See docs of `MeshCollocationCache`"
+    "Cache for collocation. See docs of `MeshCollocationCache`."
     mesh_cache::MeshCollocationCache{𝒯} = nothing
 
     # cache for allocation free computations
     cache::POCollCache{𝒯} = nothing
 
     #################
-    "whether to use mesh adaptation"
+    "Whether to use mesh adaptation."
     meshadapt::Bool = false
 
-    # verbose mesh adaptation information
+    "Verbose mesh adaptation information."
     verbose_mesh_adapt::Bool = false
 
-    "parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
+    "Parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
 
     @assert jacobian in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one in $_pocoll_jacobian_types."
