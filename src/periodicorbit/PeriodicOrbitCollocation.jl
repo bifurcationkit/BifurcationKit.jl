@@ -522,7 +522,7 @@ function _POO_coll_scheme!(coll::PeriodicOrbitOCollProblem, dest, ∂u, u, par, 
 end
 
 # functional for collocation problem
-@views function functional_coll_bare!(pb::PeriodicOrbitOCollProblem,
+@views function po_residual_bare!(pb::PeriodicOrbitOCollProblem,
                                     out::AbstractMatrix, 
                                     u::AbstractMatrix{𝒯}, 
                                     period, 
@@ -562,13 +562,13 @@ end
     return phase / period
 end
 
-function functional_coll!(pb::PeriodicOrbitOCollProblem, 
+function po_residual!(pb::PeriodicOrbitOCollProblem, 
                                 out::AbstractMatrix, 
                                 u::AbstractMatrix, 
                                 period, 
                                 (L, ∂L), 
                                 pars)
-    phase = functional_coll_bare!(pb, out, u, period, (L, ∂L), pars)
+    phase = po_residual_bare!(pb, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
     @views @. out[:, end] = u[:, end] - u[:, 1]
     return phase
@@ -586,7 +586,7 @@ function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, p
     resultc = get_time_slices(prob, result)
     Ls = get_Ls(prob.mesh_cache)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt / T
-    result[end] = functional_coll!(prob, resultc, uc, T, Ls, pars)
+    result[end] = po_residual!(prob, resultc, uc, T, Ls, pars)
     return result
 end
 
@@ -881,7 +881,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Function needed for automatic Branch switching from Hopf bifurcation point.
+Function needed for automatic branch switching from a Hopf bifurcation point.
 """
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
@@ -904,7 +904,7 @@ function re_make(coll::PeriodicOrbitOCollProblem,
                 cache = POCollCache(eltype(coll), Ntst, N, m)
                 )
 
-    ϕ0 = generate_solution(probPO, t -> orbit(2pi*t/period + pi), period)
+    ϕ0 = generate_solution(probPO, t -> orbit(2pi * t / period + pi), period)
     updatesection!(probPO, ϕ0, nothing)
 
     # append period at the end of the initial guess

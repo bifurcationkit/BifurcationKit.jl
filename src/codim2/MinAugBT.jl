@@ -262,7 +262,7 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 # Optional arguments:
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
+- `jacobian_ma::Symbol = true` how the linear system (for newton) is solved. Can be (AutoDiff(), FiniteDifferences(), MinAug())
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call

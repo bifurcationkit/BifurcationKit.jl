@@ -116,7 +116,9 @@ _sol(0.1)
 
 # test of all matrix-based jacobians 
 let
-    for jacPO in (BK.AutoDiffDense(), BK.FiniteDifferences(), BK.AutoDiffDenseAnalytical())
+    for jacPO in (BK.AutoDiffDense(), 
+                    BK.FiniteDifferences(), 
+                    BK.AutoDiffDenseAnalytical())
         for eig in (FloquetQaD(optn.eigsolver), FloquetGEV(optn.eigsolver, 2*_pb.M, 2))
             println("*"^50)
             br_po = continuation((@set _pb.jacobian = jacPO), outpo.u, PALC(tangent = Bordered()),

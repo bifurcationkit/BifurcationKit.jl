@@ -157,7 +157,7 @@ end
     𝒯 = promote_type(VI.scalartype(u), VI.scalartype(x₁))
     result = 𝒯.(u)
     resultc = get_time_slices(coll, result)
-    functional_coll_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
+    po_residual_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
     resultc[:, end] .= x₁ .- uc[:, 1]
     return vcat(vec(resultc), Π.Σ(u[end-N:end-1], T))
 end
