@@ -234,6 +234,14 @@ begin
     linear_algo  = COPBLS(),
     );
 
+    # test the values of the Floquet exponents
+    for k in 1:length(br_po)-1
+        _eigvals = br_po[k].eigenvals
+        μ1_bk = minimum(real, _eigvals)
+        μ1 = -2*br_po[k].param*(br_po[k].period)
+        @test isapprox(μ1_bk, μ1, atol = 1e-5 )
+    end 
+
     newton(prob_col2, _ci, NewtonPar())
     newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
 end
@@ -331,12 +339,21 @@ let
                     eigsolver = BK.FloquetColl(),
                 )
                 issorted(br_po.eig[1].eigenvals, by = real)
-                
+
                 # we test that the 2 methods give the same floquet exponents
                 if eig isa DefaultEig
                     for i=1:length(br_po)-1
                         @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
                     end
+                end
+
+                for k in 1:length(br_po)-1
+                    _eigvals = br_po[k].eigenvals
+                    μ1_bk = minimum(real, _eigvals)
+                    valid = minimum(abs, _eigvals) < 1e-9 # Floquet exponent not precise?
+                    μ1 = -2*br_po[k].param*(br_po[k].period)
+                    # @error "" k _eigvals μ1_bk μ1 eig
+                    @test isapprox(μ1_bk, μ1, atol = 1e-5) || (eig isa EigArnoldiMethod) || (eig isa EigArpack) || ~valid
                 end
             end
             
