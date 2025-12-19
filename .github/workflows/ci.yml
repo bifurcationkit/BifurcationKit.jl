@@ -25,7 +25,7 @@ jobs:
           # - x64
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup julia
         uses: julia-actions/setup-julia@v2
@@ -39,7 +39,7 @@ jobs:
 
       - name: Cache Julia artifacts (self-hosted runners)
         if: contains(matrix.os, 'self-hosted')
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-artifacts
         with:
@@ -106,7 +106,7 @@ jobs:
         uses: julia-actions/julia-processcoverage@v1
 
       - name: Process coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
