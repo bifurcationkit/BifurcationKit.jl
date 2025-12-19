@@ -281,7 +281,7 @@ function residual!(pb::AbstractPOFDProblem, out, u, par)
     end
 end
 
-function po_residual_bare!(pb::AbstractPOFDProblem, outc, uc, par, T)
+function po_residual_bare!(pb::AbstractPOFDProblem, outc::AbstractMatrix, uc::AbstractMatrix, par, T)
     M, N = size(pb)
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop

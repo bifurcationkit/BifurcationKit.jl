@@ -64,6 +64,7 @@ module BifurcationKit
     include("BifurcationPoints.jl")
 
     include("bifdiagram/BranchSwitching.jl")
+    normal_form(args...; kwargs...) = get_normal_form(args...; kwargs...)
     include("NormalForms.jl")
     include("codim2/BifurcationPoints.jl")
     include("codim2/NormalForms.jl")
@@ -101,6 +102,9 @@ module BifurcationKit
     # wave problem
     include("wave/WaveProblem.jl")
     include("wave/EigSolver.jl")
+
+    # BVP problem
+    include("bvp/BVP.jl")
 
     # plotting
     include("plotting/Utils.jl")
@@ -155,7 +159,7 @@ module BifurcationKit
     export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolverMinAug
 
     # normal form
-    export get_normal_form, hopf_normal_form, predictor
+    export get_normal_form, hopf_normal_form, predictor, normal_form
 
     # automatic bifurcation diagram
     export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP
@@ -177,4 +181,7 @@ module BifurcationKit
 
     # waves
     export TWProblem
+
+    # BVP
+    @reexport using .BVP
 end

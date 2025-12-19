@@ -574,6 +574,11 @@ function po_residual!(pb::PeriodicOrbitOCollProblem,
     return phase
 end
 
+@views function po_residual_bare!(pb::PeriodicOrbitOCollProblem, out::AbstractMatrix, u::AbstractMatrix, pars, period)
+    L, ∂L = get_Ls(pb)
+    return po_residual_bare!(pb, out, u, period, (L, ∂L), pars; compute_phase = Val(false))
+end
+
 function residual(prob::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
     out = zero(u)
     residual!(prob, out, u, pars)
