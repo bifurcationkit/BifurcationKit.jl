@@ -1,0 +1,59 @@
+using Pkg
+Pkg.activate(".")
+
+using OptimalControl
+using Plots
+using OrdinaryDiffEq
+import BifurcationKit: BifurcationProblem, continuation, PALC, ContinuationPar
+
+# parameters
+t0 =  0
+x0 = -2
+tf =  1
+
+# model
+ocp = @def begin
+    λ ∈ R, variable
+    t ∈ [t0, tf], time
+    x ∈ R, state
+    u ∈ R, control
+    x(t0) == x0
+    x(tf)^2 - λ^2 == 0
+    ẋ(t) == u(t)
+    ∫( u(t)^2 ) → min
+end
+
+# maximising control
+u(x, p, λ) = p/2
+
+# Hamiltonian flow
+f = Flow(ocp, u);
+
+# state projection
+π((x, p)) = x
+
+# shooting function
+S(p0::Number, λ::Number) =  π( f(t0, x0, p0, tf, λ) )^2 - λ^2
+S(p0::AbstractVector, λ::AbstractVector) = [S(p0[1], λ[1])]
+
+# continuation: branch 1
+p0_init =  2
+λ_init  = -1
+λ_final =  1
+prob = BifurcationProblem(S, Float64[p0_init], Float64[λ_init], 1; 
+    record_from_solution = (x,p; k...) -> x[1])
+br = continuation(prob, PALC(), ContinuationPar(p_min = Float64(λ_init), p_max = Float64(λ_final)))
+plt_branch_1 = plot(br; dpi=200)
+
+savefig(plt_branch_1, "plot_branch_1.png")
+
+# continuation: branch 2
+p0_init =  6
+λ_init  = -1
+λ_final =  1
+prob = BifurcationProblem(S, Float64[p0_init], Float64[λ_init], 1; 
+    record_from_solution = (x,p; k...) -> x[1])
+br = continuation(prob, PALC(), ContinuationPar(p_min = Float64(λ_init), p_max = Float64(λ_final)))
+plt_branch_2 = plot(br; dpi=200)
+
+savefig(plt_branch_2, "plot_branch_2.png")
