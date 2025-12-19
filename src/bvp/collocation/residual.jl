@@ -15,14 +15,13 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     model = bvp.model
     disc = bvp.discretizer 
     po_coll = bvp.cache.po_coll
-    n = state_dimension(model)
+    nf = state_dimension(model)
     Ntst, m = disc.Ntst, disc.m
     N_total = 1 + Ntst * m
     
     # Extract solution
-    Xc = reshape(@view(X[1:n*N_total]), n, N_total)
-    T = X[end]
-    
+    Xc = reshape(@view(X[1:nf*N_total]), nf, N_total)
+        
     # Determine result type (promote X and p)
     T_res = eltype(X)
     if p isa NamedTuple
@@ -36,11 +35,11 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     # Get output buffer from cache
     # Robust check: only use cache for Float64 to avoid chunk mismatch in Dual
     out = similar(X)
-    outc = reshape(@view(out[1:n*N_total]), n, N_total)
+    outc = reshape(@view(out[1:nf*N_total]), nf, N_total)
     
     # Core residual computation from BifurcationKit
     # This writes to outc[:, 1:Ntst*m]
-    po_residual_bare!(po_coll, outc, Xc, p, T)
+    po_residual_bare!(po_coll, outc, Xc, p, 1)
     
     # Boundary condition: g(u(0), u(T), p) = 0
     u0 = @view Xc[:, 1]
@@ -50,10 +49,11 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     
     # Phase condition
     if has_phase_constraint(model)
-        out[end] = evaluate_phase(model, Xc[:, 1], p, T)
+        # @assert false
+        # out[end] = evaluate_phase(model, Xc[:, 1], p, T)
     else
         # Default: user set T-1 in example or we could use integral phase
-        out[end] = T - 1.0 # Standard for Bratu example
+        # out[end] = T - 1.0 # Standard for Bratu example
     end
 
     return out
