@@ -1,6 +1,3 @@
-using Pkg
-Pkg.activate(".")
-
 using OptimalControl
 using Plots
 using OrdinaryDiffEq
@@ -27,7 +24,7 @@ end
 u(x, p, λ) = p/2
 
 # Hamiltonian flow
-f = Flow(ocp, u);
+f = Flow(ocp, u)
 
 # state projection
 π((x, p)) = x
@@ -43,9 +40,7 @@ p0_init =  2
 prob = BifurcationProblem(S, Float64[p0_init], Float64[λ_init], 1; 
     record_from_solution = (x,p; k...) -> x[1])
 br = continuation(prob, PALC(), ContinuationPar(p_min = Float64(λ_init), p_max = Float64(λ_final)))
-plt_branch_1 = plot(br; dpi=200)
-
-savefig(plt_branch_1, "plot_branch_1.png")
+plt = plot(br; dpi=200)
 
 # continuation: branch 2
 p0_init =  6
@@ -54,6 +49,6 @@ p0_init =  6
 prob = BifurcationProblem(S, Float64[p0_init], Float64[λ_init], 1; 
     record_from_solution = (x,p; k...) -> x[1])
 br = continuation(prob, PALC(), ContinuationPar(p_min = Float64(λ_init), p_max = Float64(λ_final)))
-plt_branch_2 = plot(br; dpi=200)
+plot!(plt, br; dpi=200)
 
-savefig(plt_branch_2, "plot_branch_2.png")
+savefig(plt, "ex1_plot.png")
