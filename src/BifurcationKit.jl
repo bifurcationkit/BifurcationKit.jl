@@ -9,6 +9,8 @@ module BifurcationKit
     using DocStringExtensions
     import DataStructures # used for Polynomial predictor
     using ForwardDiff
+    import DifferentiationInterface
+    const DI = DifferentiationInterface
     import Random: randn!
     import LinearAlgebra as LA
 

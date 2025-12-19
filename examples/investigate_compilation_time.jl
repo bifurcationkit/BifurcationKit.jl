@@ -29,16 +29,16 @@ println("L$(@__LINE__() + 1) continuation ")
 br = @time continuation(prob, PALC(), opts)
 
 # branch of periodic orbits
-println("L$(@__LINE__() + 1) continuation ")
+println("L$(@__LINE__() + 1) continuation PO")
 br_po = @time continuation(br, 1, opts,
                            PeriodicOrbitOCollProblem(20, 4)
                            )
 
 # computation of folds of periodic orbits
-println("L$(@__LINE__() + 1) ContinuationPar ")
+println("L$(@__LINE__() + 1) ContinuationPar PO")
 opts_pocoll_fold = @time ContinuationPar(br_po.contparams, max_steps = 10, p_max=1.2)
 
-println("L$(@__LINE__() + 1) continuation ")
+println("L$(@__LINE__() + 1) continuation Fold PO")
 fold_po_coll = @time continuation(deepcopy(br_po), 1, (@optic _.c5), opts_pocoll_fold;
                                   detect_codim2_bifurcation = 0,
                                   jacobian_ma = BifurcationKit.MinAug(),

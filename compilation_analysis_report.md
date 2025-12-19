@@ -116,3 +116,19 @@ julia --project=. -e 'using Pkg; Pkg.precompile()'
 ```
 
 Ceci est particulièrement utile après une modification du code source de la librairie pour régénérer les caches.
+
+## 7. Analyse de l'instabilité de type (Script `analyse_unsafe_typing.jl`)
+
+Le script `examples/analyse_unsafe_typing.jl` visait à mettre en évidence des instabilités de type (retour `Any`) dans le calcul automatique de la Jacobienne avec `ForwardDiff`.
+
+**Observations :**
+*   L'appel à `BifurcationKit.jacobian(prob, ...)` retourne `Any` au lieu d'une matrice typée (`Matrix{Float64}`).
+*   Ceci est dû à la difficulté pour `ForwardDiff` d'inférer la taille de sortie des tableaux créés dynamiquement dans la fonction utilisateur (e.g. `return [f1, f2]`), ce qui force le compilateur à être conservateur.
+
+**Investigation de `DifferentiationInterface.jl` :**
+Nous avons investigué l'utilisation de `DifferentiationInterface.jl` comme suggéré.
+*   **Résultat :** Le remplacement direct de `ForwardDiff.jacobian` par `DifferentiationInterface.jacobian(..., AutoForwardDiff())` **ne résout pas** l'instabilité de type (le retour reste `Any`). L'interface délègue toujours le travail à `ForwardDiff` qui rencontre les mêmes limitations d'inférence.
+*   **Action :** Nous avons tout de même intégré `DifferentiationInterface` dans `src/Problems.jl`. Bien que cela ne corrige pas l'instabilité immédiate, cela modernise la gestion de l'AD et permettra à l'avenir de tester facilement d'autres backends (comme `Enzyme.jl` ou `FastDifferentiation.jl`) qui pourraient offrir une meilleure stabilité ou performance sans changer le code de `BifurcationKit`.
+
+**Conclusion :**
+L'instabilité de type est pour l'instant inhérente à l'usage de `ForwardDiff` avec des fonctions allouant des vecteurs dynamiques. L'intégration de `DifferentiationInterface` pose les bases pour contourner ce problème via d'autres backends futurs.

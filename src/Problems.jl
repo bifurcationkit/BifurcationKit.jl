@@ -124,7 +124,7 @@ end
 jacobian(pb::BifFunction, x, p) = pb.J(x, p)
 
 function jacobian(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Nothing}, x, p) where {Tf, TFinp, Tdf, Tdfad}
-    ForwardDiff.jacobian(z -> pb.F(z, p), x)
+    DI.jacobian(z -> pb.F(z, p), DI.AutoForwardDiff(), x)
 end
 #####
 jacobian!(pb::BifFunction, J, x, p) = pb.J!(J, x, p)
