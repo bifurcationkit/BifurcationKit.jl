@@ -914,7 +914,6 @@ end
 ##########################
 # problem wrappers
 residual(prob::WrapPOColl, x, p) = residual(prob.prob, x, p)
-jacobian(prob::WrapPOColl, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
 
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
 @inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
@@ -955,21 +954,22 @@ function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{DenseAnalyticalInpla
     analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
     floquet_wrap.x .= x
     floquet_wrap.par = p
-    return floquet_wrap
+    return _Jcoll_matrix
 end
 
 function jacobian(coll::PeriodicOrbitOCollProblem, ::DenseAnalytical, x, p)
-    return FloquetWrapper(coll, analytical_jacobian(coll, x, p), x, p)
+    return analytical_jacobian(coll, x, p)
 end
 
 function jacobian(coll::PeriodicOrbitOCollProblem, ::FullSparse, x, p)
-    return FloquetWrapper(coll, analytical_jacobian_sparse(coll, x, p), x, p)
+    return analytical_jacobian_sparse(coll, x, p)
 end
 
 function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{FullSparseInplace, Tj, Tind}, x, p) where {Tj, Tind}
     _J = J[2]
     indx = J[3]
-    return FloquetWrapper(coll, jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx), x, p)
+    jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx)
+    return _J
 end
 ####################################################################################################
 const DocStringJacobianPOColl = """
@@ -990,12 +990,11 @@ function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
     end
 
     prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
-    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
 
     if isnothing(defOp)
-        return solve(prob, Newton(), new_options; kwargs...)
+        return solve(prob, Newton(), options; kwargs...)
     else
-        return solve(prob, defOp, new_options; kwargs...)
+        return solve(prob, defOp, options; kwargs...)
     end
 end
 
@@ -1064,7 +1063,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
         cache = COPCACHE(coll, Val(1))
         linear_algo = COPBLS(;
                         cache,
-                        solver = FloquetWrapperLS(nothing),
+                        solver = nothing,
                         J = similar(_Jcoll, Nbls, Nbls)
                         )
         jacPO = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll); 
@@ -1079,13 +1078,13 @@ function continuation(coll::PeriodicOrbitOCollProblem,
             @reset eigsolver.cache = COPCACHE(coll, Val(0))
         end
     else
-        linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
+        # linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
         jacPO = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll); δ)
     end
-    contParams = @set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver)
+    contParams = _contParams
 
     # we have to change the Bordered linear solver to cope with our type FloquetWrapper
-    alg = update(alg, contParams, linear_algo)
+    # alg = update(alg, contParams, linear_algo)
 
     if compute_eigenelements(contParams)
         contParams = @set contParams.newton_options.eigsolver = eigsolver
@@ -1104,7 +1103,8 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                       contParams;
                       kwargs...,
                       kind = PeriodicOrbitCont(),
-                      finalise_solution = _finsol
+                      finalise_solution = _finsol,
+                      linear_algo
                       )
     return br
 end

@@ -132,7 +132,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     σxv2i = @. -(u1i - u2) / ϵ2
     σₓ = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
-    Jhopf = hcat(_get_matrix(J_at_xp), dₚF, VI.zerovector(dₚF))
+    Jhopf = hcat(J_at_xp, dₚF, VI.zerovector(dₚF))
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
 end

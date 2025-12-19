@@ -276,7 +276,7 @@ function _get_spectral_basis_iooss_bp(pbwrap::WrapPOColl,
     end
 
     jac = jacobian(pbwrap, bp0.x0, pars)
-    J = copy(_get_matrix(jac))
+    J = copy((jac))
     nj = size(J, 1)
     J[end, begin:end-1] .= Fu₀
     J[:, end] .= _rand(nj)
@@ -620,7 +620,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     #########
     # compute v1
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
-    J = copy(_get_matrix(jac)) # we put copy to not alias FloquetWrapper.jacpb
+    J = copy(jac) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
     J[:, end] .= _rand(nj)
@@ -727,7 +727,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                             # _plot(vcat(vec(rhsₛ),1))
     # we could perhaps save the re-computation of J here and use the previous J
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
-    J = copy(_get_matrix(jac))
+    J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders
@@ -776,7 +776,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     jac = jacobian(pbwrap, _getsolution(pd.x0), par)
-    J = copy(_get_matrix(jac))
+    J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders
@@ -863,7 +863,7 @@ function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
     # we get the floquet eigenvectors for μ = -1
     jac = jacobian(pbwrap, pd0.x0, pars)
     # remove borders
-    J = copy(_get_matrix(jac))
+    J = copy((jac))
     nj = size(J, 1)
     J[end, :] .= rand(nj)
     J[:, end] .= rand(nj)

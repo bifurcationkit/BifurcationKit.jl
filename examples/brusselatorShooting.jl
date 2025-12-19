@@ -105,10 +105,10 @@ br = @time continuation(
 # Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
-#
-orbitguess_f2 = reduce(hcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
+nf_hopf = BK.get_normal_form(br, ind_hopf; detailed = Val(false))
+pred = predictor(nf_hopf, 1; ampfactor = 22*0.075)
+list_of_time_steps = reduce(hcat, [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]])
+orbitguess_f = vcat(vec(list_of_time_steps), pred.period)
 ####################################################################################################
 # Standard Shooting
 import OrdinaryDiffEq as ODE
@@ -153,10 +153,10 @@ prob = ODE.ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 sol = @time ODE.solve(prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
 ####################################################################################################
 M = 10
-dM = 5
-orbitsection = Array(orbitguess_f2[:, 1:dM:M])
+dM = 3
+orbitsection = Array(list_of_time_steps[:, 1:dM:M])
 
-initpo = vcat(vec(orbitsection), 3.0)
+initpo = vcat(vec(orbitsection), 3.1)
 
 sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
 
@@ -164,7 +164,7 @@ BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 probSh = ShootingProblem(prob,
     ODE.Rodas4P(),
-    [orbitguess_f2[:,ii] for ii=1:dM:M];
+    [list_of_time_steps[:,ii] for ii=1:dM:M];
     abstol = 1e-11, reltol = 1e-9,
     parallel = true, #pb with LoopVectorization
     lens = (@optic _.l),

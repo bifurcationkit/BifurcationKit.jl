@@ -117,63 +117,6 @@ end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 ####################################################################################################
-"""
-$(TYPEDEF)
-
-Structure to interface the jacobian of a periodic orbit functional with the Floquet computation methods. If we use the same code as for `newton` (see below) but in `continuation`, it is difficult to tell the eigensolver that it should use the monodromy matrix instead of the jacobian.
-
-## Methods
-- `_get_matrix(::FloquetWrapper)`
-- `apply(shjac::FloquetWrapper, dx)`
-
-## Fields
-$(TYPEDFIELDS)
-"""
-mutable struct FloquetWrapper{Tpb, Tjacpb, Torbitguess, Tp} # REMOVE BY DISPATCH?
-    "Periodic orbit functional."
-    pb::Tpb
-    "Jacobian (MF, AbstractArray, etc)."
-    jacpb::Tjacpb
-    "Current orbit."
-    x::Torbitguess
-    "Current parameters."
-    par::Tp
-end
-FloquetWrapper(pb, x, par) = FloquetWrapper(pb, dx -> jvp(pb, x, par, dx), x, par)
-_get_matrix(pb::AbstractMatrix) = pb
-_get_matrix(pb::FloquetWrapper) = pb.jacpb
-
-# jacobian evaluation
-(shjac::FloquetWrapper)(dx) = apply(shjac.jacpb, dx)
-
-# this is to use with BorderingBLS with check_precision = true
-apply(shjac::FloquetWrapper, dx) = apply(shjac.jacpb, dx)
-
-# specific linear solver to dispatch
-"""
-$(TYPEDEF)
-
-Structure to interface the linear solver with the type `FloquetWrapper`.
-
-## Methods
-- `LinearAlgebra.hcat(::FloquetWrapper, dR)`
-
-## Fields
-$(TYPEDFIELDS)
-"""
-struct FloquetWrapperLS{T} <: AbstractLinearSolver
-    "Linear solver."
-    solver::T # the use of field `solver` is good for BLS
-end
-# this constructor prevents from having FloquetWrapperLS(FloquetWrapperLS(ls))
-FloquetWrapperLS(ls::FloquetWrapperLS) = ls
-(ls::FloquetWrapperLS)(J, rhs; kwargs...) = ls.solver(J, rhs; kwargs...)
-(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs; kwargs...) = ls.solver(J.jacpb, rhs; kwargs...)
-(ls::FloquetWrapperLS)(J::FloquetWrapper, rhs1, rhs2) = ls.solver(J.jacpb, rhs1, rhs2)
-
-# this is to use of MatrixBLS
-LinearAlgebra.hcat(shjac::FloquetWrapper, dR) = hcat(shjac.jacpb, dR)
-####################################################################################################
 const DocStringJacobianPOSh = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `[AutoDiffMF(), MatrixFree(), AutodiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()]`. This is used to select a way of inverting the jacobian dG
     - For `MatrixFree()`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
@@ -186,10 +129,10 @@ const DocStringJacobianPOSh = """
 ##########################
 @inline is_symmetric(prob::WrapPOSh) = false
 residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
-jacobian(prob::WrapPOSh, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
+jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
 
-_generate_jacobian(probPO::AbstractShootingProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree}, o, pars; k...) = J
-_generate_jacobian(probPO::AbstractShootingProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, FullLU, FullMatrixFree}, o, pars; k...) = J
+_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
 
 function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
     _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
@@ -197,30 +140,30 @@ function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnal
 end
 
 function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffDense, x, p)
-    return FloquetWrapper(probPO, ForwardDiff.jacobian(z -> residual(probPO, z, p), x), x, p)
+    ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
 end
 
-function jacobian(probPO::AbstractShootingProblem, ::FiniteDifferences, x, p)
-    return FloquetWrapper(probPO, finite_differences(z -> residual(probPO, z, p), x), x, p)
+function jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferences, x, p)
+    return finite_differences(z -> residual(probPO, z, p), x)
 end
 
 function jacobian(probPO::AbstractShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
     probPO(Val(:JacobianMatrixInplace), J[2], x, p)
-    return FloquetWrapper(probPO, J[2], x, p)
+    return J[2]
 end
 
-function jacobian(probPO::AbstractShootingProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
+function jacobian(probPO::AbstractPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
     δ = J[2]
-    return FloquetWrapper(probPO, dx -> (residual(probPO, x .+ δ .* dx, p) .-
-                                         residual(probPO, x .- δ .* dx, p)) ./ (2δ), x, p)
+    return dx -> (residual(probPO, x .+ δ .* dx, p) .- 
+                  residual(probPO, x .- δ .* dx, p)) ./ (2δ)
 end
 
-function jacobian(probPO::AbstractShootingProblem, ::AutoDiffMF, x, p)
-    return FloquetWrapper(probPO, (dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)), x, p)
+function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffMF, x, p)
+    return dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)
 end
 
-function jacobian(probPO::AbstractShootingProblem, ::MatrixFree, x, p)
-    return FloquetWrapper(probPO, x, p)
+function jacobian(probPO::AbstractPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p)
+    return dx -> jvp(probPO, x, p, dx)
 end
 
 """
@@ -249,8 +192,7 @@ function newton(prob::AbstractShootingProblem,
                 kwargs...)
     jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
-    return solve(probw, Newton(), new_options; kwargs...)
+    return solve(probw, Newton(), options; kwargs...)
 end
 
 """
@@ -277,8 +219,7 @@ function newton(prob::AbstractShootingProblem,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob))
     probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
-    new_options = @set options.linsolver = FloquetWrapperLS(options.linsolver)
-    return solve(probw, defOp, new_options; kwargs...)
+    return solve(probw, defOp, options; kwargs...)
 end
 
 ####################################################################################################
@@ -306,7 +247,7 @@ function continuation(probPO::AbstractShootingProblem,
                         record_from_solution = nothing,
                         plot_solution = nothing,
                         kwargs...)
-    if isnothing(getlens(probPO)) 
+    if isnothing(getlens(probPO))
         error("You need to provide a lens for your periodic orbit problem.")
     end
     jacobianPO = probPO.jacobian
@@ -323,17 +264,13 @@ function continuation(probPO::AbstractShootingProblem,
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
     _plotsol   = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
-    linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
-    alg = update(alg, contParams, linear_algo)
-
     probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
-    options = contParams.newton_options
 
     br = continuation(
         probwp, alg,
-        (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
+        contParams;
         kwargs...,
+        linear_algo,
         kind = PeriodicOrbitCont(),
         finalise_solution = _finsol)
     return br

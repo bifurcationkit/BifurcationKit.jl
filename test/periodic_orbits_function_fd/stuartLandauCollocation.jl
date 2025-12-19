@@ -249,10 +249,10 @@ end
 ## test of the computation of the Floquet exponents
 begin
     Jw = @time (BK.jacobian(br_po.prob, br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
-    J = BK._get_matrix(Jw) |> copy
+    J = (Jw) |> copy
     @test BK._eig_floquet_coll((J),2,4,50,2)[1] ≈ BK._eig_floquet_coll(sparse(J),2,4,50,2)[1] atol=1e-10
     @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ BK._eig_floquet_coll((J),2,4,50,2)[1] atol=1e-10
-    @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ FloquetGEV(DefaultEig(),size(J,1)-1,2)((Jw),2)[1]
+    @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(br_po.prob.prob, Val(0)))[1] ≈ FloquetGEV(DefaultEig(),size(J,1)-1,2)(br_po.prob.prob,Jw,2)[1]
 end
 ####################################################################################################
 # test analytical jacobian
@@ -322,6 +322,7 @@ let
         _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
         for lspo in (BK.MatrixBLS(), BK.COPBLS())
             for eig in (EigArnoldiMethod(;sigma=0.1), EigArpack(0.1), DefaultEig())
+                # @error "" jacPO use_nf typeof(lspo) eig
                 br_po_gev = continuation(br, 1, _cont_po,
                     PeriodicOrbitOCollProblem(20, 5; jacobian = jacPO);
                     δp = 0.1,
