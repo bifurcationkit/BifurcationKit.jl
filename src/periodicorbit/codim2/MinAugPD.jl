@@ -487,7 +487,5 @@ function compute_eigenvalues(eig::FoldEig, iter::ContIterable{PDPeriodicOrbitCon
     par = getparams(probma)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
-
-    Jma = jacobian(getprob(iter), u0, par)
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

@@ -1,8 +1,10 @@
 function compute_eigenvalues(eig::FoldEig, iter::ContIterable{FoldPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
     Jma = jacobian(getprob(iter), u0, par)
     # il ne faut pas mettre a jour les deux params?
-    x = getvec(Jma.x)
-    newpar = set(Jma.params, getlens(Jma.prob), getp(Jma.x))
+    x = getvec(u0)
+    prob = getprob(iter)
+    lens1, lens2 = get_lenses(getprob(iter)) # IL FAUT METTRE A JOUR LES DEUX
+    newpar = set(getparams(prob), lens1, getp(u0))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end
 ####################################################################################################
@@ -32,7 +34,7 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, c
         x = getvec(z.u, 𝐏𝐛)
         # we get the parameters at the bifurcation point
         lenses = get_lenses(wrap_ma)
-        p1, = getp(z.u, 𝐏𝐛)   # first parameter, ca bug pour Folds si p1,_ = getp(...)
+        p1, = getp(z.u, 𝐏𝐛)   # first parameter, TODO it errors for Folds if p1,_ = getp(...)
         p2 = z.p              # second parameter
         pars = _set(getparams(prob_sh), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"

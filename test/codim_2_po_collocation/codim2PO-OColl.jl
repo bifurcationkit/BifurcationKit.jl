@@ -67,39 +67,45 @@ get_normal_form(brpo_pd, 1, prm = Val(false))
 # codim 2 Fold
 opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
 @reset opts_pocoll_fold.newton_options.tol = 1e-12
-fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_pocoll_fold;
-        verbosity = 0, plot = false,
-        detect_codim2_bifurcation = 0,
-        start_with_eigen = false,
-        bothside = true,
-        jacobian_ma = BK.MinAug(),
-        bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
-        )
-@test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
+
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false)
+    fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_pocoll_fold;
+            verbosity = 0, plot = false,
+            detect_codim2_bifurcation = 1,
+            start_with_eigen = false,
+            usehessian,
+            bothside = true,
+            jacobian_ma = jma,
+            bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
+            )
+    @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
+end
 
 # codim 2 PD
 opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 20, p_min = -1., dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-12
 
-pd_po_colls = [ continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
+    pd_po_coll = continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
-                    detect_codim2_bifurcation = jma == BK.MinAug() ? 1 : 0,
+                    detect_codim2_bifurcation = 1,
                     start_with_eigen = false,
                     usehessian = false,
                     jacobian_ma = jma,
                     normC = norminf,
                     callback_newton = BK.cbMaxNorm(10),
                     bothside = true,
-                    ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
-@test all(x -> x.kind isa BK.PDPeriodicOrbitCont, pd_po_colls)
-get_normal_form(pd_po_colls[1], 2)
+                    )
+    @test all(minimum(abs.(Complex(0,pi) .- x.eigenvals)) < 1e-3 for x in pd_po_coll.eig)
+    @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
+    get_normal_form(pd_po_coll, 2)
+end
 ################################################################################
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
-
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
@@ -114,9 +120,11 @@ get_normal_form(brpo_ns, 1; prm = Val(false))
 
 opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
-ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
+    opts_pocoll_ns2 = @set opts_pocoll_ns.detect_bifurcation = (jma isa BK.MinAug ? 2 : 0)
+    ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns2;
             verbosity = 0, plot = false,
-            detect_codim2_bifurcation = 1,
+            detect_codim2_bifurcation = jma isa BK.MinAug ? 1 : 0,
             update_minaug_every_step = 1,
             start_with_eigen = false,
             usehessian = false,
@@ -125,9 +133,16 @@ ns_po_colls = [continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
             normC = norminf,
             callback_newton = BK.cbMaxNorm(10),
             bothside = true,
-            ) for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )]
-@test all(x -> x.kind isa BK.NSPeriodicOrbitCont, ns_po_colls)
-get_normal_form(ns_po_colls[1], 2)
+            ) 
+    @test ns_po_coll.kind isa BK.NSPeriodicOrbitCont
+    if jma isa BK.MinAug
+        get_normal_form(ns_po_coll, 2)
+        for step in eachindex(ns_po_coll.branch)
+            ns_po_coll[step].ωₙₛ
+            @test minimum(abs.(Complex(0,ns_po_coll[step].ωₙₛ) .- ns_po_coll.eig[step].eigenvals)) < 1e-5
+        end
+    end
+end
 ################################################################################
 # test of the implementation of the jacobian for the PD case
 using ForwardDiff
