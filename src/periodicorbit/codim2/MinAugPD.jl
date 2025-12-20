@@ -477,3 +477,12 @@ function test_for_gpd_cp(iter, state)
 
     return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
 end
+
+function compute_eigenvalues(eig::FoldEig, iter::ContIterable{PDPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+    Jma = jacobian(getprob(iter), u0, par)
+    # il ne faut pas mettre a jour les deux params?
+    x = getvec(u0)
+    @error "" getlens(Jma.prob) getlens(iter)
+    newpar = set(Jma.params, getlens(Jma.prob), getp(u0))
+    compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
+end

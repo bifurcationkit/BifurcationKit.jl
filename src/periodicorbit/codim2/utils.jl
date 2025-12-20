@@ -1,3 +1,12 @@
+function compute_eigenvalues(eig::FoldEig, iter::ContIterable{FoldPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+    Jma = jacobian(getprob(iter), u0, par)
+    # il ne faut pas mettre a jour les deux params?
+    x = getvec(u0)
+    prob = getprob(iter)
+    newpar = set(getparams(prob), getlens(prob), getp(u0))
+    compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
+end
+####################################################################################################
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO::Union{PDMAProblem, NSMAProblem, FoldMAProblem}, pars, lens; kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(getvec(x, probPO.prob), (prob = probPO, p = p); k...)

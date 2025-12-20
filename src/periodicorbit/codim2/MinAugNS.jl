@@ -471,8 +471,7 @@ end
 
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
     Jma = jacobian(getprob(iter), u0, par)
-    n = min(nev, length(Jma.x.u))
-    x = Jma.x.u     # hopf point
+    x = Jma.x.u     # ns point
     p1, ω = Jma.x.p # first parameter
     newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
