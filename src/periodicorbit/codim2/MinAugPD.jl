@@ -201,6 +201,7 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
+get_wrap_po(pb::PDMAProblem) = get_wrap_po(pb.prob)
 @inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)
 @inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
 @inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)

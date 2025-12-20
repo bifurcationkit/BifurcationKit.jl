@@ -147,6 +147,10 @@ end
 
 @inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
 @inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
+get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
+get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::NeimarkSackerProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
 ####################################################################################################
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldProblemMinimallyAugmented

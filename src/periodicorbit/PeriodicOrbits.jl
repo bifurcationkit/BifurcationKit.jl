@@ -131,6 +131,9 @@ const DocStringJacobianPOSh = """
 residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
 
+# useful getters for FloquetColl
+get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
+get_wrap_po(pb::AbstractWrapperPOProblem) = pb
 
 _generate_jacobian(probPO::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, FullLU, FullMatrixFree, FullSparse, DenseAnalytical}, o, pars; k...) = J
 _generate_jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
