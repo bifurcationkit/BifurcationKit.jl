@@ -470,15 +470,12 @@ function test_ch(iter, state)
 end
 
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
-    # Jma = jacobian(getprob(iter), u0, par)
-    # @error "" getp(state.z) u0.p  Jma.x.p
     probma = getprob(iter)
     lens1, lens2 = get_lenses(probma)
-    x = getvec(u0)                     # ns point
+    x = getvec(u0, probma.prob)        # ns point
     p1, ω = getp(u0, probma.prob)      # first parameter
     p2 = getp(state.z)                 # second parameter
     par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
+    newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

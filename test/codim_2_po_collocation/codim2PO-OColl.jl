@@ -117,10 +117,10 @@ get_normal_form(brpo_ns, 1; prm = Val(false))
 opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
 for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
-    opts_pocoll_ns2 = @set opts_pocoll_ns.detect_bifurcation = (jma isa BK.MinAug ? 2 : 0)
+    opts_pocoll_ns2 = @set opts_pocoll_ns.detect_bifurcation = 2
     ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns2;
             verbosity = 0, plot = false,
-            detect_codim2_bifurcation = jma isa BK.MinAug ? 1 : 0,
+            detect_codim2_bifurcation = 1,
             update_minaug_every_step = 1,
             start_with_eigen = false,
             usehessian = false,

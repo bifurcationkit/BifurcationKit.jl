@@ -475,7 +475,6 @@ function test_for_gpd_cp(iter, state)
             𝐏𝐝.GPD = pd.nf.nf.b3
         end
     end
-
     return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
 end
 
@@ -486,7 +485,6 @@ function compute_eigenvalues(eig::FoldEig, iter::ContIterable{PDPeriodicOrbitCon
     p1 = getp(u0)      # first parameter
     p2 = getp(state.z) # second parameter
     par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
+    newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end
