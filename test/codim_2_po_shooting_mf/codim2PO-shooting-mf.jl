@@ -85,7 +85,7 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 @reset opts_posh_fold.newton_options.tol = 1e-8
 # @reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
 @reset opts_posh_fold.newton_options.verbose = false
-@reset opts_posh_fold.newton_options.linsolver.solver.verbose=0
+@reset opts_posh_fold.newton_options.linsolver.verbose=0
 # fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
 #     # verbosity = 3, #plot = true,
 #     detect_codim2_bifurcation = 0,
@@ -145,7 +145,7 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 @info "--> NS curve"
 opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 0, p_min = -0., p_max = 1.2)
 @reset opts_posh_ns.newton_options.tol = 1e-8
-@reset opts_posh_ns.newton_options.linsolver.solver.verbose = 0
+@reset opts_posh_ns.newton_options.linsolver.verbose = 0
 @reset opts_posh_ns.newton_options.verbose = false
 ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         # verbosity = 2, plot = true,

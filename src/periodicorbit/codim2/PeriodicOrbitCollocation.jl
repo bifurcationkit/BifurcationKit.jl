@@ -5,22 +5,13 @@ function d2F(wrapcoll::WrapPOColl, x, p, dx1, dx2)
     d2PO(z -> residual(wrapcoll.prob, z, p), x, dx1, dx2)
 end
 
-function Base.transpose(J::FloquetWrapper{ <: PeriodicOrbitOCollProblem})
-    @set J.jacpb = transpose(J.jacpb)
-end
-
-function Base.adjoint(J::FloquetWrapper{ <: PeriodicOrbitOCollProblem})
-    @set J.jacpb = adjoint(J.jacpb)
-end
-
 function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
+    J = copy(Jac)
     # put the PD boundary condition
-    J = copy(_get_matrix(Jac))
     J[end-N:end-1, 1:N] .= LA.I(N)
-    @set Jac.jacpb = J[begin:end-1, begin:end-1]
-    # J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1]
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
@@ -144,14 +135,14 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     coll = deepcopy(pbwrap.prob)
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
-    options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
+    options_foldpo = options_cont
 
     # perform continuation
     br_fold_po = continuation_fold(br.prob,
         br, ind_bif, lens2,
         options_foldpo;
-        start_with_eigen = start_with_eigen,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        start_with_eigen,
+        bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
         finalise_solution = _finsol,
         kwargs...
@@ -203,7 +194,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
 
     # get the PD eigenvectors
     jac = jacobian(pbwrap, pdpointguess.u, par)
-    J = copy(_get_matrix(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
+    J = copy(jac) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
@@ -224,7 +215,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
         options_cont;
         kwargs...,
         prm,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         kind = PDPeriodicOrbitCont(),
         )
 end
@@ -261,7 +252,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
     jac = jacobian(br.prob, nspointguess.u, par)
-    J = Complex.(copy(_get_matrix(jac))) # careful, we copy in case of use of DenseAnalyticalInplace
+    J = Complex.(copy(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace
     J[:, end] .= rand(nj)
@@ -282,7 +273,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
         options_cont;
         kwargs...,
         prm,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         kind = NSPeriodicOrbitCont(),
         )
 end

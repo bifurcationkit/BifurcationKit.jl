@@ -139,7 +139,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     _Jpo = jacobian(POWrap, x, par0)
 
-    return [_Jpo.jacpb dₚF ; vcat(σₓ, σₜ)' σₚ]
+    return [_Jpo dₚF ; vcat(σₓ, σₜ)' σₚ]
 end
 ###################################################################################################
 # Struct to invert the jacobian of the pd MA problem.

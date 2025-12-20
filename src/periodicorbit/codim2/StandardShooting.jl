@@ -6,14 +6,6 @@ end
 @inline has_adjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
 @inline has_jvp(wrap::WrapPOSh) = has_jvp(wrap.prob)
 
-function Base.transpose(J::FloquetWrapper{ <: ShootingProblem })
-    @set J.jacpb = transpose(J.jacpb)
-end
-
-function Base.adjoint(J::FloquetWrapper{ <: ShootingProblem })
-    @set J.jacpb = adjoint(J.jacpb)
-end
-
 # this function is necessary for pdtest to work in PDMinimallyAugmented problem
 function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj}
     dx -> jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, 1, dx)
@@ -33,11 +25,10 @@ function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }
     M = get_mesh_size(pbwrap.prob)
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
+    J = copy(Jac)
     # put the PD boundary condition
-    @set Jac.jacpb = copy(Jac.jacpb)
-    J = Jac.jacpb
     J[end-N:end-1, 1:N] .= LA.I(N)
-    @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1]
 end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
@@ -136,7 +127,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} },
     # put the NS boundary condition
     J = Complex.(copy(Jac))
     J[end-N:end-1, 1:N] .*= cis(ω)
-    @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1]
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem

@@ -142,7 +142,7 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
     σt = -LA.dot(w, dJvdt) 
 
     _Jpo = jacobian(POWrap, x, par0)
-    Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
+    Jns = hcat(_Jpo, dₚF, zero(dₚF))
     Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
     Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
 end
@@ -470,7 +470,7 @@ function test_ch(iter, state)
 end
 
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
-    Jma = jacobian(iter.prob, u0, par)
+    Jma = jacobian(getprob(iter), u0, par)
     n = min(nev, length(Jma.x.u))
     x = Jma.x.u     # hopf point
     p1, ω = Jma.x.p # first parameter
