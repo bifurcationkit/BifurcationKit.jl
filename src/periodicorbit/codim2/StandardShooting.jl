@@ -184,7 +184,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
 
     _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(sh)),lens2), kwargs, sh.update_section_every_step)
 
-    options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
+    options_foldpo = options_cont
 
     # perform continuation
     br_fold_po = continuation_fold(

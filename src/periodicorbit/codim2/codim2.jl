@@ -2,14 +2,6 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
-struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver
-    solver::T # use solver as a field is good for BLS
-end
-
-(ls::FloquetWrapperBLS)(J, args...; k...) = ls.solver(J, args...; k...)
-(ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(_get_matrix(J), args...; k...)
-Base.transpose(J::FloquetWrapper) = transpose(_get_matrix(J))
-
 for op in (:NeimarkSackerProblemMinimallyAugmented,
             :PeriodDoublingProblemMinimallyAugmented)
     @eval begin
@@ -252,8 +244,6 @@ function _continuation(gh::Bautin,
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
 
     contParams = _contParams
 
@@ -368,13 +358,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
-
-    contParams = (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
 
     # create fold point guess
     ωₙₛ = whichns == 1 ? pred.k1 : pred.k2
