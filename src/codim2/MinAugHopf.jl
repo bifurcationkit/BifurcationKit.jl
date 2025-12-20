@@ -676,7 +676,7 @@ struct HopfEig{P, S} <: AbstractCodim2EigenSolver
 end
 
 function (eig::HopfEig)(Jma, nev; k...)
-    n = min(nev, length(Jma.x.u))
+    n = min(nev, length(getvec(Jma.x)))
     x = Jma.x.u     # hopf point
     p1, ω = Jma.x.p # first parameter
     newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
