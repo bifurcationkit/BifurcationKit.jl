@@ -209,11 +209,8 @@ residual!(pdpb::PDMAProblem, out, x, p) = (_copyto!(out, pdpb.prob(x, p)); out)
 save_solution(::PDMAProblem, x, p) = x
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = pdpb.prob)
-
 jacobian(pdpb::PDMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
-
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
-
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ################################################################################################### Newton / Continuation functions
 """

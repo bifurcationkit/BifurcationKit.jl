@@ -27,9 +27,9 @@ function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
     N, m, Ntst = size(pbwrap.prob)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
-    J = Complex.(_get_matrix(Jac))
+    J = Complex.(Jac)
     J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ω))(N)
-    Jns = @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    Jns = J[begin:end-1, begin:end-1]
 end
 
 for (fname, cdt, err_msg) in (

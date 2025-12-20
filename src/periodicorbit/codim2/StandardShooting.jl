@@ -134,7 +134,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} },
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
-    J = Complex.(copy(Jac.jacpb))
+    J = Complex.(copy(Jac))
     J[end-N:end-1, 1:N] .*= cis(ω)
     @set Jac.jacpb = J[begin:end-1, begin:end-1]
 end
@@ -200,7 +200,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
         pbwrap,
         br, ind_bif, lens2,
         options_foldpo;
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
         finalise_solution = _finsol,
         kwargs...)
@@ -330,7 +330,7 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
         # ζs, copy(ζs_ad),
         options_cont;
         kwargs...,
-        bdlinsolver = bdlinsolver,
+        bdlinsolver,
         kind = NSPeriodicOrbitCont(),
         )
 end

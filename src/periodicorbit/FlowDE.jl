@@ -22,7 +22,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
     "How the monodromy is computed"
     jacobian::Tjac
 
-    "adjoint of the monodromy (Matrix-Free)."
+    "adjoint of the monodromy (matrix-free)."
     vjp::Tvjp
 
     "delta used in finite differences wrt to parameter. Used for example in PALC."

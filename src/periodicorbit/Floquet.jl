@@ -32,8 +32,8 @@ Despite precision limitations, the method is sufficient for bifurcation detectio
 
 ## Fields
 
-- `eigsolver::AbstractEigenSolver`: Eigensolver used to compute the eigenvalues of the monodromy matrix.
-- `matrix_free::Bool`: Whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver).
+- `eigsolver::AbstractEigenSolver`: eigensolver used to compute the eigenvalues of the monodromy matrix.
+- `matrix_free::Bool`: whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver).
 
 ## Implementation Details
 
@@ -74,7 +74,7 @@ function (fl::FloquetQaD)(J, nev; kwargs...)
     # floquet exponents
     σ = logvals[I]
     vp0 = minimum(abs, σ)
-    if (J isa FloquetWrapper{ShootingProblem}) && vp0 > 1e-8
+    if (wrapprob isa WrapPOSh) && vp0 > 1e-8
         @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info

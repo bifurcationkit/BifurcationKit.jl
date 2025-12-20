@@ -204,8 +204,8 @@ function _continuation(gh::Bautin,
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
     𝒯 = typeof(ds)
-    pred = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
-    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont), 0; verbose, ampfactor = 𝒯(ampfactor))
+    pred  = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
+    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont),  0; verbose, ampfactor = 𝒯(ampfactor))
 
     M = get_mesh_size(probPO)
     ϕ = 0
@@ -251,7 +251,7 @@ function _continuation(gh::Bautin,
     linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
     alg = update(alg, _contParams, linear_algo)
 
-    contParams = (@set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
+    contParams = _contParams
 
     # set the second derivative
     prob_po_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
@@ -266,7 +266,7 @@ function _continuation(gh::Bautin,
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold)).jacpb
+    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold))
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -288,8 +288,9 @@ function _continuation(gh::Bautin,
         contParams;
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
-        finalise_solution = _finsol
+        bdlinsolver,
+        finalise_solution = _finsol,
+        # linear_algo = _linear_algo,
     )
     return Branch(branch, gh)
 end
@@ -379,7 +380,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa WrapPOColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(_get_matrix(jac)))
+        J = Complex.(copy(jac))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)
@@ -415,7 +416,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             kind = NSPeriodicOrbitCont(),
             kwargs...,
             plot_solution = _plotsol,
-            bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+            bdlinsolver,
     )
     return Branch(branch, hh)
 end

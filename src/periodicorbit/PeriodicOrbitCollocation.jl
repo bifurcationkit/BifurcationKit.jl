@@ -933,8 +933,6 @@ function save_solution(wrap::WrapPOColl, x, pars)
 end
 
 ####
-_generate_jacobian(coll::PeriodicOrbitOCollProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, DenseAnalytical, FullSparse}, o, pars; k...) = J
-
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::FullSparseInplace, orbitguess, pars; k...)
     _J = analytical_jacobian_sparse(coll, orbitguess, pars)
     indx = get_blocks(coll, _J)
@@ -943,17 +941,13 @@ end
 
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::DenseAnalyticalInplace, orbitguess, pars; Jcoll_matrix = nothing, k...)
     _Jcoll_matrix = isnothing(Jcoll_matrix) ? analytical_jacobian(coll, orbitguess, pars) : Jcoll_matrix
-    floquet_wrap = FloquetWrapper(coll, _Jcoll_matrix, orbitguess, pars)
-    return (DenseAnalyticalInplace(), floquet_wrap, _Jcoll_matrix)
+    return (DenseAnalyticalInplace(), _Jcoll_matrix)
 end
 ####
 
-function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{DenseAnalyticalInplace, Tj, Tind}, x, p) where {Tj, Tind}
-    floquet_wrap = J[2]
-    _Jcoll_matrix = J[3]
-    analytical_jacobian!(floquet_wrap.jacpb, floquet_wrap.pb, x, p)
-    floquet_wrap.x .= x
-    floquet_wrap.par = p
+function jacobian(coll::PeriodicOrbitOCollProblem, J::Tuple{DenseAnalyticalInplace, Tj}, x, p) where {Tj}
+    _Jcoll_matrix = J[2]
+    analytical_jacobian!(_Jcoll_matrix, coll, x, p)
     return _Jcoll_matrix
 end
 

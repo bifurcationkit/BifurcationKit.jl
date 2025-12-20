@@ -61,6 +61,7 @@ end
 @inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 ####################################################################################################
+# this is very useful methods than can be used with dispatch to specialize the eigensolver to the model
 function compute_eigenvalues(eigsolver::AbstractEigenSolver, 
                              iter::ContIterable,
                              state,
