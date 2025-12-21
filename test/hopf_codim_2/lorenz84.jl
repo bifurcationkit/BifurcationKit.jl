@@ -327,7 +327,7 @@ solbt = newton(hp_codim2_1, 2; options = NewtonPar(br.contparams.newton_options;
 
 eigvals(BK.jacobian(prob, solbt.u.x0, solbt.u.params))
 
-# curv of Hopf points from BT
+# curve of Hopf points from BT
 sn_from_bt = continuation(hp_codim2_1, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, p_max = 15.) ;
     normC = norminf,
     detect_codim2_bifurcation = 2,
@@ -389,7 +389,7 @@ for probPO in (
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
             normC = norminf,
             δp = 0.02,
-            update_minaug_every_step = 0,
+            update_minaug_every_step = 1,
             jacobian_ma = BK.MinAug(),
             # callback_newton =  BK.cbMaxNormAndΔp(1e1, 0.025),
             )
@@ -403,7 +403,8 @@ opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurc
 # @reset opts_ns_po.newton_options.verbose = true
 @reset opts_ns_po.newton_options.tol = 1e-12
 @reset opts_ns_po.newton_options.max_iterations = 10
-for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), ShootingProblem(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
+for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), 
+                ShootingProblem(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
         probPO;
         usehessian = false,

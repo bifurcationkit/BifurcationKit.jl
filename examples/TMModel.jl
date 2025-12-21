@@ -83,7 +83,7 @@ plot(br, br_pocoll, markersize = 3, xlims = (-2.5, 0))
 # idem with Standard shooting
 import OrdinaryDiffEq as ODE
 
-# this is the ODEProblem used with `DiffEqBase.solve`
+# this is the ODEProblem used with `ODE.solve`
 prob_ode = ODE.ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-11, reltol = 1e-9)
 
 opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7, verbose = false), tol_stability = 1e-7, detect_bifurcation = 3, plot_every_step = 10)
