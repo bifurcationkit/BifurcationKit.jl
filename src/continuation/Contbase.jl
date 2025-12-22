@@ -43,6 +43,9 @@ end
 # this is called during initialization of the continuation method. Can be used to adjust the algo.
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
+# get the bordered linear solver used for the continuation algorithm
+getbls(::AbstractContinuationAlgorithm) = MatrixBLS()
+
 # helper functions to update ::ContState when calling the corrector
 function _update_field_but_not_sol!(state::AbstractContinuationState,
                                     sol::NonLinearSolution)

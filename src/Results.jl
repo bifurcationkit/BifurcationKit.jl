@@ -149,6 +149,9 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectortype(br::AbstractBranchResult) = _getvectortype(br.specialpoint)
 @inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
 
+# get the bordered linear solver used for the branch
+getbls(br::AbstractBranchResult) = getbls(getalg(br))
+
 """
     setparam(br, p0)
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.

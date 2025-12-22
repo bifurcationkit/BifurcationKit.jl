@@ -542,7 +542,7 @@ struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     eigsolver::E
     "Cache, defaults to `nothing`. It should be set to `COPCACHE`. When used with `COPBLS`, it is automatically set up."
     cache::C
-    "Whether to use optimized COP to compute the Floquet exponents. Defaults to `true`."
+    "Whether to use optimized COP to compute the Floquet exponents. Note that this does not work well for sparse matrices. Defaults to `true`."
     small_n::Bool
 end
 

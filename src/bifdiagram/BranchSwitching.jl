@@ -81,7 +81,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       δp = nothing, 
                       ampfactor::Real = 1,
                       use_normal_form = true,
-                      bls = MatrixBLS(),
+                      bls = getbls(br),
                       bls_block = bls,
 
 

@@ -113,7 +113,7 @@ hopfpt = get_normal_form(br, 1; verbose = true)
 ind_hopf = 1
 optnew = opts_br_eq.newton_options
 hopfpoint = @time newton(br, ind_hopf;
-                options = (@set optnew.verbose=true), 
+                options = (@set optnew.verbose = true), 
                 normN = norminf);
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 
@@ -156,7 +156,6 @@ br_po = continuation(
         end,
     # plot_solution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
     normC = norminf)
-
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO
 br_po2 = BK.continuation(

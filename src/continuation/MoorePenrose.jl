@@ -29,6 +29,7 @@ end
 internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 @inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
+getbls(alg::MoorePenrose) = alg.ls
 
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
 
