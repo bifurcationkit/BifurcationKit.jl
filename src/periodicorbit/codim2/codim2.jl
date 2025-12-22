@@ -2,14 +2,6 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
-struct FloquetWrapperBLS{T} <: AbstractBorderedLinearSolver
-    solver::T # use solver as a field is good for BLS
-end
-
-(ls::FloquetWrapperBLS)(J, args...; k...) = ls.solver(J, args...; k...)
-(ls::FloquetWrapperBLS)(J::FloquetWrapper, args...; k...) = ls.solver(_get_matrix(J), args...; k...)
-Base.transpose(J::FloquetWrapper) = transpose(_get_matrix(J))
-
 for op in (:NeimarkSackerProblemMinimallyAugmented,
             :PeriodDoublingProblemMinimallyAugmented)
     @eval begin
@@ -147,6 +139,10 @@ end
 
 @inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
 @inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
+get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
+get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::NeimarkSackerProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
 ####################################################################################################
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldProblemMinimallyAugmented
@@ -204,8 +200,8 @@ function _continuation(gh::Bautin,
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
     𝒯 = typeof(ds)
-    pred = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
-    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont), 0; verbose, ampfactor = 𝒯(ampfactor))
+    pred  = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
+    pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont),  0; verbose, ampfactor = 𝒯(ampfactor))
 
     M = get_mesh_size(probPO)
     ϕ = 0
@@ -242,16 +238,14 @@ function _continuation(gh::Bautin,
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
+    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
 
-    contParams = (@set _contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
+    contParams = _contParams
 
     # set the second derivative
     prob_po_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
@@ -266,7 +260,7 @@ function _continuation(gh::Bautin,
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold)).jacpb
+    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold))
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -288,8 +282,9 @@ function _continuation(gh::Bautin,
         contParams;
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
-        finalise_solution = _finsol
+        bdlinsolver,
+        finalise_solution = _finsol,
+        # linear_algo = _linear_algo,
     )
     return Branch(branch, gh)
 end
@@ -360,16 +355,10 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
+    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
 
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
-
-    contParams = (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
 
     # create fold point guess
     ωₙₛ = whichns == 1 ? pred.k1 : pred.k2
@@ -379,7 +368,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa WrapPOColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(_get_matrix(jac)))
+        J = Complex.(copy(jac))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)
@@ -415,7 +404,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             kind = NSPeriodicOrbitCont(),
             kwargs...,
             plot_solution = _plotsol,
-            bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+            bdlinsolver,
     )
     return Branch(branch, hh)
 end

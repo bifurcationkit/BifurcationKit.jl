@@ -46,7 +46,7 @@ end
 orbitguess_f = reduce(vcat, [√(getparams(poTrap).r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
 push!(orbitguess_f, 2pi)
 
-optn_po = NewtonPar(tol = 1e-9, verbose = true)
+optn_po = NewtonPar(tol = 1e-9, verbose = false)
 opts_po_cont = ContinuationPar(dsmax = 0.02, ds = 0.001, p_max = 2.2, max_steps = 3, newton_options = optn_po, save_sol_every_step = 1, detect_bifurcation = 1)
 
 let
@@ -62,7 +62,7 @@ let
                                         BK.AutoDiffMF(),
                                         BK.BorderedMatrixFree()))
         _ls = ind > 6 ? lsit : lsdef
-        @info jacobianPO, ind, _ls
+        # @info jacobianPO, ind, _ls
         outpo_f = newton((@set poTrap.jacobian = jacobianPO),
             orbitguess_f, (@set optn_po.linsolver = _ls);
             normN = norminf)

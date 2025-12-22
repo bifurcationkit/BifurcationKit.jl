@@ -13,17 +13,13 @@ Update the continuation parameters according to a problem. This can be useful fo
 function _update_cont_params(contParams::ContinuationPar, pb::AbstractShootingProblem, orbitguess)
     if contParams.newton_options.linsolver isa GMRESIterativeSolvers
         @reset contParams.newton_options.linsolver.N = length(orbitguess)
-    elseif contParams.newton_options.linsolver isa FloquetWrapperLS
-        if contParams.newton_options.linsolver.solver isa GMRESIterativeSolvers
-            @reset contParams.newton_options.linsolver.solver.N = length(orbitguess)
-        end
     end
     return contParams
 end
 
 function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOCollProblem, orbitguess)
-    if cont_params.newton_options.linsolver isa BifurcationKit.FloquetWrapperLS{<:COPLS}
-        @reset cont_params.newton_options.linsolver.solver = COPLS(COPCACHE(coll, Val(0)))
+    if cont_params.newton_options.linsolver isa COPLS
+        @reset cont_params.newton_options.linsolver = COPLS(COPCACHE(coll, Val(0)))
     end
     return cont_params
 end

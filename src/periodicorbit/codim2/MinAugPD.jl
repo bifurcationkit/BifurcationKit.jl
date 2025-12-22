@@ -139,7 +139,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     _Jpo = jacobian(POWrap, x, par0)
 
-    return [_Jpo.jacpb dₚF ; vcat(σₓ, σₜ)' σₚ]
+    return [_Jpo dₚF ; vcat(σₓ, σₜ)' σₚ]
 end
 ###################################################################################################
 # Struct to invert the jacobian of the pd MA problem.
@@ -201,6 +201,7 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
+get_wrap_po(pb::PDMAProblem) = get_wrap_po(pb.prob)
 @inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)
 @inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
 @inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
@@ -209,11 +210,8 @@ residual!(pdpb::PDMAProblem, out, x, p) = (_copyto!(out, pdpb.prob(x, p)); out)
 save_solution(::PDMAProblem, x, p) = x
 
 jacobian(pdpb::PDMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = pdpb.prob)
-
 jacobian(pdpb::PDMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
-
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
-
 jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ################################################################################################### Newton / Continuation functions
 """
@@ -477,6 +475,16 @@ function test_for_gpd_cp(iter, state)
             𝐏𝐝.GPD = pd.nf.nf.b3
         end
     end
-
     return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
+end
+
+function compute_eigenvalues(eig::FoldEig, iter::ContIterable{PDPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+    probma = getprob(iter)
+    lens1, lens2 = get_lenses(probma)
+    x = getvec(u0)
+    p1 = getp(u0)      # first parameter
+    p2 = getp(state.z) # second parameter
+    par = getparams(probma)
+    newpar = _set(par, (lens1, lens2), (p1, p2))
+    compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

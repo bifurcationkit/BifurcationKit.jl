@@ -546,7 +546,7 @@ end
 # │ (shift⋅I + J)     dR      ││dX│ = │ R │
 # │   ξu * dz.u'   ξp * dz.p  ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
-function (ls::COPBLS)(_Jc, dR,
+function (ls::COPBLS)(Jc, dR,
                       dzu, dzp::𝒯, 
                       R::AbstractVecOrMat, n::𝒯,
                       ξu::𝒯 = one(𝒯), ξp::𝒯 = one(𝒯);
@@ -554,7 +554,6 @@ function (ls::COPBLS)(_Jc, dR,
                       Mass::Tm = LinearAlgebra.I,
                       dotp = nothing,
                       applyξu! = nothing)  where {𝒯 <: Number, Ts, Tm}
-    Jc = _get_matrix(_Jc) # to handle FloquetWrapper
     if isnothing(shift)
         A = Jc
     else

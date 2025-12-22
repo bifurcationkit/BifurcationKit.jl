@@ -238,7 +238,7 @@ plot(br_po_sh_pd, br, label = "");title!("")
 # branching from Hopf bp using aBS - Shooting
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(initpo_pd), maxiter = 50, verbose = false)
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
-eig = DefaultEig()
+# eig = DefaultEig()
 
 opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 12, linsolver  = ls)
 optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1.8, max_steps = 50, newton_options = (@set opt_po.eigsolver = eig), nev = 20, tol_stability = 1e-2, detect_bifurcation = 3, n_inversion = 8)

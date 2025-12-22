@@ -122,7 +122,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     u2 = apply(JAd_at_xp, w) # TODO we know u2!!
     σₓ = minus(u2, u1); VI.scale!(σₓ, 1 / ϵ2)
 
-    [_get_matrix(J_at_xp) dₚF ; σₓ' σₚ]
+    [J_at_xp dₚF ; σₓ' σₚ]
 end
 ###################################################################################################
 # Struct to invert the jacobian of the fold MA problem.

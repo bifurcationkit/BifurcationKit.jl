@@ -142,7 +142,7 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
     σt = -LA.dot(w, dJvdt) 
 
     _Jpo = jacobian(POWrap, x, par0)
-    Jns = hcat(_Jpo.jacpb, dₚF, zero(dₚF))
+    Jns = hcat(_Jpo, dₚF, zero(dₚF))
     Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
     Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
 end
@@ -230,6 +230,7 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
+get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
 residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
 residual!(nspb::NSMAProblem, out, x, p) = (_copyto!(out, nspb.prob(x, p)); out)
 @inline getdelta(nspb::NSMAProblem) = getdelta(nspb.prob)
@@ -237,11 +238,8 @@ save_solution(::NSMAProblem, x ,p) = x
 
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
-
 jacobian(nspb::NSMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
-
 jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
-
 jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
@@ -320,7 +318,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     𝐍𝐒.R4 = zero(𝒯)
 
     # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented problem
+    # it is called to update the Minimally Augmented formulation
     # by updating the vectors a, b
     function update_min_aug_ns(z, tau, step, contResult; kUP...)
         # user-passed finalizer
@@ -398,28 +396,27 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
-    # change the plotter
+    # change the plot and record functions
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
     _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
     prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    # Define event for detecting codim 2 bifurcations.
-    # Couple it with user passed events
+    # Define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
 
     # solve the NS equations
     br_ns_po = continuation(
-        prob_ns, alg,
-        (@set opt_ns_cont.newton_options.eigsolver = eigsolver);
-        linear_algo = BorderingBLS(solver = opt_ns_cont.newton_options.linsolver, check_precision = false),
-        kwargs...,
-        kind = kind,
-        event = event,
-        normC = normC,
-        finalise_solution = update_min_aug_ns,
-        )
+                    prob_ns, alg,
+                    (@set opt_ns_cont.newton_options.eigsolver = eigsolver);
+                    linear_algo = BorderingBLS(solver = opt_ns_cont.newton_options.linsolver, check_precision = false),
+                    kwargs...,
+                    kind,
+                    event,
+                    normC,
+                    finalise_solution = update_min_aug_ns,
+                    )
     correct_bifurcation(br_ns_po)
 end
 
@@ -470,4 +467,15 @@ function test_ch(iter, state)
     𝐍𝐒.R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
     𝐍𝐒.R4 = c    # μ = {1, exp(±iπ/2)}
     return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
+end
+
+function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+    probma = getprob(iter)
+    lens1, lens2 = get_lenses(probma)
+    x = getvec(u0, probma.prob)        # ns point
+    p1, ω = getp(u0, probma.prob)      # first parameter
+    p2 = getp(state.z)                 # second parameter
+    par = getparams(probma)
+    newpar = _set(par, (lens1, lens2), (p1, p2))
+    compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

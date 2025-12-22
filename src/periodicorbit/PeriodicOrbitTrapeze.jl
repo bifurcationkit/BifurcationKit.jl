@@ -808,14 +808,42 @@ end
 
 ##########################
 # problem wrappers
-residual(prob::WrapPOTrap, x, p) = residual(prob.prob, x, p)
-residual!(prob::WrapPOTrap, args...) = residual!(prob.prob, args...)
-jacobian(prob::WrapPOTrap, x, p) = prob.jacobian(x, p)
+residual(prob::WrapPOTrap, x, p) = residual(prob.prob, x, p) # ON NE PEUT PAS METTRE EN COMMUN?
+residual!(prob::WrapPOTrap, args...) = residual!(prob.prob, args...) # METTRE EN COMMUN?
+
 @inline save_solution(::WrapPOTrap, x, p) = x
 get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(prob.prob, u, p)
 is_symmetric(::WrapPOTrap) = false
 has_adjoint(::WrapPOTrap) = false
-@inline getdelta(pb::WrapPOTrap) = getdelta(pb.prob)
+@inline getdelta(pb::WrapPOTrap) = getdelta(pb.prob) # METTRE EN COMMUN?
+##########################
+function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::Dense, orbitguess, pars; k...)
+    _J =  trap(Val(:JacFullSparse), orbitguess, pars) |> Array
+    return (Dense(), _J)
+end
+
+function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace, orbitguess, pars; k...)
+    M, N = size(trap)
+    # sparse matrix to hold the jacobian
+    J =  trap(Val(:JacFullSparse), orbitguess, getparams(trap.prob_vf))
+    indx = get_blocks(J, N, M)
+    return (FullSparseInplace(), J, indx)
+end
+
+function jacobian(trap::PeriodicOrbitTrapProblem, J::Tuple{Dense, Tj}, x, p) where {Tj}
+    _J = J[2]
+    trap(Val(:JacFullSparseInplace), _J, x, p)
+end
+
+function jacobian(trap::PeriodicOrbitTrapProblem, J::Tuple{FullSparseInplace, Tj, Ti}, x, p) where {Tj, Ti}
+    _J = J[2]
+    _indx = J[3]
+    trap(Val(:JacFullSparseInplace), _J, x, p, _indx)
+end
+
+jacobian(trap::PeriodicOrbitTrapProblem, J::FullLU, x, p) = trap(Val(:JacFullSparse), x, p)
+POTrapJacobianBordered
+jacobian(trap::PeriodicOrbitTrapProblem, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
 # newton wrappers
 function _newton_trap(trap::PeriodicOrbitTrapProblem,
@@ -823,40 +851,16 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
                 options::NewtonPar;
                 defOp::Union{Nothing, DeflationOperator} = nothing,
                 kwargs...)
-    # this hack is for the test to work with CUDA
+    # hack to test the use of CUDA
     @assert sum(_extract_period_fdtrap(trap, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = trap.jacobian
     @assert jacobianPO in _trapezoid_jacobian_type "This jacobian is not defined. Please choose another one."
     M, N = size(trap)
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
-        if jacobianPO == FullLU()
-            jac = (x, p) -> trap(Val(:JacFullSparse), x, p)
-        elseif jacobianPO == FullSparseInplace()
-            # sparse matrix to hold the jacobian
-            _J =  trap(Val(:JacFullSparse), orbitguess, getparams(trap.prob_vf))
-            _indx = get_blocks(_J, N, M)
-            # inplace modification of the jacobian _J
-            jac = (x, p) -> trap(Val(:JacFullSparseInplace), _J, x, p, _indx)
-        elseif jacobianPO == Dense()
-            _J =  trap(Val(:JacFullSparse), orbitguess, getparams(trap.prob_vf)) |> Array
-            jac = (x, p) -> trap(Val(:JacFullSparseInplace), _J, x, p)
-        elseif jacobianPO == AutoDiffDense()
-            jac = (x, p) -> ForwardDiff.jacobian(z -> residual(trap, z, p), x)
-        elseif jacobianPO == AutoDiffMF()
-            jac = (x, p) -> dx -> ForwardDiff.derivative(t -> residual(trap, x .+ t .* dx, p), 0)
-        else # FullMatrixFree()
-            jac = (x, p) -> (dx -> jvp(trap, x, p, dx))
-        end
-
-        # define a problem to call newton
+        jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
         prob = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
-
-        if isnothing(defOp)
-            return solve(prob, Newton(), options; kwargs...)
-        else
-            return solve(prob, defOp, options; kwargs...)
-        end
+        new_options = options # to prevent from duplicated code
     else # bordered linear solvers
         if jacobianPO == BorderedLU()
             Aγ = AγOperatorLU(N = N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = trap)
@@ -876,14 +880,14 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
         end
 
         jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-
         prob = WrapPOTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        new_options = @set options.linsolver = lspo
+    end
 
-        if isnothing(defOp)
-            return solve(prob, Newton(), (@set options.linsolver = lspo); kwargs...)
-        else
-            return solve(prob, defOp, (@set options.linsolver = lspo); kwargs...)
-        end
+    if isnothing(defOp)
+        return solve(prob, Newton(), new_options; kwargs...)
+    else
+        return solve(prob, defOp, new_options; kwargs...)
     end
 end
 
@@ -948,11 +952,12 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(prob, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = prob.jacobian
-    @assert jacobianPO in _trapezoid_jacobian_type "This jacobian is not defined. Please chose another one among $_trapezoid_jacobian_type."
+    @assert jacobianPO in _trapezoid_jacobian_type "This jacobian is not defined.\nPlease chose another in $_trapezoid_jacobian_type."
 
     M, N = size(prob)
     options = contParams.newton_options
 
+    # we need to specialize the eigensolver for the computation of Floquet coefficients
     if compute_eigenelements(contParams)
         contParams = @set contParams.newton_options.eigsolver =
          eigsolver
@@ -966,48 +971,22 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     _plotsol = modify_po_plot(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
-        if jacobianPO == FullLU()
-            jac = (x, p) -> FloquetWrapper(prob, prob(Val(:JacFullSparse), x, p), x, p)
-        elseif jacobianPO == FullSparseInplace()
-            # sparse matrix to hold the jacobian
-            _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf))
-            _indx = get_blocks(_J, N, M)
-            # inplace modification of the jacobian _J
-            jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p, _indx); FloquetWrapper(prob, _J, x, p));
-        elseif jacobianPO == Dense()
-            _J =  prob(Val(:JacFullSparse), orbitguess, getparams(prob.prob_vf)) |> Array
-            jac = (x, p) -> (prob(Val(:JacFullSparseInplace), _J, x, p); FloquetWrapper(prob, _J, x, p));
-        elseif jacobianPO == AutoDiffDense()
-            jac = (x, p) -> FloquetWrapper(prob, ForwardDiff.jacobian(z -> residual(prob, z, p), x), x, p)
-        elseif jacobianPO == AutoDiffMF()
-            jac = (x, p) -> FloquetWrapper(prob, dx -> ForwardDiff.derivative(t->residual(prob, x .+ t .* dx, p), 0), x, p)
-        else
-             jac = (x, p) -> FloquetWrapper(prob, x, p)
-        end
-
-        # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
-        linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
-        contParams2 = (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver))
-        alg = update(alg, contParams2, linear_algo)
-
+        jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob))
         probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
-
-        br = continuation(probwp, alg,
-            contParams2; 
-            kwargs...,
-            kind = PeriodicOrbitCont(),
-            finalise_solution = _finsol,
-            )
+        kwargs_continuation = (kwargs...,
+                                kind = PeriodicOrbitCont(),
+                                finalise_solution = _finsol,
+                                linear_algo,)
     else
         if jacobianPO == BorderedLU()
-            Aγ = AγOperatorLU(N = N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = prob)
+            Aγ = AγOperatorLU(;N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  prob(Val(:JacCyclicSparse), orbitguess, getparams(prob.prob_vf))
             _indx = get_blocks(_J, N, M-1)
             # inplace modification of the jacobian _J
-            Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = LA.lu(_J), prob = prob, indx = _indx)
+            Aγ = AγOperatorSparseInplace(;Jc = _J,  Jcfact = LA.lu(_J), prob, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
 
         else # BorderedMatrixFree
@@ -1016,25 +995,22 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), check_precision = false))
         end
 
-        jacBD = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        jacPO = (x, p) -> FloquetWrapper(prob, jacBD(x, p), x, p)
-
+        # we define a specific jacobian for this case
+        jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
+        probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
         # we change the linear solver
-        contParams = @set contParams.newton_options.linsolver = FloquetWrapperLS(lspo)
-
-        # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
+        contParams = @set contParams.newton_options.linsolver = lspo
+        # we have to change the Bordered linearsolver to cope with our lspo
         linear_algo = @set linear_algo.solver = contParams.newton_options.linsolver
         alg = update(alg, contParams, linear_algo)
-
-        probwp = WrapPOTrap(prob, jacPO, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
-
-        br = continuation(probwp, alg,
-            contParams;
-            kwargs...,
-            kind = PeriodicOrbitCont(),
-            finalise_solution = _finsol)
+        kwargs_continuation = (kwargs...,
+                                kind = PeriodicOrbitCont(),
+                                finalise_solution = _finsol,)
     end
-    return br
+    return continuation(probwp, alg,
+                contParams;
+                kwargs_continuation...,
+                )
 end
 
 """

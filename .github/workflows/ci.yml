@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -17,18 +17,21 @@ jobs:
           #- '1.3' # Leave this line unchanged. '1' will automatically expand to the latest stable 1.x release of Julia.
           # - 'nightly'
         os:
+          - self-hosted
           - ubuntu-latest
-        arch:
-          - x64
+          - macos-15-intel # for fun and knowledge
+          # - ubuntu-latest
+        # arch:
+          # - x64
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       - name: Setup julia
         uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          # arch: ${{ matrix.arch }} \todo required? 
 
       - name: Cache Julia packages (GitHub-hosted runners)
         if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'windows') || contains(matrix.os, 'macOs')
@@ -64,7 +67,7 @@ jobs:
           JULIA_NUM_THREADS: auto
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
         run: |
-          julia --color=yes --project=@. -e '
+          julia --math-mode=ieee --color=yes --project=@. -e '
             import Pkg
 
             # Parse labels from the environment variable using Regex to avoid JSON dependency

@@ -28,9 +28,7 @@ end
 par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
 par_hopf = (@set par_sl.r = 0.1)
 u0 = [.001, .001]
-
-prob_vf = BifurcationKit.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
-
+prob_vf = BK.BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r))
 optconteq = ContinuationPar(ds = -0.01, p_min = -0.5, n_inversion = 8)
 br = continuation(prob_vf, PALC(), optconteq)
 ####################################################################################################
@@ -54,7 +52,7 @@ section(x, T, dx, dT) = dx[1] #* x[end]
 M = 1
 dM = 1
 _pb = ShootingProblem(prob, ODE.KenCarp4(), 1, section; abstol = 1e-10, reltol=1e-9)
-BifurcationKit.has_monodromy_DE(_pb.flow)
+BK.has_monodromy_DE(_pb.flow)
 
 initpo = [0.13, 0., 6.]
 res = _pb(initpo, par_hopf)
@@ -185,7 +183,7 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 ####################################################################################################
 # test shooting interface M > 1, parallel
-initpo = [0.13, 0., 6.]
+initpo = [0.13, 0, 6]
 _pb = ShootingProblem(prob, ODE.KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
 initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
 res = _pb(initpo, par_hopf)
@@ -198,7 +196,6 @@ _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 # test flowDE interface
 _pb2_par = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
 BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
-
 ####################################################################################################
 @info "Single Poincaré Shooting"
 # Single Poincaré Shooting with hyperplane parametrization
@@ -225,7 +222,7 @@ initpo_bar = [0.4]
 probPsh(initpo_bar, par_hopf)
 
 # test of the analytical formula for jacobian of the functional
-_Jad = BifurcationKit.finite_differences( x -> probPsh(x, par_hopf), initpo_bar)
+_Jad = BK.finite_differences( x -> probPsh(x, par_hopf), initpo_bar)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 3e-3
 
@@ -254,8 +251,7 @@ BK.jvp(probPsh, outpo.u, par_hopf, outpo.u)
 @info "Test continuation"
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, p_max = 4.0, max_steps = 5, newton_options = setproperties(optn; tol = 1e-7, eigsolver = eil), detect_bifurcation = 0)
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
-    opts_po_cont; verbosity = 0,
-    plot = false, normC = norminf)
+    opts_po_cont; normC = norminf)
 # plot(br_pok2)
 BK.setparam(br_pok2.prob, 1.)
 BK.getperiod(br_pok2.prob.prob, br_pok2.sol[1].x, br_pok2.sol[1].p)
@@ -276,8 +272,8 @@ probPsh = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol
 probPsh2 = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
 
 # test of the analytical formula for jacobian of the functional
-_Jad = BifurcationKit.finite_differences( x-> probPsh(x, par_hopf), initpo_bar)
-# _Jphifd = BifurcationKit.finiteDifferences(x->probPsh.flow(x, par_hopf, Inf64), [0,0.4]; δ=1e-8)
+_Jad = BK.finite_differences( x-> probPsh(x, par_hopf), initpo_bar)
+# _Jphifd = BK.finiteDifferences(x->probPsh.flow(x, par_hopf, Inf64), [0,0.4]; δ=1e-8)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
 
@@ -318,7 +314,7 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
 # probPsh(initpo_bar, par_hopf; verbose = true)
 #
 # # test of the analytical formula for jacobian of the functional
-# _Jad = BifurcationKit.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
+# _Jad = BK.finiteDifferences( x -> probPsh(x, par_hopf), initpo_bar)
 # _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 # @test norm(_Jad - _Jana, Inf) < 5e-5
 #
