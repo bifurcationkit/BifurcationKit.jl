@@ -123,7 +123,7 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
 # find the PD NS case
 par_pop2 = @set par_pop.b0 = 0.45
 sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
-sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2.u[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
 probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5(),

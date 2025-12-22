@@ -15,18 +15,6 @@ function Pop!(du, X, p, t = 0)
     du
 end
 
-par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
-z0 = [0.1, 0.1, 1, 0]
-prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
-opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, nev = 4, max_steps = 200)
-################################################################################
-import OrdinaryDiffEq as ODE
-prob_de = ODE.ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
-alg = ODE.Rodas5()
-sol = ODE.solve(prob_de, alg)
-prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abstol = 1e-10)
-sol = ODE.solve(prob_de, alg)
-################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
@@ -39,6 +27,18 @@ argspo = (record_from_solution = (x, p; k...) -> begin
         plot!(xtt.t, xtt[2,:]; label = "y", k...)
         # plot!(br; subplot = 1, putspecialptlegend = false)
     end)
+
+par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
+z0 = [0.1, 0.1, 1, 0]
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
+opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, nev = 4, max_steps = 200)
+################################################################################
+import OrdinaryDiffEq as ODE
+prob_de = ODE.ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
+alg = ODE.Rodas5()
+sol = ODE.solve(prob_de, alg)
+prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abstol = 1e-10)
+sol = ODE.solve(prob_de, alg)
 ################################################################################
 ######    Shooting ########
 probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = ODE.Rodas5(), parallel = true)
@@ -109,7 +109,7 @@ BK.has_adjoint(_pdma.prob)
 # find the PD NS case
 par_pop2 = @set par_pop.b0 = 0.45
 sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1, 0.1, 1, 0], tspan = (0, 1000)), ODE.Rodas5())
-sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
 probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
@@ -151,29 +151,29 @@ BK.getprob(ns_po_sh)
 
 #########
 # test of the implementation of the jacobian for the NS case
-using ForwardDiff
-_probns = ns_po_sh.prob
-_x = ns_po_sh.sol[end].x
-_solpo = ns_po_sh.sol[end].x.u
-_p1 = ns_po_sh.sol[end].x.p
-_p2 = ns_po_sh.sol[end].p
-_param= BK.setparam(ns_po_sh, _p1[1])
-_param = @set _param.ϵ = _p2
+let
+    using ForwardDiff
+    _probns = ns_po_sh.prob
+    _x = ns_po_sh.sol[end].x
+    _solpo = ns_po_sh.sol[end].x.u
+    _p1 = ns_po_sh.sol[end].x.p
+    _p2 = ns_po_sh.sol[end].p
+    _param= BK.setparam(ns_po_sh, _p1[1])
+    _param = @set _param.ϵ = _p2
 
-_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
 
-BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.)
+    BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.)
 
-_probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
-J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
-@test norminf(_Jnsad - J_ns_mat) < 1e-6
+    _probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
+    J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
+    @test norminf(_Jnsad - J_ns_mat) < 1e-6
+end
 #########
-
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
 sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0, 1000)), ODE.Rodas5())
-sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), ODE.Rodas5())
-# plot(sol2, xlims= (8,10))
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), ODE.Rodas5())
 
 probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
@@ -209,17 +209,19 @@ BK.getprob(pd_po_sh2)
 
 #####
 # test of the implementation of the jacobian for the PD case
-_probpd = pd_po_sh2.prob
-_x = pd_po_sh2.sol[end].x
-_solpo = pd_po_sh2.sol[end].x.u
-_p1 = pd_po_sh2.sol[end].x.p
-_p2 = pd_po_sh2.sol[end].p
-_param= BK.setparam(pd_po_sh2, _p1)
-_param = @set _param.ϵ = _p2
+let
+    _probpd = pd_po_sh2.prob
+    _x = pd_po_sh2.sol[end].x
+    _solpo = pd_po_sh2.sol[end].x.u
+    _p1 = pd_po_sh2.sol[end].x.p
+    _p2 = pd_po_sh2.sol[end].p
+    _param= BK.setparam(pd_po_sh2, _p1)
+    _param = @set _param.ϵ = _p2
 
-_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
 
-_probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
-J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_x.u, _x.p), _param)
+    _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
+    J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_x.u, _x.p), _param)
 
-@test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
+    @test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
+end

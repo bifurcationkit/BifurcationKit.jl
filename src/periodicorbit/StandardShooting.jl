@@ -305,27 +305,18 @@ function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
-    Th = eltype(x)
-
     if ~isparallel(prob)
-        sol = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
-        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
-        # we could also use Matrix(sol[1])
-        for ii in 2:M
-            append!(time, sol[ii].t .+ time[end])
-            append!(u.u, sol[ii].u)
-        end
-        return SolPeriodicOrbit(t = time, u = u)
-
+        sol = RecursiveArrayTools.VectorOfArray([evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M])
     else # threaded version
         sol = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
-        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
-        for ii in 2:M
-            append!(time, sol[ii].t .+ time[end])
-            append!(u.u, sol[ii].u)
-        end
-        return SolPeriodicOrbit(t = time, u = u)
     end
+    time = sol.u[1].t
+    u = RecursiveArrayTools.VectorOfArray(sol.u[1].u)
+    for ii in 2:M
+        append!(time, sol.u[ii].t .+ time[end])
+        append!(u.u, sol.u[ii].u)
+    end
+    return SolPeriodicOrbit(t = time, u = u)
 end
 get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(prob, x, setparam(prob, p); kode...)
 

@@ -30,6 +30,7 @@ function record_from_solution(x, p; k...)
             amplitude = _max - _min,
             period = getperiod(p.prob, x, p.p))
 end
+
 begin
     probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
     br_po = continuation(br, 1,

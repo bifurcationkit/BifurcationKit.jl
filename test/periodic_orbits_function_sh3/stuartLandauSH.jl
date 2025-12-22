@@ -84,7 +84,7 @@ _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
 _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 
-_pb2 = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
+_pb2 = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
 res = BK.residual(_pb2, initpo, par_hopf)
 res = BK.jvp(_pb2, initpo, par_hopf, initpo)
 @test BK.issimple(_pb2)
@@ -172,44 +172,48 @@ br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = fal
 @test br_pok2_s2.period[1] ≈ 2pi rtol = 1e-7
 ####################################################################################################
 # test shooting interface M > 1
-initpo = [0.13, 0., 6.]
-_pb = ShootingProblem(prob, ODE.KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
-initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
-res = BK.residual(_pb, initpo, par_hopf)
-res = BK.jvp(_pb, initpo, par_hopf, initpo)
-# test the jacobian of the functional
-_Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
-_Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
-@test norm(_Jad - _Jana, Inf) < 1e-7
+let
+    initpo = [0.13, 0., 6.]
+    _pb = ShootingProblem(prob, ODE.KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9)
+    initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
+    res = BK.residual(_pb, initpo, par_hopf)
+    res = BK.jvp(_pb, initpo, par_hopf, initpo)
+    # test the jacobian of the functional
+    _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
+    _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
+    @test norm(_Jad - _Jana, Inf) < 1e-7
+end
 ####################################################################################################
 # test shooting interface M > 1, parallel
-initpo = [0.13, 0, 6]
-_pb = ShootingProblem(prob, ODE.KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
-initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
-res = _pb(initpo, par_hopf)
-res = BK.jvp(_pb, initpo, par_hopf, initpo)
-# test the jacobian of the functional
-_Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
-_Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
-@test norm(_Jad - _Jana, Inf) < 1e-7
+let
+    initpo = [0.13, 0, 6]
+    _pb = ShootingProblem(prob, ODE.KenCarp4(), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol =1e-10, reltol=1e-9, parallel = true)
+    initpo = [0.13, 0, 0, 0.13, 0, 0.13 , 6.3]
+    res = _pb(initpo, par_hopf)
+    res = BK.jvp(_pb, initpo, par_hopf, initpo)
+    # test the jacobian of the functional
+    _Jad = FD.jacobian( x -> _pb(x, par_hopf), initpo)
+    _Jana = _pb(Val(:JacobianMatrix), initpo, par_hopf)
+    @test norm(_Jad - _Jana, Inf) < 1e-7
 
-# test flowDE interface
-_pb2_par = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false), [initpo[1:end-1],initpo[1:end-1],initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
-BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
+    # test flowDE interface
+    _pb2_par = ShootingProblem(prob, ODE.Rodas4(), probMono, ODE.Rodas4(), [initpo[1:end-1], initpo[1:end-1], initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9, parallel = true)
+    BK.jvp(_pb2_par.flow, initpo, par_hopf, initpo, 0.1)
+end
 ####################################################################################################
 @info "Single Poincaré Shooting"
 # Single Poincaré Shooting with hyperplane parametrization
 normals = [[-1., 0.]]
 centers = [zeros(2)]
 
-probPsh = PoincareShootingProblem(2, prob, ODE.Rodas4(), probMono, ODE.Rodas4(autodiff=false); abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
+probPsh = PoincareShootingProblem(2, prob, ODE.Rodas4(), probMono, ODE.Rodas4(); abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
 @test probPsh.par == probPsh.flow.prob1.p
 
 probPsh = PoincareShootingProblem(2, prob, ODE.Rodas4(); rtol = abstol=1e-10, reltol=1e-9, jacobian = BK.AutoDiffDenseAnalytical())
 @test probPsh.par == probPsh.flow.prob.p
 
 probPsh = PoincareShootingProblem(prob, ODE.Rodas4(),
-        probMono, ODE.Rodas4(autodiff=false),
+        probMono, ODE.Rodas4(),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
         jacobian = BK.AutoDiffDenseAnalytical())
 
@@ -238,7 +242,7 @@ BK.getperiod(probPsh, outpo.u, par_hopf)
 BK.get_periodic_orbit(probPsh, outpo.u, par_hopf)
 
 probPsh = PoincareShootingProblem(prob, ODE.Rodas4(),
-        # probMono, Rodas4(autodiff=false),
+        # probMono, Rodas4(),
         normals, centers; abstol = 1e-10, reltol = 1e-9,
         lens = (@optic _.r))
 

@@ -98,7 +98,7 @@ function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
     # the use of concrete_solve makes it compatible with Zygote
-    sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...)[end]
+    sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...).u[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
@@ -123,7 +123,7 @@ end
 function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: EnsembleProblem}
     N = size(x, 1)
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
-    _epb = setproperties(fl.odeprob_mono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
+    _epb = setproperties(fl.odeprob_mono, output_func = (sol,i) -> ((t = sol.t[end], u = sol.u[end][1:N], du = sol.u[end][N+1:end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg_mono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
     return sol.u
 end
