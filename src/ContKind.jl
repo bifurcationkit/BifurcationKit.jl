@@ -10,6 +10,7 @@ struct TravellingWaveCont <: OneParamCont end
 struct FoldCont <: TwoParamCont end
 struct HopfCont <: TwoParamCont end
 struct PDCont <: TwoParamCont end
+struct NSCont <: TwoParamCont end
 
 struct FoldPeriodicOrbitCont <: TwoParamPeriodicOrbitCont end
 struct PDPeriodicOrbitCont <: TwoParamPeriodicOrbitCont end

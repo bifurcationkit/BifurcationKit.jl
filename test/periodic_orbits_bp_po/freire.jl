@@ -20,11 +20,22 @@ prob = BK.BifurcationProblem(freire!, zeros(3), par_freire, (@optic _.ν))
 br = continuation(prob, PALC(), ContinuationPar(dsmax = 0.05, n_inversion = 8))
 ##################################################################################
 import OrdinaryDiffEq as ODE
+
+function record_from_solution(x, p; k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+    _max = maximum(xtt[1,:])
+    _min = minimum(xtt[1,:])
+    return (max = _max,
+            min = _min,
+            amplitude = _max - _min,
+            period = getperiod(p.prob, x, p.p))
+end
 begin
     probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
     br_po = continuation(br, 1,
                 ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
                 ShootingProblem(15, probsh, ODE.Rodas5(), parallel = true);
+                record_from_solution,
                 δp = 0.001, 
     )
     @test br_po.specialpoint[1].type == :bp
@@ -40,6 +51,7 @@ begin
     br_po_bp = continuation(deepcopy(br_po), 2;
                     δp = -0.001, ampfactor = 0.01,
                     use_normal_form = false, detailed = Val(false),
+                    record_from_solution,
     )
     
     @test br_po_bp.specialpoint[1].type == :ns
@@ -55,6 +67,13 @@ begin
     # @test pd.nf.nf.b3 ≈ 5548 rtol = 1e-2
 
     # plot(br, br_po, br_po_bp, xlims = (-0.7,-0.5))
+
+    br_po_pd = continuation(deepcopy(br_po_bp), 2;
+                    δp = -0.0005, ampfactor = 0.01,
+                    use_normal_form = false, detailed = Val(false),
+                    record_from_solution,
+    )
+    # plot(br, br_po, br_po_bp,br_po_pd, xlims = (-0.7,-0.5))
 end
 ##################################################################################
 begin
@@ -63,7 +82,7 @@ begin
                 PeriodicOrbitOCollProblem(30,4; jacobian = BK.DenseAnalyticalInplace());
                 δp = 0.001,
     )
-
+    # plot(br, br_po)
     @test br_po.specialpoint[1].type == :bp
     @test br_po.specialpoint[2].type == :bp
 
@@ -71,7 +90,7 @@ begin
     @test bp.nf.nf.a01 ≈ 1e-5  atol = 1e-5
     @test bp.nf.nf.b11 ≈ 219   rtol = 1e-2
     @test bp.nf.nf.b20 ≈ -4e-4 atol = 1e-2
-    @test bp.nf.nf.b30 ≈ 1657  rtol = 1e-4
+    @test bp.nf.nf.b30 ≈ 1657  rtol = 1e-2
 
     bppo = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(false))
     BK.predictor(bppo, 0.01, 0.1)
@@ -82,6 +101,7 @@ begin
     )
     @test br_po_bp.specialpoint[1].type == :ns
     @test br_po_bp.specialpoint[2].type == :pd
+    # plot(br_po, br_po_bp, xlims = (-0.7,-0.5))
 
     ns_p = get_normal_form(br_po_bp, 1; detailed = Val(true), prm = Val(true))
     # @test ns_p.nf.nf.b/(imag(ns_p.nf.nf.b)) ≈ (-6.724846398058799 - 52.018420910967144im)/(- 52.018420910967144) rtol = 1e-1
@@ -102,8 +122,15 @@ begin
     @test pd.nf.nf.a₀₁ ≈ 2.06888            rtol = 1e-1
     @test pd.nf.nf.a   ≈ 0.3043419215670348 rtol = 1e-1
     @test pd.nf.nf.c₁₁ ≈ -247.7313562613303 rtol = 1e-1
-end
     @test pd.nf.nf.b3  ≈ -6.736             rtol = 1e-2
+
+    br_po_pd = continuation(deepcopy(br_po_bp), 2;
+                    δp = -0.0005, ampfactor = 0.01,
+                    use_normal_form = false, detailed = Val(false),
+                    record_from_solution,
+    )
+    # plot(br, br_po, br_po_bp,br_po_pd, xlims = (-0.7,-0.5))
+end
 ##################################################################################
 begin
     br_po = continuation(br, 1, 

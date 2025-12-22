@@ -242,7 +242,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     # bothside = true,
     )
 
-get_normal_form(brpo_ns, 1; prm = true)
+get_normal_form(brpo_ns, 1; prm = Val(true))
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);

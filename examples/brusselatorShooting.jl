@@ -217,7 +217,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, 
-    ShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
+    ShootingProblem(Mt, prob, ODE.Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
             jacobian = BK.FiniteDifferencesMF(),
             # jacobian = BK.AutoDiffMF(),
             );
