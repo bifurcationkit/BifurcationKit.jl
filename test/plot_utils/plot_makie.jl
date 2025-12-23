@@ -38,3 +38,8 @@ let
         verbosediagram = true, normC = norminf, plot = true)
     BK.plot(bdiag)
 end
+
+let
+    BK.plot_periodic_potrap(rand(10*100+1)|>vec, 10, 100; ratio = 1)
+    BK.plot_periodic_potrap(rand(2*10*100+1)|>vec, 10, 100; ratio = 2)
+end

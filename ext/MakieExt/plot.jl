@@ -215,11 +215,11 @@ function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
     if ratio == 1
-        heatmap(outpo[1:n, :]', ylabel = "Time", color = :viridis)
+        heatmap(outpo[1:n, :]', colormap = :viridis)
     else
         fig = Makie.Figure()
-        ax1 = Axis(fig[1, 1], ylabel = "Time")
-        ax2 = Axis(fig[1, 2], ylabel = "Time")
+        ax1 = Axis(fig[1, 1])
+        ax2 = Axis(fig[1, 2])
         # Makie.heatmap!(ax1, rand(2,2))
         Makie.heatmap!(ax1, outpo[1:n, :]')
         Makie.heatmap!(ax2, outpo[n+2:end, :]')

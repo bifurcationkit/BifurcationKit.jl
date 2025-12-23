@@ -101,7 +101,7 @@ end
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2[end]), Rodas5())
+sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), Rodas5())
 probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
