@@ -352,7 +352,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
 end
 
 # Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
-function MonodromyQaD(poPb::PeriodicOrbitTrapProblem, J, u0, par)  where {Tpb <: PeriodicOrbitTrapProblem, Tjacpb, Torbitguess, Tp}
+function MonodromyQaD(poPb::PeriodicOrbitTrapProblem, J, u0, par)
     # extraction of various constants
     M, N = size(poPb)
 
@@ -456,7 +456,7 @@ end
     μ = @. Complex(1 / (1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`"
+        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
     end
     Ind = sortperm(log.(μ); by = real, rev = true)
     nev2 = min(nev, length(Ind))
@@ -519,16 +519,6 @@ FloquetColl(; eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_
 - `eigls`: Eigensolver to use (defaults to `DefaultEig()`)
 - `cache`: Optional cache for optimization (set to `COPCACHE`; automatically configured when using `COPBLS`)
 - `small_n`: Whether to use optimized algorithm for small state dimensions (defaults to `true`)
-
-## Example
-
-```julia
-# Default constructor (recommended)
-floquet_solver = FloquetColl()
-
-# With custom eigensolver
-floquet_solver = FloquetColl(eigls = EigArpack())
-```
 
 ## References
 [1] Doedel, Eusebius, Herbert B. Keller, et Jean Pierre Kernevez. «Numerical analysis and control of bifurcation problems (ii): bifurcation in infinite dimensions». International Journal of Bifurcation and Chaos 01, nᵒ 04 (décembre 1991): 745‑72. https://doi.org/10.1142/S0218127491000555.

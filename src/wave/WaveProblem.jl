@@ -2,7 +2,7 @@ abstract type AbstractModulatedWaveFD <: AbstractPOFDProblem end
 abstract type AbstractModulatedWaveShooting <: AbstractShootingProblem end
 
 """
-TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
+$(TYPEDEF)
 
 This composite type implements a functional for freezing symmetries in order, for example, to compute traveling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
 
@@ -27,23 +27,29 @@ This simplified call handles the case where a single symmetry needs to be frozen
 - `updatesection!(pb::TWProblem, u0)` updates the reference solution of the problem using `u0`.
 - `nb_constraints(::TWProblem)` number of constraints (or Lie generators)
 
+## Fields
+$(TYPEDFIELDS)
+
 """
-@with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD} <: AbstractBifurcationProblem
-    "vector field, must be `AbstractBifurcationProblem`"
+@with_kw_noshow struct TWProblem{Tprob, Tu0, TDu0, TD, Tj} <: AbstractBifurcationProblem
+    "vector field, must be `AbstractBifurcationProblem`."
     prob_vf::Tprob
-    "Infinitesimal generator of symmetries, differential operator"
+    "Infinitesimal generator of symmetries, differential operator."
     ∂::TD
     "reference solution, we only need one!"
     u₀::Tu0
     ∂u₀::TDu0 = (∂ * u₀,)
     DAE::Int = 0
-    nc::Int = 1  # number of constraints
-    jacobian::Symbol = :AutoDiff
+    "[Internal] number of constraints"
+    nc::Int = 1
+    jacobian::Tj = AutoDiff()
     @assert 0 <= DAE <= 1
     @assert 0 < nc
+    @assert jacobian in [MatrixFree(), AutoDiffMF(), FullLU(), FiniteDifferences(), AutoDiff()] "This jacobian is not defined. Please chose another one."
 end
+getparams(tw::TWProblem) = getparams(tw.prob_vf)
 
-function TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian::Symbol = :AutoDiff)
+function TWProblem(prob, ∂::Tuple, u₀; DAE = 0, jacobian = AutoDiff())
     # ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
     ∂u₀ = Tuple( LA.mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
     return TWProblem(prob_vf = prob, ∂ = ∂,
@@ -79,6 +85,8 @@ function updatesection!(pb::TWProblem{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {T
 end
 
 """
+$(TYPEDSIGNATURES)
+
 - `ss` tuple of speeds
 - `D` tuple of Lie generators
 """
@@ -189,31 +197,29 @@ function modify_tw_record(probTW, kwargs, par, lens)
     end
 end
 ################################################################################
-jacobian(tw::WrapTW, x, p) = tw.jacobian(x, p)
+jacobian(tw::WrapTW, x, p) = jacobian(tw, tw.jacobian, x, p)
 residual(tw::WrapTW, x, p) = residual(tw.prob, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 @inline getdelta(::WrapTW) = 1e-8
-dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0.)
-d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0.)
-d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0.)
+dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0)
+d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0)
+d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0)
 @inline update!(::WrapTW, args...; k...) = update_default(args...; k...)
 
-function newton(prob::TWProblem, orbitguess, optn::NewtonPar; kwargs...)
-    jacobian = prob.jacobian
-    @assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
-    if jacobian == :AutoDiff
-        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> residual(prob, z, p), x))
-    elseif jacobian == :MatrixFreeAD
-        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> residual(prob, x .+ t .* dx, p), 0))
-    elseif jacobian == :FullLU
-        jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
-    elseif jacobian == :FiniteDifferences
-        jac = (x, p) -> finiteDifferences(z -> prob(z, p), x)
-    elseif jacobian == :MatrixFree
-        jac = (x, p) -> (dx ->  prob(x, p, dx))
-    end
+_generate_jacobian(probPO::TWProblem, J::Union{MatrixFree, AutoDiffMF, FullLU, FiniteDifferences, AutoDiff}, o, pars; k...) = J
+jacobian(prob::WrapTW, ::AutoDiff, x, p) = ForwardDiff.jacobian(z -> residual(prob, z, p), x)
+jacobian(prob::WrapTW, ::FullLU, x, p) = prob.prob(Val(:JacFullSparse), x, p)
+jacobian(prob::WrapTW, ::MatrixFree, x, p) = (dx ->  prob.prob(x, p, dx))
+
+function newton(prob::TWProblem, 
+                orbitguess, 
+                optn::NewtonPar; 
+                δ = convert(VI.scalartype(orbitguess), 1e-8),
+                kwargs...)
+    jacobianTW = prob.jacobian
+    jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), record_from_solution(prob.prob_vf), plot_solution(prob.prob_vf))
     return solve(probwp, Newton(), optn; kwargs...,)
 end
@@ -223,22 +229,11 @@ function continuation(prob::TWProblem,
                     alg::AbstractContinuationAlgorithm, 
                     contParams::ContinuationPar;
                     record_from_solution = nothing,
-                    plot_solution = BifurcationKit.plot_solution(prob.prob_vf),
+                    plot_solution = plot_solution(prob.prob_vf),
+                    δ = convert(VI.scalartype(orbitguess), 1e-8),
                     kwargs...)
-    jacobian = prob.jacobian
-    @assert jacobian in (:MatrixFree, :MatrixFreeAD, :AutoDiff, :FullLU, :FiniteDifferences)
-
-    if jacobian == :AutoDiff
-        jac = (x, p) -> sparse(ForwardDiff.jacobian(z -> residual(prob, z, p), x))
-    elseif jacobian == :MatrixFreeAD
-        jac = (x, p) -> (dx -> ForwardDiff.derivative(t -> residual(prob, x .+ t .* dx, p), 0))
-    elseif jacobian == :FullLU
-        jac = (x, p) -> prob(Val(:JacFullSparse), x, p)
-    elseif jacobian == :FiniteDifferences
-        jac = (x, p) -> finite_differences(z -> residual(prob, z, p), x)
-    elseif jacobian == :MatrixFree
-        jac = (x, p) -> (dx ->  prob(x, p, dx))
-    end
+    jacobianTW = prob.jacobian
+    @assert jacobianTW in (MatrixFree(), AutoDiffMF(), AutoDiff(), FullLU(), FiniteDifferences())
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
     B = spdiagm(vcat(ones(N-1), 0))
@@ -248,9 +243,9 @@ function continuation(prob::TWProblem,
 
     # update record function
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
+    _kwargs = (;record_from_solution, plot_solution)
     _recordsol = modify_tw_record(prob, _kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
-
+    jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution, _recordsol)
 
     # call continuation

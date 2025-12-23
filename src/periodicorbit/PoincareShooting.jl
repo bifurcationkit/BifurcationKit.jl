@@ -175,7 +175,7 @@ function get_periodic_orbit(prob::PoincareShootingProblem, x_bar::AbstractVector
     else # threaded version
         E!(prob.section, view(xc, :, 1), view(x_barc, :, 1), 1)
         sol = @views evolve(prob.flow, Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
-        return sol[1]
+        return sol.u[1]
     end
 end
 get_periodic_orbit(prob::PoincareShootingProblem, x::AbstractVector, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))

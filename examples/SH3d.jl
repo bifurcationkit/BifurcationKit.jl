@@ -91,6 +91,7 @@ LinearAlgebra.ldiv!(o::Vector, P::SuiteSparse.CHOLMOD.Factor{Float64}, v::Vector
 
 # rtol must be small enough to pass the folds and to get precise eigenvalues
 ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Prec)
+# ls = KrylovLS(Pl = Prec, rtol = 1e-9, atol = 1e-11, verbose = 0, ldiv=true)
 ####################################################################################################
 struct SH3dEig{Ts, Tσ} <: BK.AbstractEigenSolver
     ls::Ts
