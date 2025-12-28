@@ -153,7 +153,8 @@ const _pocoll_jacobian_types = (AutoDiffDense(),
                                 DenseAnalytical(),
                                 FullSparse(),
                                 DenseAnalyticalInplace(),
-                                FullSparseInplace())
+                                FullSparseInplace(),
+                                AutoDiffMF())
 
 """
 $(TYPEDEF)
@@ -180,6 +181,11 @@ Here are some useful methods you can apply to `pb`
 You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
 
 Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
+
+# Jacobian
+
+Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to $_pocoll_jacobian_types. This is used to
+  select a way of inverting the jacobian dG of the functional G.
 
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
@@ -214,7 +220,7 @@ Note that you can generate this guess from a function using `generate_solution` 
     "Update the section every `update_section_every_step` step during continuation."
     update_section_every_step::UInt = 1
 
-    "Describes the type of jacobian used in Newton iterations. Can only be `AutoDiffDense(), DenseAnalytical(), FullSparse(), FullSparseInplace(), DenseAnalyticalInplace()`."
+    "Describes the type of jacobian used in Newton/PALC/etc iterations."
     jacobian::Tjac = DenseAnalytical()
 
     "Cache for collocation. See docs of `MeshCollocationCache`."

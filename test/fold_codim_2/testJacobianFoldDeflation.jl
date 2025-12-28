@@ -28,108 +28,112 @@ out = BK.solve(prob, Newton(), opt_newton)
 opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = opt_newton)
 br = continuation(prob, PALC(), opts_br0)
 ####################################################################################################
-# Fold continuation, test of Jacobian expression
-outfold = newton(br, 2; start_with_eigen = false)
-outfold = newton(br, 2; start_with_eigen = true)
-@test  BK.converged(outfold)
-outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = false, issymmetric = true)
-@test BK.converged(outfold)
+# Fold continuation
+let
+    outfold = newton(br, 2; start_with_eigen = false)
+    outfold = newton(br, 2; start_with_eigen = true)
+    @test  BK.converged(outfold)
+    outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = false, issymmetric = true)
+    @test BK.converged(outfold)
 
-optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
-for eig_st in (true, false)
-    outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
-    outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
-    # test use of jacobian_adjoint
-    outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+    optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
+    for eig_st in (true, false)
+        outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+        outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+        # test use of jacobian_adjoint
+        outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+    end
 end
 
+# test of Jacobian expression
 # manual handling
-indfold = 1
-foldpt = BK.fold_point(br, indfold)
-foldpb = FoldProblemMinimallyAugmented(
-        (@set prob.VF.d2F = nothing), # this is for debug array
-        br.specialpoint[indfold].x,
-        br.specialpoint[indfold].x,
-        opts_br0.newton_options.linsolver)
+let
+    indfold = 1
+    foldpt = BK.fold_point(br, indfold)
+    foldpb = FoldProblemMinimallyAugmented(
+                    (@set prob.VF.d2F = nothing), # this is for debug array
+                    br.specialpoint[indfold].x,
+                    br.specialpoint[indfold].x,
+                    opts_br0.newton_options.linsolver)
 
-outfold = BK.newton_fold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar())
-# @test BK.converged(outfold)
+    outfold = BK.newton_fold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(tol = 1e-10), normN = norminf)
+    @test BK.converged(outfold)
 
-# user defined Fold Problem
-indfold = 1
+    # we now use the newton refined point
+    foldpt = outfold.u
 
-# we define the following wrappers to be able to use ForwardDiff
-Bd2Vec(x) = vcat(x.u, x.p)
-Vec2Bd(x) = BorderedArray(x[1:end-1], x[end])
-foldpbVec(x,p) = Bd2Vec(foldpb(Vec2Bd(x),p))
+    # we define the following wrappers to be able to use ForwardDiff
+    Bd2Vec(x) = vcat(x.u, x.p)
+    Vec2Bd(x) = BorderedArray(x[1:end-1], x[end])
+    foldpbVec(x,p) = Bd2Vec(foldpb(Vec2Bd(x),p))
 
-rhs = rand(n+1)
-Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
-J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
-res_fd =  J_fold_fd \ rhs
+    rhs = rand(n+1)
+    Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
+    J_fold_fwdiff = Jac_fold_fdMA(Bd2Vec(foldpt))
+    res_fd =  J_fold_fwdiff \ rhs
 
-# test against analytical jacobian
-_fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
-BK.has_adjoint(_fold_ma_problem)
-BK.is_symmetric(_fold_ma_problem)
-BK.residual!(_fold_ma_problem, zero(Bd2Vec(foldpt)) ,Bd2Vec(foldpt), par_chan)
-J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
-@test norminf(J_ana - J_fold_fd) < 1e-5
+    # test against analytical jacobian, compare to ForwardDiff
+    # The main error comes from the borders which are evaluated by finite differences in the functional
+    _fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
+    BK.has_adjoint(_fold_ma_problem)
+    BK.is_symmetric(_fold_ma_problem)
+    BK.residual!(_fold_ma_problem, zero(Bd2Vec(foldpt)) ,Bd2Vec(foldpt), par_chan)
+    J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
 
-###
-Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
-res_explicit = BK.FoldLinearSolverMinAug()(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
+    # test whether the Jacobian Matrix for the Fold problem is correct
+    @test norminf(J_ana[1:end-1,1:end-1] - J_fold_fwdiff[1:end-1,1:end-1]) == 0
+    @test norminf(J_ana - J_fold_fwdiff) < 1e-5
 
-# test whether the Jacobian Matrix for the Fold problem is correct
-@test norminf(J_ana[1:end-1,1:end-1] - J_fold_fd[1:end-1,1:end-1]) == 0
+    ###
+    Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
+    res_explicit = BK.FoldLinearSolverMinAug()(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
 
-# we test the expression for σp
-σp_fd = J_fold_fd[end,end]
-σp_fd_ana = J_ana[end,end]
-@test σp_fd ≈ σp_fd_ana atol = 1e-5
+    # we test the expression for σp
+    σp_fd = J_fold_fwdiff[end,end]
+    σp_fd_ana = J_ana[end,end]
+    @test σp_fd ≈ σp_fd_ana atol = 1e-5
 
-# we test the expression for σx
-σx_fd = J_fold_fd[end,1:end-1]
-σx_ana = J_ana[end,1:end-1]
-@test σx_fd ≈ σx_ana rtol = 1e-2
+    # we test the expression for σx
+    σx_fd = J_fold_fwdiff[end,1:end-1]
+    σx_ana = J_ana[end,1:end-1]
+    @test σx_fd ≈ σx_ana rtol = 1e-2
 
-σx_fd - σx_ana |> norminf
-J_ana[1:end-1,1:end-1] - J_fold_fd[1:end-1,1:end-1] |> norminf
+    σx_fd - σx_ana |> norminf
+    J_ana[1:end-1,1:end-1] - J_fold_fwdiff[1:end-1,1:end-1] |> norminf
 
-# check our solution of the bordered problem
-res_exp = J_ana \ rhs
-@test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
-#############################################
-@reset foldpb.prob_vf.VF.isSymmetric = true
-_fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
-rhs = rand(n+1)
-Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
-J_fold_fd = Jac_fold_fdMA(Bd2Vec(foldpt))
-res_fd =  J_fold_fd \ rhs
+    # check our solution of the bordered problem
+    res_exp = J_ana \ rhs
+    @test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
 
-Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
-jacFoldSolver = BK.FoldLinearSolverMinAug()
-J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
-res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
+    # test the symmetric case
+    @reset foldpb.prob_vf.VF.isSymmetric = true
+    _fold_ma_problem = BK.FoldMAProblem(foldpb, BK. MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
+    rhs = rand(n+1)
+    Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
+    J_fold_fwdiff = Jac_fold_fdMA(Bd2Vec(foldpt))
+    res_fd =  J_fold_fwdiff \ rhs
 
-Jac_fold_MA(foldpt, 0.01, foldpb)[2]
+    jacFoldSolver = BK.FoldLinearSolverMinAug()
+    J_ana = BK.jacobian(_fold_ma_problem, Bd2Vec(foldpt), par_chan)
+    res_explicit = jacFoldSolver(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
 
-# test whether the Jacobian Matrix for the Fold problem is correct
-@test J_ana[1:end-1,1:end-1] - J_fold_fd[1:end-1,1:end-1] |> norminf == 0
+    Jac_fold_MA(foldpt, 0.01, foldpb)[2]
 
-# we test the expression for σp
-σp_fd = J_fold_fd[end,end]
-σp_fd_ana = J_ana[end,end]
-@test σp_fd ≈ σp_fd_ana atol = 1e-5
+    # test whether the Jacobian Matrix for the Fold problem is correct
+    @test J_ana[1:end-1,1:end-1] - J_fold_fwdiff[1:end-1,1:end-1] |> norminf == 0
 
-# we test the expression for σx
-σx_fd = J_fold_fd[end,1:end-1]
-σx_ana = J_ana[end,1:end-1]
-@test σx_fd ≈ σx_ana rtol = 1e-2
+    # we test the expression for σp
+    σp_fd = J_fold_fwdiff[end,end]
+    σp_fd_ana = J_ana[end,end]
+    @test σp_fd ≈ σp_fd_ana atol = 1e-5
 
-σx_fd - σx_ana |> norminf
-J_ana[1:end-1,1:end-1] - J_fold_fd[1:end-1,1:end-1] |> norminf
+    # we test the expression for σx
+    σx_fd = J_fold_fwdiff[end,1:end-1]
+    σx_ana = J_ana[end,1:end-1]
+    @test σx_fd ≈ σx_ana rtol = 1e-2
+    @test σx_fd ≈ σx_ana atol = 1e-4
 
-# check our solution of the bordered problem
-res_exp = J_ana \ rhs
-@test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
+    # check our solution of the bordered problem
+    res_exp = J_ana \ rhs
+    @test norm(res_exp - Bd2Vec(res_explicit[1]), Inf64) < 1e-10
+end

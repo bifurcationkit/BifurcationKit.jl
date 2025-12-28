@@ -74,7 +74,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     update_section_every_step::UInt = 1
     "Describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = AutoDiffDense()
-    @assert jacobian in [AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()] "This jacobian is not defined. Please chose another one."
+    @assert jacobian in _po_sh_jacobian_types "This jacobian is not defined. Please chose another one."
 end
 
 @inline issimple(sh::ShootingProblem) = get_mesh_size(sh) == 1

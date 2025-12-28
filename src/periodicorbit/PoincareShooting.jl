@@ -66,7 +66,7 @@ Note that you can generate this guess from a function solution using `generate_s
     update_section_every_step::UInt = 1
     "Describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = AutoDiffDenseAnalytical()
-    @assert jacobian in [AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()] "This jacobian is not defined. Please chose another one."
+    @assert jacobian in _po_sh_jacobian_types "This jacobian is not defined. Please chose another one."
 end
 
 @inline isparallel(psh::PoincareShootingProblem) = psh.parallel
