@@ -366,6 +366,35 @@ function update!(probma::HopfMAProblem, iter, state)
     return ((abs(ω) >= threshBT) || in_bisection(state) == false) && (~isbt) && update_result
 end
 
+function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
+                              state::AbstractContinuationState) where {Tkind <: AbstractContinuationKind}
+    probma = getprob(iter)
+    𝐇 = get_formulation(probma)
+    prob_vf = 𝐇.prob_vf
+    lens1, lens2 = get_lenses(probma)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    if probma.recordFromSolution isa Nothing
+        return (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
+                            ωₕ = getp(u, 𝐇)[2],
+                            l1 = 𝐇.l1,
+                            BT = 𝐇.BT,
+                            GH = 𝐇.GH,
+                            _namedrecordfromsol(record_from_solution(prob_vf)(getvec(u, 𝐇), p))...
+                            ) 
+    end
+
+    return (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
+                        ωₕ = getp(u, 𝐇)[2],
+                        l1 = 𝐇.l1,
+                        BT = 𝐇.BT,
+                        GH = 𝐇.GH,
+                        _namedrecordfromsol(probma.recordFromSolution(getvec(u, 𝐇), p))...
+                        ) 
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -464,30 +493,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     𝐇.BT = one(eTb)
     𝐇.GH = one(eTb)
 
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = record_from_solution
-    _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...)  -> begin
-                 (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
-                            ωₕ = getp(u, 𝐇)[2],
-                            l1 = 𝐇.l1,
-                            BT = 𝐇.BT,
-                            GH = 𝐇.GH,
-                            _namedrecordfromsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...
-                            )
-            end :
-        (u, p; kw...) -> begin
-            (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
-                        ωₕ = getp(u, 𝐇)[2],
-                        l1 = 𝐇.l1,
-                        BT = 𝐇.BT,
-                        GH = 𝐇.GH,
-                        _namedrecordfromsol(_printsol(getvec(u, 𝐇), p; kw...))...
-                        )
-        end
-
-    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
-
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_hopf)
 
@@ -512,8 +517,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
             event = PairOfEvents(event_bif, event_user)
         end
     end
-
-    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
 
     # solve the hopf equations
     br = continuation(

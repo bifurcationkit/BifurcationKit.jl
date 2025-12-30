@@ -290,6 +290,27 @@ function finalise_solution(iter::ContIterable{NSPeriodicOrbitCont},
     return isbt && fin_user
 end
 
+function record_from_solution(iter::ContIterable{NSPeriodicOrbitCont, <: NSMAProblem},
+                              state::AbstractContinuationState)
+    probma = getprob(iter)
+    𝐍𝐒 = get_formulation(probma)
+    probwrap = 𝐍𝐒.prob_vf
+    lens1, lens2 = get_lenses(probma)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    return (; zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
+                ωₙₛ = getp(u, 𝐍𝐒)[2],
+                CH = real(𝐍𝐒.l1),
+                R₁ = 𝐍𝐒.R1,
+                R₂ = 𝐍𝐒.R2,
+                R₃ = 𝐍𝐒.R3,
+                R₄ = 𝐍𝐒.R4,
+                _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
+                )
+end
+
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
                         lens1::AllOpticTypes, lens2::AllOpticTypes,
@@ -352,32 +373,13 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     𝐍𝐒.R3 = zero(𝒯)
     𝐍𝐒.R4 = zero(𝒯)
 
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _recordsol = get(kwargs, :record_from_solution, nothing)
-    _recordsol2 = isnothing(_recordsol) ?
-        (u, p; kw...) -> (; 
-                zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
-                ωₙₛ = getp(u, 𝐍𝐒)[2],
-                CH = real(𝐍𝐒.l1),
-                R₁ = 𝐍𝐒.R1,
-                R₂ = 𝐍𝐒.R2,
-                R₃ = 𝐍𝐒.R3,
-                R₄ = 𝐍𝐒.R4,
-                _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))... #putting it last is important for plotting
-                ) :
-        (u, p; kw...) -> (; 
-            _namedrecordfromsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
-            zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
-            ωₙₛ = getp(u, 𝐍𝐒)[2], 
-            CH = real(𝐍𝐒.l1), )
-
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
     # change the plot and record functions
-    _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
+    _kwargs = (;plot_solution = plot_solution)
     _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
-    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
+    prob_ns = re_make(prob_ns, plot_solution = _plotsol)
 
     # define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)

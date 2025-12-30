@@ -301,6 +301,24 @@ function update!(probma::PDMAProblem, iter, state)
     return update!(𝐏𝐝, iter, state)
 end
 
+function record_from_solution(iter::ContIterable{PDPeriodicOrbitCont, <: PDMAProblem},
+                              state::AbstractContinuationState)
+    probma = getprob(iter)
+    𝐏𝐝 = get_formulation(probma)
+    probwrap = 𝐏𝐝.prob_vf
+    lens1, lens2 = get_lenses(probma)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    return (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))...,
+                CP  = 𝐏𝐝.CP,
+                GPD = 𝐏𝐝.GPD,
+                R₂  = 𝐏𝐝.R2,
+                _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
+                )
+end
+
 function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 pdpointguess::BorderedArray{vectype, 𝒯}, par,
                 lens1::AllOpticTypes, lens2::AllOpticTypes,
@@ -361,28 +379,13 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     𝐏𝐝.GPD = one(𝒯)
     𝐏𝐝.R2  = one(𝒯)
 
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _recordsol = get(kwargs, :record_from_solution, nothing)
-    _recordsol2 = isnothing(_recordsol) ?
-        (u, p; kw...) -> (; zip(lenses, (getp(u, 𝐏𝐝)[1], p))...,
-                    period = getperiod(prob, getvec(u, 𝐏𝐝), nothing), # do not work for PoincareShootingProblem
-                    CP  = 𝐏𝐝.CP,
-                    GPD = 𝐏𝐝.GPD,
-                    R₂  = 𝐏𝐝.R2,
-                    _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐏𝐝), p; kw...))...) :
-        (u, p; kw...) -> (; _namedrecordfromsol(_recordsol(getvec(u, 𝐏𝐝), p; kw...))..., zip(lenses, (getp(u, 𝐏𝐝), p))..., 
-                            CP  = 𝐏𝐝.CP, 
-                            GPD = 𝐏𝐝.GPD,
-                            R₂  = 𝐏𝐝.R2,
-                            )
-
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_pd_cont.newton_options.eigsolver), prob_pd)
 
     # change the plotter
     _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
     _plotsol = modify_po_plot(prob_pd, getparams(prob_pd), getlens(prob_pd); _kwargs...)
-    prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
+    prob_pd = re_make(prob_pd, plot_solution = _plotsol)
 
     # define event for detecting codim 2 bifurcations.
     # couple it with user passed events
