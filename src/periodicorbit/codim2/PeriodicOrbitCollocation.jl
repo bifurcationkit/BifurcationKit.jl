@@ -133,7 +133,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # this updates the section
     coll = deepcopy(pbwrap.prob)
-    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
 
     options_foldpo = options_cont
 
@@ -144,7 +143,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         start_with_eigen,
         bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
-        finalise_solution = _finsol,
         kwargs...
         )
 end

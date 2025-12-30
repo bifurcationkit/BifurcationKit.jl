@@ -182,8 +182,6 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     pbwrap = getprob(br)
     sh = pbwrap.prob
 
-    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(sh)),lens2), kwargs, sh.update_section_every_step)
-
     options_foldpo = options_cont
 
     # perform continuation
@@ -193,7 +191,6 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
         options_foldpo;
         bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
-        finalise_solution = _finsol,
         kwargs...)
 end
 

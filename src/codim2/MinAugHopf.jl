@@ -311,8 +311,9 @@ function update!(probma::HopfMAProblem, iter, state)
     𝒯 = eltype(𝐇)
     success = state.converged
     step = state.step
-        return true
     if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false) || in_bisection(state)
+        # update vector field
+        return update!(𝐇, iter, state)
     end
 
     @debug "[Hopf] Update vectors a and b"

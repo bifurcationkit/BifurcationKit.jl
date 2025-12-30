@@ -651,8 +651,12 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 end
 get_periodic_orbit(prob::AbstractPOFDProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
-# this function updates the section during the continuation run
-@views function updatesection!(prob::PeriodicOrbitTrapProblem, x, par)
+"""
+$(TYPEDSIGNATURES)
+
+This function updates the section during the continuation run.
+"""
+@views function updatesection!(prob::PeriodicOrbitTrapProblem, x, pars)
     @debug "Update section TRAP"
     M, N = size(prob)
     xc = get_time_slices(prob, x)
@@ -664,7 +668,7 @@ get_periodic_orbit(prob::AbstractPOFDProblem, x, p::Real) = get_periodic_orbit(p
     # update the normals
     for ii in 0:M-1
         # ii2 = (ii+1)<= M ? ii+1 : ii+1-M
-        residual!(prob.prob_vf, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], par)
+        residual!(prob.prob_vf, prob.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], pars)
         prob.ϕ[ii*N+1:ii*N+N] ./= M
     end
     return true
@@ -968,8 +972,6 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
          eigsolver
     end
 
-    # change the user provided finalise function by passing prob in its parameters
-    _finsol = modify_po_finalise(prob, kwargs, prob.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
@@ -980,7 +982,6 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
         probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
         kwargs_continuation = (kwargs...,
                                 kind = PeriodicOrbitCont(),
-                                finalise_solution = _finsol,
                                 linear_algo,)
     else
         if jacobianPO == BorderedLU()
@@ -1010,7 +1011,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
         alg = update(alg, contParams, linear_algo)
         kwargs_continuation = (kwargs...,
                                 kind = PeriodicOrbitCont(),
-                                finalise_solution = _finsol,)
+                                )
     end
     return continuation(probwp, alg,
                 contParams;

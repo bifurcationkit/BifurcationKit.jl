@@ -293,7 +293,7 @@ function update!(probma::FoldMAProblem, iter, state)
     success = state.converged
     step = state.step
     if (~mod_counter(step, 𝐅.update_minaug_every_step) || success == false)
-        return true
+        return update!(𝐅, iter, state)
     end
 
     @debug "[Fold] Update vectors a and b"

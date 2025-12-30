@@ -1278,8 +1278,47 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     success = true
     return (;success, newτsT, ϕ)
 end
+####################################################################################################
+function update!(wrap::WrapPOColl, iter, state)
+    coll = wrap.prob
+    success = converged(state)
+    bisection = in_bisection(state)
+    update_section_every_step = coll.update_section_every_step
+    step = state.step
+    z = getsolution(state)
+    is_mesh_updated = false
 
-# condensation of parameters in Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
+    # mesh adaptation
+    if success &&
+            coll.meshadapt && 
+            bisection == false && 
+            mod_counter(step, update_section_every_step) == 1 &&
+            step > 2
+        @debug "[Collocation] update mesh"
+        is_mesh_updated = true
+        oldsol = _copy(z) # avoid possible overwrite in compute_error!
+        oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
+        adapt = compute_error!(coll, oldsol.u;
+                    verbosity = coll.verbose_mesh_adapt,
+                    K = coll.K,
+                    par = setparam(iter, z.p)
+                    )
+        if ~adapt.success # stop continuation if mesh adaptation fails
+            return false
+        end
+    end
+
+    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+        @debug "[collocation] update section"
+        updatesection!(coll, z.u, setparam(iter, z.p))
+    end
+    if is_mesh_updated
+        # we recompute the tangent predictor
+        @debug "[collocation] update predictor"
+        getpredictor!(state, iter)
+    end
+    return true
+end
 ####################################################################################################
 """
 $(TYPEDSIGNATURES)

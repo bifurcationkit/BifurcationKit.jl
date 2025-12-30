@@ -117,6 +117,21 @@ end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 ####################################################################################################
+function update!(wrap::Union{WrapPOSh, WrapPOTrap}, iter, state)
+    prob = wrap.prob
+    success = converged(state)
+    bisection = in_bisection(state)
+    update_section_every_step = prob.update_section_every_step
+    step = state.step
+    z = getsolution(state)
+    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+        @debug "[Periodic orbit] update section"
+        # Trapezoid and Shooting need the parameters for section update:
+        updatesection!(prob, z.u, setparam(wrap, z.p))
+    end
+    return true
+end
+####################################################################################################
 const _po_sh_jacobian_types = (AutoDiffMF(),
                                 MatrixFree(),
                                 AutoDiffDense(),
