@@ -19,8 +19,9 @@ abstract type AbstractBifurcationProblem end
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
-abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
+abstract type AbstractMABifurcationProblem{T, Tjac} <: AbstractBifurcationProblem end
 ################################################################################
 abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
@@ -39,8 +40,6 @@ abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
 abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
 ################################################################################
-import SciMLBase
-
 # const type to hold "all" the types of optics. Note that we relied on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
@@ -308,7 +307,7 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob}
+            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob, Tjac}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
@@ -461,16 +460,17 @@ for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
 end
 
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
+    color = :cyan
     print(io, prefix * "┌─ Bifurcation problem with uType ")
-    printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
+    printstyled(io, _getvectortype(prob); color, bold = true)
     print(io, "\n" * prefix * "├─ Inplace: ")
-    printstyled(io, isinplace(prob), color = :cyan, bold = true)
+    printstyled(io, isinplace(prob); color, bold = true)
     print(io, "\n" * prefix * "├─ Dimension: ")
-    printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
+    printstyled(io, length(getu0(prob)); color, bold = true)
     print(io, "\n" * prefix * "├─ Symmetric: ")
-    printstyled(io, is_symmetric(prob), color = :cyan, bold = true)
+    printstyled(io, is_symmetric(prob); color, bold = true)
     print(io, "\n" * prefix * "└─ Parameter: ")
-    printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
+    printstyled(io, get_lens_symbol(getlens(prob)); color, bold = true)
 end
 
 function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)

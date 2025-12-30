@@ -1090,8 +1090,6 @@ function continuation(coll::PeriodicOrbitOCollProblem,
         contParams = @set contParams.newton_options.eigsolver = eigsolver
     end
 
-    # change the user provided finalise function by passing prob in its parameters
-    _finsol = modify_po_finalise(coll, kwargs, coll.update_section_every_step)
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); _kwargs...)
@@ -1103,7 +1101,6 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                       contParams;
                       kwargs...,
                       kind = PeriodicOrbitCont(),
-                      finalise_solution = _finsol,
                       linear_algo
                       )
     return br

@@ -13,6 +13,9 @@ module BifurcationKit
     import PreallocationTools: DiffCache, get_tmp
     using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF, TYPEDFIELDS, TYPEDSIGNATURES
 
+    # used in Problems.jl
+    import SciMLBase
+
     import Reexport
     Reexport.@reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
     Reexport.@reexport using ArnoldiMethod: LM, LR, LI, SR, SI

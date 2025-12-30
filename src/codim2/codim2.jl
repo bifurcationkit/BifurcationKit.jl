@@ -30,7 +30,7 @@ for op in (:FoldProblemMinimallyAugmented,
     """
     mutable struct $op{Tprob <: AbstractBifurcationProblem,
                        vectype,
-                       T <: Real,
+                       𝒯 <: Real,
                        S <: AbstractLinearSolver,
                        Sa <: AbstractLinearSolver,
                        Sbd <: AbstractBorderedLinearSolver,
@@ -46,13 +46,13 @@ for op in (:FoldProblemMinimallyAugmented,
         "vector zero, to avoid allocating it many times."
         zero::vectype
         "Lyapunov coefficient."
-        l1::Complex{T}
+        l1::Complex{𝒯}
         "Cusp test value."
-        CP::T
+        CP::𝒯
         "Bogdanov-Takens test value."
-        BT::T
+        BT::𝒯
         "Bautin test values."
-        GH::T
+        GH::𝒯
         "Zero-Hopf test values."
         ZH::Int
         "linear solver. Used to invert the jacobian of MA functional."
@@ -73,8 +73,7 @@ for op in (:FoldProblemMinimallyAugmented,
         update_minaug_every_step::Int
     end
 
-    @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
-    @inline Base.eltype(pb::$op{Tprob, vectype, T}) where {Tprob, vectype, T} = T
+    @inline Base.eltype(pb::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
     @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
     @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
     @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -164,13 +163,13 @@ end
 end
 ################################################################################
 # this function encodes the functional for Hopf/NS
-function (𝐇::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::BorderedArray, params)
-    res = 𝐇(x.u, x.p[1], x.p[2], params)
+function (𝐏𝐛::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::BorderedArray, params)
+    res = 𝐏𝐛(x.u, x.p[1], x.p[2], params)
     return BorderedArray(res[1], [res[2], res[3]])
 end
 
-@views function (𝐇::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::AbstractVector, params)
-    res = 𝐇(x[begin:end-2], x[end-1], x[end], params)
+@views function (𝐏𝐛::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::AbstractVector, params)
+    res = 𝐏𝐛(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
 ################################################################################

@@ -16,7 +16,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         """
         mutable struct $op{Tprob <: AbstractBifurcationProblem,
                            vectype,
-                           T <: Real,
+                           𝒯 <: Real,
                            S <: AbstractLinearSolver,
                            Sa <: AbstractLinearSolver,
                            Sbd <: AbstractBorderedLinearSolver,
@@ -33,23 +33,23 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             "vector zero, to avoid allocating it many times"
             zero::vectype
             "Lyapunov coefficient"
-            l1::Complex{T}
+            l1::Complex{𝒯}
             "Cusp test value"
-            CP::T
+            CP::𝒯
             "Fold-Neimark Sacker test value"
-            FOLDNS::T
+            FOLDNS::𝒯
             "Generalized period doubling test value"
-            GPD::T
+            GPD::𝒯
             "Fold-NS test values"
             FLIPNS::Int
             "Resonance 1"
-            R1::T
+            R1::𝒯
             "Resonance 2"
-            R2::T
+            R2::𝒯
             "Resonance 3"
-            R3::T
+            R3::𝒯
             "Resonance 4"
-            R4::T
+            R4::𝒯
             "linear solver. Used to invert the jacobian of MA functional"
             linsolver::S
             "linear solver for the jacobian adjoint"
@@ -73,7 +73,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         end
 
         @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
-        @inline Base.eltype(pb::$op{Tprob, vectype, T}) where {Tprob, vectype, T} = T
+        @inline Base.eltype(pb::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
         @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
         @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
         @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -143,6 +143,10 @@ get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
 get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
 get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
 get_wrap_po(pb::NeimarkSackerProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+
+__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
+__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
+__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldProblemMinimallyAugmented
@@ -161,10 +165,6 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     end
     return contres
 end
-
-__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
-__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
-__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
@@ -286,7 +286,6 @@ function _continuation(gh::Bautin,
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
         bdlinsolver,
-        finalise_solution = _finsol,
         # linear_algo = _linear_algo,
     )
     return Branch(branch, gh)

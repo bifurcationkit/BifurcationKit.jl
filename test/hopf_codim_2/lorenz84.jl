@@ -26,7 +26,7 @@ function jac_Lor(u, p, t = 0)
     ]
 end
 
-parlor = (α = 1//4, β = 1, G = .25, δ = 1.04, γ = 0.987, F = 1.7620532879639, T = .0001265)
+parlor = (α = 1//4, β = 1, G = .25, δ = 1.04, γ = 0.987, T=0.04,F=3.)
 
 opts_br = ContinuationPar(p_min = -1.5, p_max = 3.0, ds = 0.001, dsmax = 0.025,
     # options to detect codim 1 bifurcations using bisection

@@ -104,7 +104,7 @@ let
     # finite differences Jacobian
     Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian(u -> hopfpbVec(u, p), u0)
     # ``analytical'' jacobian
-    Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x = u0, params = p, hopfpb = pb))
+    Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x = u0, params = p, pbma = pb))
 
     rhs = rand(length(hopfpt))
     jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)

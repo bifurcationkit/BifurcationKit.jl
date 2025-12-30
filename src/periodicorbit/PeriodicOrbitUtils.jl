@@ -24,9 +24,7 @@ function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOC
     return cont_params
 end
 
-function _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
-    return cont_params
-end
+@inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess) = cont_params
 ####################################################################################################
 function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
     return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)

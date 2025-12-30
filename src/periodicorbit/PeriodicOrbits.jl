@@ -268,8 +268,6 @@ function continuation(probPO::AbstractShootingProblem,
         contParams = @set contParams.newton_options.eigsolver = eigsolver
     end
 
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
     # remove this part from the arguments passed to continuation
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
@@ -283,7 +281,7 @@ function continuation(probPO::AbstractShootingProblem,
         kwargs...,
         linear_algo,
         kind = PeriodicOrbitCont(),
-        finalise_solution = _finsol)
+        )
     return br
 end
 
