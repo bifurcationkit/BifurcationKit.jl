@@ -343,24 +343,13 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _kwargs = (;record_from_solution, plot_solution)
 
     # Jacobian for the PD problem
-    if jacobian_ma == AutoDiff()
+    record_pd = RecordForPD(record_from_solution, BifurcationKit.record_from_solution(prob))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == FiniteDifferences()
-        pdpointguess = vcat(pdpointguess.u, pdpointguess.p...)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == FiniteDifferencesMF()
-        pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, FiniteDifferencesMF(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == MinAugMatrixBased()
-        pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, MinAugMatrixBased(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_pd_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+        prob_pd = PDMAProblem(𝐏𝐝, jacobian_ma, pdpointguess, par, lens2, plot_solution, record_pd)
+        opt_pd_cont =  deepcopy(options_cont)
     else
-        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_solution, record_pd)
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 

@@ -402,25 +402,14 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             _norm = normC,
             update_minaug_every_step)
 
-    # Jacobian for the Fold problem
-    if jacobian_ma == AutoDiff()
+    # jacobians for the Fold problem
+    record_fold = RecordForFold(record_from_solution, BifurcationKit.record_from_solution(prob))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, AutoDiff(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == FiniteDifferencesMF()
-        foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, FiniteDifferencesMF(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == FiniteDifferences()
-        foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, FiniteDifferences(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == MinAugMatrixBased()
-        foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, MinAugMatrixBased(), foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
-        opt_fold_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+        prob_fold = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, par, lens2, prob.plotSolution, record_fold)
+        opt_fold_cont = deepcopy(options_cont)
     else
-        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, prob.recordFromSolution)
+        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, record_fold)
         opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 

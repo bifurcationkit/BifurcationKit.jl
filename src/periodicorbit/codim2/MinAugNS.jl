@@ -331,24 +331,13 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug(), FiniteDifferencesMF(), MinAugMatrixBased())
 
     # Jacobian for the NS problem
-    if jacobian_ma == AutoDiff()
+    record_ns = RecordForNS(record_from_solution, BifurcationKit.record_from_solution(prob))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == FiniteDifferences()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == FiniteDifferencesMF()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == MinAugMatrixBased()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, MinAugMatrixBased(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, par, lens2, plot_solution, record_ns)
+        opt_ns_cont = deepcopy(options_cont)
     else
-        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, record_ns)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
 
