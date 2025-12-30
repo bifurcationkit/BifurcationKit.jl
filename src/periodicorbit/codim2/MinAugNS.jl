@@ -247,18 +247,14 @@ function update!(probma::NSMAProblem, iter, state)
         return update!(𝐍𝐒, iter, state)
     end
     @debug "[codim2 NS] Update a / b in NS"
-
-    z = getsolution(state)
-    x = getvec(z.u, 𝐍𝐒)   # NS point
-    p1, ω = getp(z.u, 𝐍𝐒) # first parameter
-    p2 = z.p              # second parameter
-
-    lens1, lens2 = get_lenses(probma)
-    newpar = set(getparams(probma), lens1, p1)
-    newpar = set(newpar, lens2, p2)
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐍𝐒)
 
     # get the PO functional
     POWrap = 𝐍𝐒.prob_vf
+
+    x = getvec(zu, 𝐍𝐒) # fold point
+    newpar = getparams(iter, state)
 
     JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
     JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
@@ -278,10 +274,14 @@ function update!(probma::NSMAProblem, iter, state)
     ϵR1 = 100 * 𝐍𝐒.newton_options.tol
     stop_R1 = 1-cos(ω) <= ϵR1
     if stop_R1
-        @warn "[Codim 2 NS - update!]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
+        p1 = get_parameter(zu, 𝐍𝐒)
+        p2 = getp(state)
+        @warn "[Codim 2 NS - update!]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
     end
 
     if pdjump
+        p1 = get_parameter(zu, 𝐍𝐒)
+        p2 = getp(state)
         @warn "[Codim 2 NS - update!] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
     end
 

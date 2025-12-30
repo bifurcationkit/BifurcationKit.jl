@@ -273,16 +273,10 @@ function update!(probma::PDMAProblem, iter, state)
     end
     @debug "[codim2 PD] Update a / b in PD"
 
-    z = getsolution(state)
-    x = getvec(z.u) # PD point
-    p1 = getp(z.u)  # first parameter
-    p2 = z.p        # second parameter
-
-    lens1, lens2 = get_lenses(probma)
-    newpar = set(getparams(probma), lens1, p1)
-    newpar = set(newpar, lens2, p2)
-
     POWrap = 𝐏𝐝.prob_vf
+    zu = getx(state)
+    x = getvec(zu, 𝐏𝐝) # PD point
+    newpar = getparams(iter, state)
     JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
     # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
     JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, newpar) : transpose(JPD)
@@ -401,22 +395,16 @@ end
 
 function test_for_pd_gpd_cp(iter, state)
     probma = getprob(iter)
-    lens1, lens2 = get_lenses(probma)
-
-    z = getx(state)
-    x = getvec(z)    # pd point
-    p1 = getp(z)     # first parameter
-    p2 = getp(state) # second parameter
-    par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
-
     𝐏𝐝 = get_formulation(probma)
     𝒯 = eltype(𝐏𝐝)
     pbwrap = 𝐏𝐝.prob_vf
 
     a = 𝐏𝐝.a
     b = 𝐏𝐝.b
+
+    zu = getx(state)
+    x = getvec(zu, 𝐏𝐝) # PD point
+    newpar = getparams(iter, state)
 
     # expression of the jacobian
     JPD = jacobian_period_doubling(pbwrap, x, newpar) # jacobian with period doubling boundary condition
@@ -435,7 +423,8 @@ function test_for_pd_gpd_cp(iter, state)
     ζ★ ./= norm(ζ★)
     𝐏𝐝.R2 = LA.dot(ζ★, ζ)
 
-    pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, lens1, nothing, nothing, nothing, :none)
+    p1 = get_parameter(zu, 𝐏𝐝) # TODO : what is this hack??
+    pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, get_lenses(probma)[1], nothing, nothing, nothing, :none)
     if pbwrap.prob isa ShootingProblem
         pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
         𝐏𝐝.GPD = pd.nf.nf.b3
