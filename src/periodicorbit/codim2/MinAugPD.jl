@@ -266,6 +266,44 @@ function newton_pd(prob::AbstractBifurcationProblem,
     return newton(prob_f, opt_pd; normN, kwargs...)
 end
 ###################################################################################################
+function update!(probma::PDMAProblem, iter, state)
+    # it is called to update the Minimally Augmented problem
+    # by updating the vectors a, b
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information!
+    𝐏𝐝 = probma.prob
+    𝒯 = eltype(𝐏𝐝)
+    success = state.converged
+    if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false)
+        # we call the user update
+        return update!(𝐏𝐝, iter, state)
+    end
+    @debug "[codim2 PD] Update a / b in PD"
+
+    z = getsolution(state)
+    x = getvec(z.u) # PD point
+    p1 = getp(z.u)  # first parameter
+    p2 = z.p        # second parameter
+
+    lens1, lens2 = get_lenses(probma)
+    newpar = set(getparams(probma), lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    POWrap = 𝐏𝐝.prob_vf
+    JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
+    # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
+    JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, newpar) : transpose(JPD)
+
+    # normalization
+    (;v, w) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
+    _copyto!(𝐏𝐝.a, w); LA.rmul!(𝐏𝐝.a, 1/𝐏𝐝.norm(w))
+    # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
+    _copyto!(𝐏𝐝.b, v); LA.rmul!(𝐏𝐝.b, 1/𝐏𝐝.norm(v))
+
+    # call the user-passed update
+    return update!(𝐏𝐝, iter, state)
+end
+
 function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 pdpointguess::BorderedArray{vectype, 𝒯}, par,
                 lens1::AllOpticTypes, lens2::AllOpticTypes,
@@ -337,47 +375,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     𝐏𝐝.GPD = one(𝒯)
     𝐏𝐝.R2  = one(𝒯)
 
-    # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented problem
-    # by updating the vectors a, b
-    function update_min_aug_pd(z, tau, step, contResult; kUP...)
-        # user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
-        # we first check that the continuation step was successful
-        # if not, we do not update the problem with bad information!
-        success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) || success == false)
-            # we call the user finalizer
-            return _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
-        end
-        @debug "[codim2 PD] Update a / b dans PD"
-
-        x = getvec(z.u) # PD point
-        p1 = getp(z.u)  # first parameter
-        p2 = z.p        # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        POWrap = 𝐏𝐝.prob_vf
-        JPD = jacobian_period_doubling(POWrap, x, newpar) # jacobian with period doubling boundary condition
-        # we do the following in order to avoid computing JPO_at_xp twice in case 𝐏𝐝.Jadjoint is not provided
-        JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint_period_doubling(POWrap, x, newpar) : transpose(JPD)
-
-        # normalization
-        (;v, w) = _compute_bordered_vectors(𝐏𝐝, JPD, JPD★)
-        _copyto!(𝐏𝐝.a, w); LA.rmul!(𝐏𝐝.a, 1/normC(w))
-        # do not normalize with dot(newb, 𝐏𝐝.a), it prevents from BT detection
-        _copyto!(𝐏𝐝.b, v); LA.rmul!(𝐏𝐝.b, 1/normC(v))
-
-        # call the user-passed finalizer
-        final_result = _finsol(z, tau, step, contResult; prob = 𝐏𝐝, kUP...)
-
-        return final_result
-    end
-
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_finalise(prob_pd, kwargs, prob.prob.update_section_every_step)
-
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)
     _recordsol2 = isnothing(_recordsol) ?
@@ -413,7 +410,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         (@set opt_pd_cont.newton_options.eigsolver = eigsolver);
         linear_algo = BorderingBLS(solver = opt_pd_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
-        finalise_solution = update_min_aug_pd,
         kind,
         normC,
         event,
