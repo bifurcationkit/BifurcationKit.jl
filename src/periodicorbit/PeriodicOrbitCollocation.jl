@@ -1090,11 +1090,11 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     end
 
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); _kwargs...)
+    _kwargs = (; plot_solution = plot_solution) # TODO: PASS RECORD TO PLOT?
     _plotsol = modify_po_plot(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); _kwargs...)
 
-    wrap_coll = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, _recordsol)
+    record_po = RecordForPeriodicOrbits(record_from_solution, BifurcationKit.record_from_solution(coll.prob_vf))
+    wrap_coll = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, record_po)
 
     br = continuation(wrap_coll, alg,
                       contParams;
