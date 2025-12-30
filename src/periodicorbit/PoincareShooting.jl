@@ -47,7 +47,7 @@ Note that you can generate this guess from a function solution using `generate_s
 !!! tip "Tip"
     You can use the function `getperiod(pb, sol, par)` to get the period of the solution `sol` for the problem with parameters `par`.
 """
-@with_kw_noshow struct PoincareShootingProblem{Tf, Tjac <: AbstractJacobianType, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingProblem
+@with_kw_noshow struct PoincareShootingProblem{Tf, Tjac <: AbstractJacobianType, Tsection <: SectionPS, Tpar, Tlens} <: AbstractPoincareShootingDiscretization
     "`M`: the number of Poincaré sections. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise."
     M::Int64 = 0                     # number of Poincaré sections
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
@@ -94,15 +94,15 @@ $(TYPEDSIGNATURES)
 
 This function updates the normals and centers of the hyperplanes defining the Poincaré sections.
 """
-@views function updatesection!(pb::PoincareShootingProblem, centers_bar, par; _norm = norm)
-    M = get_mesh_size(pb); Nm1 = div(length(centers_bar), M)
+@views function updatesection!(psh::PoincareShootingProblem, centers_bar, par; _norm = norm)
+    M = get_mesh_size(psh); Nm1 = div(length(centers_bar), M)
     centers_barc = reshape(centers_bar, Nm1, M)
-    centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
-    normals = [vector_field(pb.flow, c, par) for c in centers]
+    centers = [E(psh.section, centers_barc[:, ii], ii) for ii = 1:M]
+    normals = [vector_field(psh.flow, c, par) for c in centers]
     for ii in eachindex(normals)
         normals[ii] ./= _norm(normals[ii])
     end
-    update!(pb.section, normals, centers)
+    update!(psh.section, normals, centers)
 end
 
 """

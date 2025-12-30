@@ -3,6 +3,9 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+- add `AbstractBoundaryValueDiscretization`, `AbstractPeriodicOrbitDiscretization`, `AbstractPODifferentialDiscretization`, `AbstractPOFiniteDifferencesDiscretization`
+- `AbstractPoincareShootingProblem` becomes `AbstractPoincareShootingDiscretization`
+- `AbstractShootingProblem` becomes `AbstractPOShootingDiscretization`
 - `BTProblemMinimallyAugmented` becomes `BTMinimallyAugmentedFormulation`
 - `TWProblem` becomes `TWModel`
 - remove `modify_po_finalise`, `modify_po_record`, `modify_tw_record` and `Finalizer`

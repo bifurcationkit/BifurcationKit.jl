@@ -23,7 +23,7 @@ For collocation, the default method to compute the NF of Period-doubling and Nei
 
 [1] Iooss, "Global Characterization of the Normal Form for a Vector Field near a Closed Orbit.", 1988
 """
-function get_normal_form(wrap::AbstractPeriodicOrbitProblem,
+function get_normal_form(wrap::AbstractWrapperPeriodicOrbitProblem,
                         br::AbstractResult{ <: PeriodicOrbitCont}, 
                         id_bif::Int,
                         Teigvec::Type{𝒯eigvec} = _getvectortype(br);

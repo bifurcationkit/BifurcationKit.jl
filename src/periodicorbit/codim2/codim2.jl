@@ -167,7 +167,7 @@ function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCon
 end
 ####################################################################################################
 # the following resolve method ambiguity
-for at in (:AbstractWrapperPOProblem, :AbstractWrapperFDProblem)
+for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPOFiniteDifferencesProblem)
     @eval begin
         function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
             prob_po = pbwrap.prob
@@ -185,7 +185,7 @@ for at in (:AbstractWrapperPOProblem, :AbstractWrapperFDProblem)
     end
 end
 
-function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperFDProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
     𝐏𝐛 = get_formulation(getprob(iter))
     u = getx(state)
     p = getp(state)
@@ -214,7 +214,7 @@ end
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
-                      probPO::AbstractPeriodicOrbitProblem;
+                      probPO::AbstractPeriodicOrbitDiscretization;
                       detect_codim2_bifurcation::Int = 0,
                       autodiff = true,
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
@@ -229,7 +229,7 @@ end
 function _continuation(gh::Bautin, 
                         br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitProblem;
+                        probPO::AbstractPeriodicOrbitDiscretization;
                         alg = br.alg,
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
@@ -319,7 +319,7 @@ end
 
 function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
-            probPO::AbstractPeriodicOrbitProblem;
+            probPO::AbstractPeriodicOrbitDiscretization;
             whichns::Int = 1,
             alg = br.alg,
             linear_algo = nothing,
@@ -439,7 +439,7 @@ end
 
 function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitProblem;
+                        probPO::AbstractPeriodicOrbitDiscretization;
                         whichns::Int = 1,
                         alg = br.alg,
                         linear_algo = nothing,

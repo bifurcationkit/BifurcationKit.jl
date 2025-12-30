@@ -1,34 +1,45 @@
+abstract type AbstractBoundaryValueDiscretization end
+abstract type AbstractPeriodicOrbitDiscretization <: AbstractBoundaryValueDiscretization end
+
+# Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
+abstract type AbstractPODifferentialDiscretization <: AbstractPeriodicOrbitDiscretization end
+# finite differences is a sub-case of Differential discretization
+abstract type AbstractPOFiniteDifferencesDiscretization <: AbstractPODifferentialDiscretization end
+
+# Periodic orbit computations by shooting method
+abstract type AbstractPOShootingDiscretization <: AbstractPeriodicOrbitDiscretization end
+abstract type AbstractPoincareShootingDiscretization <: AbstractPOShootingDiscretization end
+################################################################################
 # get the number of time slices
-@inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
+@inline get_mesh_size(pb::AbstractPeriodicOrbitDiscretization) = pb.M
+isinplace(::AbstractPOShootingDiscretization) = false
 
 """
 $(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = _extract_period(x)
-@inline getperiod(prob::WrapPOColl, u, p) = getperiod(get_discretization(prob), u, p)
-@inline getperiod(prob::WrapPOSh, u, p) = getperiod(get_discretization(prob), u, p)
+@inline getperiod(::AbstractPeriodicOrbitDiscretization, x, par = nothing) = _extract_period(x)
+@inline getperiod(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = getperiod(get_discretization(prob), u, p)
 
 @inline _extract_period(x::AbstractVector) = x[end]
 @inline _extract_period(x::BorderedArray)  = x.p
 
 # The next method only used just in the current file. Allows to set the parameters, like during aBS
-_set_params_in_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
-_set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
+_set_params_in_po(pb::AbstractPODifferentialDiscretization, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
+_set_params_in_po(pb::AbstractPOShootingDiscretization, pars) = (@set pb.par = pars)
 
 # function to extract trajectories from branch
-get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
-get_periodic_orbit(prob::WrapPOSh, u, p)   = get_periodic_orbit(get_discretization(prob), u, p)
+get_periodic_orbit(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
 get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 
 @inline getdelta(prob::WrapPOSh) = getdelta(get_discretization(prob).flow)
 @inline has_hessian(::WrapPOSh) = true
 
-Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
-on_gpu(pb::AbstractPOFDProblem) = pb.ongpu
-has_hessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
-isinplace(pb::AbstractPOFDProblem) = isinplace(pb.prob_vf)
+Base.size(pb::AbstractPOFiniteDifferencesDiscretization) = (pb.M, pb.N)
+on_gpu(pb::AbstractPOFiniteDifferencesDiscretization) = pb.ongpu
+has_hessian(pb::AbstractPOFiniteDifferencesDiscretization) = pb.d2F == nothing
+isinplace(pb::AbstractPOFiniteDifferencesDiscretization) = isinplace(pb.prob_vf)
 
 function applyJ(pb, dest, x, p, dx)
     if isinplace(pb)
@@ -44,7 +55,7 @@ $(TYPEDSIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`.
 """
-function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
+function generate_solution(pb::AbstractPeriodicOrbitDiscretization, orbit, period)
     M = get_mesh_size(pb)
     orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
     # append period at the end of the initial guess
@@ -74,7 +85,7 @@ struct POSolution{Tpb, Tx, Tp}
     x::Tx
     pars::Tp
 end
-POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
+POSolution(prob::AbstractPeriodicOrbitDiscretization, x) = POSolution(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
 save_solution(::WrapPOSh, x, p) = x
@@ -150,44 +161,47 @@ const DocStringJacobianPOSh = """
 """
 ##########################
 @inline is_symmetric(prob::WrapPOSh) = false
-jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
+jacobian(prob::AbstractWrapperPeriodicOrbitProblem, x, p) = _jacobian_po(prob, prob.jacobian, x, p)
 
+########
 # useful getters for FloquetColl
 get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
-get_wrap_po(pb::AbstractWrapperPOProblem) = pb
+get_wrap_po(pb::AbstractWrapperPeriodicOrbitProblem) = pb
 
-_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, FullLU, FullMatrixFree, FullSparse, DenseAnalytical}, o, pars; k...) = J
-_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+########
+_generate_jacobian(probPO::AbstractPeriodicOrbitDiscretization, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, FullLU, FullMatrixFree, FullSparse, DenseAnalytical}, o, pars; k...) = J
+_generate_jacobian(probPO::AbstractPeriodicOrbitDiscretization, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
 
-function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
+function _generate_jacobian(probPO::AbstractPOShootingDiscretization, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
     _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
     return (AutoDiffDenseAnalytical(), _J)
 end
-
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffDense, x, p)
+########
+function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffDense, x, p)
     ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferences, x, p)
+function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::FiniteDifferences, x, p)
     return finite_differences(z -> residual(probPO, z, p), x)
 end
 
-function jacobian(probPO::AbstractShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
-    probPO(Val(:JacobianMatrixInplace), J[2], x, p)
+function _jacobian_po(wrap::AbstractWrapperPOShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
+    sh = get_discretization(wrap)
+    sh(Val(:JacobianMatrixInplace), J[2], x, p)
     return J[2]
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
+function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
     δ = J[2]
     return dx -> (residual(probPO, x .+ δ .* dx, p) .- 
                   residual(probPO, x .- δ .* dx, p)) ./ (2δ)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffMF, x, p)
+function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffMF, x, p)
     return dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)
 end
 
-jacobian(probPO::AbstractPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(probPO, x, p, dx)
+_jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(get_discretization(probPO), x, p, dx)
 
 
 """
@@ -200,7 +214,7 @@ Note that the linear solver has to be appropriately set up in `options`.
 
 Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
 
-- `prob` a problem of type `<: AbstractShootingProblem` encoding the shooting functional G.
+- `prob` a problem of type `<: AbstractPOShootingDiscretization` encoding the shooting functional G.
 - `orbitguess` a guess for the periodic orbit. See [`ShootingProblem`](@ref) and See [`PoincareShootingProblem`](@ref) for information regarding the shape of `orbitguess`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular [`newton`](@ref) method.
@@ -208,7 +222,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 # Optional argument
 $DocStringJacobianPOSh
 """
-function newton(prob::AbstractShootingProblem,
+function newton(prob::AbstractPOShootingDiscretization,
                 orbitguess,
                 options::NewtonPar;
                 lens::OpticType = nothing,
@@ -234,7 +248,7 @@ $DocStringJacobianPOSh
 # Output:
 - solution::NonLinearSolution, see [`NonLinearSolution`](@ref)
 """
-function newton(prob::AbstractShootingProblem,
+function newton(prob::AbstractPOShootingDiscretization,
                 orbitguess::vectype,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, S, E};
@@ -261,7 +275,7 @@ Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingPro
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 $DocStringJacobianPOSh
 """
-function continuation(probPO::AbstractShootingProblem,
+function continuation(probPO::AbstractPOShootingDiscretization,
                         orbitguess,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
@@ -305,14 +319,14 @@ This is the continuation routine for computing a periodic orbit.
 
 # Arguments
 
-Similar to [`continuation`](@ref) except that `prob::AbstractPeriodicOrbitProblem`.
+Similar to [`continuation`](@ref) except that `prob::AbstractPeriodicOrbitDiscretization`.
 
 # Optional argument
 - `linear_algo::AbstractBorderedLinearSolver`
 $DocStringJacobianPOSh
 
 """
-function continuation(prob::AbstractPeriodicOrbitProblem,
+function continuation(prob::AbstractPeriodicOrbitDiscretization,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar;
@@ -353,7 +367,7 @@ A modified version of `prob` is passed to `plot_solution` and `finalise_solution
 function continuation(br::AbstractBranchResult, 
                       ind_bif::Int,
                       _contParams::ContinuationPar,
-                      pbPO::AbstractPeriodicOrbitProblem ;
+                      pbPO::AbstractPeriodicOrbitDiscretization ;
                       bif_prob = br.prob,
                       detailed::Val{detailed_type} = Val(true),
                       use_normal_form = true,
@@ -372,7 +386,7 @@ end
 function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
                       hopfpt::Hopf,
                       _contParams::ContinuationPar,
-                      pbPO::AbstractPeriodicOrbitProblem;
+                      pbPO::AbstractPeriodicOrbitDiscretization;
                       verbose = false,
                       alg = PALC(),
                       δp = nothing,
@@ -431,7 +445,7 @@ function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
         # this factor prevent shooting jacobian from being singular at fixed points
         if probPO isa PoincareShootingProblem
             Tfactor = 0
-        elseif probPO isa AbstractPOFDProblem
+        elseif probPO isa AbstractPOFiniteDifferencesDiscretization
             Tfactor = 100 / abs(2pi / pred.ω)
         else
             Tfactor = 0.001
@@ -511,7 +525,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       prm::Val{prm_type} = Val(getprob(br) isa WrapPOColl ? false : true),
                       use_normal_form = true,
                       autodiff_nf = true,
-                      kwargs...) where {Tprob <: AbstractWrapperPOProblem, detailed_type, prm_type}
+                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem, detailed_type, prm_type}
 
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type

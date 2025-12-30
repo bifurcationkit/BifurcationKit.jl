@@ -27,20 +27,24 @@ abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
 # Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
-# finite differences is a sub-case of Diff discretization
-abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end 
-abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
+abstract type AbstractPODifferentialProblem <: AbstractPeriodicOrbitProblem end
+# finite differences is a sub-case of Differential discretization
+abstract type AbstractPOFiniteDifferencesProblem <: AbstractPODifferentialProblem end
 #####################################
 # Periodic orbit computations by shooting method
-abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
+abstract type AbstractPOShootingProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPOPoincareShootingProblem <: AbstractPOShootingProblem end
 #####################################
 # wrapper problems for periodic orbits, basically making them a BifurcationProblem
-abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
-abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
+# these problems are based on a AbstractPeriodicOrbitDiscretization
+abstract type AbstractWrapperPeriodicOrbitProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractWrapperPOShootingProblem <: AbstractWrapperPeriodicOrbitProblem end
+abstract type AbstractWrapperPODifferentialProblem <: AbstractWrapperPeriodicOrbitProblem end
+abstract type AbstractWrapperPOFiniteDifferencesProblem <: AbstractWrapperPODifferentialProblem end
 ################################################################################
-# const type to hold "all" the types of optics. Note that we used to rely on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
+abstract type AbstractWaveProblem <: AbstractBifurcationProblem end
+################################################################################
+# const type to hold "all" types of optics. Note that we used to rely on `Setfield.jl` where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
 """
@@ -229,14 +233,15 @@ for (op, at) in (
 
                 (:FoldMAProblem, AbstractMABifurcationProblem),
                 (:HopfMAProblem, AbstractMABifurcationProblem),
-                (:PDMAProblem, AbstractMABifurcationProblem),
-                (:NSMAProblem, AbstractMABifurcationProblem),
-                (:BTMAProblem, AbstractMABifurcationProblem),
+                (:PDMAProblem,   AbstractMABifurcationProblem),
+                (:NSMAProblem,   AbstractMABifurcationProblem),
+                (:BTMAProblem,   AbstractMABifurcationProblem),
 
-                (:WrapPOTrap, AbstractWrapperFDProblem),
-                (:WrapPOSh, AbstractWrapperShootingProblem),
-                (:WrapPOColl, AbstractWrapperFDProblem),
-                (:WrapTW, AbstractWrapperFDProblem),
+                (:WrapPOTrap, AbstractWrapperPOFiniteDifferencesProblem),
+                (:WrapPOSh,   AbstractWrapperPOShootingProblem),
+                (:WrapPOColl, AbstractWrapperPODifferentialProblem),
+
+                (:WrapTW, AbstractWaveProblem),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin

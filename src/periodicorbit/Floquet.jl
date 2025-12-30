@@ -464,7 +464,7 @@ end
     return log.(μ[Ind]), geteigenvector(fl.eigsolver, vecs, indvalid[Ind]), true, 1
 end
 
-@views function (fl::FloquetGEV)(prob::AbstractShootingProblem, _J::AbstractMatrix, nev; k...)
+@views function (fl::FloquetGEV)(prob::AbstractPOShootingDiscretization, _J::AbstractMatrix, nev; k...)
     n = length(prob.flow.odeprob.u0)
     J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)

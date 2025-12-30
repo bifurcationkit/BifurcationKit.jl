@@ -440,8 +440,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         event = SetOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
     end
 
-    if prob isa AbstractWrapperFDProblem
     # TODO remove this hack
+    if prob isa AbstractWrapperPOFiniteDifferencesProblem
         _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = prob.plotSolution)
         prob_fold = re_make(prob_fold, plot_solution = _plotsol)
     end

@@ -23,12 +23,12 @@ end
 ####################################################################################################
 ## TODO MERGE WITH UPDATE!(COLLOCATION)
 
-__get_discretization(pb::AbstractWrapperPOProblem) = get_discretization(pb)
+__get_discretization(pb::AbstractWrapperPeriodicOrbitProblem) = get_discretization(pb)
 __get_discretization(pb::AbstractMinimallyAugmentedFormulation) = __get_discretization(pb.prob_vf)
-__get_discretization(pb::AbstractPeriodicOrbitProblem) = pb
+__get_discretization(pb::AbstractPeriodicOrbitDiscretization) = pb
 
 function __update_codim1_po!(𝐏𝐛, iter, state)
-    # we get the AbstractPeriodicOrbitProblem
+    # we get the AbstractPeriodicOrbitDiscretization
     disc_po = __get_discretization(𝐏𝐛)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information

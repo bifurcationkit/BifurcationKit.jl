@@ -89,7 +89,7 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFDProblem
+@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFiniteDifferencesDiscretization
     "a bifurcation problem"
     prob_vf::Tprob = nothing
 
@@ -198,7 +198,7 @@ function PeriodicOrbitTrapProblem(prob_vf,
                                     jacobian = Dense()) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-    prob = PeriodicOrbitTrapProblem(;prob_vf,
+    trap = PeriodicOrbitTrapProblem(;prob_vf,
                                     ϕ = similar(ϕ, N*M),
                                     xπ = similar(xπ, N*M),
                                     M,
@@ -210,12 +210,12 @@ function PeriodicOrbitTrapProblem(prob_vf,
                                     update_section_every_step,
                                     jacobian)
 
-    prob.xπ .= 0
-    prob.ϕ .= 0
+    trap.xπ .= 0
+    trap.ϕ .= 0
 
-    prob.xπ[eachindex(xπ)] .= xπ
-    prob.ϕ[eachindex(ϕ)] .= ϕ
-    return prob
+    trap.xπ[eachindex(xπ)] .= xπ
+    trap.ϕ[eachindex(ϕ)] .= ϕ
+    return trap
 end
 
 PeriodicOrbitTrapProblem(prob_vf,
@@ -592,10 +592,10 @@ end
     if updateborder
         # we now set up the last line / column
         ∂TGpo = (residual(trap, vcat(u0[begin:end-1], T + δ), par) .- residual(trap, u0, par)) ./ δ
-        J0[:, end] .=  ∂TGpo
+        J0[:, end] .= ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ
+        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
     end
 
     return J0
@@ -645,14 +645,14 @@ $(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function get_periodic_orbit(prob::AbstractPOFDProblem, u, p)
-    T = getperiod(prob, u, p)
-    M, N = size(prob)
+@views function get_periodic_orbit(trap::AbstractPOFiniteDifferencesDiscretization, u, p)
+    T = getperiod(trap, u, p)
+    M, N = size(trap)
     uv = u[begin:end-1]
     uc = reshape(uv, N, M)
-    return SolPeriodicOrbit(t = cumsum(T .* collect(prob.mesh)), u = uc)
+    return SolPeriodicOrbit(t = cumsum(T .* collect(trap.mesh)), u = uc)
 end
-get_periodic_orbit(prob::AbstractPOFDProblem, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
+get_periodic_orbit(prob::AbstractPOFiniteDifferencesDiscretization, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
 """
 $(TYPEDSIGNATURES)
@@ -839,27 +839,29 @@ function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace,
     return (FullSparseInplace(), J, indx)
 end
 
-function jacobian(trap::PeriodicOrbitTrapProblem, J::Tuple{Dense, Tj}, x, p) where {Tj}
+function _jacobian_po(wrap::WrapPOTrap, J::Tuple{Dense, Tj}, x, p) where {Tj}
     _J = J[2]
+    trap = get_discretization(wrap)
     trap(Val(:JacFullSparseInplace), _J, x, p)
 end
 
-function jacobian(trap::PeriodicOrbitTrapProblem, J::Tuple{FullSparseInplace, Tj, Ti}, x, p) where {Tj, Ti}
+function _jacobian_po(wrap::WrapPOTrap, J::Tuple{FullSparseInplace, Tj, Ti}, x, p) where {Tj, Ti}
     _J = J[2]
     _indx = J[3]
+    trap = get_discretization(wrap)
     trap(Val(:JacFullSparseInplace), _J, x, p, _indx)
 end
 
-jacobian(trap::PeriodicOrbitTrapProblem, J::FullLU, x, p) = trap(Val(:JacFullSparse), x, p)
+_jacobian_po(wrap::WrapPOTrap, J::FullLU, x, p) = wrap.prob(Val(:JacFullSparse), x, p)
 POTrapJacobianBordered
-jacobian(trap::PeriodicOrbitTrapProblem, J::POTrapJacobianBordered, x, p) = J(x, p)
+_jacobian_po(::WrapPOTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
 # newton wrappers
 function _newton_trap(trap::PeriodicOrbitTrapProblem,
-                orbitguess,
-                options::NewtonPar;
-                defOp::Union{Nothing, DeflationOperator} = nothing,
-                kwargs...)
+                        orbitguess,
+                        options::NewtonPar;
+                        defOp::Union{Nothing, DeflationOperator} = nothing,
+                        kwargs...)
     # hack to test the use of CUDA
     @assert sum(_extract_period_fdtrap(trap, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = trap.jacobian
@@ -950,14 +952,14 @@ $DocStrjacobianPOTrap
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """
 function continuation_potrap(trap::PeriodicOrbitTrapProblem,
-            orbitguess,
-            alg::AbstractContinuationAlgorithm,
-            contParams::ContinuationPar,
-            linear_algo::AbstractBorderedLinearSolver;
-            eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
-            record_from_solution = nothing,
-            plot_solution = nothing,
-            kwargs...)
+                            orbitguess,
+                            alg::AbstractContinuationAlgorithm,
+                            contParams::ContinuationPar,
+                            linear_algo::AbstractBorderedLinearSolver;
+                            eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
+                            record_from_solution = nothing,
+                            plot_solution = nothing,
+                            kwargs...)
     # this hack is for the test to work with CUDA
     @assert sum(_extract_period_fdtrap(trap, orbitguess)) >= 0 "The guess for the period should be positive"
     jacobianPO = trap.jacobian
@@ -1038,12 +1040,12 @@ $DocStrjacobianPOTrap
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """
 function continuation(trap::PeriodicOrbitTrapProblem,
-                    orbitguess,
-                    alg::AbstractContinuationAlgorithm,
-                    _contParams::ContinuationPar;
-                    record_from_solution = (u, p; k...) -> (period = u[end],),
-                    linear_algo = nothing,
-                    kwargs...)
+                        orbitguess,
+                        alg::AbstractContinuationAlgorithm,
+                        _contParams::ContinuationPar;
+                        record_from_solution = (u, p; k...) -> (period = u[end],),
+                        linear_algo = nothing,
+                        kwargs...)
     _linear_algo = isnothing(linear_algo) ?  BorderingBLS(solver = _contParams.newton_options.linsolver, check_precision = false) : linear_algo
     return continuation_potrap(trap, orbitguess, alg, _contParams, _linear_algo; record_from_solution, kwargs...)
 end
@@ -1065,7 +1067,7 @@ function re_make(trap::PeriodicOrbitTrapProblem,
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
     # update the problem
-    probPO = setproperties(trap; N, prob_vf, ϕ = zeros(N*M), xπ = zeros(N*M))
+    probPO = setproperties(trap; N, prob_vf, ϕ = zeros(N * M), xπ = zeros(N * M))
 
     orbit = get(kwargs, :orbit, nothing)
 
@@ -1075,7 +1077,7 @@ function re_make(trap::PeriodicOrbitTrapProblem,
     else
         probPO.xπ .= orbitguess[begin:end-1]
         _sol = get_periodic_orbit(probPO, orbitguess, nothing)
-        probPO.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:,i], getparams(prob_vf)) for i=1:probPO.M])
+        probPO.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:, i], getparams(prob_vf)) for i = 1:probPO.M])
     end
     return probPO, orbitguess
 end
@@ -1120,12 +1122,10 @@ function generate_ci_problem(trap::PeriodicOrbitTrapProblem,
         _times = LinRange(period * 0.8, period * 1.2, M)
         period = _times[argmin(norm(sol(tspan[1] + t) - sol(tspan[1])) for t in _times)]
     end
-
     ci = generate_solution(probtrap, t -> sol(tspan[1] + t * period / (2pi)), period)
     _sol = get_periodic_orbit(probtrap, ci, nothing)
     probtrap.xπ .= ci[begin:end-1]
-    probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:,i], sol.prob.p) for i=1:probtrap.M])
-
+    probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:, i], sol.prob.p) for i = 1:probtrap.M])
     return probtrap, ci
 end
 

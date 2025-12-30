@@ -69,7 +69,7 @@ julia> br.param
 ```
 - `continuation(br, ind)` performs automatic branch switching (aBS) from ind-th bifurcation point. Typically branching from equilibrium to equilibrium, or periodic orbit to periodic orbit.
 - `continuation(br, ind, lens2)` performs two parameters `(getlens(br), lens2)` continuation of the  ind-th bifurcation point.
-- `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
+- `continuation(br, ind, probPO::AbstractPeriodicOrbitDiscretization)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
     "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
