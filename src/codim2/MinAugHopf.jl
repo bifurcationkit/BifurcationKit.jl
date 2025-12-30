@@ -339,18 +339,19 @@ function update!(probma::HopfMAProblem, iter, state)
     𝐇.b .= bd_vec.v ./ 𝐇.norm(bd_vec.v)
 
     # we stop continuation at Bogdanov-Takens points
-    # CA NE DEVRAIT PAS ETRE ISSNOT?
-    # isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
-    isbt = true
-
     threshBT = 100iter.contparams.newton_options.tol
-
     # if the frequency is null, this is not a Hopf point, we halt the process
-    if abs(ω) < threshBT
-        @warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
+    isbt = abs(ω) < threshBT
+
+    if isbt
+        @warn "[Codim 2 Hopf - update!] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
     end
 
-    return ((abs(ω) >= threshBT) || in_bisection(state) == true) && isbt
+    # call the user-passed update
+    update_result = update!(𝐇, iter, state)
+
+    return ((abs(ω) >= threshBT) || in_bisection(state) == false) && (~isbt) && update_result
+end
 end
 
 """
