@@ -331,19 +331,15 @@ function update!(probma::HopfMAProblem, iter, state)
     end
 
     @debug "[Hopf] Update vectors a and b"
-    z = getsolution(state)
-    x = getvec(z.u, 𝐇)    # hopf point
-    p1, ω = getp(z.u, 𝐇)  # first parameter
-    p2 = z.p              # second parameter
-
-    lens1, lens2 = get_lenses(probma)
-    newpar = set(getparams(probma), lens1, p1)
-    newpar = set(newpar, lens2, p2)
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐇)
 
     a = 𝐇.a
     b = 𝐇.b
 
     # expression of the jacobian
+    x = getvec(zu, 𝐇) # fold point
+    newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
 
@@ -359,7 +355,9 @@ function update!(probma::HopfMAProblem, iter, state)
     isbt = abs(ω) < threshBT
 
     if isbt
-        @warn "[Codim 2 Hopf - update!] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
+        p1 = get_parameter(zu, 𝐇)
+        p2 = getp(state)
+        @warn "[Codim 2 Hopf - update!]\nThe Hopf curve seems to be close to a BT point: ω ≈ $ω.\nStopping computations at ($p1, $p2) .\nIf the BT point is not detected, try lowering Newton tolerance or dsmax."
     end
 
     # call the user-passed update
@@ -599,21 +597,17 @@ end
 function test_bt_gh(iter, state)
     probma = getprob(iter)
     𝐇 = get_formulation(probma)
-    𝒯 = eltype(𝐇) 
-    lens1, lens2 = get_lenses(probma)
+    𝒯 = eltype(𝐇)
 
-    z = getx(state)
-    x = getvec(z, 𝐇)   # hopf point
-    p1, ω = getp(z, 𝐇) # first parameter
-    p2 = getp(state)   # second parameter
-    par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐇)
 
     a = 𝐇.a
     b = 𝐇.b
 
     # expression of the jacobian
+    x = getvec(zu, 𝐇) # fold point
+    newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : transpose(J_at_xp)
 
@@ -631,8 +625,8 @@ function test_bt_gh(iter, state)
     BT2 = real( VI.inner(ζ★ ./ 𝐇.norm(ζ★), ζ) )
     ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
-    hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
-    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO! WE NEED A KWARGS here
+    hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(probma)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
+    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO!! WE NEED A KWARGS here
     # lyapunov coefficient
     𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.
