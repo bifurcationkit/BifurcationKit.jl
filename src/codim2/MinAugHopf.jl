@@ -107,7 +107,7 @@ end
 ###################################################################################################
 # since this is matrix based, it requires X to ba an AbstractVector
 function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector{𝒯}, par) where {Tprob, 𝒯}
-    𝐇 = pdpb.prob
+    𝐇 = get_formulation(pdpb)
     x = @view X[begin:end-2]
     p = X[end-1]
     ω = X[end]
@@ -278,7 +278,7 @@ function newton_hopf(prob,
 end
 
 function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
-            prob = br.prob,
+            prob = getprob(br),
             normN = norm,
             options = br.contparams.newton_options,
             verbose = true,

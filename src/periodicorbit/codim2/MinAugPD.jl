@@ -40,10 +40,6 @@ function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, par
     # - x guess for the point at which the jacobian is singular
     # - p guess for the parameter value `<: Real` at which the jacobian is singular
     # The jacobian of the MA problem is solved with a BLS method
-    a = 𝐏𝐝.a
-    b = 𝐏𝐝.b
-    # update parameter
-    par = set(params, getlens(𝐏𝐝), p)
     # ┌        ┐┌  ┐   ┌ ┐
     # │ J+I  a ││v │ = │0│
     # │ b    0 ││σ │   │1│
@@ -54,6 +50,10 @@ function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, par
     # we solve Jv + v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)⁻¹a>.
     # In the case of collocation, the matrix J is simply Jpo without the phase condition and with PD boundary condition.
+    a = 𝐏𝐝.a
+    b = 𝐏𝐝.b
+    # update parameter
+    par = set(params, getlens(𝐏𝐝), p)
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
     _, σ, cv, = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "[PD residual] Linear solver for J+I did not converge."
@@ -106,7 +106,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulati
  
     δ = getdelta(POWrap)
     ϵₚ = ϵₓ = ϵⱼ = ϵₜ = 𝒯(δ)
- 
+    ################### computation of σx σp ####################
     dₚF = minus(residual(POWrap, x, set(par, lens, p + ϵₚ)),
                 residual(POWrap, x, set(par, lens, p - ϵₚ)))
     LA.rmul!(dₚF, 𝒯(1 / (2ϵₚ)))
@@ -119,11 +119,9 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulati
 end
 ###################################################################################################
 function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
-    p = X[end]
+    𝐏𝐝 = get_formulation(pdpb)
     x = @view X[begin:end-1]
-
-    𝐏𝐝 = pdpb.prob
-    𝒯 = eltype(p)
+    p = X[end]
 
     POWrap = 𝐏𝐝.prob_vf
 

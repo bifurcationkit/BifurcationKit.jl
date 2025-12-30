@@ -114,7 +114,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulatio
 end
 ###################################################################################################
 function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
-    𝐍𝐒 = pdpb.prob
+    𝐍𝐒 = get_formulation(pdpb)
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
@@ -230,7 +230,7 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
-get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
+get_wrap_po(pb::NSMAProblem) = get_wrap_po(get_formulation(pb))
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 ###################################################################################################

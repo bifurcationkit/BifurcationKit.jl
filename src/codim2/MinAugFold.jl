@@ -65,7 +65,6 @@ function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
     w, _, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
-
     return (; v, w, itv, itw, JAd_at_xp)
 end
 
@@ -101,7 +100,7 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
 end
 ###################################################################################################
 function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
-    𝐅 = pdpb.prob
+    𝐅 = get_formulation(pdpb)
     x = @view X[begin:end-1]
     p = X[end]
 
@@ -235,7 +234,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
 end
 
 function newton_fold(br::AbstractBranchResult, ind_fold::Int;
-                prob = br.prob,
+                prob = getprob(br),
                 normN = norm,
                 options = br.contparams.newton_options,
                 nev = br.contparams.nev,
