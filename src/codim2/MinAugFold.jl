@@ -106,7 +106,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
 
     (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵₓ, v, w, par0) = _get_bordered_terms(𝐅, x, p, par)
 
-    u1 = apply_jacobian(𝐅.prob_vf, x + ϵₓ * v, par0, w, true)
+    u1 = apply_jacobian(𝐅.prob_vf, x + ϵₓ * v, par0, w, true) # jacobian adjoint
     u2 = apply(JAd_at_xp, w) # TODO we know u2!!
     σₓ = minus(u2, u1); VI.scale!(σₓ, 1 / ϵₓ)
 

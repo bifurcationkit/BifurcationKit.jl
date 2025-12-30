@@ -1281,45 +1281,45 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
     return (;success, newτsT, ϕ)
 end
 ####################################################################################################
-function update!(wrap::WrapPOColl, iter, state)
-    coll = get_discretization(wrap)
-    success = converged(state)
-    bisection = in_bisection(state)
+function update_po_coll!(coll::PeriodicOrbitOCollProblem, po, params, iter, state, update_pred = true)
     update_section_every_step = coll.update_section_every_step
     step = state.step
-    z = getsolution(state)
-    is_mesh_updated = false
+    has_mesh_been_updated = false
 
     # mesh adaptation
-    if success &&
+    if converged(state) &&
             meshadapt(coll) && 
-            bisection == false && 
+            in_bisection(state) == false && 
             mod_counter(step, update_section_every_step) == 1 &&
             step > 2
         @debug "[Collocation] update mesh"
-        is_mesh_updated = true
-        oldsol = _copy(z) # avoid possible overwrite in compute_error!
-        oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
-        adapt = compute_error!(coll, oldsol.u;
+        has_mesh_been_updated = true
+        old_po = _copy(po) # avoid possible overwrite in compute_error!
+        oldmesh = get_times(coll) .* getperiod(coll, old_po, nothing)
+        adapt = compute_error!(coll, old_po;
                     verbosity = coll.verbose_mesh_adapt,
                     K = coll.K,
-                    par = setparam(iter, z.p)
+                    par = params
                     )
         if ~adapt.success # stop continuation if mesh adaptation fails
             return false
         end
     end
-
-    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+    if converged(state) && mod_counter(step, update_section_every_step) == 1 && in_bisection(state) == false
         @debug "[collocation] update section"
-        updatesection!(coll, z.u, setparam(iter, z.p))
+        updatesection!(coll, po, params)
     end
-    if is_mesh_updated
+    if has_mesh_been_updated && update_pred
         # we recompute the tangent predictor
         @debug "[collocation] update predictor"
         getpredictor!(state, iter)
     end
     return true
+end
+
+function update!(wrap::WrapPOColl, iter, state)
+    coll = get_discretization(wrap)
+    return update_po_coll!(coll, getx(state), setparam(iter, getp(state)), iter, state)
 end
 ####################################################################################################
 """

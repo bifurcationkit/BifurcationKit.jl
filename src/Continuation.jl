@@ -135,6 +135,7 @@ $(TYPEDFIELDS)
 - `getpreviousx(state)` returns the x component of the previous solution
 - `getpreviousp(state)` returns the p component of the previous solution
 - `is_stable(state)` whether the current state is stable
+- `in_bisection(state)` whether the state is in bisection for locating special points
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
     "predictor"
@@ -229,8 +230,8 @@ end
 @inline converged(::Nothing) = false
 @inline converged(state::AbstractContinuationState)    = state.converged
 @inline gettangent(state::AbstractContinuationState)   = state.τ
-@inline getsolution(state::AbstractContinuationState)  = state.z
 @inline getpredictor(state::AbstractContinuationState) = state.z_pred
+@inline getsolution(state::AbstractContinuationState)  = state.z
 @inline getx(state::AbstractContinuationState)         = state.z.u
 @inline getp(state::AbstractContinuationState)         = state.z.p
 @inline get_previous_solution(state::AbstractContinuationState) = state.z_old
@@ -240,6 +241,7 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
+
 @inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)

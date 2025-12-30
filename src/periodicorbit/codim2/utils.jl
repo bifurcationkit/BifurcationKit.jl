@@ -32,13 +32,8 @@ function __update_codim1_po!(𝐌𝐚, iter, state)
     # if not, we do not update the problem with bad information
     if converged(state) && mod_counter(step, disc_po.update_section_every_step) == 1 && in_bisection(state) == false
         # state vector at bifurcation point
-        z = getsolution(state)
-        x = getvec(z.u, 𝐌𝐚)
-        # parameters at the bifurcation point
-        lenses = get_lenses(getprob(iter))
-        p1 = get_parameter(z.u, 𝐌𝐚) # first parameter
-        p2 = z.p                     # second parameter
-        pars = _set(getparams(disc_po), lenses, (p1, p2))
+        x = getvec(getx(state), 𝐌𝐚)
+        pars = getparams(iter, state)
         @debug "[Periodic orbit] update section"
         updatesection!(disc_po, x, pars)
     end
@@ -51,33 +46,14 @@ function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation,
     return __update_codim1_po!(𝐌𝐚, iter, state)
 end
 
-## TODO MERGE WITH UPDATE!(COLLOCATION)
 function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
                 state)
     coll = 𝐌𝐚.prob_vf.prob
     # state vector at bifurcation point
     Z = getsolution(state)
-    x = getvec(Z.u, 𝐌𝐚)
-    # we first check that the continuation step was successful
-    # if not, we do not update the problem with bad information
-    success = converged(state)
-    # mesh adaptation
-    if success && coll.meshadapt && in_bisection(state) == false
-        @debug "[Collocation] update mesh"
-        oldsol = _copy(x) # avoid possible overwrite in compute_error!
-        oldmesh = get_times(coll) .* getperiod(coll, oldsol, nothing)
-        adapt = compute_error!(coll, oldsol;
-                    verbosity = coll.verbose_mesh_adapt,
-                    K = coll.K
-                    )
-        if ~adapt.success # stop continuation if mesh adaptation fails
-            return false
-        end
-    end
-    if success && mod_counter(step, coll.update_section_every_step) == 1 && in_bisection(state) == false
-        @debug "[collocation] update section"
-        updatesection!(coll, x, nothing) # collocation does not need the parameter for updatesection!
-    end
-    return true
+    po = getvec(Z.u, 𝐌𝐚)
+    params = getparams(iter, state)
+    # we do not update the predictor in the following call
+    return update_po_coll!(coll, po, params, iter, state, false)
 end
