@@ -1,7 +1,8 @@
 # using Revise, Plots
 using Test, LinearAlgebra
-using BifurcationKit, Test
+using BifurcationKit, Test, ForwardDiff
 const BK = BifurcationKit
+import OrdinaryDiffEq as ODE
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
     (;r,K,a,ϵ,b0,e,d) = p
@@ -15,6 +16,7 @@ function Pop!(du, X, p, t = 0)
     du
 end
 
+let
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
         return (max = maximum(xtt[1,:]),
@@ -33,7 +35,6 @@ z0 = [0.1, 0.1, 1, 0]
 prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, nev = 4, max_steps = 200)
 ################################################################################
-import OrdinaryDiffEq as ODE
 prob_de = ODE.ODEProblem(Pop!, prob.u0, (0,600.), prob.params)
 alg = ODE.Rodas5()
 sol = ODE.solve(prob_de, alg)
@@ -151,25 +152,23 @@ BK.getprob(ns_po_sh)
 
 #########
 # test of the implementation of the jacobian for the NS case
-let
-    using ForwardDiff
-    _probns = ns_po_sh.prob
-    _x = ns_po_sh.sol[end].x
-    _solpo = _x.x
-    _p1 = _x.p1
-    _ω = _x.ω
-    _p2 = ns_po_sh.sol[end].p
-    _param = BK.setparam(ns_po_sh, _p1[1])
-    _param = @set _param.ϵ = _p2
+_probns = ns_po_sh.prob
+_x = ns_po_sh.sol[end].x
+_solpo = _x.x
+_p1 = _x.p1
+_ω = _x.ω
+_p2 = ns_po_sh.sol[end].p
+_param = BK.setparam(ns_po_sh, _p1[1])
+_param = @set _param.ϵ = _p2
 
-    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
+_Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
 
-    BK.NSMALinearSolver(_solpo, _p1, _ω, _probns.prob, _param, copy(_solpo), 1., 1.)
+BK.NSMALinearSolver(_solpo, _p1, _ω, _probns.prob, _param, copy(_solpo), 1., 1.)
 
-    _probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
-    J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1, _ω), _param)
-    @test norminf(_Jnsad - J_ns_mat) < 1e-6
-end
+_probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
+J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1, _ω), _param)
+@test norminf(_Jnsad - J_ns_mat) < 1e-6
+
 #########
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
@@ -210,19 +209,19 @@ BK.getprob(pd_po_sh2)
 
 #####
 # test of the implementation of the jacobian for the PD case
-let
-    _probpd = pd_po_sh2.prob
-    _x = pd_po_sh2.sol[end].x
-    _solpo = _x.x
-    _p1 = _x.p1
-    _p2 = pd_po_sh2.sol[end].p
-    _param = BK.setparam(pd_po_sh2, _p1)
-    _param = @set _param.ϵ = _p2
+_probpd = pd_po_sh2.prob
+_x = pd_po_sh2.sol[end].x
+_solpo = _x.x
+_p1 = _x.p1
+_p2 = pd_po_sh2.sol[end].p
+_param = BK.setparam(pd_po_sh2, _p1)
+_param = @set _param.ϵ = _p2
 
-    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_solpo, _p1))
+_Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_solpo, _p1))
 
-    _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
-    J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
+_probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
+J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
 
-    @test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
+@test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
+
 end

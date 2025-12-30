@@ -15,6 +15,7 @@ function COm(u, p)
     ]
 end
 
+let
 par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 
 z0 = [0.001137, 0.891483, 0.062345]
@@ -139,3 +140,4 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
 # plot(sn_codim2, vars=(:q2, :x))
 #     plot!(hp_codim2, vars=(:q2, :x))
 #     plot!(hp_from_bt, vars=(:q2, :x), marker = :d)
+end

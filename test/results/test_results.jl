@@ -5,9 +5,9 @@ const BK = BifurcationKit
 function f(u, p)
     return @. p.r * u - u^3
 end
-prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
 
 @testset "ContResult" begin
+    prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
     opt = BK.ContinuationPar(p_min=-1.0, p_max=1.0)
     contres = BK.continuation(prob, PALC(), opt)
     @assert typeof(contres) <: BK.ContResult
@@ -36,6 +36,7 @@ prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
 end
 
 @testset "Branch" begin
+    prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
     # Test slicing of Branch object
     opt = BK.ContinuationPar(p_min=-1.0, p_max=1.0)
     contres = BK.continuation(prob, PALC(), opt)
@@ -55,6 +56,7 @@ end
 end
 
 @testset "cat/merge for AbstractBranchResult" begin
+    prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
     opt = BK.ContinuationPar(p_min=-2.0, p_max=1.0)
     contres = BK.continuation(prob, PALC(), opt)
     opt2 = BK.ContinuationPar(p_min=-2.0, p_max=-1.0)

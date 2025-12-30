@@ -2,6 +2,7 @@
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, ForwardDiff
 const BK = BifurcationKit
 
+let
 n = 250*150
 M = 30
 par = nothing
@@ -314,3 +315,4 @@ BK.get_periodic_orbit(pbspti, orbitguess_f, par)
 @test pbspti.ϕ ≈ pbsp.ϕ
 BK.residual(pbspti, orbitguess_f, par)
 @test BK.residual(pbsp, orbitguess_f, par) ≈ BK.residual(pbspti, orbitguess_f, par)
+end

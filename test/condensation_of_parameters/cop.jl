@@ -153,6 +153,8 @@ const BK = BifurcationKit
     rhs[end-N-δn:end-1, :] .= rhs0[end-N-δn:end-1, :]
     return rhs
 end
+
+let
 # ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 par_hopf = (@set par_sl.r = 0.1)
@@ -161,7 +163,7 @@ Ntst = 80
 m = 4
 N = 3
 #####################################################
-const _al = I + 10. .* rand(N, N)
+_al = I + 10. .* rand(N, N)
 # prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> I(N))
 prob_ana = BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
 coll = PeriodicOrbitOCollProblem(Ntst, m; 
@@ -221,3 +223,4 @@ sol_cop_bd = BK.solve_cop(coll, copy(Jco_bd), copy(_rhs_bd), cop_cache; _USELU =
 cop_cache.Jcoll .= 0
 BK._copy_to_coll!(coll, cop_cache.Jcoll, Jco_bd, Val(2)) # 12.041 μs (1 allocation: 448 bytes)
 @test cop_cache.Jcoll ≈ Jco_bd
+end

@@ -17,16 +17,16 @@ function F_chan(x, p)
     return f
 end
 
-par_chan = (α = 3.3, β = 0.01)
+let
+    par_chan = (α = 3.3, β = 0.01)
 
-n = 101
-sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@optic _.α))
-opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = NewtonPar(tol = 1e-10))
-br = continuation(prob, PALC(), opts_br0)
+    n = 101
+    sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
+    prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@optic _.α))
+    opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = NewtonPar(tol = 1e-10))
+    br = continuation(prob, PALC(), opts_br0)
 ####################################################################################################
 # Fold continuation
-let
     outfold = newton(br, 2; start_with_eigen = false)
     outfold = newton(br, 2; start_with_eigen = true)
     @test  BK.converged(outfold)
@@ -41,11 +41,9 @@ let
         outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
         BK.getparams(outfoldco, 1)
     end
-end
 
-# test of Jacobian expression
-# manual handling
-let
+    # test of Jacobian expression
+    # manual handling
     indfold = 1
     foldpt = BK.fold_point(br, indfold)
     foldpb = BK.FoldMinimallyAugmentedFormulation(

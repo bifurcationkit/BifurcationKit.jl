@@ -3,6 +3,8 @@
 using BifurcationKit, ForwardDiff
 using LinearAlgebra
 import OrdinaryDiffEq as ODE
+const FD = ForwardDiff
+const BK = BifurcationKit
 
 function Fsl!(f, u, p, t)
     (;r, μ, ω, c3) = p
@@ -23,6 +25,7 @@ function diffAD(f, x, dx)
     ForwardDiff.derivative(t -> f(x .+ t .* dx), 0.)
 end
 
+let
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ω = 1.0, c3 = 1.0,)
 u0 = [.001, .001]
@@ -102,8 +105,6 @@ println("\n──> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1e-4
 ####################################################################################################
 # matrix of the Poincare map, analytical formula
-const FD = ForwardDiff
-const BK = BifurcationKit
 
 tΣ, solΣ = flowTS(u0, Inf64, prob; callback = cb);
 tΣ = tΣ[end]; solΣ = solΣ[end]
@@ -143,3 +144,4 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 # resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
 # resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 # @test norminf(resDP - resDPBK) < 1e-6
+end

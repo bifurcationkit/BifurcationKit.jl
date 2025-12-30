@@ -2,26 +2,9 @@
 using LinearAlgebra, Test
 using BifurcationKit
 const BK = BifurcationKit
+import OrdinaryDiffEq as ODE
 
 record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
-####################################################################################################
-function lur!(dz, u, p, t = 0)
-    (; α, β) = p
-    x, y, z = u
-    dz[1] = y
-    dz[2] = z
-    dz[3] = -α * z - β * y - x + x^2
-    dz
-end
-
-prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
-
-opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
-opts_br = @set opts_br.newton_options.verbose = false
-br = continuation(prob, PALC(tangent = Bordered()), opts_br;
-bothside = true, normC = norminf)
-
-# plot(br)
 ####################################################################################################
 function plotPO(x, p; k...)
 	xtt = get_periodic_orbit(p.prob, x, p.p)
@@ -36,6 +19,25 @@ function recordPO(x, p; k...)
 	period = getperiod(p.prob, x, p.p)
 	return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
+####################################################################################################
+function lur!(dz, u, p, t = 0)
+    (; α, β) = p
+    x, y, z = u
+    dz[1] = y
+    dz[2] = z
+    dz[3] = -α * z - β * y - x + x^2
+    dz
+end
+
+let
+prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
+
+opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
+opts_br = @set opts_br.newton_options.verbose = false
+br = continuation(prob, PALC(tangent = Bordered()), opts_br;
+bothside = true, normC = norminf)
+
+# plot(br)
 ####################################################################################################
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.02, dsmin = 1e-4, p_max = 1.1, max_steps = 80, tol_stability = 1e-4, ds = -0.01)
@@ -118,8 +120,6 @@ for meshadapt in (false, true)
     )
 end
 ####################################################################################################
-import OrdinaryDiffEq as ODE
-
 probsh = ODE.ODEProblem(lur!, copy(BK.getu0(prob)), (0., 1000.), BK.getparams(prob); abstol = 1e-12, reltol = 1e-10)
 
 # continuation parameters
@@ -199,3 +199,4 @@ end
 #     )
 
 # plot(br_po_pd, br_po)
+end

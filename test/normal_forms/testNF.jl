@@ -313,7 +313,7 @@ function FbpD6(x, p)
              p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c * (x[2]^2 + x[1]^2) * x[3])]
 end
 
-begin
+let
     probD6 = BK.ODEBifProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@optic _.μ),)
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
     br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds = 0.001); normC = norminf)
@@ -400,6 +400,7 @@ let
     Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
     par = (β1 = 0.0, β2 = -0.01, c = 3.)
     prob = BK.ODEBifProblem(Fcusp, [0.01], par, (@optic _.β1))
+    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
     br = continuation(prob, PALC(), opts_br;)
 
     sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
@@ -567,6 +568,7 @@ let
     for _F in (Fzh!, Fzh)
         par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
         prob = BK.ODEBifProblem(_F, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
         br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, max_steps = 70, detect_bifurcation=3, n_inversion = 2), verbosity = 0)
 
         _cparams = br.contparams
@@ -616,6 +618,7 @@ let
     for _F in (Fhh!, Fhh)
         par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022 = 5., G1110 = 6., G0021 = 7., G2210 = 8., G1121 = 9., G0032 = 10. )
         prob = BK.ODEBifProblem(_F, zeros(4), par_hh, (@optic _.β1))
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
         br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.005, max_steps = 30, detect_bifurcation = 3, n_inversion = 2))
         _cparams = br.contparams
         opts2 = @set _cparams.newton_options.verbose = false

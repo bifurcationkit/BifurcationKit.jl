@@ -25,6 +25,7 @@ function FslMono!(f, x, p, t)
     f[3:4] .= dFsl(u, du, p)
 end
 ####################################################################################################
+let
 par_sl = (r = 0.5, μ = 0., ν = 1.0, c3 = 1.0, c5 = 0.0,)
 par_hopf = (@set par_sl.r = 0.1)
 u0 = [.001, .001]
@@ -381,4 +382,5 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
 
     # test different versions of newton
     newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newton_options)
+end
 end

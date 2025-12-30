@@ -15,6 +15,7 @@ function COm(u, p)
     out
 end
 
+let
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
@@ -143,3 +144,4 @@ for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.MinAugMatrixBased()
 
     @test ~isnothing(hp_br.eig)
 end
+end #let
