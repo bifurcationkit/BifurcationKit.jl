@@ -166,6 +166,51 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     return contres
 end
 ####################################################################################################
+# the following resolve method ambiguity
+for at in (:AbstractWrapperPOProblem, :AbstractWrapperFDProblem)
+    @eval begin
+        function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+            prob_po = pbwrap.prob
+            𝐏𝐛 = get_formulation(getprob(iter))
+            u = getx(state)
+            p = getp(state)
+
+            po = getvec(u, 𝐏𝐛)
+            period = getperiod(prob_po, po, nothing)
+            return (;period)
+            # sol = get_periodic_orbit(prob_po, x, nothing)
+            # _min, _max = @views extrema(sol[1, :])
+            # return (;max = _max, min = _min, amplitude = _max - _min, period)
+        end
+    end
+end
+
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperFDProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+    𝐏𝐛 = get_formulation(getprob(iter))
+    u = getx(state)
+    p = getp(state)
+    po = getvec(u, 𝐏𝐛)
+    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = p); iter, state)
+end
+
+# shooting functional
+# we pass the full parameters updated at the bifurcation point
+function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+    probma = getprob(iter)
+    𝐏𝐛 = get_formulation(probma)
+    lens1, lens2 = get_lenses(probma)
+    u = getx(state)
+
+    p2 = getp(state)
+    p1 = get_parameter(u, 𝐏𝐛)
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    po = getvec(u, 𝐏𝐛)
+    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = newpar); iter, state)
+end
+####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
@@ -194,6 +239,7 @@ function _continuation(gh::Bautin,
                         scaleζ = norm,
                         Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+                        record_from_solution = nothing,
                         kwargs...) where {Tkind, Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # compute predictor for point on new branch
@@ -229,12 +275,11 @@ function _continuation(gh::Bautin,
     end
 
     # change the user provided functions by passing probPO in its parameters
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
-
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
@@ -334,12 +379,12 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _kwargs = (;plot_solution = plot_solution)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
 
     options = _contParams.newton_options
 
