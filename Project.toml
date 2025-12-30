@@ -1,7 +1,7 @@
 name = "BifurcationKit"
 uuid = "0f109fa4-8a5d-4b75-95aa-f515264e7665"
-authors = ["Romain Veltz <rveltz@salk.edu>"]
 version = "0.5.5"
+authors = ["Romain Veltz <rveltz@salk.edu>"]
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -57,7 +57,7 @@ Makie = "^0.21, ^0.22, 0.23, 0.24"
 OrdinaryDiffEq = "^6.33"
 Parameters = "0.12.3"
 Plots = "1"
-PreallocationTools = "0.4.1"
+PreallocationTools = "0.4.1, 1"
 RecipesBase = "1.0, 1.1, 1.3"
 RecursiveArrayTools = "^2.3, ^2.4, ^2.8, ^2.9, ^3"
 Reexport = "1.2.2"
