@@ -326,6 +326,24 @@ function update!(probma::FoldMAProblem, iter, state)
     return update!(𝐅, iter, state)
 end
 
+function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
+                              state::AbstractContinuationState) where {Tkind <: AbstractContinuationKind}
+    probma = getprob(iter)
+    𝐅 = get_formulation(probma)
+    prob_vf = 𝐅.prob_vf
+    lens1, lens2 = get_lenses(probma)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    return (; zip(lenses, (getp(u, 𝐅), p))..., 
+                    BT = 𝐅.BT, 
+                    CP = 𝐅.CP, 
+                    ZH = 𝐅.ZH,
+                    _namedrecordfromsol(probma.recordFromSolution(getvec(u), p;))...
+                    ) 
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -420,26 +438,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     𝐅.BT = one(𝒯)
     𝐅.CP = one(𝒯)
     𝐅.ZH = 1
-
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = record_from_solution
-    _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...) -> begin 
-                (; zip(lenses, (getp(u, 𝐅), p))..., 
-                        BT = 𝐅.BT,
-                        CP = 𝐅.CP,
-                        ZH = 𝐅.ZH,
-                        _namedrecordfromsol(BifurcationKit.record_from_solution(prob)(getvec(u), p; kw...))...) 
-            end :
-        (u, p; kw...) -> begin 
-                (; zip(lenses, (getp(u, 𝐅), p))..., 
-                    BT = 𝐅.BT, 
-                    CP = 𝐅.CP, 
-                    ZH = 𝐅.ZH,
-                    _namedrecordfromsol(_printsol(getvec(u), p; kw...))...) 
-            end
-
-    prob_fold = re_make(prob_fold, record_from_solution = _printsol2)
 
     # eigen solver
     eigsolver = FoldEig(getsolver(opt_fold_cont.newton_options.eigsolver), prob_fold)
