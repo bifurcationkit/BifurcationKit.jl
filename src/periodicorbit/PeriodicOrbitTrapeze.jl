@@ -603,7 +603,7 @@ end
 function (pb::PeriodicOrbitTrapProblem)(::Val{:JacCyclicSparse}, u0::AbstractVector, par, γ = 1)
     # extraction of various constants
     N = pb.N
-    AγBlock = jacobian_potrap_block(pb, u0, par; γ = γ)
+    AγBlock = jacobian_potrap_block(pb, u0, par; γ)
 
     # this is bad for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
@@ -714,7 +714,7 @@ end
 function (A::AγOperatorSparseInplace)(orbitguess::AbstractVector, par)
     # compute the cyclic matrix
     A.prob(Val(:JacFullSparseInplace), A.Jc, orbitguess, par, A.indx; updateborder = false)
-    # update the Lu decomposition
+    # update the LU decomposition
     LA.lu!(A.Jcfact, A.Jc)
     return A
 end
@@ -778,9 +778,8 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltyp
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE vcat!
     @views J.∂TGpo .= (residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- residual(J.Aγ.prob, u0, par)) ./ δ
-
-    J.Aγ(u0, par) # update Aγ
-
+    # update Aγ
+    J.Aγ(u0, par)
     # return J, needed to properly call the linear solver.
     return J
 end

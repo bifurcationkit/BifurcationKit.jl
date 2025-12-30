@@ -235,15 +235,14 @@ detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loo
 $(TYPEDEF)
 
 Structure to hold a specific finaliser and simplify dispatch on it. 
-It is mainly used for periodic orbits computation and adaption of mesh and section.
-It is meant to be called like a callable struct.
+It is mainly used for periodic orbits computation and adaptation of mesh and section.
 """
 struct Finaliser{Tp, Tf}
-    "Bifurcation problem"
+    "Bifurcation problem."
     prob::Tp
-    "Finalizer to be called"
+    "Finalizer to be called."
     finalise_solution::Tf
-    "Section updated every updateSectionEveryStep step"
+    "Section updated every updateSectionEveryStep step."
     updateSectionEveryStep::UInt
 end
 

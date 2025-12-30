@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a PD bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newton_fold`.
+For an initial guess from the index of a PD bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newton_fold`.
 """
 function pd_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
@@ -129,11 +129,11 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
     (;dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0) = _get_bordered_terms(𝐏𝐝, x, p, par)
 
     # TODO!! This is only finite differences
-    u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v,0), par0, w, true)
-    u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v,0), par0, w, true)
+    u1 = apply_jacobian_period_doubling(POWrap, x .+ ϵₓ .* vcat(v, 0), par0, w, true)
+    u2 = apply_jacobian_period_doubling(POWrap, x .- ϵₓ .* vcat(v, 0), par0, w, true)
     σₓ = minus(u2, u1); LA.rmul!(σₓ, 1 / (2ϵₓ))
 
-    # a bit of a hack
+    # TODO!! a bit of a hack
     xtmp = copy(x); xtmp[end] += ϵₜ
     σₜ = (𝐏𝐝(xtmp, p, par0)[end] - 𝐏𝐝(x, p, par0)[end]) / (ϵₜ)
 
@@ -184,7 +184,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAu
         dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ, σₜ), σₚ, rhsu, rhsp)
         ~flag && @debug "Linear solver for J did not converge."
     else
-        error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
+        error("WIP. Please select another jacobian method like `AutoDiff()` or `FiniteDifferences()`. You can also pass the option usehessian = false.")
     end
 
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
@@ -310,7 +310,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
             update_minaug_every_step)
 
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
+    _kwargs = (;record_from_solution, plot_solution)
 
     # Jacobian for the PD problem
     if jacobian_ma == AutoDiff()
@@ -406,10 +406,10 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _plotsol = modify_po_plot(prob_pd, getparams(prob_pd), getlens(prob_pd); _kwargs...)
     prob_pd = re_make(prob_pd, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    # Define event for detecting codim 2 bifurcations.
-    # Couple it with user passed events
+    # define event for detecting codim 2 bifurcations.
+    # couple it with user passed events
     event_user = get(kwargs, :event, nothing)
-    event_bif = ContinuousEvent(3, test_for_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
+    event_bif = ContinuousEvent(3, test_for_pd_gpd_cp, compute_eigen_elements, ("gpd", "cusp", "R2"), opt_pd_cont.tol_stability)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
 
     # solve the PD equations
@@ -418,15 +418,15 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         (@set opt_pd_cont.newton_options.eigsolver = eigsolver);
         linear_algo = BorderingBLS(solver = opt_pd_cont.newton_options.linsolver, check_precision = false),
         kwargs...,
-        kind = kind,
-        normC = normC,
-        event = event,
         finalise_solution = update_min_aug_pd,
+        kind,
+        normC,
+        event,
         )
     correct_bifurcation(br_pd_po)
 end
 
-function test_for_gpd_cp(iter, state)
+function test_for_pd_gpd_cp(iter, state)
     probma = getprob(iter)
     lens1, lens2 = get_lenses(probma)
 
@@ -478,7 +478,12 @@ function test_for_gpd_cp(iter, state)
     return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
 end
 
-function compute_eigenvalues(eig::FoldEig, iter::ContIterable{PDPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+function compute_eigenvalues(eig::FoldEig,
+                            iter::ContIterable{PDPeriodicOrbitCont},
+                            state,
+                            u0,
+                            par,
+                            nev = iter.contparams.nev; k...)
     probma = getprob(iter)
     lens1, lens2 = get_lenses(probma)
     x = getvec(u0)

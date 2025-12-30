@@ -194,8 +194,8 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
     LS = Matrix{𝒯}(undef, 2, 2);
     rhs = Vector{𝒯}(undef, 2);
-    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
-    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    LS[1, 1] = real(σₚ - σxx2); LS[1, 2] = real(σω)
+    LS[2, 1] = imag(σₚ + σxx2); LS[2, 2] = imag(σω)
     rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
     dp, dω = LS \ rhs
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
@@ -325,6 +325,58 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζad, options; normN, kwargs...)
 end
 
+function update!(probma::HopfMAProblem, iter, state)
+    # it is called to update the Minimally Augmented problem
+    # by updating the vectors a, b
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information!
+    # if we are in a bisection, we still update the MA problem, this does not work well otherwise
+    𝐇 = probma.prob
+    𝒯 = eltype(𝐇)
+    success = state.converged
+    step = state.step
+    if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false)
+        return true
+    end
+
+    @debug "[Hopf] Update vectors a and b"
+    z = getsolution(state)
+    x = getvec(z.u, 𝐇)    # hopf point
+    p1, ω = getp(z.u, 𝐇)  # first parameter
+    p2 = z.p              # second parameter
+
+    lens1, lens2 = get_lenses(probma)
+    newpar = set(getparams(probma), lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    a = 𝐇.a
+    b = 𝐇.b
+
+    # expression of the jacobian
+    J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
+    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
+
+    bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+
+    𝐇.a .= bd_vec.w ./ 𝐇.norm(bd_vec.w)
+    # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
+    𝐇.b .= bd_vec.v ./ 𝐇.norm(bd_vec.v)
+
+    # we stop continuation at Bogdanov-Takens points
+    # CA NE DEVRAIT PAS ETRE ISSNOT?
+    # isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
+    isbt = true
+
+    threshBT = 100iter.contparams.newton_options.tol
+
+    # if the frequency is null, this is not a Hopf point, we halt the process
+    if abs(ω) < threshBT
+        @warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
+    end
+
+    return ((abs(ω) >= threshBT) || in_bisection(state) == true) && isbt
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -435,54 +487,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     𝐇.BT = one(eTb)
     𝐇.GH = one(eTb)
 
-    # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented problem
-    # by updating the vectors a, b
-    function update_minaug_hopf(z, tau, step, contResult; kUP...)
-        # user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
-
-        # we first check that the continuation step was successful
-        # if not, we do not update the problem with bad information!
-        # if we are in a bisection, we still update the MA problem, this does not work well otherwise
-        success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) || success == false)
-            # we call the user finalizer
-            return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
-        end
-
-        @debug "[Hopf] Update vectors a and b"
-        x = getvec(z.u, 𝐇)   # hopf point
-        p1, ω = getp(z.u, 𝐇) # first parameter
-        p2 = z.p              # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        # expression of the jacobian
-        J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-        JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-
-        bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
-
-        𝐇.a .= bd_vec.w ./ normC(bd_vec.w)
-        # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
-        𝐇.b .= bd_vec.v ./ normC(bd_vec.v)
-
-        # we stop continuation at Bogdanov-Takens points
-        # CA NE DEVRAIT PAS ETRE ISSNOT?
-        isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
-
-        # if the frequency is null, this is not a Hopf point, we halt the process
-        if abs(ω) < threshBT
-            @warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
-        end
-
-        # call the user-passed finalizer
-        final_result = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
-
-        return abs(ω) >= threshBT && isbt && final_result
-    end
-
     # the following allows to append information specific to the codim 2 continuation to the user data
     _printsol = record_from_solution
     _printsol2 = isnothing(_printsol) ?
@@ -510,8 +514,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_hopf)
 
-    # Define event for detecting codim 2 bifurcations.
-    # Couple it with user passed events
+    # define event for detecting codim 2 bifurcations
+    # couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT)
 
@@ -539,10 +543,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 prob_hopf, alg,
                 (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
                 kwargs...,
-                kind ,
+                kind,
                 linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
                 normC,
-                finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
+                finalise_solution = get(kwargs, :finalise_solution, finalise_default),
                 event
             )
     @assert ~isnothing(br) "Empty branch!"

@@ -16,7 +16,8 @@ end
     get_lenses(br.prob)
 end
 
-for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
+for op in (:FoldProblemMinimallyAugmented, 
+           :HopfProblemMinimallyAugmented)
     @eval begin
     """
     $(TYPEDEF)

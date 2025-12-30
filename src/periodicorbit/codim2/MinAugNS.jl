@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a NS bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newtonFold`.
+For an initial guess from the index of a NS bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newtonFold`.
 """
 function ns_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
@@ -199,8 +199,8 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
-        σxx1 = LA.dot(vcat(σx,σt), x1)
-        σxx2 = LA.dot(vcat(σx,σt), x2)
+        σxx1 = LA.dot(vcat(σx, σt), x1)
+        σxx2 = LA.dot(vcat(σx, σt), x2)
 
     else
         error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
@@ -210,8 +210,8 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
     LS = Matrix{𝒯}(undef, 2, 2);
     rhs = Vector{𝒯}(undef, 2);
-    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
-    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    LS[1, 1] = real(σₚ - σxx2); LS[1, 2] = real(σω)
+    LS[2, 1] = imag(σₚ + σxx2); LS[2, 2] = imag(σω)
     rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
     dp, dω = LS \ rhs
 
@@ -240,7 +240,7 @@ save_solution(::NSMAProblem, x ,p) = x
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 jacobian(nspb::NSMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
 jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) ./ (2e-8)
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
@@ -401,9 +401,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
     prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
 
-    # Define event for detecting codim 2 bifurcations. Couple it with user passed events
+    # define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
-    event_bif = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
+    event_bif = ContinuousEvent(5, test_for_ns_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
 
     # solve the NS equations
@@ -420,7 +420,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     correct_bifurcation(br_ns_po)
 end
 
-function test_ch(iter, state)
+function test_for_ns_ch(iter, state)
     probma = getprob(iter)
     𝐍𝐒 = probma.prob
     lens1, lens2 = get_lenses(probma)

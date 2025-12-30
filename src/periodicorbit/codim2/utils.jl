@@ -51,8 +51,8 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProbl
     updateSectionEveryStep = finalizer.updateSectionEveryStep
     𝐏𝐛 = finalizer.prob.prob
     coll = 𝐏𝐛.prob_vf.prob
-     # we get the state vector at bifurcation point
-     x = getvec(Z.u, 𝐏𝐛)
+    # we get the state vector at bifurcation point
+    x = getvec(Z.u, 𝐏𝐛)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     state = get(kF, :state, nothing)

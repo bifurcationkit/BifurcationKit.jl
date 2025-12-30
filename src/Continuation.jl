@@ -155,7 +155,7 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     # it is initialized as -1 when unknown
     "number of unstable eigenvalues (current, previous)"
     n_unstable::Tuple{Int64, Int64}  = (-1, -1)
-    "number of imaginary eigenvalues (current, previous)"
+    "number of unstable complex eigenvalues (current, previous)"
     n_imag::Tuple{Int64, Int64}      = (-1, -1)
     "boolean for eigen solver computation"
     convergedEig::Bool               = true
@@ -230,7 +230,7 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
-@inline update_prob!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
+@inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
@@ -460,7 +460,7 @@ function Base.iterate(it::ContIterable,
                 printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
             end
         end
-        state.stopcontinuation = ~update_prob!(it, state)
+        state.stopcontinuation = ~update_problem!(it, state)
         state.step += 1
     else
         verbose && printstyled("Newton correction failed\n", color = :red)
@@ -469,7 +469,7 @@ function Base.iterate(it::ContIterable,
     # step size control, updates the parameter ds stored in state
     step_size_control!(state, it)
 
-    # predictor: state.z_pred. The following method only mutates z_pred and τ
+    # predictor: state.z_pred. The next method only mutates z_pred and τ
     getpredictor!(state, it)
 
     return state, state
@@ -491,7 +491,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
         # we perform saving, plotting, computation of eigenvalues...
         # the case state.step = 0 was just done above
         if converged(state) && (state.step <= it.contparams.max_steps) && (state.step > 0)
-            # Detection of fold points based on parameter monotony, mutates contRes.specialpoint
+            # detection of fold points based on parameter monotony, mutates contRes.specialpoint
             # if we detect bifurcations based on eigenvalues, we disable fold detection to avoid duplicates
             if contparams.detect_fold && contparams.detect_bifurcation < 2
                 foldetected = locate_fold!(contRes, it, state)
@@ -508,7 +508,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                 # lead to infinite looping. Indeed, clamping messes up the `ds`
                 if contparams.detect_bifurcation > 2 && ~is_on_boundary(it, getp(state))
                     verbose1 && printstyled(color = :red, "──▶ Bifurcation detected before p = ", getp(state), "\n")
-                    # locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. It also updates the eigenelements at the current state. The call returns :guess or :converged
+                    # Locate bifurcations with bisection, mutates state so that it stays very close the bifurcation point. 
+                    # It also updates the eigenelements at the current state. The call returns :guess or :converged
                     status, interval = locate_bifurcation!(it, state, it.verbosity > 2)
                 end
                 # we double-ckeck that the previous line, which mutated `state`, did not remove the bifurcation point
@@ -531,6 +532,8 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                     _𝒯 = eltype(it)
                     interval_event::Tuple{_𝒯, _𝒯} = getinterval(getpreviousp(state), getp(state))
                     if contparams.detect_event > 1
+                        # Locate events with bisection, mutates state so that it stays very close the event point. 
+                        # It may also updates the eigenelements at the current state. The call returns :guess or :converged
                         status, interval_event = locate_event!(it.event, it, state, it.verbosity > 2)
                     end
                     success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, interval_event)
@@ -548,7 +551,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             contparams.save_to_file && save_to_file(it, getx(state), getp(state), state.step, contRes)
 
             # call user saved finalise_solution function. If returns false, stop continuation
-            # we put a OR to stop continuation if the stop was required before
+            # we put am OR (|) to stop continuation if the stop was required before
             state.stopcontinuation |= ~it.finalise_solution(getsolution(state), state.τ, state.step, contRes; state = state, iter = it)
 
             # save current state in the branch

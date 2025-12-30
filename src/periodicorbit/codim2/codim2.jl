@@ -3,7 +3,7 @@ function d2PO(f, x, dx1, dx2)
 end
 
 for op in (:NeimarkSackerProblemMinimallyAugmented,
-            :PeriodDoublingProblemMinimallyAugmented)
+           :PeriodDoublingProblemMinimallyAugmented)
     @eval begin
         """
         $(TYPEDEF)
@@ -22,7 +22,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                            Sbd <: AbstractBorderedLinearSolver,
                            Sbda <: AbstractBorderedLinearSolver,
                            Tmass,
-                           Tn,
+                           Tnorm,
                            Tnewton} <: AbstractProblemMinimallyAugmented{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
@@ -63,7 +63,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             "wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
             massmatrix::Tmass
             "norm to normalize vector in update or test"
-            norm::Tn
+            norm::Tnorm
             "Update the problem every such step"
             update_minaug_every_step::Int
             "Compute the PO normal forms with Poincaré Return Map?"
@@ -96,17 +96,17 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         prm = false)
             # determine scalar type associated to vectors a and b
             α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
-            Ty = eltype(α)
+            𝒯 = eltype(α)
             return $op(prob, a, b, 0*a,
-                        complex(zero(Ty)), # l1
-                        real(one(Ty)),     # cp
-                        real(one(Ty)),     # fold-ns
-                        real(one(Ty)),     # gpd
+                        complex(zero(𝒯)), # l1
+                        real(one(𝒯)),     # cp
+                        real(one(𝒯)),     # fold-ns
+                        real(one(𝒯)),     # gpd
                         1,                 # flip-ns
-                        real(one(Ty)),     # R1
-                        real(one(Ty)),     # R2
-                        real(one(Ty)),     # R3
-                        real(one(Ty)),     # R4
+                        real(one(𝒯)),     # R1
+                        real(one(𝒯)),     # R2
+                        real(one(𝒯)),     # R3
+                        real(one(𝒯)),     # R4
                         linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
 
@@ -121,17 +121,17 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                     prm = false)
             a = b = 0.
             α = norm(a) 
-            Ty = eltype(α)
+            𝒯 = eltype(α)
             return $op(prob, a, b, 0*a,
-                        complex(zero(Ty)), # l1
-                        real(one(Ty)),     # cp
-                        real(one(Ty)),     # fold-ns
-                        real(one(Ty)),     # gpd
-                        1,                 # flip-ns
-                        real(one(Ty)),     # R1
-                        real(one(Ty)),     # R2
-                        real(one(Ty)),     # R3
-                        real(one(Ty)),     # R4
+                        complex(zero(𝒯)), # l1
+                        real(one(𝒯)),     # cp
+                        real(one(𝒯)),     # fold-ns
+                        real(one(𝒯)),     # gpd
+                        1,                # flip-ns
+                        real(one(𝒯)),     # R1
+                        real(one(𝒯)),     # R2
+                        real(one(𝒯)),     # R3
+                        real(one(𝒯)),     # R4
                         linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
     end

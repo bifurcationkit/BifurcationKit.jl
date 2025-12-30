@@ -1161,7 +1161,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
     rhs = vcat(vec(rhsₛ), 0)
     border_ϕ1 = ForwardDiff.gradient(x -> ∫( reshape(x, size(ϕ₁★ₛ)), ϕ₁★ₛ),
-                                     zeros(𝒯, length(ϕ₁★ₛ))
+                                                zeros(𝒯, length(ϕ₁★ₛ))
                                     )
     J = analytical_jacobian(coll, ns.x0, par;  𝒯 = Complex{𝒯})
     J[end-N:end-1, 1:N] .= -LA.I(N)

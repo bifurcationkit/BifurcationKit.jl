@@ -3,7 +3,6 @@ using Test, ForwardDiff, LinearAlgebra
 # using Plots
 using BifurcationKit, Test
 const BK = BifurcationKit
-
 ####################################################################################################
 function Lor(u, p, t = 0)
     (;α,β,γ,δ,G,F,T) = p
@@ -13,6 +12,17 @@ function Lor(u, p, t = 0)
         X*Y - β*X*Z - Y + G,
         β*X*Y + X*Z - Z,
         -δ*U + γ*U*X + T
+    ]
+end
+
+function jac_Lor(u, p, t = 0)
+    (;α,β,γ,δ,G,F,T) = p
+    X,Y,Z,U = u
+    return [
+        -α        -2Y        -2Z        -2γ*U
+        Y-β*Z     X-1        -β*X        0
+        β*Y+Z     β*X        X-1         0
+        γ*U       0          0           -δ + γ*X
     ]
 end
 
@@ -34,6 +44,7 @@ recordFromSolutionLor(u::AbstractVector, p; k...) = (X = u[1], Y = u[2], Z = u[3
 recordFromSolutionLor(u::BorderedArray, p; k...) = recordFromSolutionLor(u.u, p)
 
 prob = BK.BifurcationProblem(Lor, z0, parlor, (@optic _.F);
+    J = jac_Lor,
     record_from_solution = recordFromSolutionLor,)
 
 br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)),
@@ -150,7 +161,6 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
         normC = norminf,
         jacobian_ma = _jac,
-        # jacobian_ma = :minaug,
         detect_codim2_bifurcation = 1,
         update_minaug_every_step = 1,
         start_with_eigen = true,
@@ -236,8 +246,6 @@ end
 # test events
 sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,
-    # jacobian_ma = _jac,
-    # jacobian_ma = :minaug,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
@@ -258,7 +266,6 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     start_with_eigen = true,
     bothside = false,
     jacobian_ma = BK.AutoDiff(),
-    # jacobian_ma = :minaug,
     event = SaveAtEvent((-0.05,.0)),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
@@ -269,8 +276,6 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
 ####################################################################################################
 sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,
-    # jacobian_ma = _jac,
-    # jacobian_ma = :minaug,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
@@ -285,7 +290,6 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     start_with_eigen = true,
     bothside = true,
     jacobian_ma = BK.AutoDiff(),
-    # jacobian_ma = :minaug,
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
 
@@ -393,7 +397,6 @@ for probPO in (
             jacobian_ma = BK.MinAug(),
             # callback_newton =  BK.cbMaxNormAndΔp(1e1, 0.025),
             )
-    
     @test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
 end 
 ####################################################################################################
