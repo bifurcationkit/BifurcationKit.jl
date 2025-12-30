@@ -4,20 +4,7 @@ abstract type AbstractMinimallyAugmentedFormulation_Hopf_NS{Tprob} <: AbstractMi
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
-get_formulation(pb::AbstractMABifurcationProblem) = pb.prob
-
-# function to get the two lenses associated to a 2-param continuation
-@inline function get_lenses(_prob::Union{FoldMAProblem,
-                                         HopfMAProblem,
-                                         PDMAProblem,
-                                         NSMAProblem})
-    prob_ma = _prob.prob
-    return getlens(prob_ma), getlens(_prob)
-end
-
-@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
-    get_lenses(br.prob)
-end
+getparams(ma::AbstractMinimallyAugmentedFormulation) = getparams(ma.prob_vf)
 
 for (op, at) in (
             (:FoldMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Fold_PD),
@@ -181,6 +168,39 @@ end
     return vcat(res[1], res[2], res[3])
 end
 ################################################################################
+# function to get the two lenses associated to a 2-param continuation
+@inline function get_lenses(_prob::Union{FoldMAProblem,
+                                         HopfMAProblem,
+                                         PDMAProblem,
+                                         NSMAProblem})
+    prob_ma = _prob.prob
+    return getlens(prob_ma), getlens(_prob)
+end
+
+@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
+    get_lenses(br.prob)
+end
+
+function getparams(u, p2, 𝐏𝐛::AbstractMABifurcationProblem)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
+    lenses = get_lenses(𝐏𝐛)
+    p1 = get_parameter(u, 𝐌𝐚)
+    par = getparams(𝐏𝐛)
+    newpar = _set(par, lenses, (p1, p2))
+end
+
+getparams(z::BorderedArray, 𝐏𝐛::AbstractMABifurcationProblem) = getparams(z.u, z.p, 𝐏𝐛)
+
+function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
+    getparams(br.sol[ind].x, br.sol[ind].p, getprob(br))
+end
+
+function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, state::AbstractContinuationState)
+    probma = getprob(iter)
+    zu = getx(state)
+    newpar = getparams(zu, getp(state), probma)
+end
+################################################################################
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; 
                                     update_minaug_every_step = 1, 
                                     kwargs...)
@@ -248,15 +268,6 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     lenses = get_lenses(br)
     parbif = _set(getparams(br), lenses, (p1, p2))
     return (x = x0, params = parbif)
-end
-
-function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
-    prob_ma = getprob(br).prob
-    lenses = get_lenses(br)
-    p1 = getp(br.sol[ind].x , prob_ma)[1]
-    p2 = br.sol[ind].p
-    lenses = get_lenses(br)
-    parbif = _set(getparams(br), lenses, (p1, p2))
 end
 ################################################################################
 """

@@ -5,9 +5,23 @@ begin
     lens2 = @optic _.b
     prob = BifurcationProblem((x,p)->x, rand(2), (a=1., b=2., c=3.),lens1)
     𝐌𝐚 = BK.FoldMinimallyAugmentedFormulation(prob)
-    wrap = BK.FoldMAProblem(𝐌𝐚, lens2)
+    𝐏𝐛 = BK.FoldMAProblem(𝐌𝐚, lens2)
     @test lens1 == getlens(prob)
-    @test BK.get_lenses(wrap) == (lens1, lens2)
+    @test BK.get_lenses(𝐏𝐛) == (lens1, lens2)
+
+    # test the function getparams
+    np = BK.getparams(zeros(3), 0.2, 𝐏𝐛)
+    @test np.a == 0
+    @test np.b == 0.2
+    @test np.c == prob.params.c
+    BK.getparams(BK.BorderedArray(zeros(3), 0.2), 𝐏𝐛)
+    @test np.a == 0
+    @test np.b == 0.2
+    @test np.c == prob.params.c
+    BK.getparams(BK.BorderedArray(zeros(3), 0.1), 0.2, 𝐏𝐛)
+    @test np.a == 0
+    @test np.b == 0.2
+    @test np.c == prob.params.c
 end
 
 begin

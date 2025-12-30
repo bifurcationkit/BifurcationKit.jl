@@ -42,6 +42,7 @@ let
         outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
         # test use of jacobian_adjoint
         outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+        BK.getparams(outfoldco, 1)
     end
 end
 
