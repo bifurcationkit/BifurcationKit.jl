@@ -973,13 +973,13 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
     end
 
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
+    _kwargs = (; plot_solution)
+    record_po = RecordForPeriodicOrbits(record_from_solution, BifurcationKit.record_from_solution(prob.prob_vf))
     _plotsol = modify_po_plot(prob, getparams(prob.prob_vf), getlens(prob.prob_vf); _kwargs...)
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob))
-        probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
+        probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, record_po)
         kwargs_continuation = (kwargs...,
                                 kind = PeriodicOrbitCont(),
                                 linear_algo,)
@@ -1003,7 +1003,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
 
         # we define a specific jacobian for this case
         jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, _recordsol)
+        probwp = WrapPOTrap(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), _plotsol, record_po)
         # we change the linear solver
         contParams = @set contParams.newton_options.linsolver = lspo
         # we have to change the Bordered linearsolver to cope with our lspo
