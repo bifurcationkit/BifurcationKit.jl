@@ -1,4 +1,4 @@
-using Revise
+# using Revise
 using BifurcationKit, Test
 const BK = BifurcationKit
 
