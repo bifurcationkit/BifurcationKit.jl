@@ -657,7 +657,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     ϵ = 𝒯(δ)
 
     # functional
-    @assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of Hopf points."
+    @assert prob_ma isa HopfMinimallyAugmentedFormulation "You need to provide a curve of Hopf points."
     ls = prob_ma.linsolver
     bls = prob_ma.linbdsolver
 

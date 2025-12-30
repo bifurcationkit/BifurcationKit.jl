@@ -365,7 +365,6 @@ function update!(probma::HopfMAProblem, iter, state)
 
     return ((abs(ω) >= threshBT) || in_bisection(state) == false) && (~isbt) && update_result
 end
-end
 
 """
 $(TYPEDSIGNATURES)

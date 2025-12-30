@@ -229,18 +229,3 @@ end
 detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol, verbose)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
 ####################################################################################################
-"""
-$(TYPEDEF)
-
-Structure to hold a specific finaliser and simplify dispatch on it. 
-It is mainly used for periodic orbits computation and adaptation of mesh and section.
-"""
-struct Finaliser{Tp, Tf}
-    "Bifurcation problem."
-    prob::Tp
-    "Finalizer to be called."
-    finalise_solution::Tf
-    "Section updated every updateSectionEveryStep step."
-    updateSectionEveryStep::UInt
-end
-
