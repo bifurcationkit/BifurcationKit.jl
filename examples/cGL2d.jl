@@ -305,21 +305,21 @@ end
 
 function Fcgl!(f, u, p, t = 0.)
     NL!(f, u, p)
-    mul!(f, p.Δ, u, 1., 1.)
+    mul!(f, p.Δ, u, 1, 1)
     return f
 end
 
 function dFcgl!(f, x, p, dx)
     # 19.869 μs (0 allocations: 0 bytes)
     dNL!(f, x, p, dx)
-    mul!(f, p.Δ, dx, 1., 1.)
+    mul!(f, p.Δ, dx, 1, 1)
     return f
 end
 
 sol0f = vec(sol0)
 out_ = similar(sol0f)
-@time Fcgl!(out_, sol0f, par_cgl)
-@time dFcgl!(out_, sol0f, par_cgl, sol0f)
+@time Fcgl!(out_, sol0f, par_cgl);
+@time dFcgl!(out_, sol0f, par_cgl, sol0f);
 
 probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 

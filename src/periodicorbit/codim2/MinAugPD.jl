@@ -148,7 +148,6 @@ struct PDLinearSolverMinAug <: AbstractLinearSolver; end
 
 function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, par,
                             rhsu, rhsp) where 𝒯
-    ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
     # where σ(x,p) is computed in the above functions and F is the periodic orbit
     # functional. We recall that N⋅[v, σ] ≡ [0, 1]
@@ -202,10 +201,10 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
-get_wrap_po(pb::PDMAProblem) = get_wrap_po(pb.prob)
-@inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)
-@inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
-################################################################################################### Newton / Continuation functions
+get_wrap_po(pb::PDMAProblem) = get_wrap_po(get_formulation(pb))
+@inline has_adjoint(pb::PDMAProblem) = has_adjoint(get_formulation(pb))
+@inline is_symmetric(pb::PDMAProblem) = is_symmetric(get_formulation(pb))
+###################################################################################################
 """
 $(SIGNATURES)
 
@@ -244,23 +243,20 @@ function newton_pd(prob::AbstractBifurcationProblem,
                 usehessian = true,
                 kwargs...)
 
-    pdproblem = PeriodDoublingMinimallyAugmentedFormulation(
+    𝐏𝐝 = PeriodDoublingMinimallyAugmentedFormulation(
         prob,
         _copy(eigenvec),
         _copy(eigenvec_ad),
         options.linsolver,
         # do not change linear solver if user provides it
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
-        usehessian = usehessian)
+        usehessian)
 
     pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-    prob_f = PDMAProblem(pdproblem, FiniteDifferences(), pdpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
-
+    prob_ma = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
     # options for the Newton Solver
     opt_pd = deepcopy(options)
-
-    # solve the PD equations
-    return newton(prob_f, opt_pd; normN, kwargs...)
+    return newton(prob_ma, opt_pd; normN, kwargs...)
 end
 ###################################################################################################
 function update!(probma::PDMAProblem, iter, state)

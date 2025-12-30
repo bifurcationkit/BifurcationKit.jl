@@ -543,6 +543,7 @@ for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
     end
 end
 @inline get_formulation(pb::AbstractMABifurcationProblem) = pb.prob
+
 ########
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     color = :cyan; bold = true

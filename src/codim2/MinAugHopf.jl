@@ -201,8 +201,8 @@ function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
-@inline has_adjoint(hopfpb::HopfMAProblem) = has_adjoint(hopfpb.prob)
-@inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
+@inline has_adjoint(pb::HopfMAProblem) = has_adjoint(get_formulation(pb))
+@inline is_symmetric(pb::HopfMAProblem) = is_symmetric(get_formulation(pb))
 
 function finalise_solution(iter::ContIterable{HopfCont},
                             state::AbstractContinuationState, 

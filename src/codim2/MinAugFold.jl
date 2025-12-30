@@ -176,9 +176,9 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
-@inline has_adjoint(foldpb::FoldMAProblem) = has_adjoint(foldpb.prob)
-@inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
-jacobian_adjoint(foldpb::FoldMAProblem, args...) = jacobian_adjoint(foldpb.prob, args...)
+@inline has_adjoint(pb::FoldMAProblem) = has_adjoint(get_formulation(pb))
+@inline is_symmetric(pb::FoldMAProblem) = is_symmetric(get_formulation(pb))
+jacobian_adjoint(pb::FoldMAProblem, args...) = jacobian_adjoint(get_formulation(pb), args...)
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -225,15 +225,13 @@ function newton_fold(prob::AbstractBifurcationProblem,
         options.linsolver,
         # do not change linear solver if the user provides it
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
-        usehessian = usehessian)
+        usehessian)
 
-    prob_f = FoldMAProblem(𝐅, nothing, foldpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
 
     # options for the Newton Solver
     opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
-
-    # solve the Fold equations
-    return solve(prob_f, Newton(), opt_fold; normN, kwargs...)
+    return solve(prob_ma, Newton(), opt_fold; normN, kwargs...)
 end
 
 function newton_fold(br::AbstractBranchResult, ind_fold::Int;

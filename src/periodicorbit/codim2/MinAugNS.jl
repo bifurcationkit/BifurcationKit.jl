@@ -256,12 +256,12 @@ function update!(probma::NSMAProblem, iter, state)
 
     # we stop continuation at R1, PD points
     # test if we jumped to PD branch
-    pdjump = abs(abs(ω) - pi) < 100𝐍𝐒.newton_options.tol
+    pdjump = abs(abs(ω) - pi) < 100 * 𝐍𝐒.newton_options.tol
 
     isbif = true#isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
     # if the frequency is null, this is not a NS point, we halt the process
     # tolerance for detecting R1 bifurcation and stopping continuation
-    ϵR1 = 100𝐍𝐒.newton_options.tol
+    ϵR1 = 100 * 𝐍𝐒.newton_options.tol
     stop_R1 = 1-cos(ω) <= ϵR1
     if stop_R1
         @warn "[Codim 2 NS - update!]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."

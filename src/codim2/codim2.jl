@@ -126,6 +126,7 @@ end
 
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_vec_bls(x)
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_vec_bls(x, 2)
+
 @inline getp(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_par_bls(x)
 @inline getp(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_par_bls(x, 2)
 @inline get_frequency(x, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐇)[2]
