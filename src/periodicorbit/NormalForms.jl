@@ -112,7 +112,7 @@ function branch_normal_form(pbwrap::WrapPOSh,
     # it is two-dimensional. One vector is the trivial vector ∂u₀ where
     # u₀ is the periodic orbit. Hence, ζ₀ = F(u₀(0), par)
     po = get_time_slices(prob_sh, bifpt.x)
-    ζ₀ = vf(prob_sh.flow, po[:, 1], pars)
+    ζ₀ = vector_field(prob_sh.flow, po[:, 1], pars)
     ζ₀ ./= scaleζ(ζ₀)
 
     # get the non trivial null vector

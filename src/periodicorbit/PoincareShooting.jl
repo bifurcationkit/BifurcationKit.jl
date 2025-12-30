@@ -98,7 +98,7 @@ This function updates the normals and centers of the hyperplanes defining the Po
     M = get_mesh_size(pb); Nm1 = div(length(centers_bar), M)
     centers_barc = reshape(centers_bar, Nm1, M)
     centers = [E(pb.section, centers_barc[:, ii], ii) for ii = 1:M]
-    normals = [vf(pb.flow, c, par) for c in centers]
+    normals = [vector_field(pb.flow, c, par) for c in centers]
     for ii in eachindex(normals)
         normals[ii] ./= _norm(normals[ii])
     end
@@ -272,7 +272,7 @@ function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
     abs(VI.inner(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(VI.inner(normal, dx))) > 1e-12 and $(VI.inner(dx, dx))"
     # compute the Poincare map from x
     tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), x, par, Inf)
-    z = vf(psh.flow, solΣ, par)
+    z = vector_field(psh.flow, solΣ, par)
     # solution of the variational equation at time tΣ
     # We need the callback to be INACTIVE here!!!
     y = evolve(psh.flow, Val(:SerialdFlow), x, par, dx, tΣ; callback = nothing).du
@@ -358,7 +358,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
         # we find the point on the next section
         tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), view(xc,:,im1), par, Inf)
         # computation of the derivative of the return map
-        F .= vf(psh.flow, solΣ, par) #vector field
+        F .= vector_field(psh.flow, solΣ, par) #vector field
         normal .= psh.section.normals[ii]
         @views dflow(Jtmp, xc[:, im1], tΣ)
         Jtmp .= Jtmp .- F * normal' * Jtmp ./ VI.inner(F, normal)

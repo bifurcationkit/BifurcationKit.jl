@@ -27,9 +27,6 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::NeimarkSackerMinimallyAugmentedFormulation) = get_vec_bls(x, 2)
-@inline   getp(x, ::NeimarkSackerMinimallyAugmentedFormulation) = get_par_bls(x, 2)
-
 is_symmetric(::NSMAProblem) = false
 
 # test function for NS bifurcation
@@ -228,7 +225,7 @@ function update!(probma::NSMAProblem, iter, state)
     # by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
-    𝐍𝐒 = probma.prob
+    𝐍𝐒 = get_formulation(probma)
     𝒯 = eltype(𝐍𝐒)
     success = state.converged
     if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false)
@@ -413,7 +410,7 @@ end
 
 function test_for_ns_ch(iter, state)
     probma = getprob(iter)
-    𝐍𝐒 = probma.prob
+    𝐍𝐒 = get_formulation(probma)
     lens1, lens2 = get_lenses(probma)
 
     z = getx(state)
@@ -463,8 +460,8 @@ end
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
     probma = getprob(iter)
     lens1, lens2 = get_lenses(probma)
-    x = getvec(u0, probma.prob)        # ns point
-    p1, ω = getp(u0, probma.prob)      # first parameter
+    x = getvec(u0, get_formulation(probma))        # ns point
+    p1, ω = getp(u0, get_formulation(probma))      # first parameter
     p2 = getp(state.z)                 # second parameter
     par = getparams(probma)
     newpar = _set(par, (lens1, lens2), (p1, p2))

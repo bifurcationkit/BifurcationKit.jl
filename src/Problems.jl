@@ -226,11 +226,13 @@ for (op, at) in (
                 (:ODEBifProblem, AbstractBifurcationProblem),
                 (:DAEBifProblem, AbstractBifurcationProblem),
                 (:PDEBifProblem, AbstractBifurcationProblem),
+
                 (:FoldMAProblem, AbstractMABifurcationProblem),
                 (:HopfMAProblem, AbstractMABifurcationProblem),
                 (:PDMAProblem, AbstractMABifurcationProblem),
                 (:NSMAProblem, AbstractMABifurcationProblem),
                 (:BTMAProblem, AbstractMABifurcationProblem),
+
                 (:WrapPOTrap, AbstractWrapperFDProblem),
                 (:WrapPOSh, AbstractWrapperShootingProblem),
                 (:WrapPOColl, AbstractWrapperFDProblem),

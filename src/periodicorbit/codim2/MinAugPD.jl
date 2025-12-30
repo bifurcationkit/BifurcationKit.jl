@@ -14,7 +14,7 @@ end
 
 function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     if _transpose == false
-        # THIS CASE IS NOT REALLY USED
+        # TODO THIS CASE IS NOT REALLY USED
         # if hasJvp(pb)
         #  return jvp(pb, x, par, dx)
         # else
@@ -31,9 +31,6 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::PeriodDoublingMinimallyAugmentedFormulation) = get_vec_bls(x)
-@inline   getp(x, ::PeriodDoublingMinimallyAugmentedFormulation) = get_par_bls(x)
-
 pdtest(JacPD, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 
 # this function encodes the functional
@@ -271,7 +268,7 @@ function update!(probma::PDMAProblem, iter, state)
     # by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
-    𝐏𝐝 = probma.prob
+    𝐏𝐝 = get_formulation(probma)
     𝒯 = eltype(𝐏𝐝)
     success = state.converged
     if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false)
@@ -429,7 +426,7 @@ function test_for_pd_gpd_cp(iter, state)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
-    𝐏𝐝 = probma.prob
+    𝐏𝐝 = get_formulation(probma)
     𝒯 = eltype(𝐏𝐝)
     pbwrap = 𝐏𝐝.prob_vf
 

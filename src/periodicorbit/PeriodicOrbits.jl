@@ -19,7 +19,7 @@ _set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 # function to extract trajectories from branch
 get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
-get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
+get_periodic_orbit(prob::WrapPOSh, u, p)   = get_periodic_orbit(prob.prob, u, p)
 get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
 
 @inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)

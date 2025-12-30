@@ -84,7 +84,6 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
         JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
     end
 
-
     (;v, w, itv, itw, JAd_at_xp) = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
 
     δ = getdelta(𝐅.prob_vf)
@@ -288,7 +287,7 @@ function update!(probma::FoldMAProblem, iter, state)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
-    𝐅 = probma.prob
+    𝐅 = get_formulation(probma)
     𝒯 = eltype(𝐅)
     success = state.converged
     step = state.step
@@ -585,7 +584,7 @@ function test_bt_cusp(iter, state)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
-    𝐅 = probma.prob
+    𝐅 = get_formulation(probma)
     𝒯 = eltype(𝐅)
 
     # expression of the jacobian

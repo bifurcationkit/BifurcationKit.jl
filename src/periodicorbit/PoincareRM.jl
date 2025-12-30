@@ -43,7 +43,7 @@ function PoincareMap(wrap::WrapPOSh, po, par, optn)
     sh = wrap.prob
     Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
     poc = get_time_slices(sh, po)
-    @views update!(Π.Σ, vf(sh.flow, poc[:, begin], par), poc[:, begin])
+    @views update!(Π.Σ, vector_field(sh.flow, poc[:, begin], par), poc[:, begin])
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
 end
@@ -192,7 +192,7 @@ function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
     # differential of return time
     ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
@@ -210,7 +210,7 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     # monodromy matrix
     N = length(x)
     𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
@@ -232,11 +232,11 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
     sh = Π.probpo.prob
     normal = Π.Σ.normal
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     ∂Πh2, ∂th2 = d1F(Π, x, pars, h₂) # not good, we recompute a lot
 
     ∂ϕ(z,h) = evolve(sh.flow, Val(:SerialdFlow), z, pars, h, tΣ).du
@@ -265,7 +265,7 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
     normal = Π.Σ.normal
     Πx, tΣ = Π(x, pars)
 
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
     d2vf(z,h1,h2) = ForwardDiff.derivative(t -> dvf(z .+ t .* h2, h1), 0)
 

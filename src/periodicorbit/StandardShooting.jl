@@ -115,7 +115,7 @@ end
 function updatesection!(sh::ShootingProblem, x, pars)
     @debug "Update section shooting"
     x1 = get_time_slice(sh, x, 1)
-    @views update!(sh.section, vf(sh.flow, x1, pars), x1)
+    @views update!(sh.section, vector_field(sh.flow, x1, pars), x1)
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
@@ -209,14 +209,14 @@ end
             ip1 = (ii == M) ? 1 : ii+1
             tmp = jvp(sh.flow, xc[:, ii], pars, dxc[:, ii], sh.ds[ii] * T)
             # call jacobian of the flow, jacobian-vector product
-            outc[:, ii] .= tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= tmp.du .+ vector_field(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     else
         solOde = jvp(sh.flow, xc, pars, dxc, sh.ds .* T)
         # call jacobian of the flow, jacobian-vector product
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= solOde[ii].du .+ vector_field(sh.flow, solOde[ii].u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     end
 
@@ -240,7 +240,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, _getindex(x.u, ii), pars, _getindex(dx.u, ii), sh.ds[ii] * T)
-            _copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* (sh.ds[ii] * dT) .- _getindex(dx.u, ip1))
+            _copyto!(_getindex(out.u, ii), tmp.du .+ vector_field(sh.flow, tmp.u, pars) .* (sh.ds[ii] * dT) .- _getindex(dx.u, ip1))
         end
     else
         error("Not implemented yet. Try using AbstractVectors instead")
@@ -276,7 +276,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
         end
         # we fill the last column
         tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], pars, sh.ds[ii] * T).u
-        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vf(sh.flow, tmp, pars) .* sh.ds[ii]
+        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vector_field(sh.flow, tmp, pars) .* sh.ds[ii]
     end
 
     # we fill the last row

@@ -319,7 +319,7 @@ function update!(probma::HopfMAProblem, iter, state)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
-    𝐇 = probma.prob
+    𝐇 = get_formulation(probma)
     𝒯 = eltype(𝐇)
     success = state.converged
     step = state.step
@@ -618,7 +618,7 @@ end
 
 function test_bt_gh(iter, state)
     probma = getprob(iter)
-    𝐇 = probma.prob
+    𝐇 = get_formulation(probma)
     𝒯 = eltype(𝐇) 
     lens1, lens2 = get_lenses(probma)
 

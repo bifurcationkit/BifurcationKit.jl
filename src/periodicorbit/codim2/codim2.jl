@@ -211,7 +211,7 @@ function _continuation(gh::Bautin,
     newparams = set(gh.params, lens1, pred.params[1])
     newparams = set(newparams, lens2, pred.params[2])
 
-    prob_ma = getprob(br).prob
+    prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
     # build the variable to hold the functional for computing PO based on finite differences
@@ -312,7 +312,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     newparams = set(hh.params, lens1, _params[1])
     newparams = set(newparams, lens2, _params[2])
 
-    prob_ma = getprob(br).prob
+    prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
     ~(lens1 == getlens(prob_vf)) && error("Please open an issue on the website of BifurcationKit")

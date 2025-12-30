@@ -28,10 +28,8 @@ __get_discretization(pb::AbstractMinimallyAugmentedFormulation) = __get_discreti
 __get_discretization(pb::AbstractPeriodicOrbitProblem) = pb
 
 function __update_codim1_po!(𝐏𝐛, iter, state)
-    @error "" typeof(𝐏𝐛)
     # we get the AbstractPeriodicOrbitProblem
     disc_po = __get_discretization(𝐏𝐛)
-    @error "" typeof(disc_po)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     success = converged(state)

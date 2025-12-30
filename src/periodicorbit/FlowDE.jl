@@ -59,7 +59,7 @@ _apply_vector_field(prob::EnsembleProblem, o, x, p) = _apply_vector_field(prob.p
 @inline _isinplace(pb::ODEProblem) = isinplace_sciml(pb)
 @inline _isinplace(pb::EnsembleProblem) = isinplace_sciml(pb.prob)
 
-function vf(fl::FlowDE, x, pars)
+function vector_field(fl::FlowDE, x, pars)
     if _isinplace(fl.odeprob)
         out = similar(x)
         _apply_vector_field(fl.odeprob, out, x, pars)

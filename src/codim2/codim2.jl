@@ -4,6 +4,7 @@ abstract type AbstractMinimallyAugmentedFormulation_Hopf_NS{Tprob} <: AbstractMi
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
+get_formulation(pb::AbstractMABifurcationProblem) = pb.prob
 
 # function to get the two lenses associated to a 2-param continuation
 @inline function get_lenses(_prob::Union{FoldMAProblem,
@@ -135,11 +136,14 @@ for (op, at) in (
     end
     end
 end
-@inline getvec(x, ::FoldMinimallyAugmentedFormulation) = get_vec_bls(x)
-@inline getvec(x, ::HopfMinimallyAugmentedFormulation) = get_vec_bls(x, 2)
-@inline getp(x, ::FoldMinimallyAugmentedFormulation) = get_par_bls(x)
-@inline getp(x, ::HopfMinimallyAugmentedFormulation) = get_par_bls(x, 2)
-@inline get_frequency(x, 𝐇::HopfMinimallyAugmentedFormulation) = getp(x, 𝐇)[2]
+@inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_vec_bls(x)
+@inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_vec_bls(x, 2)
+@inline getp(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_par_bls(x)
+@inline getp(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_par_bls(x, 2)
+@inline get_frequency(x, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐇)[2]
+
+@inline get_parameter(x, 𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD) = getp(x, 𝐏𝐛)
+@inline get_parameter(x, 𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐏𝐛)[1]
 
 update!(::FoldMAProblem, args...; k...) = update_default(args...; k...)
 update!(::HopfMAProblem, args...; k...) = update_default(args...; k...)
