@@ -542,7 +542,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n")
 
     if pred.ampfactor > 0.1
-        @warn "The amplitude of the first periodic orbit on the bifurcated branch\nobtained by the predictor is not small, it is = $(pred.ampfactor).\nYou can either decrease the step size `ds` or specify the distance `δp` from the bifurcation point where the branch of periodic orbits originates."
+        @warn "The amplitude of the first periodic orbit on the bifurcated branch\nobtained by the predictor is not small, it is = $(pred.ampfactor).\nYou can either decrease the step size `ds` or specify the distance `δp`\nfrom the bifurcation point where the branch of periodic orbits originates.\nYou can also decrease `ampfactor`"
     end
 
     # a priori, the following do not overwrite the options in br

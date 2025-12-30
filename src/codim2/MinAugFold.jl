@@ -289,7 +289,7 @@ function update!(probma::FoldMAProblem, iter, state)
     𝒯 = eltype(𝐅)
     success = state.converged
     step = state.step
-    if (~mod_counter(step, 𝐅.update_minaug_every_step) || success == false)
+    if (~mod_counter(step, 𝐅.update_minaug_every_step) || success == false) || in_bisection(state)
         return update!(𝐅, iter, state)
     end
 

@@ -47,11 +47,13 @@ prob = BK.BifurcationProblem(Lor, z0, parlor, (@optic _.F);
     J = jac_Lor,
     record_from_solution = recordFromSolutionLor,)
 
-br = @time continuation(re_make(prob, params = setproperties(parlor;T=0.04,F=3.)),
-     PALC(tangent = Bordered()),
-    opts_br;
-    normC = norminf,
-    bothside = true)
+alg = PALC(tangent = Bordered())
+
+br = @time continuation(prob,
+                        alg,
+                        opts_br;
+                        normC = norminf,
+                        bothside = true)
 
 @test br.alg.tangent isa Bordered
 @test br.alg.bls isa MatrixBLS
@@ -70,7 +72,6 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T),
     detect_codim2_bifurcation = 1,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS(),
     )
 
@@ -273,6 +274,9 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
 @test hp_codim2_1.specialpoint |> length == 4
 @test hp_codim2_1.specialpoint[2].type == Symbol("save-2")
 @test hp_codim2_1.specialpoint[3].type == Symbol("save-1")
+
+# plot(hp_codim2_1)
+# plot(sn_codim2, hp_codim2_1)
 ####################################################################################################
 sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,

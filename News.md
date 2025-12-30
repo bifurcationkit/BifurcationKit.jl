@@ -4,6 +4,7 @@ BifurcationKit.jl, Changelog
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
 - TWProblem becomes TWModel
+- remove `modify_po_finalise`, `modify_po_record`, `modify_tw_record` and `Finalizer`
 - change `Fold/Hopf/PeriodDoubling/NeimarkSackerProblemMinimallyAugmented` into `Fold/Hopf/PeriodDoubling/NeimarkSackerMinimallyAugmentedFormulation`
 - `AbstractProblemMinimallyAugmented` becomes `AbstractMinimallyAugmentedFormulation`
 - make `AbstractMABifurcationProblem{T, Tjac}` dependent on 2 parameters

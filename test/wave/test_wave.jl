@@ -132,7 +132,7 @@ uold = copy(orbitguess2[1][1:2n])
 # plot(uold[1:end-1]; linewidth = 5)
 
 # we create a TW problem
-probTW = BK.TWProblem(prob, par_cgl.Db, copy(uold))
+probTW = BK.TWModel(prob, par_cgl.Db, copy(uold))
 BK.residual(probTW, vcat(uold,.1), par_cgl)
 show(probTW)
 

@@ -21,11 +21,8 @@ par_chan = (α = 3.3, β = 0.01)
 
 n = 101
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
-opt_newton = NewtonPar(tol = 1e-10)
 prob = BK.BifurcationProblem(F_chan, sol0, (α = 3.3, β = 0.01), (@optic _.α))
-out = BK.solve(prob, Newton(), opt_newton)
-
-opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = opt_newton)
+opts_br0 = ContinuationPar(p_max = 4., max_steps = 100, newton_options = NewtonPar(tol = 1e-10))
 br = continuation(prob, PALC(), opts_br0)
 ####################################################################################################
 # Fold continuation
@@ -36,10 +33,10 @@ let
     outfold = BK.newton_fold((@set br.prob.VF.isSymmetric = true), 2; start_with_eigen = false, issymmetric = true)
     @test BK.converged(outfold)
 
-    optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 50, detect_bifurcation = 0)
+    optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(tol = 1e-8), max_steps = 5, detect_bifurcation = 0)
     for eig_st in (true, false)
-        outfoldco = continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
-        outfoldco = continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+        continuation(br, 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
+        continuation((@set br.prob.VF.isSymmetric = true), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
         # test use of jacobian_adjoint
         outfoldco = continuation((@set br.prob.VF.Jᵗ = (x,p)->transpose(BK.jacobian(prob,x,p))), 2, (@optic _.β), optcontfold; start_with_eigen = eig_st, update_minaug_every_step = 1)
         BK.getparams(outfoldco, 1)

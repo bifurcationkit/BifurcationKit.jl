@@ -1,4 +1,6 @@
 """
+$(TYPEDSIGNATURES)
+
 For an initial guess from the index of a Hopf bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newton_hopf`.
 """
 function hopf_point(br::AbstractBranchResult, index::Int)
@@ -45,7 +47,7 @@ Compute the solution of
 ```
 ┌                ┐ ┌  ┐   ┌   ┐
 │ J - iω    𝐇.a  │ │v │ = │ 0 │
-│  𝐇.b'    0     │ │σ │   │ 1 │
+│  𝐇.b'      0   │ │σ │   │ 1 │
 └                ┘ └  ┘   └   ┘
 ```
 

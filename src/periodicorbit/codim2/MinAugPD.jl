@@ -67,8 +67,8 @@ Compute the solution of
 
 ```
 ┌              ┐┌  ┐   ┌   ┐
-│ J+I   𝐅.a    ││v │ = │ 0 │
-│ 𝐅.b'   0     ││σ │   │ 1 │
+│ J+I   𝐏𝐝.a   ││v │ = │ 0 │
+│ 𝐏𝐝.b'   0    ││σ │   │ 1 │
 └              ┘└  ┘   └   ┘
 ```
 
@@ -267,7 +267,7 @@ function update!(probma::PDMAProblem, iter, state)
     𝐏𝐝 = get_formulation(probma)
     𝒯 = eltype(𝐏𝐝)
     success = state.converged
-    if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false)
+    if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐏𝐝, iter, state)
     end

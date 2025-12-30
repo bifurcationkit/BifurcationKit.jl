@@ -110,6 +110,8 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 getalg(br::AbstractBranchResult) = br.alg
 get_solution(br::ContResult, i) = br.sol[i]
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem of the branch.
 """
 function getparams(br::AbstractBranchResult) 
@@ -117,6 +119,8 @@ function getparams(br::AbstractBranchResult)
 end
 
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters corresponding to the ind-th step in the branch.
 """
 function getparams(br::AbstractBranchResult, ind::Int)

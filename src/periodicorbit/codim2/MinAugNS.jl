@@ -48,6 +48,20 @@ function (𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation)(x, p::𝒯, ω::
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
 ###################################################################################################
+"""
+$(TYPEDSIGNATURES)
+
+Compute the solution of 
+
+```
+┌                 ┐ ┌  ┐   ┌   ┐
+│ J - iω    𝐍𝐒.a  │ │v │ = │ 0 │
+│  𝐍𝐒.b'      0   │ │σ │   │ 1 │
+└                 ┘ └  ┘   └   ┘
+```
+
+and the same for the adjoint system.
+"""
 function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, JNS, JNS★, ω)
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
@@ -228,7 +242,7 @@ function update!(probma::NSMAProblem, iter, state)
     𝐍𝐒 = get_formulation(probma)
     𝒯 = eltype(𝐍𝐒)
     success = state.converged
-    if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false)
+    if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐍𝐒, iter, state)
     end

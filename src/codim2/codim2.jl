@@ -135,10 +135,12 @@ end
 @inline get_parameter(x, 𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐌𝐚)[1]
 
 @inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
+
 save_solution(::AbstractMABifurcationProblem, x ,p) = x
+################################################################################
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
-
+################################################################################
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> residual(𝐏𝐛, z, p), x)
 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = 1e-8) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
