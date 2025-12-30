@@ -187,16 +187,6 @@ function (pb::TWProblem)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ 
     return J2
 end
 ################################################################################
-function modify_tw_record(probTW, kwargs, par, lens)
-    _recordsol0 = get(kwargs, :record_from_solution, nothing)
-    if isnothing(_recordsol0) == false
-        _recordsol0 = get(kwargs, :record_from_solution, nothing)
-        return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probTW, p = p); k...)
-    else
-        return _recordsol = (x, p; k...) -> (s = x[end],)
-    end
-end
-################################################################################
 jacobian(tw::WrapTW, x, p) = jacobian(tw, tw.jacobian, x, p)
 residual(tw::WrapTW, x, p) = residual(tw.prob, x, p)
 @inline save_solution(::WrapTW, x, p) = x
@@ -223,6 +213,16 @@ function newton(prob::TWProblem,
     probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), record_from_solution(prob.prob_vf), plot_solution(prob.prob_vf))
     return solve(probwp, Newton(), optn; kwargs...,)
 end
+################################################################################
+function record_from_solution(iter::ContIterable{TravellingWaveCont},
+                              state::AbstractContinuationState)
+    probTW = getprob(iter)
+    if probTW.recordFromSolution isa Nothing
+        return (s = getx(state)[end],)
+    else
+        return probTW.recordFromSolution(getx(state), (prob = probTW.prob, p = getp(state)); iter, state)
+    end
+end
 
 function continuation(prob::TWProblem,
                     orbitguess, 
@@ -244,9 +244,8 @@ function continuation(prob::TWProblem,
     # update record function
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (;record_from_solution, plot_solution)
-    _recordsol = modify_tw_record(prob, _kwargs, getparams(prob.prob_vf), getlens(prob.prob_vf))
     jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
-    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution, _recordsol)
+    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution, record_from_solution)
 
     # call continuation
     branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
