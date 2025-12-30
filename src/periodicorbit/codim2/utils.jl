@@ -21,44 +21,52 @@ function modify_po_plot(::BK_Makie, probPO::Union{PDMAProblem, NSMAProblem, Fold
     _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
 ####################################################################################################
-function (finalizer::Finaliser{<: AbstractMABifurcationProblem})(z, tau, step, contResult; bisection = false, kF...)
-    updateSectionEveryStep = finalizer.updateSectionEveryStep
+## TODO MERGE WITH UPDATE!(COLLOCATION)
+
+function __update_codim1_po!(𝐏𝐛, iter, state)
+    # we get the MA problem
+    prob_sh = 𝐏𝐛.prob_vf.prob
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    state = get(kF, :state, nothing)
     success = converged(state)
     bisection = in_bisection(state)
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
-        # we get the MA problem
-        wrap_ma = finalizer.prob
-        𝐏𝐛 = wrap_ma.prob
-        prob_sh = 𝐏𝐛.prob_vf.prob
-        # we get the state vector at bifurcation point
+    if success && mod_counter(step, prob_sh.update_section_every_step) == 1 && bisection == false
+        # state vector at bifurcation point
+        z = getsolution(state)
         x = getvec(z.u, 𝐏𝐛)
-        # we get the parameters at the bifurcation point
-        lenses = get_lenses(wrap_ma)
-        p1, = getp(z.u, 𝐏𝐛)   # first parameter, TODO it errors for Folds if p1,_ = getp(...)
+        # parameters at the bifurcation point
+        lenses = get_lenses(getprob(iter))
+        p1, = getp(z.u, 𝐏𝐛)   # first parameter, TODO it errors for Folds if p1, _ = getp(...)
         p2 = z.p              # second parameter
         pars = _set(getparams(prob_sh), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"
         updatesection!(prob_sh, x, pars)
     end
-    if isnothing(finalizer.finalise_solution)
-        return true
-    else
-        return finalizer.finalise_solution(z, tau, step, contResult; prob = finalizer.prob, kF...)
-    end
+    return true
 end
 
-function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProblemMinimallyAugmented{ <: WrapPOColl}}})(Z, tau, step, contResult; kF...)
-    updateSectionEveryStep = finalizer.updateSectionEveryStep
-    𝐏𝐛 = finalizer.prob.prob
+function update!(𝐏𝐛::AbstractMinimallyAugmentedFormulation, 
+                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
+                 state)
+    return __update_codim1_po!(𝐏𝐛, iter, state)
+end
+
+function update!(𝐏𝐛::FoldMinimallyAugmentedFormulation, 
+                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
+                 state)
+    return __update_codim1_po!(𝐏𝐛, iter, state)
+end
+
+## TODO MERGE WITH UPDATE!(COLLOCATION)
+function update!(𝐏𝐛::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
+                iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
+                state)
     coll = 𝐏𝐛.prob_vf.prob
-    # we get the state vector at bifurcation point
+    # state vector at bifurcation point
+    Z = getsolution(state)
     x = getvec(Z.u, 𝐏𝐛)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    state = get(kF, :state, nothing)
     success = converged(state)
     bisection = in_bisection(state)
     # mesh adaptation
@@ -74,13 +82,9 @@ function (finalizer::Finaliser{<: AbstractMABifurcationProblem{ <: AbstractProbl
             return false
         end
     end
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
+    if success && mod_counter(step, coll.update_section_every_step) == 1 && bisection == false
         @debug "[collocation] update section"
         updatesection!(coll, x, nothing) # collocation does not need the parameter for updatesection!
     end
-    if isnothing(finalizer.finalise_solution)
-        return true
-    else
-        return finalizer.finalise_solution(Z, tau, step, contResult; prob = coll, kF...)
-    end
+    return true
 end
