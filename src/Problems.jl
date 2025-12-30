@@ -220,7 +220,6 @@ record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
-
 # create specific problems where pretty much is available
 for (op, at) in (
                 (:BifurcationProblem, AbstractBifurcationProblem),
@@ -467,16 +466,17 @@ end
 
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     color = :cyan
+    bold = true
     print(io, prefix * "┌─ Bifurcation problem with uType ")
-    printstyled(io, _getvectortype(prob); color, bold = true)
+    printstyled(io, _getvectortype(prob); color, bold)
     print(io, "\n" * prefix * "├─ Inplace: ")
-    printstyled(io, isinplace(prob); color, bold = true)
+    printstyled(io, isinplace(prob); color, bold)
     print(io, "\n" * prefix * "├─ Dimension: ")
-    printstyled(io, length(getu0(prob)); color, bold = true)
+    printstyled(io, length(getu0(prob)); color, bold)
     print(io, "\n" * prefix * "├─ Symmetric: ")
-    printstyled(io, is_symmetric(prob); color, bold = true)
+    printstyled(io, is_symmetric(prob); color, bold)
     print(io, "\n" * prefix * "└─ Parameter: ")
-    printstyled(io, get_lens_symbol(getlens(prob)); color, bold = true)
+    printstyled(io, get_lens_symbol(getlens(prob)); color, bold)
 end
 
 function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)

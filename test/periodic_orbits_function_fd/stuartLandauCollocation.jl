@@ -194,11 +194,11 @@ begin
     
     args = (
         plot_solution = (x,p; k...) -> begin
-        outt = get_periodic_orbit(prob_col, x, p)
-        plot!(vec(outt.t), outt.u[1, :]; k...)
-        end,
-        finalise_solution = (z, tau, step, contResult; k...) -> begin
-            return true
+            outt = get_periodic_orbit(prob_col, x, p)
+            plot!(vec(outt.t), outt.u[1, :]; k...)
+            end,
+            finalise_solution = (z, tau, step, contResult; k...) -> begin
+                return true
         end,
     )
 

@@ -19,8 +19,8 @@ end
 end
 
 for (op, at) in (
-            (:FoldProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Fold_PD),
-            (:HopfProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Hopf_NS),
+            (:FoldMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Fold_PD),
+            (:HopfMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Hopf_NS),
             )
     @eval begin
     """
@@ -134,11 +134,11 @@ for (op, at) in (
     end
     end
 end
-@inline getvec(x, ::FoldProblemMinimallyAugmented) = get_vec_bls(x)
-@inline getvec(x, ::HopfProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline getp(x, ::FoldProblemMinimallyAugmented) = get_par_bls(x)
-@inline getp(x, ::HopfProblemMinimallyAugmented) = get_par_bls(x, 2)
-@inline get_frequency(x, 𝐇::HopfProblemMinimallyAugmented) = getp(x, 𝐇)[2]
+@inline getvec(x, ::FoldMinimallyAugmentedFormulation) = get_vec_bls(x)
+@inline getvec(x, ::HopfMinimallyAugmentedFormulation) = get_vec_bls(x, 2)
+@inline getp(x, ::FoldMinimallyAugmentedFormulation) = get_par_bls(x)
+@inline getp(x, ::HopfMinimallyAugmentedFormulation) = get_par_bls(x, 2)
+@inline get_frequency(x, 𝐇::HopfMinimallyAugmentedFormulation) = getp(x, 𝐇)[2]
 
 update!(::FoldMAProblem, args...; k...) = update_default(args...; k...)
 update!(::HopfMAProblem, args...; k...) = update_default(args...; k...)
@@ -332,7 +332,7 @@ function continuation(br::AbstractBranchResult,
             ind_bif,
             lens2::AllOpticTypes,
             options_cont::ContinuationPar = br.contparams ;
-            prob = br.prob,
+            prob = getprob(br),
             start_with_eigen = false,
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
@@ -416,7 +416,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     # compute predictor for point on new branch
     ds = isnothing(δp) ? optionsCont.ds : δp
 
-    if prob_ma isa FoldProblemMinimallyAugmented || bif_type == :hh
+    if prob_ma isa FoldMinimallyAugmentedFormulation || bif_type == :hh
         # define guess for the first Hopf point on the branch
         pred = predictor(nf, Val(:HopfCurve), ds)
 
@@ -450,7 +450,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         return Branch(branch, nf)
 
     else
-        @assert prob_ma isa HopfProblemMinimallyAugmented
+        @assert prob_ma isa HopfMinimallyAugmentedFormulation
         pred = predictor(nf, Val(:FoldCurve), 0.)
 
         # new continuation parameters
@@ -493,9 +493,9 @@ function correct_bifurcation(contres::ContResult)
     if contres.prob.prob isa AbstractMinimallyAugmentedFormulation == false
         return contres
     end
-    if contres.prob.prob isa FoldProblemMinimallyAugmented
+    if contres.prob.prob isa FoldMinimallyAugmentedFormulation
         conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd, :btbp => :bt)
-    elseif contres.prob.prob isa HopfProblemMinimallyAugmented
+    elseif contres.prob.prob isa HopfMinimallyAugmentedFormulation
         conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt, :btbp => :bt)
     else
         throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")

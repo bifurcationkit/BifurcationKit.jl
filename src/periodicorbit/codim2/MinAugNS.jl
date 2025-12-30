@@ -27,8 +27,8 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::NeimarkSackerProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline   getp(x, ::NeimarkSackerProblemMinimallyAugmented) = get_par_bls(x, 2)
+@inline getvec(x, ::NeimarkSackerMinimallyAugmentedFormulation) = get_vec_bls(x, 2)
+@inline   getp(x, ::NeimarkSackerMinimallyAugmentedFormulation) = get_par_bls(x, 2)
 
 is_symmetric(::NSMAProblem) = false
 
@@ -36,7 +36,7 @@ is_symmetric(::NSMAProblem) = false
 nstest(JacNS, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
 
 # this function encodes the functional
-function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
+function (𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Neimark-Sacker bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -51,7 +51,7 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
 ###################################################################################################
-function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, JNS, JNS★, ω)
+function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, JNS, JNS★, ω)
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
     𝒯 = eltype(𝐍𝐒)
@@ -67,7 +67,7 @@ function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmen
     return (; v, w, itv, itw)
 end
 
-function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
 
@@ -139,7 +139,7 @@ end
 # Struct to invert the jacobian of the ns MA problem.
 struct NSLinearSolverMinAug <: AbstractLinearSolver; end
 
-function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
+function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, par,
                             duu, dup, duω) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
@@ -247,7 +247,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     # options for the Newton Solver inheritated from the ones the user provided
     newton_options = options_cont.newton_options
 
-    𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
+    𝐍𝐒 = NeimarkSackerMinimallyAugmentedFormulation(
             prob,
             _copy(eigenvec),
             _copy(eigenvec_ad),

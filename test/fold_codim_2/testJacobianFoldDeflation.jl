@@ -85,7 +85,7 @@ let
     @test norminf(J_ana - J_fold_fwdiff) < 1e-5
 
     ###
-    Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, prob = pb))
+    Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, pbma = pb))
     res_explicit = BK.FoldLinearSolverMinAug()(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
 
     # we test the expression for σp

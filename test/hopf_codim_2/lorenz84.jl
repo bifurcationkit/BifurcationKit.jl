@@ -310,6 +310,7 @@ get_normal_form(hp_codim2_1, 2)
 get_normal_form(hp_codim2_1, 2; nev = 4, verbose = true)
 
 nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
+
 @test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
 @test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
 @test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im    atol = 1e-3

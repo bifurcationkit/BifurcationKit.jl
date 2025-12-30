@@ -31,13 +31,13 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::PeriodDoublingProblemMinimallyAugmented) = get_vec_bls(x)
-@inline   getp(x, ::PeriodDoublingProblemMinimallyAugmented) = get_par_bls(x)
+@inline getvec(x, ::PeriodDoublingMinimallyAugmentedFormulation) = get_vec_bls(x)
+@inline   getp(x, ::PeriodDoublingMinimallyAugmentedFormulation) = get_par_bls(x)
 
 pdtest(JacPD, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
 
 # this function encodes the functional
-function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
+function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Period-Doubling bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -77,7 +77,7 @@ Compute the solution of
 
 and the same for the adjoint system.
 """
-function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, JPD, JPD★)
+function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, JPD, JPD★)
     a = 𝐏𝐝.a
     b = 𝐏𝐝.b
     𝒯 = eltype(𝐏𝐝)
@@ -92,7 +92,7 @@ function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingProblemMinimallyAugme
     return (; v, itv, w, itw)
 end
 
-function _get_bordered_terms(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, x, p::𝒯, par) where 𝒯
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐏𝐝.prob_vf
 
@@ -149,7 +149,7 @@ end
 # Struct to invert the jacobian of the pd MA problem.
 struct PDLinearSolverMinAug <: AbstractLinearSolver; end
 
-function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, par,
+function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, par,
                             rhsu, rhsp) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
@@ -247,7 +247,7 @@ function newton_pd(prob::AbstractBifurcationProblem,
                 usehessian = true,
                 kwargs...)
 
-    pdproblem = PeriodDoublingProblemMinimallyAugmented(
+    pdproblem = PeriodDoublingMinimallyAugmentedFormulation(
         prob,
         _copy(eigenvec),
         _copy(eigenvec_ad),
@@ -290,7 +290,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     # options for the Newton solver inheritated from the ones the user provided
     newton_options = options_cont.newton_options
 
-    𝐏𝐝 = PeriodDoublingProblemMinimallyAugmented(
+    𝐏𝐝 = PeriodDoublingMinimallyAugmentedFormulation(
             prob,
             _copy(eigenvec),
             _copy(eigenvec_ad),

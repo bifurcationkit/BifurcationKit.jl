@@ -245,7 +245,7 @@ function newton_hopf(prob,
             kwargs...)
     # we first need to update d2F and d3F for them to accept complex arguments
 
-    hopfproblem = HopfProblemMinimallyAugmented(
+    hopfproblem = HopfMinimallyAugmentedFormulation(
         prob,
         _copy(eigenvec_ad), # this is pb.a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is pb.b ≈ null space of  J - iω I
@@ -417,7 +417,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # tolerance for detecting BT bifurcation and stopping continuation
     threshBT = 100options_newton.tol
 
-    𝐇 = HopfProblemMinimallyAugmented(
+    𝐇 = HopfMinimallyAugmentedFormulation(
         prob_vf,
         _copy(eigenvec_ad), # this is a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is b ≈ null space of  J - iω I

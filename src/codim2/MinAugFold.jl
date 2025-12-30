@@ -12,7 +12,7 @@ function fold_point(br::AbstractBranchResult, index::Int)
     return BorderedArray(_copy(specialpoint.x), specialpoint.param)
 end
 ####################################################################################################
-function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
+function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -51,7 +51,7 @@ Compute the solution of
 
 and the same for the adjoint system.
 """
-function _compute_bordered_vectors(𝐅::FoldProblemMinimallyAugmented, J_at_xp, JAd_at_xp)
+function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp)
     a = 𝐅.a
     b = 𝐅.b
     𝒯 = eltype(𝐅)
@@ -69,7 +69,7 @@ function _compute_bordered_vectors(𝐅::FoldProblemMinimallyAugmented, J_at_xp,
     return (; v, w, itv, itw, JAd_at_xp)
 end
 
-function _get_bordered_terms(𝐅::FoldProblemMinimallyAugmented, x, p::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯, par) where 𝒯
     # update parameter
     lens = getlens(𝐅)
     par0 = set(par, lens, p)
@@ -118,7 +118,7 @@ end
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
-function foldMALinearSolver(x, p::𝒯, 𝐅::FoldProblemMinimallyAugmented, par,
+function foldMALinearSolver(x, p::𝒯, 𝐅::FoldMinimallyAugmentedFormulation, par,
                             rhsu, rhsp) where 𝒯
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)] where σ(x,p) is computed in the 
     # function above. The Jacobian Jfold of the vector field is expressed at (x, p).
@@ -219,7 +219,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
                 usehessian = true,
                 kwargs...)
 
-    𝐅 = FoldProblemMinimallyAugmented(
+    𝐅 = FoldMinimallyAugmentedFormulation(
         prob,
         _copy(eigenvec),
         _copy(eigenvec_ad),
@@ -392,7 +392,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
 
-    𝐅 = FoldProblemMinimallyAugmented(
+    𝐅 = FoldMinimallyAugmentedFormulation(
             prob,
             _copy(eigenvec_ad), # carefull a =  left null vector
             _copy(eigenvec),    # carefull b = right null vector

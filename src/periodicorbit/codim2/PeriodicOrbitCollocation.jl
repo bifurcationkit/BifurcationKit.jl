@@ -279,19 +279,19 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
 end
 
 # dispatch to compute Floquet exponent when the jacobian is a Matrix
-@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_col(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)
 end
 
-@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-1, begin:end-1], n, m, Ntst, nev)
 end
 
-@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)

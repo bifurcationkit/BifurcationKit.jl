@@ -3,8 +3,8 @@ function d2PO(f, x, dx1, dx2)
 end
 
 for (op, at) in (
-           (:NeimarkSackerProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Hopf_NS),
-           (:PeriodDoublingProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Fold_PD)
+           (:NeimarkSackerMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Hopf_NS),
+           (:PeriodDoublingMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Fold_PD)
            )
     @eval begin
         """
@@ -143,20 +143,20 @@ end
 @inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
 
 get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
-get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::NeimarkSackerProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::FoldMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
+get_wrap_po(pb::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
 
 __wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
 __wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
 __wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
 function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
-    if contres.prob.prob isa FoldProblemMinimallyAugmented
+    if contres.prob.prob isa FoldMinimallyAugmentedFormulation
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
-    elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
+    elseif contres.prob.prob isa PeriodDoublingMinimallyAugmentedFormulation
         conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2, :gpdR2 => :R2)
-    elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
+    elseif contres.prob.prob isa NeimarkSackerMinimallyAugmentedFormulation
         conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS, :R1ch => :R1, :fold => :R1)
     else
         throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
