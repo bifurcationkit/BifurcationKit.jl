@@ -80,7 +80,6 @@ function compute_eigenvalues(iter::ContIterable,
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
-    # we compute the eigen-elements
     n = state.n_unstable[2]
     nev_ = max(n + 5, iter.contparams.nev)
     @debug "Computing spectrum..."
@@ -89,7 +88,7 @@ function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
     return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
-# same as previous but we save the eigen-elements in state
+# same as previous but we save the eigen-elements in `state`
 function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
     eiginfo, _isstable, n_unstable, n_imag, cveig = compute_eigenvalues(iter, state; kwargs...)
     # we update the state
@@ -108,7 +107,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute a Jacobian by Finite Differences. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
+Compute a jacobian by Finite Differences. Use the centered formula (f(x+δ) - f(x-δ))/2δ.
 """
 function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
@@ -129,7 +128,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Same as finite_differences but with inplace `F`
+Same as `finite_differences` but with inplace `F`
 """
 @views function finite_differences!(F, J, x::AbstractVector; δ = 1e-9, tmp = copy(x))
     x1 = copy(x)
@@ -147,17 +146,17 @@ end
 function block_to_sparse(J::BA.AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
-    res = J[BA.Block(1,1)]
+    res = J[BA.Block(1, 1)]
     @inbounds for j in 2:nc
-        res = hcat(res, J[BA.Block(1,j)])
+        res = hcat(res, J[BA.Block(1, j)])
     end
     # continue with the other lines
     @inbounds for i in 2:nl
-        line = J[BA.Block(i,1)]
+        line = J[BA.Block(i, 1)]
         for j in 2:nc
-            line = hcat(line, J[BA.Block(i,j)])
+            line = hcat(line, J[BA.Block(i, j)])
         end
-        res = vcat(res,line)
+        res = vcat(res, line)
     end
     return res
 end

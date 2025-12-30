@@ -175,7 +175,7 @@ orbitguess_f = vcat(reduce(vcat, list_of_time_steps), pred.period)
 r_hopf = nf_hopf.params.r
 
 poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
-                    BK.residual(prob, orbitguess_a[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
+                    BK.residual(prob, list_of_time_steps[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
                     zeros(2n), 
                     M, 
                     2n; jacobian = BK.FullMatrixFree())
@@ -197,7 +197,7 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 ####################################################################################################
 opt_po = (@set opt_newton.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
-@assert 1==0 "Too much memory will be used!"
+@assert false "Too much memory will be used!"
 br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
             orbitguess_f, PALC(),
             opts_po_cont;
@@ -341,11 +341,7 @@ outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 
 lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
 opt_po_inp_kl = @set opt_po.linsolver = lsi
-# outpo_f = @time newton(poTrapMFi, 
-#                         orbitguess_f,
-#                         opt_po_inp_kl; 
-#                         normN = norminf, 
-#                         )
+# outpo_f = @time newton(poTrapMFi, orbitguess_f,opt_po_inp_kl; normN = norminf, )
 
 ####################################################################################################
 # Computation of Fold of limit cycle

@@ -19,12 +19,11 @@ end
 
 @inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess) = cont_params
 ####################################################################################################
-# @inline user_passed_pofunction(probwrap.recordFromSolution) = user_passed_pofunction(probwrap.recordFromSolution)
 @inline user_passed_pofunction(rf::RecordForPeriodicOrbits) = user_passed_function(rf.user_record_from_solution)
 
 function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter, state)
     p = set(getparams(pbwrap), getlens(pbwrap), getp(state))
-    return pbwrap.recordFromSolution(getx(state), (prob = pbwrap.prob, p = p); iter, state)
+    return pbwrap.recordFromSolution(getx(state), (prob = get_discretization(pbwrap), p = p); iter, state)
 end
 
 function __user_record_solution_periodic_orbit(pbwrap, ::NoUserPassedFunction, iter, state)
@@ -61,7 +60,6 @@ function record_from_solution(iter::ContIterable{FoldPeriodicOrbitCont, <: FoldM
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
     p = getp(state)
-
     return (; zip(lenses, (getp(u, 𝐅), p))..., 
                     BT = 𝐅.BT, 
                     CP = 𝐅.CP, 
@@ -69,7 +67,6 @@ function record_from_solution(iter::ContIterable{FoldPeriodicOrbitCont, <: FoldM
                     _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
                     ) 
 end
-
 ####################################################################################################
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, pars, lens; kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)

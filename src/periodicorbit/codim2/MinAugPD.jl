@@ -371,9 +371,6 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 
-    # this functions allows to tackle the case where the two parameters have the same name
-    lenses = get_lens_symbol(lens1, lens2)
-
     # global variables to save call back
     𝐏𝐝.CP  = one(𝒯)
     𝐏𝐝.GPD = one(𝒯)

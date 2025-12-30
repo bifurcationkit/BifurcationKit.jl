@@ -319,9 +319,10 @@ for (op, at) in (
             end
 
             _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
-            isinplace(pb::$op) = isinplace(pb.prob)
+            isinplace(pb::$op) = isinplace(get_formulation(pb))
             # dummy constructor
-            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, missing, lens, nothing, nothing)
+            getparams(prob::$op{Tprob, Tjac, Tu0, Missing}) where {Tprob, Tjac, Tu0} = getparams(get_formulation(prob))
         end
     else
         @eval begin #WrapPOTrap, WrapPOSh, WrapPOColl, WrapTW
@@ -343,11 +344,12 @@ for (op, at) in (
             end
 
             _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
-            isinplace(pb::$op) = isinplace(pb.prob)
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
-            residual!(pb::$op, o, x, p) = residual!(pb.prob, o, x, p)
-            get_discretization(pb::$op) = pb.prob
+            @inline get_discretization(pb::$op) = pb.prob
+            @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
+            residual(pb::$op, x, p) = residual(get_discretization(pb), x, p)
+            residual!(pb::$op, o, x, p) = residual!(get_discretization(pb), o, x, p)
         end
     end
 
@@ -403,10 +405,31 @@ for (op, at) in (
                     J!
                 end
 
-                # type unstable but simplifies the type a lot
+                # type unstable but simplifies the types a lot
                 jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
-                vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, jet)
-                return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution, update!)
+                vf = BifFunction(Foop,
+                                Finp,
+                                jvp,
+                                vjp,
+                                J,
+                                Jᵗ,
+                                J!,
+                                d2F,
+                                d3F,
+                                d2Fc,
+                                d3Fc,
+                                issymmetric,
+                                delta,
+                                inplace,
+                                jet)
+                return $op(vf,
+                            u0,
+                            parms,
+                            new_lens,
+                            plot_solution,
+                            record_from_solution,
+                            save_solution,
+                            update!)
             end
         end
     end
@@ -441,46 +464,6 @@ has_hessian(pb::AbstractAllJetBifProblem) = has_hessian(pb.VF)
 has_adjoint(pb::AbstractAllJetBifProblem) = has_adjoint(pb.VF)
 has_adjoint_MF(pb::AbstractAllJetBifProblem) = has_adjoint_MF(pb.VF)
 getdelta(pb::AbstractAllJetBifProblem) = getdelta(pb.VF)
-
-# simple trait for dispatching on user passed functions
-struct NoUserPassedFunction end
-struct UserPassedFunction end
-user_passed_function(f) = UserPassedFunction()
-user_passed_function(::Nothing) = NoUserPassedFunction()
-
-for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
-    @eval begin
-        function Base.show(io::IO, pb::$op)
-            printstyled(io, "Problem wrap of\n", bold = true)
-            show(io, pb.prob)
-        end
-    end
-end
-
-for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
-    @eval begin
-        function Base.show(io::IO, pb::$op)
-            printstyled(io, "Problem wrap for curve of " * $txt * " of periodic orbits.\n", bold = true)
-            println("Based on the formulation:")
-            show(io, pb.prob.prob_vf)
-        end
-    end
-end
-
-function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
-    color = :cyan
-    bold = true
-    print(io, prefix * "┌─ Bifurcation problem with uType ")
-    printstyled(io, _getvectortype(prob); color, bold)
-    print(io, "\n" * prefix * "├─ Inplace: ")
-    printstyled(io, isinplace(prob); color, bold)
-    print(io, "\n" * prefix * "├─ Dimension: ")
-    printstyled(io, length(getu0(prob)); color, bold)
-    print(io, "\n" * prefix * "├─ Symmetric: ")
-    printstyled(io, is_symmetric(prob); color, bold)
-    print(io, "\n" * prefix * "└─ Parameter: ")
-    printstyled(io, get_lens_symbol(getlens(prob)); color, bold)
-end
 
 function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)
     if is_symmetric(pb)
@@ -533,6 +516,46 @@ function re_make(prob::AbstractBifurcationProblem;
         @reset prob2.VF.d3F = d3F
     end
     return prob2
+end
+########
+# simple trait for dispatching on user passed functions
+struct NoUserPassedFunction end
+struct UserPassedFunction end
+user_passed_function(f) = UserPassedFunction()
+user_passed_function(::Nothing) = NoUserPassedFunction()
+########
+for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
+    @eval begin
+        function Base.show(io::IO, pb::$op)
+            printstyled(io, "Problem wrap of\n", bold = true)
+            show(io, pb.prob)
+        end
+    end
+end
+########
+for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
+    @eval begin
+        function Base.show(io::IO, pb::$op)
+            printstyled(io, "Problem wrap for curve of " * $txt * " of periodic orbits.\n", bold = true)
+            println("Based on the formulation:")
+            show(io, pb.prob.prob_vf)
+        end
+    end
+end
+@inline get_formulation(pb::AbstractMABifurcationProblem) = pb.prob
+########
+function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
+    color = :cyan; bold = true
+    print(io, prefix * "┌─ Bifurcation problem with uType ")
+    printstyled(io, _getvectortype(prob); color, bold)
+    print(io, "\n" * prefix * "├─ Inplace: ")
+    printstyled(io, isinplace(prob); color, bold)
+    print(io, "\n" * prefix * "├─ Dimension: ")
+    printstyled(io, length(getu0(prob)); color, bold)
+    print(io, "\n" * prefix * "├─ Symmetric: ")
+    printstyled(io, is_symmetric(prob); color, bold)
+    print(io, "\n" * prefix * "└─ Parameter: ")
+    printstyled(io, get_lens_symbol(getlens(prob)); color, bold)
 end
 ####################################################################################################
 # the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
@@ -591,6 +614,7 @@ end
 ####################################################################################################
 for op in (
         :RecordForFold,
+        :RecordForHopf,
         :RecordForPeriodicOrbits,
         :RecordForNS,
         :RecordForPD,

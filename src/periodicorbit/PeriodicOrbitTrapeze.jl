@@ -128,40 +128,40 @@ $DocStrjacobianPOTrap
     @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `PeriodicOrbitTrapProblem`. Pick one in $_trapezoid_jacobian_type"
 end
 
-function Base.show(io::IO, pb::PeriodicOrbitTrapProblem)
+function Base.show(io::IO, trap::PeriodicOrbitTrapProblem)
     println(io, "┌─ Trapezoid functional for periodic orbits")
-    println(io, "├─ time slices    : ", pb.M)
-    println(io, "├─ dimension      : ", get_state_dim(pb))
-    println(io, "├─ jacobian       : ", pb.jacobian)
-    println(io, "├─ update section : ", pb.update_section_every_step)
-    println(io, "├─ # unknowns without phase condition : ", length(pb) - 1)
-    println(io, "└─ inplace        : ", isinplace(pb))
+    println(io, "├─ time slices    : ", trap.M)
+    println(io, "├─ dimension      : ", get_state_dim(trap))
+    println(io, "├─ jacobian       : ", trap.jacobian)
+    println(io, "├─ update section : ", trap.update_section_every_step)
+    println(io, "├─ # unknowns without phase condition : ", length(trap) - 1)
+    println(io, "└─ inplace        : ", isinplace(trap))
 end
 
-@inline isinplace(pb::PeriodicOrbitTrapProblem) = isnothing(pb.prob_vf) ? false : isinplace(pb.prob_vf)
 @inline get_time_step(pb::AbstractPOFDProblem, i::Int) = get_time_step(pb.mesh, i)
 get_times(pb::AbstractPOFDProblem) = cumsum(collect(pb.mesh))
-@inline hasmassmatrix(pb::PeriodicOrbitTrapProblem{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
-@inline getparams(pb::PeriodicOrbitTrapProblem) = getparams(pb.prob_vf)
-@inline getlens(pb::PeriodicOrbitTrapProblem) = getlens(pb.prob_vf)
-@inline getdelta(pb::PeriodicOrbitTrapProblem) = getdelta(pb.prob_vf)
-setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
-@inline get_state_dim(pb::PeriodicOrbitTrapProblem) = pb.N
-@inline length(pb::PeriodicOrbitTrapProblem) = pb.M * get_state_dim(pb)
+@inline isinplace(trap::PeriodicOrbitTrapProblem) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
+@inline hasmassmatrix(trap::PeriodicOrbitTrapProblem{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
+@inline getparams(trap::PeriodicOrbitTrapProblem) = getparams(trap.prob_vf)
+@inline getlens(trap::PeriodicOrbitTrapProblem) = getlens(trap.prob_vf)
+@inline getdelta(trap::PeriodicOrbitTrapProblem) = getdelta(trap.prob_vf)
+setparam(trap::PeriodicOrbitTrapProblem, p) = set(getparams(trap), getlens(trap), p)
+@inline get_state_dim(trap::PeriodicOrbitTrapProblem) = trap.N
+@inline length(trap::PeriodicOrbitTrapProblem) = trap.M * get_state_dim(trap)
 
 # type unstable!
-@inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, return_type_Array = false)
+@inline function get_mass_matrix(trap::PeriodicOrbitTrapProblem, return_type_Array = false)
     if return_type_Array == false
-        return hasmassmatrix(pb) ? pb.massmatrix : SPA.spdiagm( 0 => ones(pb.N))
+        return hasmassmatrix(trap) ? trap.massmatrix : SPA.spdiagm( 0 => ones(trap.N))
     else
-        return hasmassmatrix(pb) ? pb.massmatrix : LinearAlgebra.I(pb.N)
+        return hasmassmatrix(trap) ? trap.massmatrix : LinearAlgebra.I(trap.N)
     end
 end
 # these functions extract the last component of the periodic orbit guess
-@inline _extract_period_fdtrap(pb::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(pb) ? x[end:end] : x[end]
+@inline _extract_period_fdtrap(trap::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
-get_time_slices(pb::PeriodicOrbitTrapProblem, x) = get_time_slices(x, pb.N, pb.M)
+get_time_slices(trap::PeriodicOrbitTrapProblem, x) = get_time_slices(x, trap.N, trap.M)
 
 """
 $(TYPEDSIGNATURES)
@@ -817,9 +817,6 @@ end
 
 ##########################
 # problem wrappers
-residual(prob::WrapPOTrap, x, p) = residual(prob.prob, x, p) # ON NE PEUT PAS METTRE EN COMMUN?
-residual!(prob::WrapPOTrap, args...) = residual!(prob.prob, args...) # METTRE EN COMMUN?
-
 @inline save_solution(::WrapPOTrap, x, p) = x
 get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(prob.prob, u, p)
 is_symmetric(::WrapPOTrap) = false
@@ -868,7 +865,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
-        prob = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
         new_options = options # to prevent from duplicated code
     else # bordered linear solvers
         if jacobianPO == BorderedLU()
@@ -889,14 +886,14 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
         end
 
         jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        prob = WrapPOTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = WrapPOTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
         new_options = @set options.linsolver = lspo
     end
 
     if isnothing(defOp)
-        return solve(prob, Newton(), new_options; kwargs...)
+        return solve(wrap_prob, Newton(), new_options; kwargs...)
     else
-        return solve(prob, defOp, new_options; kwargs...)
+        return solve(wrap_prob, defOp, new_options; kwargs...)
     end
 end
 

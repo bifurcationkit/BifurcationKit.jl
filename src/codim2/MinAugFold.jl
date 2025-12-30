@@ -330,7 +330,6 @@ function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
                               state::AbstractContinuationState) where {Tkind <: AbstractContinuationKind}
     probma = getprob(iter)
     𝐅 = get_formulation(probma)
-    prob_vf = 𝐅.prob_vf
     lens1, lens2 = get_lenses(probma)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
@@ -431,9 +430,6 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
         opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 
-    # Allow to tackle the case where the two parameters have the same name
-    lenses = get_lens_symbol(lens1, lens2)
-
     # variables to save call back
     𝐅.BT = one(𝒯)
     𝐅.CP = one(𝒯)
@@ -446,13 +442,14 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(2, test_bt_cusp, compute_eigen_elements, ("bt", "cusp"), 0)
-    if isnothing(event_user)
         event = PairOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)))
+    if isnothing(event_user) # TODO: TYPE UNSTABLE
     else
         event = SetOfEvents(event_bif, DiscreteEvent(1, test_zh, false, ("zh",)), event_user)
     end
 
     if prob isa AbstractWrapperFDProblem
+    # TODO remove this hack
         _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = prob.plotSolution)
         prob_fold = re_make(prob_fold, plot_solution = _plotsol)
     end
@@ -602,9 +599,10 @@ end
 FoldEig(solver) = FoldEig(solver, nothing)
 
 function (eig::FoldEig)(Jma, nev; kwargs...)
-    # il ne faut pas mettre a jour les deux params?
     n = min(nev, length(getvec(Jma.x)))
-    J = jacobian(Jma.pbma.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.pbma), getp(Jma.x)))
+    𝐅 = Jma.pbma
+    newpar = set(Jma.params, getlens(𝐅), getp(Jma.x))
+    J = jacobian(𝐅.prob_vf, getvec(Jma.x, 𝐅), newpar)
     return eig.eigsolver(J, n; kwargs...)
 end
 

@@ -7,8 +7,8 @@ $(TYPEDSIGNATURES)
 Compute the period of the periodic orbit associated to `x`.
 """
 @inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = _extract_period(x)
-@inline getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
-@inline getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
+@inline getperiod(prob::WrapPOColl, u, p) = getperiod(get_discretization(prob), u, p)
+@inline getperiod(prob::WrapPOSh, u, p) = getperiod(get_discretization(prob), u, p)
 
 @inline _extract_period(x::AbstractVector) = x[end]
 @inline _extract_period(x::BorderedArray)  = x.p
@@ -18,11 +18,11 @@ _set_params_in_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(
 _set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
 
 # function to extract trajectories from branch
-get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
-get_periodic_orbit(prob::WrapPOSh, u, p)   = get_periodic_orbit(prob.prob, u, p)
-get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
+get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
+get_periodic_orbit(prob::WrapPOSh, u, p)   = get_periodic_orbit(get_discretization(prob), u, p)
+get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 
-@inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
+@inline getdelta(prob::WrapPOSh) = getdelta(get_discretization(prob).flow)
 @inline has_hessian(::WrapPOSh) = true
 
 Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
@@ -82,7 +82,7 @@ save_solution(::WrapPOSh, x, p) = x
 """
 $(TYPEDEF)
 
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl, ...)`
 
 ## Fields
 $(TYPEDFIELDS)
@@ -118,7 +118,7 @@ Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 ####################################################################################################
 function update!(wrap::Union{WrapPOSh, WrapPOTrap}, iter, state)
-    prob = wrap.prob
+    prob = get_discretization(wrap)
     success = converged(state)
     bisection = in_bisection(state)
     update_section_every_step = prob.update_section_every_step
@@ -150,7 +150,6 @@ const DocStringJacobianPOSh = """
 """
 ##########################
 @inline is_symmetric(prob::WrapPOSh) = false
-residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
 jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
 
 # useful getters for FloquetColl

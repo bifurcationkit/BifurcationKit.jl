@@ -362,9 +362,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
 
-    # this functions allows to tackle the case where the two parameters have the same name
-    lenses = get_lens_symbol(lens1, lens2)
-
     # current lyapunov coefficient
     𝒯 = eltype(𝒯b)
     𝐍𝐒.l1 = Complex{𝒯}(1, 0)
@@ -453,7 +450,7 @@ function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCon
     lens1, lens2 = get_lenses(probma)
     x = getvec(u0, get_formulation(probma))        # ns point
     p1, ω = getp(u0, get_formulation(probma))      # first parameter
-    p2 = getp(state.z)                 # second parameter
+    p2 = getp(state.z)                             # second parameter
     par = getparams(probma)
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)

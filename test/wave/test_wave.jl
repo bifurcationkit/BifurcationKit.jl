@@ -1,4 +1,4 @@
-# using Revise, Plots
+# using Revise#, Plots
 using Test
 using BifurcationKit, SparseArrays, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
@@ -87,7 +87,6 @@ out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
 br = continuation(prob, PALC(), opts_br, verbosity = 0)
-
 ####################################################################################################
 # we test the jacobian
 # _J0 = BK.jacobian(prob, sol0, par_cgl)
@@ -122,7 +121,7 @@ function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0,
     return p_hopf, 2pi/ωH, orbitguess, specialpoint.x, vec_hopf1, vec_hopf2
 end
 ####################################################################################################
-# we test TWProblem: travelling wave problem
+# we test TWModel: traveling wave problem
 # number of time slices in the periodic orbit
 M = 50
 
@@ -160,7 +159,6 @@ BK.updatesection!(probTW, probTW.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
 let
-    probTW.jacobian
     sol = BK.newton(probTW, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
     @test BK.converged(sol)
     BK.is_symmetric(sol.prob)

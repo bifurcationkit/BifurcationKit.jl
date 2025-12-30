@@ -566,31 +566,31 @@ end
     return phase / period
 end
 
-function po_residual!(pb::PeriodicOrbitOCollProblem, 
+function po_residual!(coll::PeriodicOrbitOCollProblem, 
                                 out::AbstractMatrix, 
                                 u::AbstractMatrix, 
                                 period, 
                                 (L, ∂L), 
                                 pars)
-    phase = po_residual_bare!(pb, out, u, period, (L, ∂L), pars)
+    phase = po_residual_bare!(coll, out, u, period, (L, ∂L), pars)
     # add the periodicity condition
     @views @. out[:, end] = u[:, end] - u[:, 1]
     return phase
 end
 
-function residual(prob::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
+function residual(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
     out = zero(u)
-    residual!(prob, out, u, pars)
+    residual!(coll, out, u, pars)
     out
 end
 
-function residual!(prob::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
-    uc = get_time_slices(prob, u)
-    T = getperiod(prob, u, nothing)
-    resultc = get_time_slices(prob, result)
-    Ls = get_Ls(prob.mesh_cache)
+function residual!(coll::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
+    uc = get_time_slices(coll, u)
+    T = getperiod(coll, u, nothing)
+    resultc = get_time_slices(coll, result)
+    Ls = get_Ls(coll.mesh_cache)
     # add the phase condition ∫_0^T < u(t), ∂ϕ(t) > dt / T
-    result[end] = po_residual!(prob, resultc, uc, T, Ls, pars)
+    result[end] = po_residual!(coll, resultc, uc, T, Ls, pars)
     return result
 end
 
@@ -864,10 +864,10 @@ $(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function get_periodic_orbit(prob::PeriodicOrbitOCollProblem, u, p)
-    T = getperiod(prob, u, p)
-    ts = get_times(prob)
-    uc = get_time_slices(prob, u)
+@views function get_periodic_orbit(coll::PeriodicOrbitOCollProblem, u, p)
+    T = getperiod(coll, u, p)
+    ts = get_times(coll)
+    uc = get_time_slices(coll, u)
     return SolPeriodicOrbit(t = ts .* T, u = uc)
 end
 
@@ -918,10 +918,8 @@ end
 
 ##########################
 # problem wrappers
-residual(prob::WrapPOColl, x, p) = residual(prob.prob, x, p)
-
-@inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
-@inline getdelta(prob::WrapPOColl) = getdelta(prob.prob)
+@inline is_symmetric(wrap::WrapPOColl) = is_symmetric(get_discretization(wrap))
+@inline getdelta(wrap::WrapPOColl) = getdelta(get_discretization(wrap))
 @inline has_adjoint(::WrapPOColl) = false # it is in problems.jl
 
 # for recording the solution in a branch
@@ -977,18 +975,18 @@ const DocStringJacobianPOColl = """
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
 
-function _newton_pocoll(probPO::PeriodicOrbitOCollProblem,
+function _newton_pocoll(coll::PeriodicOrbitOCollProblem,
                         orbitguess,
                         options::NewtonPar;
                         defOp::Union{Nothing, DeflationOperator} = nothing,
                         kwargs...)
-    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO))
+    jac = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll))
 
     if options.linsolver isa COPLS
-        @reset options.linsolver = COPLS(probPO)
+        @reset options.linsolver = COPLS(coll)
     end
 
-    prob = WrapPOColl(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), nothing, nothing)
+    prob = WrapPOColl(coll, jac, orbitguess, getparams(coll), getlens(coll), nothing, nothing)
 
     if isnothing(defOp)
         return solve(prob, Newton(), options; kwargs...)
@@ -1014,22 +1012,22 @@ Similar to [`newton`](@ref) except that `prob` is a [`PeriodicOrbitOCollProblem`
 # Optional argument
 $DocStringJacobianPOColl
 """
-newton(probPO::PeriodicOrbitOCollProblem,
+newton(coll::PeriodicOrbitOCollProblem,
             orbitguess,
             options::NewtonPar;
-            kwargs...) = _newton_pocoll(probPO, orbitguess, options; defOp = nothing, kwargs...)
+            kwargs...) = _newton_pocoll(coll, orbitguess, options; defOp = nothing, kwargs...)
 
 """
     $(TYPEDSIGNATURES)
 
-This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
+This function is similar to `newton(::PeriodicOrbitOCollProblem, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """
-function newton(probPO::PeriodicOrbitOCollProblem,
+function newton(coll::PeriodicOrbitOCollProblem,
                 orbitguess,
                 defOp::DeflationOperator,
                 options::NewtonPar;
                 kwargs...)
-    _newton_pocoll(probPO, orbitguess, options; defOp, kwargs...)
+    _newton_pocoll(coll, orbitguess, options; defOp, kwargs...)
 end
 
 """
@@ -1279,7 +1277,7 @@ function compute_error!(coll::PeriodicOrbitOCollProblem, x::AbstractVector{𝒯}
 end
 ####################################################################################################
 function update!(wrap::WrapPOColl, iter, state)
-    coll = wrap.prob
+    coll = get_discretization(wrap)
     success = converged(state)
     bisection = in_bisection(state)
     update_section_every_step = coll.update_section_every_step

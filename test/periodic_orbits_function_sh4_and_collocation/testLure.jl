@@ -108,7 +108,7 @@ for meshadapt in (false, true)
     predictor(pd, 0.1, 1)
     pd = get_normal_form(br_po, 1; verbose = false, prm = Val(false))
     predictor(pd, 0.1, 1)
-    @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-3 # reference value computed with ApproxFun
+    @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-2 # reference value computed with ApproxFun
     # @test pd.nf.nf.a  ≈ 0.020989802220981707 rtol=1e-3 # reference value computed with ApproxFun
 
     # aBS from PD

@@ -78,15 +78,15 @@ for (op, at) in (
         update_minaug_every_step::Int
     end
 
-    @inline Base.eltype(pb::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
-    @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
-    @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
-    @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
-    @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
-    @inline has_adjoint_MF(pb::$op) = has_adjoint_MF(pb.prob_vf)
-    @inline isinplace(pb::$op) = isinplace(pb.prob_vf)
-    @inline getlens(pb::$op) = getlens(pb.prob_vf)
-    jacobian_adjoint(pb::$op, args...) = jacobian_adjoint(pb.prob_vf, args...)
+    @inline Base.eltype(::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
+    @inline getdelta(𝐌𝐚::$op) = getdelta(𝐌𝐚.prob_vf)
+    @inline has_hessian(𝐌𝐚::$op) = has_hessian(𝐌𝐚.prob_vf)
+    @inline is_symmetric(𝐌𝐚::$op) = is_symmetric(𝐌𝐚.prob_vf)
+    @inline has_adjoint(𝐌𝐚::$op) = has_adjoint(𝐌𝐚.prob_vf)
+    @inline has_adjoint_MF(𝐌𝐚::$op) = has_adjoint_MF(𝐌𝐚.prob_vf)
+    @inline isinplace(𝐌𝐚::$op) = isinplace(𝐌𝐚.prob_vf)
+    @inline getlens(𝐌𝐚::$op) = getlens(𝐌𝐚.prob_vf)
+    jacobian_adjoint(𝐌𝐚::$op, args...) = jacobian_adjoint(𝐌𝐚.prob_vf, args...)
     update!(pb::$op, iter, state) = update!(pb.prob_vf, iter, state)
 
     # constructor
@@ -121,7 +121,7 @@ for (op, at) in (
                     massmatrix = LinearAlgebra.I,
                     _norm = norm,
                     update_minaug_every_step = 0)
-        a = b = 0.
+        a = b = 0.0
         𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         if ~(𝒯  <: Number)
             error("This norm must return a `Number`, returned $𝒯")
@@ -136,19 +136,17 @@ for (op, at) in (
     end
     end
 end
+
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_vec_bls(x)
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_vec_bls(x, 2)
 @inline getp(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_par_bls(x)
 @inline getp(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_par_bls(x, 2)
 @inline get_frequency(x, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐇)[2]
 
-@inline get_parameter(x, 𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD) = getp(x, 𝐏𝐛)
-@inline get_parameter(x, 𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐏𝐛)[1]
+@inline get_parameter(x, 𝐌𝐚::AbstractMinimallyAugmentedFormulation_Fold_PD) = getp(x, 𝐌𝐚)
+@inline get_parameter(x, 𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getp(x, 𝐌𝐚)[1]
 
-update!(::FoldMAProblem, args...; k...) = update_default(args...; k...)
-update!(::HopfMAProblem, args...; k...) = update_default(args...; k...)
-
-@inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(𝐏𝐛.prob)
+@inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
 save_solution(::AbstractMABifurcationProblem, x ,p) = x
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
@@ -162,24 +160,24 @@ jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, pbma = 𝐏𝐛.prob)
 ################################################################################
 # this function encodes the functional for Fold/PD
-function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::BorderedArray, params)
-    res = 𝐏𝐛(x.u, x.p, params)
+function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::BorderedArray, params)
+    res = 𝐌𝐚(x.u, x.p, params)
     return BorderedArray(res[1], res[2])
 end
 
-@views function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::AbstractVector, params)
-    res = 𝐏𝐛(x[begin:end-1], x[end], params)
+@views function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::AbstractVector, params)
+    res = 𝐌𝐚(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
 ################################################################################
 # this function encodes the functional for Hopf/NS
-function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::BorderedArray, params)
-    res = 𝐏𝐛(x.u, x.p[1], x.p[2], params)
+function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::BorderedArray, params)
+    res = 𝐌𝐚(x.u, x.p[1], x.p[2], params)
     return BorderedArray(res[1], [res[2], res[3]])
 end
 
-@views function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::AbstractVector, params)
-    res = 𝐏𝐛(x[begin:end-2], x[end-1], x[end], params)
+@views function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::AbstractVector, params)
+    res = 𝐌𝐚(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
 ################################################################################
@@ -199,53 +197,53 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont;
     end
 end
 
-function Base.show(io::IO, prob::AbstractMABifurcationProblem; prefix = "")
+function Base.show(io::IO, 𝐏𝐛::AbstractMABifurcationProblem; prefix = "")
+    color = :cyan; bold = true
     print(io, prefix * "┌─ Problem for bif. points continuation with uType ")
-    printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
+    printstyled(io, _getvectortype(𝐏𝐛); color, bold)
     print(io, "\n" * prefix * "├─ Inplace:  ")
-    printstyled(io, isinplace(prob), color = :cyan, bold = true)
+    printstyled(io, isinplace(𝐏𝐛); color, bold)
     print(io, "\n" * prefix * "├─ Dimension:  ")
-    printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
+    printstyled(io, length(getu0(𝐏𝐛)); color, bold)
     print(io, "\n" * prefix * "├─ Jacobian: ")
-    printstyled(io, prob.jacobian, color = :cyan, bold = true)
+    printstyled(io, 𝐏𝐛.jacobian; color, bold)
     print(io, "\n" * prefix * "└─ Parameter: ")
-    printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
+    printstyled(io, get_lens_symbol(getlens(𝐏𝐛)); color, bold)
 end
 
-function Base.show(io::IO, prob::AbstractMinimallyAugmentedFormulation{Tprob}; prefix = "") where {Tprob}
+function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob}; prefix = "") where {Tprob}
+    color = :cyan; bold = true
     print(io, prefix * "┌─ Minimally Augmented Problem continuation")
     print(io, "\n" * prefix * "├─ use hessian:  ")
-    printstyled(io, prob.usehessian, color = :cyan, bold = true)
+    printstyled(io, 𝐌𝐚.usehessian; color, bold)
     print(io, "\n" * prefix * "├─ linear solver:  ")
-    printstyled(io, prob.linsolver, color = :cyan, bold = true)
+    printstyled(io, 𝐌𝐚.linsolver; color, bold)
     print(io, "\n" * prefix * "├─ linear solver for adjoint:  ")
-    printstyled(io, prob.linsolverAdjoint, color = :cyan, bold = true)
+    printstyled(io, 𝐌𝐚.linsolverAdjoint; color, bold)
     print(io, "\n" * prefix * "├─ linear bordered solver for the jacobian:  ")
-    printstyled(io, prob.linbdsolver, color = :cyan, bold = true)
+    printstyled(io, 𝐌𝐚.linbdsolver; color, bold)
     print(io, "\n" * prefix * "└─ linear bordered solver for the jacobian adjoint:  ")
-    printstyled(io, prob.linbdsolverAdjoint, color = :cyan, bold = true)
+    printstyled(io, 𝐌𝐚.linbdsolverAdjoint; color, bold)
     # print(io, "\n" * prefix * "├─ Dimension:  ")
-    # printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
+    # printstyled(io, length(getu0(𝐌𝐚)); color, bold)
     # print(io, "\n" * prefix * "├─ Jacobian: ")
-    # printstyled(io, prob.jacobian, color = :cyan, bold = true)
+    # printstyled(io, 𝐌𝐚.jacobian; color, bold)
     # print(io, "\n" * prefix * "└─ Parameter: ")
-    # printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
+    # printstyled(io, get_lens_symbol(getlens(𝐌𝐚)); color, bold)
 end
 ################################################################################
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
-    prob_ma = getprob(br).prob
+    𝐌𝐚 = get_formulation(getprob(br))
     𝒯 = _getvectortype(br)
-
     bifpt = br.specialpoint[ind]
     # get the BT point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
-        x0 = convert(𝒯.parameters[1], getvec(bifpt.x, prob_ma))
+        x0 = convert(𝒯.parameters[1], getvec(bifpt.x, 𝐌𝐚))
     else
-        x0 = convert(𝒯, getvec(bifpt.x , prob_ma))
+        x0 = convert(𝒯, getvec(bifpt.x , 𝐌𝐚))
     end
-
     # parameters for vector field
-    p1 = getp(bifpt.x , prob_ma)[1] # get(bifpt.printsol, lens1)
+    p1 = get_parameter(bifpt.x , 𝐌𝐚)
     p2 = bifpt.param
     lenses = get_lenses(br)
     parbif = _set(getparams(br), lenses, (p1, p2))
