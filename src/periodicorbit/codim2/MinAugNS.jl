@@ -223,6 +223,62 @@ get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 ###################################################################################################
+function update!(probma::NSMAProblem, iter, state)
+    # it is called to update the Minimally Augmented problem
+    # by updating the vectors a, b
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information!
+    𝐍𝐒 = probma.prob
+    𝒯 = eltype(𝐍𝐒)
+    success = state.converged
+    if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false)
+        # we call the user update
+        return update!(𝐍𝐒, iter, state)
+    end
+    @debug "[codim2 NS] Update a / b in NS"
+
+    z = getsolution(state)
+    x = getvec(z.u, 𝐍𝐒)   # NS point
+    p1, ω = getp(z.u, 𝐍𝐒) # first parameter
+    p2 = z.p              # second parameter
+
+    lens1, lens2 = get_lenses(probma)
+    newpar = set(getparams(probma), lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    # get the PO functional
+    POWrap = 𝐍𝐒.prob_vf
+
+    JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
+    JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
+
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
+    _copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/𝐍𝐒.norm(w))
+    # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
+    _copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/𝐍𝐒.norm(v))
+
+    # we stop continuation at R1, PD points
+    # test if we jumped to PD branch
+    pdjump = abs(abs(ω) - pi) < 100𝐍𝐒.newton_options.tol
+
+    isbif = true#isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
+    # if the frequency is null, this is not a NS point, we halt the process
+    # tolerance for detecting R1 bifurcation and stopping continuation
+    ϵR1 = 100𝐍𝐒.newton_options.tol
+    stop_R1 = 1-cos(ω) <= ϵR1
+    if stop_R1
+        @warn "[Codim 2 NS - update!]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
+    end
+
+    if pdjump
+        @warn "[Codim 2 NS - update!] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
+    end
+
+    # call the user-passed update
+    final_result = update!(𝐍𝐒, iter, state)
+
+    return ~stop_R1 && isbif && final_result && ~pdjump
+end
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
                         lens1::AllOpticTypes, lens2::AllOpticTypes,
@@ -296,63 +352,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     𝐍𝐒.R3 = zero(𝒯)
     𝐍𝐒.R4 = zero(𝒯)
 
-    # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented formulation
-    # by updating the vectors a, b
-    function update_min_aug_ns(z, tau, step, contResult; kUP...)
-        # user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
-        # we first check that the continuation step was successful
-        # if not, we do not update the problem with bad information!
-        success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) || success == false)
-            # we call the user finalizer
-            return _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
-        end
-        @debug "[codim2 NS] Update a / b dans NS"
-
-        x = getvec(z.u, 𝐍𝐒)   # NS point
-        p1, ω = getp(z.u, 𝐍𝐒) # first parameter
-        p2 = z.p              # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        # get the PO functional
-        POWrap = 𝐍𝐒.prob_vf
-
-        JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
-        JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
-
-        (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
-        _copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/normC(w))
-        # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        _copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/normC(v))
-
-        # we stop continuation at R1, PD points
-        # test if we jumped to PD branch
-        pdjump = abs(abs(ω) - pi) < 100newton_options.tol
-
-        isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
-
-         # if the frequency is null, this is not a NS point, we halt the process
-         stop_R1 = 1-cos(ω) <= ϵR1
-         if stop_R1
-            @warn "[Codim 2 NS - Finalizer]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
-        end
-
-        if pdjump
-            @warn "[Codim 2 NS - Finalizer] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
-        end
-
-        # call the user-passed finalizer
-        final_result = _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
-
-        return ~stop_R1 && isbif && final_result && ~pdjump
-    end
-
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_finalise(prob_ns, kwargs, prob.prob.update_section_every_step)
-
     # the following allows to append information specific to the codim 2 continuation to the user data
     _recordsol = get(kwargs, :record_from_solution, nothing)
     _recordsol2 = isnothing(_recordsol) ?
@@ -394,7 +393,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     kind,
                     event,
                     normC,
-                    finalise_solution = update_min_aug_ns,
                     )
     correct_bifurcation(br_ns_po)
 end

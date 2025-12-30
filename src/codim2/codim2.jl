@@ -86,6 +86,7 @@ for (op, at) in (
     @inline isinplace(pb::$op) = isinplace(pb.prob_vf)
     @inline getlens(pb::$op) = getlens(pb.prob_vf)
     jacobian_adjoint(pb::$op, args...) = jacobian_adjoint(pb.prob_vf, args...)
+    update!(pb::$op, iter, state) = update!(pb.prob_vf, iter, state)
 
     # constructor
     function $op(prob, a, b,
