@@ -150,7 +150,7 @@ function residualBEC(lbs::BorderingBLS,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
                             shift::𝒯s = nothing, 
-                            dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
+                            dotp = lbs.dot) where {𝒯, 𝒯ξ, 𝒯s}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
     # hence δx = R - (shift⋅I + J) * dX - dl * dR
@@ -175,7 +175,7 @@ function solve_bls_block(lbs::BorderingBLS,
                          c::NTuple{M, 𝒯vec}, 
                          d::AbstractMatrix, 
                          rhst, 
-                         rhsb) where {M, 𝒯vec <: AbstractArray}
+                         rhsb) where {M <: Integer, 𝒯vec <: AbstractArray}
     m = size(d, 1)
     if ~(length(b) == length(c) == m == M)
         error("Linear bordered solver, wrong sizes!")
@@ -309,7 +309,7 @@ function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Nu
     if isnothing(lbmap.shift) == false
         VI.add!(out.u, x.u, lbmap.shift)
     end
-    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c  * x.p
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
 

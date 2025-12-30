@@ -234,14 +234,14 @@ get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 ###################################################################################################
-function update!(probma::NSMAProblem, iter, state)
+function update!(𝐏𝐛::NSMAProblem, iter, state)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
-    𝐍𝐒 = get_formulation(probma)
+    𝐍𝐒 = get_formulation(𝐏𝐛)
     𝒯 = eltype(𝐍𝐒)
-    success = state.converged
+    success = converged(state)
     if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐍𝐒, iter, state)
@@ -306,10 +306,10 @@ end
 
 function record_from_solution(iter::ContIterable{NSPeriodicOrbitCont, <: NSMAProblem},
                               state::AbstractContinuationState)
-    probma = getprob(iter)
-    𝐍𝐒 = get_formulation(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐍𝐒 = get_formulation(𝐏𝐛)
     probwrap = 𝐍𝐒.prob_vf
-    lens1, lens2 = get_lenses(probma)
+    lens1, lens2 = get_lenses(𝐏𝐛)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
     p = getp(state)
@@ -411,15 +411,15 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 end
 
 function test_for_ns_ch(iter, state)
-    probma = getprob(iter)
-    𝐍𝐒 = get_formulation(probma)
-    lens1, lens2 = get_lenses(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐍𝐒 = get_formulation(𝐏𝐛)
+    lens1, lens2 = get_lenses(𝐏𝐛)
 
     z = getx(state)
     x = getvec(z, 𝐍𝐒)   # NS point
     p1, ω = getp(z, 𝐍𝐒) # first parameter
     p2 = getp(state)    # second parameter
-    par = getparams(probma)
+    par = getparams(𝐏𝐛)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
@@ -460,12 +460,12 @@ function test_for_ns_ch(iter, state)
 end
 
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
-    probma = getprob(iter)
-    lens1, lens2 = get_lenses(probma)
-    x = getvec(u0, get_formulation(probma))        # ns point
-    p1, ω = getp(u0, get_formulation(probma))      # first parameter
+    𝐏𝐛 = getprob(iter)
+    lens1, lens2 = get_lenses(𝐏𝐛)
+    x = getvec(u0, get_formulation(𝐏𝐛))        # ns point
+    p1, ω = getp(u0, get_formulation(𝐏𝐛))      # first parameter
     p2 = getp(state.z)                             # second parameter
-    par = getparams(probma)
+    par = getparams(𝐏𝐛)
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

@@ -533,24 +533,24 @@ user_passed_function(::Nothing) = NoUserPassedFunction()
 ########
 for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
     @eval begin
-        function Base.show(io::IO, pb::$op)
+        function Base.show(io::IO, wrap::$op)
             printstyled(io, "Problem wrap of\n", bold = true)
-            show(io, pb.prob)
+            show(io, get_discretization(wrap))
         end
     end
 end
 ########
+@inline get_formulation(𝐏𝐛::AbstractMABifurcationProblem) = 𝐏𝐛.prob
+
 for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
     @eval begin
-        function Base.show(io::IO, pb::$op)
+        function Base.show(io::IO, 𝐏𝐛::$op)
             printstyled(io, "Problem wrap for curve of " * $txt * " of periodic orbits.\n", bold = true)
             println("Based on the formulation:")
-            show(io, pb.prob.prob_vf)
+            show(io, get_formulation(𝐏𝐛).prob_vf)
         end
     end
 end
-@inline get_formulation(pb::AbstractMABifurcationProblem) = pb.prob
-
 ########
 function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     color = :cyan; bold = true
@@ -644,6 +644,7 @@ for op in (
         end
         (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)
         (fr::$op{Nothing})(x, p; kwargs...) = fr.vf_record_from_solution(x, p; kwargs...)
+        $op(u::$op, vf) = u # constructor, do not iterate the same structure
     end
 end
 

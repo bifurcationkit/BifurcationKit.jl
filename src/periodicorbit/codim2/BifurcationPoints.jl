@@ -1,6 +1,6 @@
 abstract type AbstractCodim2BifurcationPointOfPO <: AbstractBifurcationPoint end
 
-for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD)
+for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
     @eval begin
         """
         $(TYPEDEF)

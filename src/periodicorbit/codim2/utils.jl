@@ -21,27 +21,23 @@ function modify_po_plot(::BK_Makie, probPO::Union{PDMAProblem, NSMAProblem, Fold
     _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
 ####################################################################################################
-## TODO MERGE WITH UPDATE!(COLLOCATION)
-
 __get_discretization(pb::AbstractWrapperPeriodicOrbitProblem) = get_discretization(pb)
-__get_discretization(pb::AbstractMinimallyAugmentedFormulation) = __get_discretization(pb.prob_vf)
-__get_discretization(pb::AbstractPeriodicOrbitDiscretization) = pb
+__get_discretization(𝐌𝐚::AbstractMinimallyAugmentedFormulation) = __get_discretization(𝐌𝐚.prob_vf)
+__get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
 
-function __update_codim1_po!(𝐏𝐛, iter, state)
-    # we get the AbstractPeriodicOrbitDiscretization
-    disc_po = __get_discretization(𝐏𝐛)
+function __update_codim1_po!(𝐌𝐚, iter, state)
+    # we extract the AbstractPeriodicOrbitDiscretization
+    disc_po = __get_discretization(𝐌𝐚)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    success = converged(state)
-    bisection = in_bisection(state)
-    if success && mod_counter(step, disc_po.update_section_every_step) == 1 && bisection == false
+    if converged(state) && mod_counter(step, disc_po.update_section_every_step) == 1 && in_bisection(state) == false
         # state vector at bifurcation point
         z = getsolution(state)
-        x = getvec(z.u, 𝐏𝐛)
+        x = getvec(z.u, 𝐌𝐚)
         # parameters at the bifurcation point
         lenses = get_lenses(getprob(iter))
-        p1, = getp(z.u, 𝐏𝐛)   # first parameter, TODO it errors for Folds if p1, _ = getp(...)
-        p2 = z.p              # second parameter
+        p1 = get_parameter(z.u, 𝐌𝐚) # first parameter
+        p2 = z.p                     # second parameter
         pars = _set(getparams(disc_po), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"
         updatesection!(disc_po, x, pars)
@@ -49,32 +45,25 @@ function __update_codim1_po!(𝐏𝐛, iter, state)
     return true
 end
 
-function update!(𝐏𝐛::AbstractMinimallyAugmentedFormulation, 
+function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, 
                  iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
                  state)
-    return __update_codim1_po!(𝐏𝐛, iter, state)
-end
-
-function update!(𝐏𝐛::FoldMinimallyAugmentedFormulation, 
-                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
-                 state)
-    return __update_codim1_po!(𝐏𝐛, iter, state)
+    return __update_codim1_po!(𝐌𝐚, iter, state)
 end
 
 ## TODO MERGE WITH UPDATE!(COLLOCATION)
-function update!(𝐏𝐛::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
+function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
                 state)
-    coll = 𝐏𝐛.prob_vf.prob
+    coll = 𝐌𝐚.prob_vf.prob
     # state vector at bifurcation point
     Z = getsolution(state)
-    x = getvec(Z.u, 𝐏𝐛)
+    x = getvec(Z.u, 𝐌𝐚)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     success = converged(state)
-    bisection = in_bisection(state)
     # mesh adaptation
-    if success && coll.meshadapt && bisection == false
+    if success && coll.meshadapt && in_bisection(state) == false
         @debug "[Collocation] update mesh"
         oldsol = _copy(x) # avoid possible overwrite in compute_error!
         oldmesh = get_times(coll) .* getperiod(coll, oldsol, nothing)
@@ -86,7 +75,7 @@ function update!(𝐏𝐛::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl}
             return false
         end
     end
-    if success && mod_counter(step, coll.update_section_every_step) == 1 && bisection == false
+    if success && mod_counter(step, coll.update_section_every_step) == 1 && in_bisection(state) == false
         @debug "[collocation] update section"
         updatesection!(coll, x, nothing) # collocation does not need the parameter for updatesection!
     end

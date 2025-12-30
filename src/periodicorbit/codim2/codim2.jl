@@ -167,7 +167,7 @@ function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCon
 end
 ####################################################################################################
 # the following resolve method ambiguity
-for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPOFiniteDifferencesProblem)
+for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialProblem)
     @eval begin
         function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
             prob_po = pbwrap.prob
@@ -178,9 +178,6 @@ for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPOFiniteDiffere
             po = getvec(u, 𝐏𝐛)
             period = getperiod(prob_po, po, nothing)
             return (;period)
-            # sol = get_periodic_orbit(prob_po, x, nothing)
-            # _min, _max = @views extrema(sol[1, :])
-            # return (;max = _max, min = _min, amplitude = _max - _min, period)
         end
     end
 end
@@ -240,6 +237,7 @@ function _continuation(gh::Bautin,
                         Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         record_from_solution = nothing,
+                        plot_solution = nothing,
                         kwargs...) where {Tkind, Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # compute predictor for point on new branch
@@ -276,7 +274,7 @@ function _continuation(gh::Bautin,
 
     # change the user provided functions by passing probPO in its parameters
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
-    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
+    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); plot_solution)
 
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)

@@ -74,7 +74,6 @@ for (op, at) in (
     @inline isinplace(𝐌𝐚::$op) = isinplace(𝐌𝐚.prob_vf)
     @inline getlens(𝐌𝐚::$op) = getlens(𝐌𝐚.prob_vf)
     jacobian_adjoint(𝐌𝐚::$op, args...) = jacobian_adjoint(𝐌𝐚.prob_vf, args...)
-    update!(pb::$op, iter, state) = update!(pb.prob_vf, iter, state)
 
     # constructor
     function $op(prob, a, b,
@@ -102,7 +101,7 @@ for (op, at) in (
     end
 
     # empty constructor, mainly used for dispatch
-    function $op(prob ;linsolve = DefaultLS(),
+    function $op(prob; linsolve = DefaultLS(),
                     linbdsolver = MatrixBLS(),
                     usehessian = true,
                     massmatrix = LinearAlgebra.I,
@@ -121,8 +120,11 @@ for (op, at) in (
                     1,                # zh
                     linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step)
     end
+
     end
 end
+
+update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, iter, state) = update!(𝐌𝐚.prob_vf, iter, state)
 
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_vec_bls(x)
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Hopf_NS) = get_vec_bls(x, 2)
@@ -151,6 +153,7 @@ save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
+    # TODO!! is it a copy or what?
     x_ma = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p2)
     if 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation_Hopf_NS
         return MASolutionFreq(x_ma, p1, get_frequency(x, 𝐌𝐚))
@@ -191,17 +194,14 @@ end
     return vcat(res[1], res[2], res[3])
 end
 ################################################################################
-# function to get the two lenses associated to a 2-param continuation
-@inline function get_lenses(_prob::Union{FoldMAProblem,
-                                         HopfMAProblem,
-                                         PDMAProblem,
-                                         NSMAProblem})
-    𝐌𝐚 = _prob.prob
-    return getlens(𝐌𝐚), getlens(_prob)
+# methods to get the two lenses associated to a 2-param continuation
+@inline function get_lenses(𝐏𝐛::AbstractMABifurcationProblem)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
+    return getlens(𝐌𝐚), getlens(𝐏𝐛)
 end
 
 @inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
-    return get_lenses(br.prob)
+    return get_lenses(getprob(br))
 end
 
 function getparams(u, p2, 𝐏𝐛::AbstractMABifurcationProblem)

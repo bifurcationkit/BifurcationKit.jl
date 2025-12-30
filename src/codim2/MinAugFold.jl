@@ -287,9 +287,8 @@ function update!(probma::FoldMAProblem, iter, state)
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
     𝐅 = get_formulation(probma)
     𝒯 = eltype(𝐅)
-    success = state.converged
     step = state.step
-    if (~mod_counter(step, 𝐅.update_minaug_every_step) || success == false) || in_bisection(state)
+    if (~mod_counter(step, 𝐅.update_minaug_every_step) || converged(state) == false) || in_bisection(state)
         return update!(𝐅, iter, state)
     end
 
@@ -319,10 +318,10 @@ function update!(probma::FoldMAProblem, iter, state)
 end
 
 function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
-                              state::AbstractContinuationState) where {Tkind <: AbstractContinuationKind}
-    probma = getprob(iter)
-    𝐅 = get_formulation(probma)
-    lens1, lens2 = get_lenses(probma)
+                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+    𝐏𝐛 = getprob(iter)
+    𝐅 = get_formulation(𝐏𝐛)
+    lens1, lens2 = get_lenses(𝐏𝐛)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
     p = getp(state)
@@ -331,7 +330,7 @@ function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
                     BT = 𝐅.BT, 
                     CP = 𝐅.CP, 
                     ZH = 𝐅.ZH,
-                    _namedrecordfromsol(probma.recordFromSolution(getvec(u), p;))...
+                    _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u), p;))...
                     ) 
 end
 

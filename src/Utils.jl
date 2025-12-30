@@ -202,7 +202,7 @@ apply!(y, f, x) = f(y, x)
 """
 $(TYPEDSIGNATURES)
 
-Function to detect continuation branches which loop on themselves.
+Function to detect when continuation branches loop on themselves.
 """
 function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = true) where T
     if verbose == false

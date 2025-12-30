@@ -30,11 +30,11 @@ function __user_record_solution_periodic_orbit(pbwrap, ::NoUserPassedFunction, i
     return (period = getperiod(pbwrap, getx(state), set(getparams(pbwrap), getlens(pbwrap), getp(state))),)
 end
 
-function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::NoUserPassedFunction, iter::ContIterable{Tkind}, state) where {Tkind}
-    prob_po = get_discretization(pbwrap)
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPODifferentialProblem, ::NoUserPassedFunction, iter::ContIterable{Tkind}, state) where {Tkind}
+    disc_po = get_discretization(pbwrap)
     x = getx(state)
-    period = getperiod(prob_po, x, nothing)
-    sol = get_periodic_orbit(prob_po, x, nothing)
+    period = getperiod(disc_po, x, nothing)
+    sol = get_periodic_orbit(disc_po, x, nothing)
     _min, _max = @views extrema(sol[1, :])
     return (;max = _max, min = _min, amplitude = _max - _min, period)
 end

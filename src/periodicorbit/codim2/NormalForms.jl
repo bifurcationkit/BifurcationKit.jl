@@ -11,7 +11,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                         k...
                     )
     bifpt = br.specialpoint[id_bif]
-    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:cusp, :R1, :R2, :R3, :R4, :gpd))
+    if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:cusp, :R1, :R2, :R3, :R4, :gpd, :ch))
         error("Normal form for $(bifpt.type) not implemented")
     end
 
@@ -30,11 +30,13 @@ function get_normal_form(prob::AbstractBifurcationProblem,
         return GPD_normal_form(prob, br, id_bif; kwargs_nf..., autodiff)
     elseif bifpt.type == :cusp
         return CuspPO_normal_form(prob, br, id_bif; kwargs_nf..., autodiff)
+    elseif bifpt.type == :ch
+        return ChencinerPO_normal_form(prob, br, id_bif; kwargs_nf..., autodiff)
     end
     error("Normal form for $(bifpt.type) not yet implemented.")
 end
 
-for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD)
+for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
     @eval begin
         function $(Symbol(op, :_normal_form))(𝐏𝐛::AbstractMABifurcationProblem{Tprob}, 
                                 br,ind_bif;
@@ -49,8 +51,8 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD)
             x0, parbif = get_bif_point_codim2(br, ind_bif)
 
             bifpt = br.specialpoint[ind_bif]
-            po = get_periodic_orbit(powrap, x0, nothing)
-            period = getperiod(powrap, x0, nothing)
+            po = get_periodic_orbit(powrap, x0, parbif)
+            period = getperiod(powrap, x0, parbif)
 
             $op(po, period, parbif, get_lenses(br), nothing, nothing, nothing, powrap, false)
         end

@@ -315,15 +315,15 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζad, options; normN, kwargs...)
 end
 
-function update!(probma::HopfMAProblem, iter, state)
+function update!(𝐏𝐛::HopfMAProblem, iter, state)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
-    𝐇 = get_formulation(probma)
+    𝐇 = get_formulation(𝐏𝐛)
     𝒯 = eltype(𝐇)
-    success = state.converged
+    success = converged(state)
     step = state.step
     if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false) || in_bisection(state)
         # update vector field
@@ -367,10 +367,10 @@ function update!(probma::HopfMAProblem, iter, state)
 end
 
 function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
-                              state::AbstractContinuationState) where {Tkind <: AbstractContinuationKind}
-    probma = getprob(iter)
-    𝐇 = get_formulation(probma)
-    lens1, lens2 = get_lenses(probma)
+                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+    𝐏𝐛 = getprob(iter)
+    𝐇 = get_formulation(𝐏𝐛)
+    lens1, lens2 = get_lenses(𝐏𝐛)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
     p = getp(state)
@@ -380,7 +380,7 @@ function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
                         l1 = 𝐇.l1,
                         BT = 𝐇.BT,
                         GH = 𝐇.GH,
-                        _namedrecordfromsol(probma.recordFromSolution(getvec(u, 𝐇), p))...
+                        _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u, 𝐇), p))...
                         ) 
 end
 
@@ -595,8 +595,8 @@ function continuation_hopf(prob,
 end
 
 function test_bt_gh(iter, state)
-    probma = getprob(iter)
-    𝐇 = get_formulation(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐇 = get_formulation(𝐏𝐛)
     𝒯 = eltype(𝐇)
 
     zu = getx(state)
@@ -625,7 +625,7 @@ function test_bt_gh(iter, state)
     BT2 = real( VI.inner(ζ★ ./ 𝐇.norm(ζ★), ζ) )
     ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
-    hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(probma)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
+    hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(𝐏𝐛)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
     hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO!! WE NEED A KWARGS here
     # lyapunov coefficient
     𝐇.l1 = hp.nf.b

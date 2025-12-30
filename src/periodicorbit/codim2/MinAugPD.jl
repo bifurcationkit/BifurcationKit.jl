@@ -259,14 +259,14 @@ function newton_pd(prob::AbstractBifurcationProblem,
     return newton(prob_ma, opt_pd; normN, kwargs...)
 end
 ###################################################################################################
-function update!(probma::PDMAProblem, iter, state)
+function update!(𝐏𝐛::PDMAProblem, iter, state)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
-    𝐏𝐝 = get_formulation(probma)
+    𝐏𝐝 = get_formulation(𝐏𝐛)
     𝒯 = eltype(𝐏𝐝)
-    success = state.converged
+    success = converged(state)
     if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐏𝐝, iter, state)
@@ -293,10 +293,10 @@ end
 
 function record_from_solution(iter::ContIterable{PDPeriodicOrbitCont, <: PDMAProblem},
                               state::AbstractContinuationState)
-    probma = getprob(iter)
-    𝐏𝐝 = get_formulation(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐏𝐝 = get_formulation(𝐏𝐛)
     probwrap = 𝐏𝐝.prob_vf
-    lens1, lens2 = get_lenses(probma)
+    lens1, lens2 = get_lenses(𝐏𝐛)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
     p = getp(state)
@@ -394,8 +394,8 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 end
 
 function test_for_pd_gpd_cp(iter, state)
-    probma = getprob(iter)
-    𝐏𝐝 = get_formulation(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐏𝐝 = get_formulation(𝐏𝐛)
     𝒯 = eltype(𝐏𝐝)
     pbwrap = 𝐏𝐝.prob_vf
 
@@ -424,7 +424,7 @@ function test_for_pd_gpd_cp(iter, state)
     𝐏𝐝.R2 = LA.dot(ζ★, ζ)
 
     p1 = get_parameter(zu, 𝐏𝐝) # TODO : what is this hack??
-    pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, get_lenses(probma)[1], nothing, nothing, nothing, :none)
+    pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, get_lenses(𝐏𝐛)[1], nothing, nothing, nothing, :none)
     if pbwrap.prob isa ShootingProblem
         pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
         𝐏𝐝.GPD = pd.nf.nf.b3
@@ -446,12 +446,12 @@ function compute_eigenvalues(eig::FoldEig,
                             u0,
                             par,
                             nev = iter.contparams.nev; k...)
-    probma = getprob(iter)
-    lens1, lens2 = get_lenses(probma)
+    𝐏𝐛 = getprob(iter)
+    lens1, lens2 = get_lenses(𝐏𝐛)
     x = getvec(u0)
     p1 = getp(u0)      # first parameter
     p2 = getp(state.z) # second parameter
-    par = getparams(probma)
+    par = getparams(𝐏𝐛)
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

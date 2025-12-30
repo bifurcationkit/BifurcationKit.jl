@@ -781,7 +781,7 @@ end
 function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltype(u0), 1e-9))
     T = _extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
-    # TODO REMOVE vcat!
+    # TODO REMOVE vcat!!
     @views J.∂TGpo .= (residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- residual(J.Aγ.prob, u0, par)) ./ δ
     # update Aγ
     J.Aγ(u0, par)

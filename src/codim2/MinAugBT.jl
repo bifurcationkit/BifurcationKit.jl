@@ -206,7 +206,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTMinimallyAugmentedFormula
     σ2p2 = -VI.inner(w2, dJv1dp2) / n - VI.inner(w1, dJv2dp2) / n
     σp = [σ1p1 σ1p2; σ2p1 σ2p2]
 
-    if 1==1
+    if true
         # We invert the jacobian of the bt problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
         u11 = apply_jacobian(𝐁𝐓.prob_vf, x + ϵ2 * v1, par0, w1, true)
