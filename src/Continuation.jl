@@ -99,6 +99,15 @@ Base.length(it::ContIterable) = it.contparams.max_steps
 @inline is_on_boundary(it::ContIterable, p) = (it.contparams.p_min == p) || (p == it.contparams.p_max)
 # clamp p value
 clamp_predp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contparams.p_min, it.contparams.p_max)
+
+function finalise_solution(iter::ContIterable, state::AbstractContinuationState, contRes)
+    return iter.finalise_solution(getsolution(state),
+                                  state.τ,
+                                  state.step,
+                                  contRes; 
+                                  state,
+                                  iter)
+end
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -552,7 +561,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
             # call user saved finalise_solution function. If returns false, stop continuation
             # we put am OR (|) to stop continuation if the stop was required before
-            state.stopcontinuation |= ~it.finalise_solution(getsolution(state), state.τ, state.step, contRes; state = state, iter = it)
+            state.stopcontinuation |= ~finalise_solution(it, state, contRes)
 
             # save current state in the branch
             save!(contRes, it, state)

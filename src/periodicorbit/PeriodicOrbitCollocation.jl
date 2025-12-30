@@ -922,7 +922,7 @@ end
 residual(prob::WrapPOColl, x, p) = residual(prob.prob, x, p)
 
 @inline is_symmetric(prob::WrapPOColl) = is_symmetric(prob.prob)
-@inline getdelta(pb::WrapPOColl) = getdelta(pb.prob)
+@inline getdelta(prob::WrapPOColl) = getdelta(prob.prob)
 @inline has_adjoint(::WrapPOColl) = false # it is in problems.jl
 
 # for recording the solution in a branch
