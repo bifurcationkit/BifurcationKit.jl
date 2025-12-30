@@ -74,8 +74,6 @@ function ContIterable(prob::AbstractBifurcationProblem,
 end
 
 Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T
-setparam(it::ContIterable{Tkind, Tprob, Talg, T}, p0::T) where {Tkind, Tprob, Talg, T} = setparam(it.prob, p0)
-
 # getters
 @inline getlens(it::ContIterable) = getlens(it.prob)
 @inline getalg(it::ContIterable) = it.alg
@@ -83,6 +81,7 @@ setparam(it::ContIterable{Tkind, Tprob, Talg, T}, p0::T) where {Tkind, Tprob, Ta
 @inline callback(it::ContIterable) = it.callback_newton
 record_from_solution(it::ContIterable) = record_from_solution(it.prob)
 plot_solution(it::ContIterable) = plot_solution(it.prob)
+setparam(iter::ContIterable, p0) = setparam(getprob(iter), p0)
 
 @inline get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
 
@@ -248,13 +247,11 @@ end
             (state.stopcontinuation == false)
 
 function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, Teigvals}
-    x = getx(state)
-    p = getp(state)
-    pt = record_from_solution(it)(x, p; iter = it, state)
+    pt = record_from_solution(it, state)
     stable = (Teigvals != Nothing) ? is_stable(state) : nothing
     # we merge the output from record_from_solution with a named tuple with iteration indicators
     return _mergewithrecordfromuser(pt, 
-                        (param = p,
+                        (param = getp(state),
                         itnewton = state.itnewton,
                         itlinear = state.itlinear,
                         ds = state.ds,
@@ -307,15 +304,18 @@ function plot_branch_cont(contres::ContResult,
     end
 end
 
+function record_from_solution(iter::ContIterable,
+                              state::AbstractContinuationState)
+    return record_from_solution(iter)(getx(state), getp(state); iter, state)
+end
+
 function ContResult(iter::AbstractContinuationIterable, 
                     state::AbstractContinuationState)
-    x0 = _copy(getx(state))
-    p0 = getp(state)
-    pt = record_from_solution(iter)(x0, p0; iter, state)
+    pt = record_from_solution(iter, state)
     return _contresult(iter, state,
                         pt,
                         get_state_summary(iter, state), 
-                        save_solution(iter.prob, _copy(x0), setparam(iter.prob, p0)), 
+                        save_solution(iter.prob, _copy(getx(state)), setparam(iter, getp(state))), 
                         getcontparams(iter))
 end
 
