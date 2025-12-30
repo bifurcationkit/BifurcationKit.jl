@@ -403,7 +403,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         normC,
         event,
         )
-    correct_bifurcation(br_pd_po)
+    _correct_event_labels(br_pd_po)
 end
 
 function test_for_pd_gpd_cp(iter, state)

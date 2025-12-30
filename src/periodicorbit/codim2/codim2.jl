@@ -148,7 +148,7 @@ __wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
 __wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
 __wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
-function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
+function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
     elseif contres.prob.prob isa PeriodDoublingMinimallyAugmentedFormulation

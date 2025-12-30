@@ -396,7 +396,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     event,
                     normC,
                     )
-    correct_bifurcation(br_ns_po)
+    _correct_event_labels(br_ns_po)
 end
 
 function test_for_ns_ch(iter, state)

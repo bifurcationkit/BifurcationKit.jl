@@ -494,7 +494,7 @@ $(TYPEDSIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
-function correct_bifurcation(contres::ContResult)
+function _correct_event_labels(contres::ContResult)
     if contres.prob.prob isa AbstractMinimallyAugmentedFormulation == false
         return contres
     end

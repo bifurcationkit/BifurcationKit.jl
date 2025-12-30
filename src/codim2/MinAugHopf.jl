@@ -530,7 +530,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 event
             )
     @assert ~isnothing(br) "Empty branch!"
-    return correct_bifurcation(br)
+    return _correct_event_labels(br)
 end
 
 function continuation_hopf(prob,
