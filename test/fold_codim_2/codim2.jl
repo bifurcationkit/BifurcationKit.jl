@@ -76,9 +76,8 @@ for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.FiniteDifferences()
     @test ~isnothing(sn_br.eig)
 
     # we test the jacobian and problem update
-    par_sn = BK.setparam(br, BK.getp(sn_br.sol[end].x))
-    par_sn = BK.set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
-    _J = BK.jacobian(prob, BK.getvec(sn_br.sol[end].x), par_sn)
+    par_sn = BK.getparams(sn_br, lastindex(sn_br))
+    _J = BK.jacobian(prob, sn_br.sol[end].x.x, par_sn)
     _eigvals, eigvec, = eigen(_J)
     ind = argmin(abs.(_eigvals))
     @test _eigvals[ind] ≈ 0 atol = 1e-10

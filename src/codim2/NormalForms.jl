@@ -540,11 +540,6 @@ function bogdanov_takens_normal_form(_prob,
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     𝒯 = VI.scalartype(𝒯eigvec)
     # jacobian at bifurcation point
@@ -675,18 +670,11 @@ function bautin_normal_form(_prob::HopfMAProblem,
     eigRes = br.eig
 
     # eigenvalue
-    ω = abs(getp(bifpt.x, prob_ma)[2])
+    ω = abs(bifpt.x.ω)
     λ = Complex(0, ω)
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-
-    # jacobian at bifurcation point
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -1323,18 +1311,18 @@ function hopf_hopf_normal_form(_prob,
     ϵ = 𝒯(δ)
 
     # get the MA problem
-    prob_ma = _prob.prob
+    𝐌𝐚 = _prob.prob
 
     # get the initial vector field
-    prob_vf = prob_ma.prob_vf
+    prob_vf = 𝐌𝐚.prob_vf
 
-    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
+    @assert 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation
 
     # linear solver
-    ls = prob_ma.linsolver
+    ls = 𝐌𝐚.linsolver
 
     # bordered linear solver
-    bls = prob_ma.linbdsolver
+    bls = 𝐌𝐚.linbdsolver
 
     # kernel dimension
     N = 4
@@ -1351,16 +1339,13 @@ function hopf_hopf_normal_form(_prob,
 
     # parameter for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
-    p0, ω0 = getp(bifpt.x, prob_ma)
+    # p0, ω0 = getp(bifpt.x, 𝐌𝐚)
+    p0 = bifpt.x.p1
+    ω0 = bifpt.x.ω
 
     # right eigenvector
     # TODO IMPROVE THIS
@@ -1419,7 +1404,7 @@ function hopf_hopf_normal_form(_prob,
     @assert LA.dot(p2, q2) ≈ 1 "we found $(LA.dot(p2, q2)) instead of 1."
 
     # parameters
-    lenses = (getlens(prob_ma), lens)
+    lenses = (getlens(𝐌𝐚), lens)
     lens1, lens2 = lenses
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
@@ -1476,7 +1461,7 @@ function hopf_hopf_normal_form(_prob,
     G1011 = LA.dot(p1, tmp1011)
 
     # some more definitions
-    VF = prob_ma.prob_vf
+    VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens

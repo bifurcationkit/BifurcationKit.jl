@@ -136,8 +136,27 @@ end
 
 @inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
 
-save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p) = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p)
+struct MASolution{T1, T2}
+    x::T1
+    p1::T2
+end
+
+struct MASolutionFreq{T1, T2}
+    x::T1
+    p1::T2
+    ω::T2
+end
+
 save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_formulation(𝐏𝐛), x, p)
+
+function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
+    p1 = get_parameter(x, 𝐌𝐚)
+    x_ma = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p2)
+    if 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation_Hopf_NS
+        return MASolutionFreq(x_ma, p1, get_frequency(x, 𝐌𝐚))
+    end
+    return MASolution(x_ma, p1)
+end
 ################################################################################
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
@@ -177,32 +196,34 @@ end
                                          HopfMAProblem,
                                          PDMAProblem,
                                          NSMAProblem})
-    prob_ma = _prob.prob
-    return getlens(prob_ma), getlens(_prob)
+    𝐌𝐚 = _prob.prob
+    return getlens(𝐌𝐚), getlens(_prob)
 end
 
 @inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
-    get_lenses(br.prob)
+    return get_lenses(br.prob)
 end
 
 function getparams(u, p2, 𝐏𝐛::AbstractMABifurcationProblem)
-    𝐌𝐚 = get_formulation(𝐏𝐛)
-    lenses = get_lenses(𝐏𝐛)
-    p1 = get_parameter(u, 𝐌𝐚)
-    par = getparams(𝐏𝐛)
-    newpar = _set(par, lenses, (p1, p2))
+    p1 = get_parameter(u, get_formulation(𝐏𝐛))
+    return _set(getparams(𝐏𝐛), get_lenses(𝐏𝐛), (p1, p2))
 end
 
 getparams(z::BorderedArray, 𝐏𝐛::AbstractMABifurcationProblem) = getparams(z.u, z.p, 𝐏𝐛)
 
-function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
-    getparams(br.sol[ind].x, br.sol[ind].p, getprob(br))
+function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, state::AbstractContinuationState)
+    return getparams(getx(state), getp(state), getprob(iter))
 end
 
-function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, state::AbstractContinuationState)
-    probma = getprob(iter)
-    zu = getx(state)
-    newpar = getparams(zu, getp(state), probma)
+"""
+$(TYPEDSIGNATURES)
+
+Returns the parameters corresponding to the ind-th solution in `br.sol[ind]` where `br` is a two parameters branch of bifurcation points.
+"""
+function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
+    p1 = br.sol[ind].x.p1
+    p2 = br.sol[ind].p
+    return _set(getparams(br), get_lenses(br), (p1, p2))
 end
 ################################################################################
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; 
@@ -261,17 +282,17 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     𝐌𝐚 = get_formulation(getprob(br))
     𝒯 = _getvectortype(br)
     bifpt = br.specialpoint[ind]
-    # get the BT point. We perform a conversion in case GPU is used
+    step = bifpt.step
+    # get the biurcation point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
-        x0 = convert(𝒯.parameters[1], getvec(bifpt.x, 𝐌𝐚))
+        x0 = convert(𝒯.parameters[1], bifpt.x.x)
     else
-        x0 = convert(𝒯, getvec(bifpt.x , 𝐌𝐚))
+        x0 = convert(𝒯, bifpt.x.x)
     end
     # parameters for vector field
-    p1 = get_parameter(bifpt.x , 𝐌𝐚)
+    p1 = bifpt.x.p1
     p2 = bifpt.param
-    lenses = get_lenses(br)
-    parbif = _set(getparams(br), lenses, (p1, p2))
+    parbif = _set(getparams(br), get_lenses(br), (p1, p2))
     return (x = x0, params = parbif)
 end
 ################################################################################

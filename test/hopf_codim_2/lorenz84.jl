@@ -116,10 +116,10 @@ function testEV(br, verbose = false)
         # we make sure the parameters are set right
         step = pt.step
         verbose && (println("="^50); @info step ii)
-        x0 = BK.getvec(br.sol[ii].x, prob_ma)
-        p0 = BK.getp(br.sol[ii].x, prob_ma)[1]
+        x0 = br.sol[ii].x.x
+        p0 = br.sol[ii].x.p1
         if prob_ma isa BK.HopfMinimallyAugmentedFormulation
-            ω0 = BK.getp(br.sol[ii].x, prob_ma)[2]
+            ω0 = br.sol[ii].x.ω
         end
         p1 = br.sol[ii].p
         @test p1 == lens1(pt)
@@ -197,7 +197,8 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     # locate BT point with newton algorithm and compute the normal form
     _bt = BK.bt_point(sn_codim2, 1) # does nothing
 
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.FiniteDifferences())
+    _optn = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15)
+    solbt = newton(sn_codim2, 1; options = _optn, start_with_eigen = true, jacobian_ma = BK.FiniteDifferences())
     @test BK.converged(solbt)
     solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.MinAug())
     @test BK.converged(solbt)
@@ -207,12 +208,9 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     @test BK.converged(solbt)
     @test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8
 
-    if sn_codim2.specialpoint[1].x isa BorderedArray
-        sn_codim2_forbt = @set sn_codim2.specialpoint[1].x.u = Array(solbt.u.x0)
-        @reset sn_codim2_forbt.specialpoint[1].x.p = solbt.u.params.F
-    else
-        sn_codim2_forbt = @set sn_codim2.specialpoint[1].x = vcat(Array(solbt.u.x0), solbt.u.params.F)
-    end
+    sn_codim2_forbt = deepcopy(sn_codim2)
+    sn_codim2_forbt.specialpoint[1].x.x .= (solbt.u.x0)
+    @reset sn_codim2_forbt.specialpoint[1].x.p1 = solbt.u.params.F
     @reset sn_codim2_forbt.specialpoint[1].param = solbt.u.params.T
 
     bpbt_2 = get_normal_form(sn_codim2_forbt, 1; nev = 4, verbose = true)

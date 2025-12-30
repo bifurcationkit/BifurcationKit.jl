@@ -60,8 +60,7 @@ function bt_point(br::AbstractResult{<: TwoParamCont, Tprob}, index::Int) where 
     bptype = br.specialpoint[index].type
     @assert bptype == :bt "This should be a BT point"
     specialpoint = br.specialpoint[index]
-    prob_ma = br.prob.prob
-    return BorderedArray(_copy(getvec(specialpoint.x, prob_ma)), [getp(specialpoint.x, prob_ma)[1], specialpoint.param])
+    return BorderedArray(_copy(specialpoint.x.x), [specialpoint.x.p1, specialpoint.param])
 end
 ################################################################################
 getvec(x, ::BTProblemMinimallyAugmented) = getvec(x)
