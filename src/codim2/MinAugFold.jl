@@ -294,19 +294,13 @@ function update!(probma::FoldMAProblem, iter, state)
     end
 
     @debug "[Fold] Update vectors a and b"
-    z = getsolution(state)
-    x = getvec(z.u) # fold point
-    p1 = getp(z.u)  # first parameter
-    p2 = z.p        # second parameter
-
-    lens1, lens2 = get_lenses(probma)
-    newpar = set(getparams(probma), lens1, p1)
-    newpar = set(newpar, lens2, p2)
-
     a = 𝐅.a
     b = 𝐅.b
 
     # expression of the jacobian
+    zu = getx(state)
+    x = getvec(zu, 𝐅) # fold point
+    newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
 
     # compute new a, close to left null vector
@@ -556,20 +550,13 @@ end
 # Bogdanov-Takens / Cusp test function for the Fold functional
 function test_bt_cusp(iter, state)
     probma = getprob(iter)
-    lens1, lens2 = get_lenses(probma)
-
-    z = getx(state)
-    x = getvec(z)    # fold point
-    p1 = getp(z)     # first parameter
-    p2 = getp(state) # second parameter
-    par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
-
     𝐅 = get_formulation(probma)
     𝒯 = eltype(𝐅)
 
     # expression of the jacobian
+    zu = getx(state)
+    x = getvec(zu, 𝐅) # fold point
+    newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
     JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅, x, newpar) : transpose(J_at_xp)
 

@@ -317,6 +317,7 @@ update_mesh!(coll::PeriodicOrbitOCollProblem, mesh) = update_mesh!(coll.mesh_cac
 @inline is_symmetric(coll::PeriodicOrbitOCollProblem) = is_symmetric(coll.prob_vf)
 @inline getdelta(coll::PeriodicOrbitOCollProblem) = getdelta(coll.prob_vf)
 @inline get_state_dim(coll::PeriodicOrbitOCollProblem) = coll.N
+@inline meshadapt(coll::PeriodicOrbitOCollProblem) = coll.meshadapt
 
 function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     N, m, Ntst = size(coll)
@@ -327,8 +328,8 @@ function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     println(io, "├─ dimension   (N)    : ", coll.N)
     println(io, "├─ update section     : ", coll.update_section_every_step)
     println(io, "├─ jacobian           : ", coll.jacobian)
-    println(io, "├─ mesh adaptation    : ", coll.meshadapt)
-    if coll.meshadapt
+    println(io, "├─ mesh adaptation    : ", meshadapt(coll))
+    if meshadapt(coll)
         println(io, "├───── K              : ", coll.K)
     end
     println(io, "└─ # unknowns (without phase condition) : ", coll.N * (1 + m * Ntst))
@@ -375,7 +376,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             cache_In = false,
                             optimal_period::Bool = true,
                             use_adapted_mesh::Bool = false)
-    if use_adapted_mesh || ~pb.meshadapt
+    if use_adapted_mesh || ~meshadapt(pb)
         @warn "You initialize an adapted mesh but do not use mesh adaptation in the collocation problem!"
     end
     t0 = sol_ode.t[begin]
@@ -924,11 +925,12 @@ end
 
 # for recording the solution in a branch
 function save_solution(wrap::WrapPOColl, x, pars)
-    if wrap.prob.meshadapt
-        return POSolutionAndState(copy(get_times(wrap.prob)), 
+    coll = get_discretization(wrap)
+    if meshadapt(coll)
+        return POSolutionAndState(copy(get_times(coll)), 
                 x, 
-                copy(getmesh(wrap.prob.mesh_cache)),
-                copy(wrap.prob.ϕ),
+                copy(getmesh(coll.mesh_cache)),
+                copy(coll.ϕ),
                 )
     else
         return x
@@ -1287,7 +1289,7 @@ function update!(wrap::WrapPOColl, iter, state)
 
     # mesh adaptation
     if success &&
-            coll.meshadapt && 
+            meshadapt(coll) && 
             bisection == false && 
             mod_counter(step, update_section_every_step) == 1 &&
             step > 2
@@ -1334,4 +1336,3 @@ function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SPA.SparseMatrixCSC)
     end
     out
 end
-

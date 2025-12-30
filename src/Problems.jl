@@ -438,6 +438,8 @@ end
 # getters for AbstractBifurcationProblem
 getu0(pb::AbstractBifurcationProblem) = pb.u0
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem.
 """
 @inline getparams(pb::AbstractBifurcationProblem) = pb.params

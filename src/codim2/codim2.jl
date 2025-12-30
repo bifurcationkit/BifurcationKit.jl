@@ -237,6 +237,7 @@ end
 function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob}; prefix = "") where {Tprob}
     color = :cyan; bold = true
     print(io, prefix * "┌─ Minimally Augmented Problem continuation")
+    print(io, "\n" * prefix * "├─ update problem every step:  ", 𝐌𝐚.update_minaug_every_step)
     print(io, "\n" * prefix * "├─ use hessian:  ")
     printstyled(io, 𝐌𝐚.usehessian; color, bold)
     print(io, "\n" * prefix * "├─ linear solver:  ")
