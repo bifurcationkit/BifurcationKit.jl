@@ -1,10 +1,13 @@
 function compute_eigenvalues(eig::FoldEig, iter::ContIterable{FoldPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
-    Jma = jacobian(getprob(iter), u0, par)
-    # il ne faut pas mettre a jour les deux params?
-    x = getvec(u0)
-    prob = getprob(iter)
-    lens1, lens2 = get_lenses(getprob(iter)) # IL FAUT METTRE A JOUR LES DEUX
-    newpar = set(getparams(prob), lens1, getp(u0))
+    z = state.z
+    x = getvec(z.u) # fold point
+    p1 = getp(z.u)  # first parameter
+    p2 = z.p        # second parameter
+
+    probma = getprob(iter)
+    lens1, lens2 = get_lenses(probma)
+    newpar = set(getparams(probma), lens1, p1)
+    newpar = set(newpar, lens2, p2)
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end
 ####################################################################################################
