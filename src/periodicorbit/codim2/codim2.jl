@@ -139,10 +139,10 @@ for (op, at) in (
     end
 end
 
-get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
-get_wrap_po(pb::FoldMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
+get_wrap_po(𝐏𝐛::FoldMAProblem) = get_wrap_po(𝐏𝐛.prob)
+get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
+get_wrap_po(𝐌𝐚::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
+get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 
 __wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
 __wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)

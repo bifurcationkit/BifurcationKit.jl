@@ -155,18 +155,19 @@ let
     using ForwardDiff
     _probns = ns_po_sh.prob
     _x = ns_po_sh.sol[end].x
-    _solpo = ns_po_sh.sol[end].x.u
-    _p1 = ns_po_sh.sol[end].x.p
+    _solpo = _x.x
+    _p1 = _x.p1
+    _ω = _x.ω
     _p2 = ns_po_sh.sol[end].p
-    _param= BK.setparam(ns_po_sh, _p1[1])
+    _param = BK.setparam(ns_po_sh, _p1[1])
     _param = @set _param.ϵ = _p2
 
-    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
 
-    BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, copy(_x.u), 1., 1.)
+    BK.NSMALinearSolver(_solpo, _p1, _ω, _probns.prob, _param, copy(_solpo), 1., 1.)
 
     _probns_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
-    J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1), _param)
+    J_ns_mat = BK.jacobian(_probns_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-6
 end
 #########
@@ -212,16 +213,16 @@ BK.getprob(pd_po_sh2)
 let
     _probpd = pd_po_sh2.prob
     _x = pd_po_sh2.sol[end].x
-    _solpo = pd_po_sh2.sol[end].x.u
-    _p1 = pd_po_sh2.sol[end].x.p
+    _solpo = _x.x
+    _p1 = _x.p1
     _p2 = pd_po_sh2.sol[end].p
-    _param= BK.setparam(pd_po_sh2, _p1)
+    _param = BK.setparam(pd_po_sh2, _p1)
     _param = @set _param.ϵ = _p2
 
-    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_solpo, _p1))
 
     _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
-    J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_x.u, _x.p), _param)
+    J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
 
     @test norm(_Jpdad - J_pd_mat, Inf) < 1e-6
 end

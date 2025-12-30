@@ -155,16 +155,16 @@ let
                         )
     _probpd = pd_po_coll2.prob
     _x = pd_po_coll2.sol[end].x
-    _solpo = pd_po_coll2.sol[end].x.u
-    _p1 = pd_po_coll2.sol[end].x.p
+    _solpo = _x.x
+    _p1 = _x.p1
     _p2 = pd_po_coll2.sol[end].p
     _param = BK.setparam(pd_po_coll2, _p1)
     _param = @set _param.ϵ = _p2
 
-    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
-    # _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_x.u, _x.p))
+    _Jpdad = ForwardDiff.jacobian(x -> BK.residual(_probpd, x, _param), vcat(_solpo, _p1))
+    # _Jpdad = BK.finite_differences(x -> BK.residual(_probpd, x, _param), vcat(_solpo, _p1))
 
-    _duu = rand(length(_x.u))
+    _duu = rand(length(_solpo))
     𝐏𝐝 = _probpd.prob
     _sol = BK.PDMALinearSolver(_solpo, _p1, 𝐏𝐝, _param, _duu, 1.)
     _solfd = _Jpdad \ vcat(_duu, 1)
@@ -192,18 +192,19 @@ let
             ) 
     _probns = ns_po_coll.prob
     _x = ns_po_coll.sol[end].x
-    _solpo = ns_po_coll.sol[end].x.u
-    _p1 = ns_po_coll.sol[end].x.p
+    _solpo = _x.x
+    _p1 = _x.p1
+    _ω = _x.ω
     _p2 = ns_po_coll.sol[end].p
-    _param = BK.setparam(ns_po_coll, _p1[1])
+    _param = BK.setparam(ns_po_coll, _p1)
     _param = @set _param.ϵ = _p2
 
-    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
-    # _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_x.u, _x.p))
+    _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
+    # _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
 
     _duu = rand(317)
     _dp = rand()
-    _sol = BK.NSMALinearSolver(_solpo, _p1[1], _p1[2], _probns.prob, _param, _duu, _dp, 1.)
+    _sol = BK.NSMALinearSolver(_solpo, _p1, _ω, _probns.prob, _param, _duu, _dp, 1.)
     _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 
     @test norminf(_solfd[1:end-2] - _sol[1]) < 1e-2
@@ -211,6 +212,6 @@ let
     @test abs(_solfd[end] - _sol[3]) < 1e-2
 
     _probpd_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
-    J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
+    J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-7
 end

@@ -36,21 +36,21 @@ end
 
 for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD)
     @eval begin
-        function $(Symbol(op, :_normal_form))(probma::AbstractMABifurcationProblem{Tprob}, 
+        function $(Symbol(op, :_normal_form))(𝐏𝐛::AbstractMABifurcationProblem{Tprob}, 
                                 br,ind_bif;
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 lens = getlens(br),
                                 Teigvec = vectortype(br),
                                 scaleζ = norminf,
                                 kwargs_nf...) where {Tprob}
-            prob_ma = probma.prob
-            powrap = prob_ma.prob_vf
+            𝐌𝐚 = 𝐏𝐛.prob
+            powrap = 𝐌𝐚.prob_vf
 
             x0, parbif = get_bif_point_codim2(br, ind_bif)
 
             bifpt = br.specialpoint[ind_bif]
-            po = get_periodic_orbit(powrap, getvec(bifpt.x, prob_ma), nothing)
-            period = getperiod(powrap, getvec(bifpt.x, prob_ma), nothing)
+            po = get_periodic_orbit(powrap, x0, nothing)
+            period = getperiod(powrap, x0, nothing)
 
             $op(po, period, parbif, get_lenses(br), nothing, nothing, nothing, powrap, false)
         end
