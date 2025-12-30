@@ -1,6 +1,5 @@
-using IterativeSolvers, Arpack
+import Arpack
 import KrylovKit: eigsolve
-import LinearAlgebra
 
 abstract type AbstractEigenSolver end
 abstract type AbstractDirectEigenSolver <: AbstractEigenSolver end

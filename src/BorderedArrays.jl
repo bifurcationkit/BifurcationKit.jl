@@ -1,5 +1,5 @@
-import Base: eltype, zero
-import LinearAlgebra: norm, length, similar
+import Base: eltype, zero, length
+import LinearAlgebra: norm
 import KrylovKit: VectorInterface
 const VI = VectorInterface
 

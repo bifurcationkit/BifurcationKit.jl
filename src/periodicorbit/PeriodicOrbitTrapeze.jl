@@ -1,5 +1,3 @@
-using BlockArrays, SparseArrays
-
 """
 
 $(TYPEDEF)
@@ -154,7 +152,7 @@ setparam(pb::PeriodicOrbitTrapProblem, p) = set(getparams(pb), getlens(pb), p)
 # type unstable!
 @inline function get_mass_matrix(pb::PeriodicOrbitTrapProblem, return_type_Array = false)
     if return_type_Array == false
-        return hasmassmatrix(pb) ? pb.massmatrix : spdiagm( 0 => ones(pb.N))
+        return hasmassmatrix(pb) ? pb.massmatrix : SPA.spdiagm( 0 => ones(pb.N))
     else
         return hasmassmatrix(pb) ? pb.massmatrix : LinearAlgebra.I(pb.N)
     end
@@ -416,19 +414,19 @@ function jacobian_potrap_block(pb::PeriodicOrbitTrapProblem, u0::AbstractVector,
     # extraction of various constants
     M, N = size(pb)
 
-    Aγ = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
+    Aγ = BA.BlockArray(SPA.spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
     cylic_potrap_block!(pb, u0, par, Aγ)
 
-    Iₙ = spdiagm( 0 => ones(N))
-    Aγ[Block(M, 1)] = (-γ) * Iₙ
-    Aγ[Block(M, M)] = Iₙ
+    Iₙ = SPA.spdiagm( 0 => ones(N))
+    Aγ[BA.Block(M, 1)] = (-γ) * Iₙ
+    Aγ[BA.Block(M, M)] = Iₙ
     return Aγ
 end
 
 """
 This function populates Jc with the cyclic matrix using the different Jacobians
 """
-function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, Jc::BlockArray)
+function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par, Jc::BA.BlockArray)
     # extraction of various constants
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
@@ -442,21 +440,21 @@ function cylic_potrap_block!(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, p
 
     h = T * get_time_step(pb, 1)
     Jn = Iₙ - (h/2) .* tmpJ
-    Jc[Block(1, 1)] = Jn
+    Jc[BA.Block(1, 1)] = Jn
 
     # we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
     Jn = @views -Iₙ - (h/2) .* jacobian(pb.prob_vf, u0c[:, M-1], par)
-    Jc[Block(1, M-1)] = Jn
+    Jc[BA.Block(1, M-1)] = Jn
 
     for ii in 2:M-1
         h = T * get_time_step(pb, ii)
         Jn = -Iₙ - (h/2) .* tmpJ
-        Jc[Block(ii, ii-1)] = Jn
+        Jc[BA.Block(ii, ii-1)] = Jn
 
         tmpJ = @views jacobian(pb.prob_vf, u0c[:, ii], par)
 
         Jn = Iₙ - (h/2) .* tmpJ
-        Jc[Block(ii, ii)] = Jn
+        Jc[BA.Block(ii, ii)] = Jn
     end
     return Jc
 end
@@ -464,7 +462,7 @@ end
 function cylic_potrap_block(pb::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(pb)
-    Jc = BlockArray(spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
+    Jc = BA.BlockArray(SPA.spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
     cylic_potrap_block!(pb, u0, par, Jc)
 end
 
@@ -485,7 +483,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVecto
     # this is "bad" for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
     @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
-    Aγ = vcat(Aγ, spzeros(1, N * M + 1))
+    Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
 
     Aγ[N*M+1, eachindex(pb.ϕ)] .= pb.ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
@@ -499,7 +497,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         M, N = size(pb)
         T = _extract_period_fdtrap(pb, u0)
 
-        Iₙ = get_mass_matrix(pb, ~(Tj <: SparseMatrixCSC))
+        Iₙ = get_mass_matrix(pb, ~(Tj <: SPA.SparseMatrixCSC))
 
         u0c = get_time_slices(pb, u0)
         outc = similar(u0c)
@@ -616,7 +614,7 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
 
-    A_diagBlock = BlockArray(spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
+    A_diagBlock = BA.BlockArray(SPA.spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 
     In = get_mass_matrix(pb)
 
@@ -625,14 +623,14 @@ function (pb::PeriodicOrbitTrapProblem)(::Val{:BlockDiagSparse}, u0::AbstractVec
 
     h = T * get_time_step(pb, 1)
     @views Jn = In - h/2 .* jacobian(pb.prob_vf, u0c[:, 1], par)
-    A_diagBlock[Block(1, 1)] = Jn
+    A_diagBlock[BA.Block(1, 1)] = Jn
 
     for ii in 2:M-1
         h = T * get_time_step(pb, ii)
         @views Jn = In - h/2 .* jacobian(pb.prob_vf, u0c[:, ii], par)
-        A_diagBlock[Block(ii, ii)]= Jn
+        A_diagBlock[BA.Block(ii, ii)]= Jn
     end
-    A_diagBlock[Block(M, M)]= In
+    A_diagBlock[BA.Block(M, M)]= In
 
     A_diag_sp = block_to_sparse(A_diagBlock) # most of the computing time is here!!
     return A_diag_sp
@@ -686,7 +684,7 @@ end
 # implementation of Aγ which catches the LU decomposition of the cyclic matrix
 @with_kw mutable struct AγOperatorLU{Tjc, Tpb} <: AbstractPOTrapAγOperator
     N::Int64 = 0                           # dimension of time slice
-    Jc::Tjc    = lu(spdiagm(0 => ones(1))) # lu factorisation of the cyclic matrix
+    Jc::Tjc    = lu(SPA.spdiagm(0 => ones(1))) # lu factorisation of the cyclic matrix
     prob::Tpb = nothing                    # PO functional
 end
 
@@ -707,7 +705,7 @@ end
 
 function (A::AγOperatorLU)(orbitguess::AbstractVector, par)
     # we store the lu decomposition of the newly computed cyclic matrix
-    A.Jc = SparseArrays.lu(cylic_potrap_sparse(A.prob, orbitguess, par))
+    A.Jc = LA.lu(cylic_potrap_sparse(A.prob, orbitguess, par))
     A
 end
 
@@ -870,7 +868,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
         new_options = options # to prevent from duplicated code
     else # bordered linear solvers
         if jacobianPO == BorderedLU()
-            Aγ = AγOperatorLU(N = N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob = trap)
+            Aγ = AγOperatorLU(N = N, Jc = LA.lu(SPA.spdiagm( 0 => ones(N * (M - 1)) )), prob = trap)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
@@ -986,7 +984,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
                                 linear_algo,)
     else
         if jacobianPO == BorderedLU()
-            Aγ = AγOperatorLU(;N, Jc = LA.lu(spdiagm( 0 => ones(N * (M - 1)) )), prob)
+            Aγ = AγOperatorLU(;N, Jc = LA.lu(SPA.spdiagm( 0 => ones(N * (M - 1)) )), prob)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()

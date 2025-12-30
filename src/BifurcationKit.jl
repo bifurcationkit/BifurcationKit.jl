@@ -1,16 +1,21 @@
 module BifurcationKit
-    using Printf, Dates
-    import BlockArrays, StructArrays, LinearMaps
-    using Reexport
-    @reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
-    @reexport using ArnoldiMethod: LM, LR, LI, SR, SI
-    using Parameters: @with_kw, @with_kw_noshow
-    using PreallocationTools: DiffCache, get_tmp
-    using DocStringExtensions
+    import Dates
+    import Printf: @printf, @sprintf
+    import StructArrays, LinearMaps
     import DataStructures # used for Polynomial predictor
-    using ForwardDiff
+    import ForwardDiff
     import Random: randn!
     import LinearAlgebra as LA
+    import BlockArrays as BA
+    import SparseArrays as SPA
+
+    using Parameters: @with_kw, @with_kw_noshow
+    import PreallocationTools: DiffCache, get_tmp
+    using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF, TYPEDFIELDS, TYPEDSIGNATURES
+
+    import Reexport
+    Reexport.@reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
+    Reexport.@reexport using ArnoldiMethod: LM, LR, LI, SR, SI
 
     include("Accessors.jl")
     include("Problems.jl")

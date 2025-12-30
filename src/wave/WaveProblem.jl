@@ -236,7 +236,7 @@ function continuation(prob::TWProblem,
     @assert jacobianTW in (MatrixFree(), AutoDiffMF(), AutoDiff(), FullLU(), FiniteDifferences())
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
-    B = spdiagm(vcat(ones(N-1), 0))
+    B = SPA.spdiagm(vcat(ones(N-1), 0))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convertToGEV(old_eigsolver, B)

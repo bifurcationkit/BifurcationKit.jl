@@ -144,20 +144,18 @@ Same as finite_differences but with inplace `F`
     return J
 end
 ####################################################################################################
-using BlockArrays, SparseArrays
-
-function block_to_sparse(J::AbstractBlockArray)
+function block_to_sparse(J::BA.AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
-    res = J[Block(1,1)]
+    res = J[BA.Block(1,1)]
     @inbounds for j in 2:nc
-        res = hcat(res, J[Block(1,j)])
+        res = hcat(res, J[BA.Block(1,j)])
     end
     # continue with the other lines
     @inbounds for i in 2:nl
-        line = J[Block(i,1)]
+        line = J[BA.Block(i,1)]
         for j in 2:nc
-            line = hcat(line, J[Block(i,j)])
+            line = hcat(line, J[BA.Block(i,j)])
         end
         res = vcat(res,line)
     end
@@ -169,8 +167,8 @@ $(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
 """
-function get_blocks(A::SparseMatrixCSC, N, M)
-    I, J, K = findnz(A)
+function get_blocks(A::SPA.SparseMatrixCSC, N, M)
+    I, J, K = SPA.findnz(A)
     out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
     for k in eachindex(I)
         m, l = div(I[k]-1, N), div(J[k]-1, N)

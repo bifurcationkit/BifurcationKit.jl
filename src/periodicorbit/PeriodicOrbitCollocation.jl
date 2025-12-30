@@ -709,7 +709,7 @@ function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector,
                                     pars; 
                                     k...)
-    jacBlock = jacobian_poocoll_block(coll, u, pars; array_zeros = spzeros, k...)
+    jacBlock = jacobian_poocoll_block(coll, u, pars; array_zeros = SPA.spzeros, k...)
     block_to_sparse(jacBlock)
 end
 
@@ -722,12 +722,12 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
     n, m, Ntst = size(coll)
     blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)
-    J = BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
+    J = BA.BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
     jacobian_poocoll_block!(J, coll, u, pars; kwargs...)
     return J
 end
 
-@views function jacobian_poocoll_block!(J::BlockArray,
+@views function jacobian_poocoll_block!(J::BA.BlockArray,
                                 coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
                                 pars;
@@ -752,8 +752,8 @@ end
     In = LA.I(n)
 
     # put boundary condition
-    view(J, Block(1 + m * Ntst, 1 + m * Ntst)) .= In
-    view(J, Block(1 + m * Ntst, 1)) .= (-1) .* In
+    view(J, BA.Block(1 + m * Ntst, 1 + m * Ntst)) .= In
+    view(J, BA.Block(1 + m * Ntst, 1)) .= (-1) .* In
 
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
@@ -774,27 +774,27 @@ end
             end
 
             for l2 in 1:m+1
-                view(J, Block(l + (j-1)*m, l2 + (j-1)*m)) .= @. (-α * L[l2, l] * ρF) * J0 +
+                view(J, BA.Block(l + (j-1)*m, l2 + (j-1)*m)) .= @. (-α * L[l2, l] * ρF) * J0 +
                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
             # add derivative w.r.t. the period
-            residual!(VF, view(J, Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
-            view(J, Block(l + (j-1)*m, n_blocks)) .*= (-dt)
+            residual!(VF, view(J, BA.Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
+            view(J, BA.Block(l + (j-1)*m, n_blocks)) .*= (-dt)
 
             phase += LA.dot(pj[:, l], coll.∂ϕ[:, iₚ + l]) * ω[l]
-            view(J, Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period
+            view(J, BA.Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period
             i∇ += 1; rgNx = rgNx .+ n
         end
         iₚ += m
         rg = rg .+ m
     end
-    view(J, Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period # last bit
+    view(J, BA.Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period # last bit
     J.blocks[end, end][1] = -phase / period^2
     return J
 end
 
 @views function jacobian_poocoll_sparse_indx!(coll::PeriodicOrbitOCollProblem,
-                                        J::AbstractSparseMatrix,
+                                        J::SPA.AbstractSparseMatrix,
                                         u::AbstractVector{𝒯},
                                         pars,
                                         indx; 
@@ -814,10 +814,10 @@ end
     phase = zero(𝒯)
     uc = get_time_slices(coll, u)
     pj = zeros(𝒯, n, m)
-    In = sparse(LA.I(n))
+    In = SPA.sparse(LA.I(n))
     J0 = jacobian(coll.prob_vf, uc[1:n], pars)
     tmpJ = copy(J0 + In)
-    @assert J0 isa AbstractSparseMatrix
+    @assert J0 isa SPA.AbstractSparseMatrix
 
     # vector field
     VF = coll.prob_vf
@@ -1289,11 +1289,11 @@ $(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix J which is a M x M Block matrix where each block N x N has the same sparsity.
 """
-function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
+function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SPA.SparseMatrixCSC)
     N, m, Ntst = size(coll)
     blocks = N * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)
-    I, J, K = findnz(Jac)
+    I, J, K = SPA.findnz(Jac)
     out = [Vector{Int}() for i in 1:n_blocks, j in 1:n_blocks];
     for k in eachindex(I)
         i, j = div(I[k]-1, N), div(J[k]-1, N)

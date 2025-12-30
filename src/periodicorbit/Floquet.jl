@@ -659,7 +659,7 @@ end
     return _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 end
 
-@views function _eig_floquet_coll(J::AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
+@views function _eig_floquet_coll(J::SPA.AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
     nbcoll = N * m
     In = LinearAlgebra.I(N)
 
@@ -687,7 +687,7 @@ end
     Lₜ = LA.LowerTriangular(copy(blockⱼ))
 
     first_column_block = Matrix{𝒯}[]
-    upper_triangular = SparseMatrixCSC{𝒯, Int64}[]
+    upper_triangular = SPA.SparseMatrixCSC{𝒯, Int64}[]
 
     for 𝐢 in 1:Ntst
         # blockⱼ .= J[rg, rg .+ N]
