@@ -173,9 +173,8 @@ function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffMF, x, p)
     return dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p)
-    return dx -> jvp(probPO, x, p, dx)
-end
+jacobian(probPO::AbstractPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(probPO, x, p, dx)
+
 
 """
 $(TYPEDSIGNATURES)

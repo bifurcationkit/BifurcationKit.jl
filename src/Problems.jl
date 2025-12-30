@@ -40,7 +40,7 @@ abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
 abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
 abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
 ################################################################################
-# const type to hold "all" the types of optics. Note that we relied on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
+# const type to hold "all" the types of optics. Note that we used to rely on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
 """
@@ -439,6 +439,12 @@ has_hessian(pb::AbstractAllJetBifProblem) = has_hessian(pb.VF)
 has_adjoint(pb::AbstractAllJetBifProblem) = has_adjoint(pb.VF)
 has_adjoint_MF(pb::AbstractAllJetBifProblem) = has_adjoint_MF(pb.VF)
 getdelta(pb::AbstractAllJetBifProblem) = getdelta(pb.VF)
+
+# simple trait for dispatching on user passed functions
+struct NoUserPassedFunction end
+struct UserPassedFunction end
+user_passed_function(f) = UserPassedFunction()
+user_passed_function(::Nothing) = NoUserPassedFunction()
 
 for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
     @eval begin

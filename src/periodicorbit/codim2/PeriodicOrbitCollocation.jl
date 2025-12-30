@@ -266,7 +266,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
     # perform continuation
-    continuation_ns(br.prob, alg,
+    continuation_ns(getprob(br), alg,
         nspointguess, setparam(br, nspointguess.p[1]),
         getlens(br), lens2,
         p, q,

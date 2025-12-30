@@ -99,6 +99,8 @@ Base.length(it::ContIterable) = it.contparams.max_steps
 # clamp p value
 clamp_predp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contparams.p_min, it.contparams.p_max)
 
+finalise_default(z, tau, step, contResult; k...) = true
+
 function finalise_solution(iter::ContIterable, state::AbstractContinuationState, contRes)
     return iter.finalise_solution(getsolution(state),
                                   state.τ,

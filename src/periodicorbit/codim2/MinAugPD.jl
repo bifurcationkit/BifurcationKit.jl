@@ -58,7 +58,8 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     # the solution is v = -σ1 (J+I)\a with σ1 = -1/<b, (J+I)⁻¹a>.
     # In the case of collocation, the matrix J is simply Jpo without the phase condition and with PD boundary condition.
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
-    σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)[2]
+    _, σ, cv, = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
+    ~cv && @debug "[PD residual] Linear solver for J+I did not converge."
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
 ###################################################################################################

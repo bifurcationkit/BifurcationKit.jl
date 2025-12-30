@@ -244,4 +244,3 @@ struct Finaliser{Tp, Tf}
     updateSectionEveryStep::UInt
 end
 
-finalise_default(z, tau, step, contResult; k...) = true
