@@ -36,17 +36,6 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) whe
     ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
-
-# this function encodes the functional
-function (𝐇::HopfProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐇(x.u, x.p[1], x.p[2], params)
-    return BorderedArray(res[1], [res[2], res[3]])
-end
-
-@views function (𝐇::HopfProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐇(x[begin:end-2], x[end-1], x[end], params)
-    return vcat(res[1], res[2], res[3])
-end
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -206,28 +195,15 @@ function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}
     out = _hopf_MA_linear_solver((Jhopf.x).u, #!! TODO !! This seems TU
                 (Jhopf.x).p[1],
                 (Jhopf.x).p[2],
-                Jhopf.hopfpb,
+                Jhopf.pbma,
                 Jhopf.params,
                 du.u, du.p[1], du.p[2])
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
-# define a problem <: AbstractBifurcationProblem
 @inline has_adjoint(hopfpb::HopfMAProblem) = has_adjoint(hopfpb.prob)
 @inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
-@inline getdelta(hopfpb::HopfMAProblem) = getdelta(hopfpb.prob)
-residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
-residual!(hopfpb::HopfMAProblem, out, x, p) = (_copyto!(out, hopfpb.prob(x, p)); out)
-save_solution(::HopfMAProblem, x ,p) = x
 
-# jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
-jacobian(hopfpb::HopfMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, hopfpb = hopfpb.prob)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -303,7 +279,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     ζ ./= normN(ζ)
-    ζad = LinearAlgebra.conj.(ζ)
+    ζad = conj.(ζ)
 
     if start_with_eigen
         # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
@@ -683,8 +659,8 @@ function (eig::HopfEig)(Jma, nev; k...)
     n = min(nev, length(getvec(Jma.x)))
     x = Jma.x.u     # hopf point
     p1, ω = Jma.x.p # first parameter
-    newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
-    J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
+    newpar = set(Jma.params, getlens(Jma.pbma), p1)
+    J = jacobian(Jma.pbma.prob_vf, x, newpar)
     eigenelts = eig.eigsolver(J, n; k...)
     return eigenelts
 end

@@ -36,17 +36,6 @@ function (𝐅::FoldProblemMinimallyAugmented)(x, p::𝒯, params) where 𝒯
     ~cv && @debug "[Fold residual] Linear solver for J did not converge."
     return residual(𝐅.prob_vf, x, par), σ
 end
-
-# this function encodes the functional
-function (𝐅::FoldProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐅(x.u, x.p, params)
-    return BorderedArray(res[1], res[2])
-end
-
-@views function (𝐅::FoldProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐅(x[begin:end-1], x[end], params)
-    return vcat(res[1], res[2])
-end
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -182,29 +171,15 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = foldMALinearSolver((Jfold.x).u,
                  (Jfold.x).p,
-                 Jfold.prob,
+                 Jfold.pbma,
                  Jfold.params,
                  du.u, du.p)
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
 ###################################################################################################
 @inline has_adjoint(foldpb::FoldMAProblem) = has_adjoint(foldpb.prob)
-@inline getdelta(foldpb::FoldMAProblem) = getdelta(foldpb.prob)
 @inline is_symmetric(foldpb::FoldMAProblem) = is_symmetric(foldpb.prob)
-residual(foldpb::FoldMAProblem, x, p) = foldpb.prob(x, p)
-residual!(foldpb::FoldMAProblem, out, x, p) = (_copyto!(out, foldpb.prob(x, p)); out)
 jacobian_adjoint(foldpb::FoldMAProblem, args...) = jacobian_adjoint(foldpb.prob, args...)
-save_solution(::FoldMAProblem, x, p) = x
-
-jacobian(foldpb::FoldMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = foldpb.prob)
-
-function jacobian(foldpb::FoldMAProblem{Tprob, AutoDiff}, x, p) where {Tprob}
-    ForwardDiff.jacobian(z -> foldpb.prob(z, p), x)
-end
-
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> foldpb.prob(z, p), x; δ = 1e-8)
-
-jacobian(foldpb::FoldMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (foldpb.prob(x .+ 1e-8 .* dx, p) .- foldpb.prob(x .- 1e-8 .* dx, p)) ./ (2e-8)
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -358,7 +333,7 @@ $(TYPEDSIGNATURES)
 
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationFunction`
-- `foldpointguess` initial guess (x_0, p1_0) for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
+- `foldpointguess` initial guess `(x_0, p1_0)` for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
 - `par` set of parameters
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2
@@ -454,7 +429,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     # Allow to tackle the case where the two parameters have the same name
     lenses = get_lens_symbol(lens1, lens2)
 
-    # global variables to save call back
+    # variables to save call back
     𝐅.BT = one(𝒯)
     𝐅.CP = one(𝒯)
     𝐅.ZH = 1
@@ -644,7 +619,7 @@ FoldEig(solver) = FoldEig(solver, nothing)
 function (eig::FoldEig)(Jma, nev; kwargs...)
     # il ne faut pas mettre a jour les deux params?
     n = min(nev, length(getvec(Jma.x)))
-    J = jacobian(Jma.prob.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.prob), getp(Jma.x)))
+    J = jacobian(Jma.pbma.prob_vf, getvec(Jma.x), set(Jma.params, getlens(Jma.pbma), getp(Jma.x)))
     return eig.eigsolver(J, n; kwargs...)
 end
 

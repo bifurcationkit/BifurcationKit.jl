@@ -50,17 +50,6 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯
     σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
-
-# this function encodes the functional
-function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐍𝐒(x.u, x.p[1], x.p[2], params)
-    return BorderedArray(res[1], [res[2], res[3]])
-end
-
-@views function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐍𝐒(x[begin:end-2], x[end-1], x[end], params)
-    return vcat(res[1], res[2], res[3])
-end
 ###################################################################################################
 function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, JNS, JNS★, ω)
     a = 𝐍𝐒.a
@@ -231,16 +220,8 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kw
 end
 ###################################################################################################
 get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
-residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
-residual!(nspb::NSMAProblem, out, x, p) = (_copyto!(out, nspb.prob(x, p)); out)
-@inline getdelta(nspb::NSMAProblem) = getdelta(nspb.prob)
-save_solution(::NSMAProblem, x ,p) = x
-
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
-jacobian(nspb::NSMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) ./ (2e-8)
 ###################################################################################################
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,

@@ -61,18 +61,21 @@ function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x, p::𝒯, params)
     σ = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)[2]
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
-
-# this function encodes the functional
-function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐏𝐝(x.u, x.p, params)
-    return BorderedArray(res[1], res[2])
-end
-
-@views function (𝐏𝐝::PeriodDoublingProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐏𝐝(x[begin:end-1], x[end], params)
-    return vcat(res[1], res[2])
-end
 ###################################################################################################
+"""
+$(TYPEDSIGNATURES)
+
+Compute the solution of 
+
+```
+┌              ┐┌  ┐   ┌   ┐
+│ J+I   𝐅.a    ││v │ = │ 0 │
+│ 𝐅.b'   0     ││σ │   │ 1 │
+└              ┘└  ┘   └   ┘
+```
+
+and the same for the adjoint system.
+"""
 function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingProblemMinimallyAugmented, JPD, JPD★)
     a = 𝐏𝐝.a
     b = 𝐏𝐝.b
@@ -194,7 +197,7 @@ function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kw
     # kwargs is used by AbstractLinearSolver
     out = PDMALinearSolver((Jpd.x).u,
                  (Jpd.x).p,
-                 Jpd.prob,
+                 Jpd.pbma,
                  Jpd.params,
                  rhs.u, rhs.p)
     # this type annotation enforces type stability
@@ -204,15 +207,6 @@ end
 get_wrap_po(pb::PDMAProblem) = get_wrap_po(pb.prob)
 @inline has_adjoint(pdpb::PDMAProblem) = has_adjoint(pdpb.prob)
 @inline is_symmetric(pdpb::PDMAProblem) = is_symmetric(pdpb.prob)
-@inline getdelta(pdpb::PDMAProblem) = getdelta(pdpb.prob)
-residual(pdpb::PDMAProblem, x, p) = pdpb.prob(x, p)
-residual!(pdpb::PDMAProblem, out, x, p) = (_copyto!(out, pdpb.prob(x, p)); out)
-save_solution(::PDMAProblem, x, p) = x
-
-jacobian(pdpb::PDMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, prob = pdpb.prob)
-jacobian(pdpb::PDMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> pdpb.prob(z, p), x)
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> pdpb.prob(z, p), x; δ = 1e-8)
-jacobian(pdpb::PDMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (pdpb.prob(x .+ 1e-8 .* dx, p) .- pdpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ################################################################################################### Newton / Continuation functions
 """
 $(SIGNATURES)
