@@ -117,7 +117,7 @@ function testEV(br, verbose = false)
         verbose && (println("="^50); @info step ii)
         x0 = BK.getvec(br.sol[ii].x, prob_ma)
         p0 = BK.getp(br.sol[ii].x, prob_ma)[1]
-        if prob_ma isa HopfProblemMinimallyAugmented
+        if prob_ma isa BK.HopfMinimallyAugmentedFormulation
             ω0 = BK.getp(br.sol[ii].x, prob_ma)[2]
         end
         p1 = br.sol[ii].p
@@ -130,7 +130,7 @@ function testEV(br, verbose = false)
         @test par1.T == pt.T && par1.F == pt.F
         resf = prob_vf.VF.F(x0, par1)
         @test norminf(resf) < ϵ
-        if prob_ma isa FoldProblemMinimallyAugmented
+        if prob_ma isa BK.FoldMinimallyAugmentedFormulation
             res = prob_ma(x0, p0, BK.set(par0, lens1, p1))
         else
             res = prob_ma(x0, p0, ω0, BK.set(par0, lens1, p1))

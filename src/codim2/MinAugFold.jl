@@ -316,11 +316,10 @@ function update!(probma::FoldMAProblem, iter, state)
     if is_symmetric(𝐅)
         JAd_at_xp = J_at_xp
     else
-        JAd_at_xp = has_adjoint(𝐅) ? jad(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
+        JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
     end
 
     bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
-
     _copyto!(𝐅.a, bd_vec.w); VI.scale!(𝐅.a, 1 / 𝐅.norm(bd_vec.w))
     # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
     _copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / 𝐅.norm(bd_vec.v))

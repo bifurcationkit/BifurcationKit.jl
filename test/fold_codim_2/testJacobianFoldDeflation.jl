@@ -50,7 +50,7 @@ end
 let
     indfold = 1
     foldpt = BK.fold_point(br, indfold)
-    foldpb = FoldProblemMinimallyAugmented(
+    foldpb = BK.FoldMinimallyAugmentedFormulation(
                     (@set prob.VF.d2F = nothing), # this is for debug array
                     br.specialpoint[indfold].x,
                     br.specialpoint[indfold].x,
@@ -85,7 +85,7 @@ let
     @test norminf(J_ana - J_fold_fwdiff) < 1e-5
 
     ###
-    Jac_fold_MA(u0, p, pb::FoldProblemMinimallyAugmented) = (return (x=u0, params=p, pbma = pb))
+    Jac_fold_MA(u0, p, pb::BK.FoldMinimallyAugmentedFormulation) = (return (x=u0, params=p, pbma = pb))
     res_explicit = BK.FoldLinearSolverMinAug()(Jac_fold_MA(foldpt, par_chan, foldpb), Vec2Bd(rhs))
 
     # we test the expression for σp

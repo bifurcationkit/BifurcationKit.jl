@@ -148,7 +148,6 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     return POCollCache(gj, gi, ∂gj, uj, vj, tmp, ∇phase, In)
 end
 ####################################################################################################
-
 const _pocoll_jacobian_types = (AutoDiffDense(),
                                 DenseAnalytical(),
                                 FullSparse(),
@@ -561,7 +560,7 @@ end
                 phase += LA.dot(pj[:, l], pb.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
         end
-        # carefull here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
+        # careful here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
         rg = rg .+ m
     end
     return phase / period

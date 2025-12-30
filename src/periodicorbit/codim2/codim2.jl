@@ -192,10 +192,9 @@ function _continuation(gh::Bautin,
                         detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
-                        # start_with_eigen = false,
                         Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-                        kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+                        kwargs...) where {Tkind, Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
@@ -242,23 +241,11 @@ function _continuation(gh::Bautin,
 
     contParams = _contParams
 
-    # set the second derivative
-    prob_po_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p),
-                orbitguess,
-                getparams(pbwrap),
-                getlens(pbwrap);
-                J = (x, p) -> jacobian(pbwrap, x, p),
-                Jᵗ = Jᵗ,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(probPO, z, p), x, dx1, dx2),
-                record_from_solution = _recordsol,
-                plot_solution = _plotsol,
-                )
-
     # create fold point guess
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold))
+    jacpo = jacobian(pbwrap, orbitguess, getparams(pbwrap))
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -272,8 +259,8 @@ function _continuation(gh::Bautin,
     ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
-    branch = continuation_fold(prob_po_fold, alg,
-        foldpointguess, getparams(prob_po_fold),
+    branch = continuation_fold(pbwrap, alg,
+        foldpointguess, getparams(pbwrap),
         lens1, lens2,
         # p, q,
         q, p,
@@ -281,7 +268,6 @@ function _continuation(gh::Bautin,
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
         bdlinsolver,
-        # linear_algo = _linear_algo,
     )
     return Branch(branch, gh)
 end

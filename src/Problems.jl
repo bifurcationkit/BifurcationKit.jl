@@ -27,8 +27,8 @@ abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
 # Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
-abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
 # finite differences is a sub-case of Diff discretization
+abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end 
 abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
 #####################################
 # Periodic orbit computations by shooting method
@@ -283,7 +283,7 @@ for (op, at) in (
                 lens::Tl
                 "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for `Plot.jl` and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the `Makie.jl`."
                 plotSolution::Tplot
-                "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x,p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
+                "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x, p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
                 "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`."
                 save_solution::Tgets
@@ -345,6 +345,7 @@ for (op, at) in (
             # dummy constructor
             $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
             residual!(pb::$op, o, x, p) = residual!(pb.prob, o, x, p)
+            get_discretization(pb::$op) = pb.prob
         end
     end
 

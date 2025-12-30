@@ -23,14 +23,20 @@ end
 ####################################################################################################
 ## TODO MERGE WITH UPDATE!(COLLOCATION)
 
+__get_discretization(pb::AbstractWrapperPOProblem) = get_discretization(pb)
+__get_discretization(pb::AbstractMinimallyAugmentedFormulation) = __get_discretization(pb.prob_vf)
+__get_discretization(pb::AbstractPeriodicOrbitProblem) = pb
+
 function __update_codim1_po!(𝐏𝐛, iter, state)
-    # we get the MA problem
-    prob_sh = 𝐏𝐛.prob_vf.prob
+    @error "" typeof(𝐏𝐛)
+    # we get the AbstractPeriodicOrbitProblem
+    disc_po = __get_discretization(𝐏𝐛)
+    @error "" typeof(disc_po)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
     success = converged(state)
     bisection = in_bisection(state)
-    if success && mod_counter(step, prob_sh.update_section_every_step) == 1 && bisection == false
+    if success && mod_counter(step, disc_po.update_section_every_step) == 1 && bisection == false
         # state vector at bifurcation point
         z = getsolution(state)
         x = getvec(z.u, 𝐏𝐛)
@@ -38,9 +44,9 @@ function __update_codim1_po!(𝐏𝐛, iter, state)
         lenses = get_lenses(getprob(iter))
         p1, = getp(z.u, 𝐏𝐛)   # first parameter, TODO it errors for Folds if p1, _ = getp(...)
         p2 = z.p              # second parameter
-        pars = _set(getparams(prob_sh), lenses, (p1, p2))
+        pars = _set(getparams(disc_po), lenses, (p1, p2))
         @debug "[Periodic orbit] update section"
-        updatesection!(prob_sh, x, pars)
+        updatesection!(disc_po, x, pars)
     end
     return true
 end

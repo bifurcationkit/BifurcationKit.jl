@@ -157,10 +157,10 @@ module BifurcationKit
     export ContIterable, iterate, ContState, getsolution, getx, getp, getpreviousx, getpreviousp, gettangent, getpredictor, get_previous_solution
 
     # codim2 Fold continuation
-    export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolverMinAug
+    export foldpoint, FoldLinearSolverMinAug
 
     # codim2 Hopf continuation
-    export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolverMinAug
+    export HopfPoint, HopfLinearSolverMinAug
 
     # normal form
     export get_normal_form, hopf_normal_form, predictor

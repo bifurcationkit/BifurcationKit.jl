@@ -91,7 +91,7 @@ let
     ind_hopf = 1
     hopfpt = BK.hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
-    𝐇 = HopfProblemMinimallyAugmented(
+    𝐇 = BK.HopfMinimallyAugmentedFormulation(
                         (@set prob.VF.d2F = nothing),
                         conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
                         (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
@@ -104,7 +104,7 @@ let
     # finite differences Jacobian
     Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian(u -> hopfpbVec(u, p), u0)
     # ``analytical'' jacobian
-    Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x = u0, params = p, pbma = pb))
+    Jac_hopf_MA(u0, p, pb::BK.HopfMinimallyAugmentedFormulation) = (return (x = u0, params = p, pbma = pb))
 
     rhs = rand(length(hopfpt))
     jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
