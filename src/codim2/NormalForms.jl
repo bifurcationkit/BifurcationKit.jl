@@ -522,7 +522,7 @@ function bogdanov_takens_normal_form(_prob,
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
 
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
 
     # kernel dimension
     N = 2
@@ -978,7 +978,7 @@ function zero_hopf_normal_form(_prob,
 
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
 
     # linear solver
     ls = prob_ma.linsolver
@@ -1328,7 +1328,7 @@ function hopf_hopf_normal_form(_prob,
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
 
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
 
     # linear solver
     ls = prob_ma.linsolver

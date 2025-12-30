@@ -246,8 +246,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # options for the Newton Solver inheritated from the ones the user provided
     newton_options = options_cont.newton_options
-    # tolerance for detecting R1 bifurcation and stopping continuation
-    ϵR1 = 100newton_options.tol
 
     𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
             prob,

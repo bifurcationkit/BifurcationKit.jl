@@ -372,7 +372,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `bdlinsolver` bordered linear solver for the constraint equation with top-left block (J-iω). Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)^*. Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a,b` in Minimally Formulation every `update_minaug_every_step` steps
-- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event>0`, it allows the detection of ZH, HH points.
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event > 0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:

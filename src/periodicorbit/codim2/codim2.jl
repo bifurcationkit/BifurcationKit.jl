@@ -2,8 +2,10 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
-for op in (:NeimarkSackerProblemMinimallyAugmented,
-           :PeriodDoublingProblemMinimallyAugmented)
+for (op, at) in (
+           (:NeimarkSackerProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Hopf_NS),
+           (:PeriodDoublingProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Fold_PD)
+           )
     @eval begin
         """
         $(TYPEDEF)
@@ -23,7 +25,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                            Sbda <: AbstractBorderedLinearSolver,
                            Tmass,
                            Tnorm,
-                           Tnewton} <: AbstractProblemMinimallyAugmented{Tprob}
+                           Tnewton} <: $at{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
             "close to null vector of Jᵗ"
@@ -139,6 +141,7 @@ end
 
 @inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
 @inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
+
 get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
 get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
 get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)

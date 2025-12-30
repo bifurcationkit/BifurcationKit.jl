@@ -1,4 +1,6 @@
-abstract type AbstractProblemMinimallyAugmented{Tprob} end
+abstract type AbstractMinimallyAugmentedFormulation{Tprob} end
+abstract type AbstractMinimallyAugmentedFormulation_Fold_PD{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
+abstract type AbstractMinimallyAugmentedFormulation_Hopf_NS{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
@@ -16,8 +18,10 @@ end
     get_lenses(br.prob)
 end
 
-for op in (:FoldProblemMinimallyAugmented, 
-           :HopfProblemMinimallyAugmented)
+for (op, at) in (
+            (:FoldProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Fold_PD),
+            (:HopfProblemMinimallyAugmented, AbstractMinimallyAugmentedFormulation_Hopf_NS),
+            )
     @eval begin
     """
     $(TYPEDEF)
@@ -36,7 +40,7 @@ for op in (:FoldProblemMinimallyAugmented,
                        Sbd <: AbstractBorderedLinearSolver,
                        Sbda <: AbstractBorderedLinearSolver,
                        Tmass,
-                       Tn} <: AbstractProblemMinimallyAugmented{Tprob}
+                       Tn} <: $at{Tprob}
         "Functional F(x, p) - vector field - with all derivatives."
         prob_vf::Tprob
         "close to null vector of Jᵗ."
@@ -74,6 +78,7 @@ for op in (:FoldProblemMinimallyAugmented,
     end
 
     @inline Base.eltype(pb::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
+    @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
     @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
     @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
     @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -152,23 +157,23 @@ jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, pbma = 𝐏𝐛.prob)
 ################################################################################
 # this function encodes the functional for Fold/PD
-function (𝐏𝐛::Union{FoldProblemMinimallyAugmented, PeriodDoublingProblemMinimallyAugmented})(x::BorderedArray, params)
+function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::BorderedArray, params)
     res = 𝐏𝐛(x.u, x.p, params)
     return BorderedArray(res[1], res[2])
 end
 
-@views function (𝐏𝐛::Union{FoldProblemMinimallyAugmented, PeriodDoublingProblemMinimallyAugmented})(x::AbstractVector, params)
+@views function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::AbstractVector, params)
     res = 𝐏𝐛(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
 ################################################################################
 # this function encodes the functional for Hopf/NS
-function (𝐏𝐛::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::BorderedArray, params)
+function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::BorderedArray, params)
     res = 𝐏𝐛(x.u, x.p[1], x.p[2], params)
     return BorderedArray(res[1], [res[2], res[3]])
 end
 
-@views function (𝐏𝐛::Union{HopfProblemMinimallyAugmented, NeimarkSackerProblemMinimallyAugmented})(x::AbstractVector, params)
+@views function (𝐏𝐛::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::AbstractVector, params)
     res = 𝐏𝐛(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
@@ -202,7 +207,7 @@ function Base.show(io::IO, prob::AbstractMABifurcationProblem; prefix = "")
     printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
 end
 
-function Base.show(io::IO, prob::AbstractProblemMinimallyAugmented{Tprob}; prefix = "") where {Tprob}
+function Base.show(io::IO, prob::AbstractMinimallyAugmentedFormulation{Tprob}; prefix = "") where {Tprob}
     print(io, prefix * "┌─ Minimally Augmented Problem continuation")
     print(io, "\n" * prefix * "├─ use hessian:  ")
     printstyled(io, prob.usehessian, color = :cyan, bold = true)
@@ -485,7 +490,7 @@ $(TYPEDSIGNATURES)
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
 function correct_bifurcation(contres::ContResult)
-    if contres.prob.prob isa AbstractProblemMinimallyAugmented == false
+    if contres.prob.prob isa AbstractMinimallyAugmentedFormulation == false
         return contres
     end
     if contres.prob.prob isa FoldProblemMinimallyAugmented
