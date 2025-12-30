@@ -279,6 +279,20 @@ function update!(probma::NSMAProblem, iter, state)
 
     return ~stop_R1 && isbif && final_result && ~pdjump
 end
+###################################################################################################
+function finalise_solution(iter::ContIterable{NSPeriodicOrbitCont}, 
+                           state::AbstractContinuationState, 
+                           contres)
+    isbt = isnothing(contres) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
+    fin_user = iter.finalise_solution(getsolution(state),
+                                  state.τ,
+                                  state.step,
+                                  contres; 
+                                  state,
+                                  iter)
+    return isbt && fin_user
+end
+
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
                         lens1::AllOpticTypes, lens2::AllOpticTypes,

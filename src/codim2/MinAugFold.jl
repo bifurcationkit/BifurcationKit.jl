@@ -325,7 +325,7 @@ function update!(probma::FoldMAProblem, iter, state)
     # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
     _copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / 𝐅.norm(bd_vec.v))
 
-    return true
+    return update!(𝐅, iter, state)
 end
 
 """

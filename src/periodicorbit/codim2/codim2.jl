@@ -139,9 +139,6 @@ for (op, at) in (
     end
 end
 
-@inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
-@inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
-
 get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
 get_wrap_po(pb::FoldMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
 get_wrap_po(pb::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(pb.prob_vf)
@@ -233,11 +230,6 @@ function _continuation(gh::Bautin,
     end
 
     # change the user provided functions by passing probPO in its parameters
-    if probPO isa PeriodicOrbitOCollProblem
-        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(probPO))), kwargs, probPO.update_section_every_step)
-    else
-        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probPO))), kwargs, probPO.update_section_every_step)
-    end
     _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
 

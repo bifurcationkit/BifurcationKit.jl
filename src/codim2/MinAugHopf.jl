@@ -204,6 +204,18 @@ end
 @inline has_adjoint(hopfpb::HopfMAProblem) = has_adjoint(hopfpb.prob)
 @inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
 
+function finalise_solution(iter::ContIterable{HopfCont},
+                            state::AbstractContinuationState, 
+                            contres)
+    isbt = isnothing(contres) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
+    fin_user = iter.finalise_solution(getsolution(state),
+                                  state.τ,
+                                  state.step,
+                                  contres; 
+                                  state,
+                                  iter)
+    return isbt && fin_user
+end
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
