@@ -88,26 +88,27 @@ _getindex(v, i) = v[i]
 _getindex(v::VI.MinimalVec, i) = v.vec[i]
 
 function Base.show(io::IO, sh::ShootingProblem)
+    color = :cyan
     println(io, "┌─ Standard shooting functional for periodic orbits")
     print(io, "├─ time slices    : ")
-    printstyled(io, get_mesh_size(sh), "\n"; color=:cyan, bold = true)
+    printstyled(io, get_mesh_size(sh), "\n"; color, bold = true)
 
     print(io, "├─ lens           : ")
-    printstyled(io, get_lens_symbol(sh.lens), "\n"; color=:cyan, bold = true)
+    printstyled(io, get_lens_symbol(sh.lens), "\n"; color, bold = true)
 
     print(io, "├─ jacobian       : ")
-    printstyled(io, sh.jacobian, "\n"; color=:cyan, bold = true)
+    printstyled(io, sh.jacobian, "\n"; color, bold = true)
 
     print(io, "├─ update section : ")
-    printstyled(io, sh.update_section_every_step, "\n"; color=:cyan, bold = true)
+    printstyled(io, sh.update_section_every_step, "\n"; color, bold = true)
 
     if sh.flow isa FlowDE
         print(io, "├─ integrator     : ")
-        printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color=:cyan, bold = true)
+        printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color, bold = true)
     end
 
     print(io, "└─ parallel       : ")
-    printstyled(io, isparallel(sh), "\n"; color=:cyan, bold = true)
+    printstyled(io, isparallel(sh), "\n"; color, bold = true)
 end
 
 # this function updates the section during the continuation run
