@@ -588,3 +588,30 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
+####################################################################################################
+for op in (
+        :RecordForFold,
+        :RecordForPeriodicOrbits,
+        :RecordForNS,
+        :RecordForPD,
+        :RecordForTW, # travelling waves
+        )
+    @eval begin
+        """
+        $(TYPEDEF)
+
+        Structure to hold the record functions for chained bifurcation problems.
+
+        ## Fields
+
+        $(TYPEDFIELDS)
+        """
+        struct $op{T1, T2}
+            user_record_from_solution::T1
+            vf_record_from_solution::T2
+        end
+        (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)
+        (fr::$op{Nothing})(x, p; kwargs...) = fr.vf_record_from_solution(x, p; kwargs...)
+    end
+end
+
