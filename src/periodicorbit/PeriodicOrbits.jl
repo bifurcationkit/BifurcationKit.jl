@@ -283,11 +283,11 @@ function continuation(probPO::AbstractShootingProblem,
     end
 
     # remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
-    _plotsol   = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _kwargs = (;record_from_solution, plot_solution)
+    _plotsol   = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...) # WHY RECORD??
 
-    probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)#BifurcationKit.record_from_solution(probPO))
+    probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
 
     br = continuation(
         probwp, alg,
