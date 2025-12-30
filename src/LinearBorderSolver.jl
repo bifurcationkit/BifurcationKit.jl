@@ -175,7 +175,7 @@ function solve_bls_block(lbs::BorderingBLS,
                          c::NTuple{M, 𝒯vec}, 
                          d::AbstractMatrix, 
                          rhst, 
-                         rhsb) where {M <: Integer, 𝒯vec <: AbstractArray}
+                         rhsb) where {M, 𝒯vec <: AbstractArray}
     m = size(d, 1)
     if ~(length(b) == length(c) == m == M)
         error("Linear bordered solver, wrong sizes!")
@@ -189,17 +189,17 @@ function solve_bls_block(lbs::BorderingBLS,
         x2, flag, it = lbs.solver(J, b[ii])
         push!(x2s, x2)
         push!(its, it)
-        cv = cv & flag
+        cv &= flag
     end
     # produce Schur complement
     S = [ d[i,j] - VI.inner(c[i], x2s[j])  for i in 1:m, j in 1:m ]
     # reduce rhs
-    h = [ rhst[i] - VI.inner(c[i], x1)  for i in 1:m ]
+    h = [ rhsb[i] - VI.inner(c[i], x1)  for i in 1:m ]
     # solve Schur complement
     u2 = S \ h
     u1 = x1
     for ii in eachindex(c)
-        u1 .-= h[ii] .* x2s[ii]
+        u1 .-= u2[ii] .* x2s[ii]
     end
     return u1, u2, cv, (its...)
 end
@@ -273,7 +273,7 @@ function solve_bls_block(lbs::MatrixBLS,
                            c::AbstractMatrix,
                            rhst,
                            rhsb)
-    @assert length(a) == length(b) == size(c,1)
+    @assert length(a) == length(b) == size(c, 1)
     n = size(c, 1)
     # A = [J hcat(a...); hcat(b...)' c]
     A = vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))

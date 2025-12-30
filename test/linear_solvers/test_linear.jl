@@ -245,7 +245,7 @@ end
 ####################################################################################################
 # test the bordered linear solvers in the case of blocks
 let
-    J0 = rand(100,100) * 0.2 - I
+    J0 = rand(100, 100) * 0.2 - I
     rhs = rand(100)
     m = 3
     J = J0[begin:end-m, 1:end-m]
@@ -254,7 +254,7 @@ let
     b = Tuple(J0[k, 1:end-m] for k in size(J0,1)-m+1:size(J0,1))
     @assert J0 ≈ vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
 
-    rhs = zeros(100)
+    rhs = rand(100)
     sol_explicit = J0 \ rhs
 
     ls = DefaultLS()
