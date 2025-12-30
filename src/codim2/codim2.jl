@@ -136,7 +136,8 @@ end
 
 @inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
 
-save_solution(::AbstractMABifurcationProblem, x ,p) = x
+save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p) = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p)
+save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_formulation(𝐏𝐛), x, p)
 ################################################################################
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
