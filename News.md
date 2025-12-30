@@ -3,6 +3,12 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+- TWProblem becomes TWModel
+- change `Fold/Hopf/PeriodDoubling/NeimarkSackerProblemMinimallyAugmented` into `Fold/Hopf/PeriodDoubling/NeimarkSackerMinimallyAugmentedFormulation`
+- `AbstractProblemMinimallyAugmented` becomes `AbstractMinimallyAugmentedFormulation`
+- make `AbstractMABifurcationProblem{T, Tjac}` dependent on 2 parameters
+- add method `finalise_solution(iter::ContIterable, state::AbstractContinuationState, contRes)`
+- remove `update_minaug_hopf`, `update_minaug_fold`, `update_min_aug_ns`, `update_min_aug_pd`
 ## [0.5.6] (future)
 - reorganise tests:
   - each test belongs to a test category (like in previous versions)

@@ -184,5 +184,5 @@ module BifurcationKit
     export FloquetQaD, FloquetColl, FloquetGEV
 
     # waves
-    export TWProblem
+    export TWModel
 end
