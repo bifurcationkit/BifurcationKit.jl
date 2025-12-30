@@ -12,7 +12,7 @@ function hopf_point(br::AbstractBranchResult, index::Int)
 end
 ###################################################################################################
 # this function encodes the functional
-function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
+function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
     # Hopf bifurcation point
     # input:
@@ -51,7 +51,7 @@ Compute the solution of
 
 and the same for the adjoint system.
 """
-function _compute_bordered_vectors(𝐇::HopfProblemMinimallyAugmented, J_at_xp, JAd_at_xp, ω)
+function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp, ω)
     return __compute_bordered_vectors(𝐇.linbdsolver,
                                       𝐇.linbdsolverAdjoint,
                                       J_at_xp,
@@ -74,7 +74,7 @@ function __compute_bordered_vectors(linbdsolver, linbdsolver_adjoint, J_at_xp, J
     return (; v, w, itv, itw)
 end
 
-function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
     # update parameter
     lens = getlens(𝐇)
     par0 = set(par, lens, p)
@@ -132,7 +132,7 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 """
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point.
 """
-function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
+function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugmentedFormulation, par,
                             duu, dup, duω) where 𝒯
     # N = length(du) - 2
     # The Jacobian J of the vector field is expressed at (x, p)
@@ -311,8 +311,8 @@ function update!(probma::HopfMAProblem, iter, state)
     𝒯 = eltype(𝐇)
     success = state.converged
     step = state.step
-    if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false)
         return true
+    if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false) || in_bisection(state)
     end
 
     @debug "[Hopf] Update vectors a and b"
