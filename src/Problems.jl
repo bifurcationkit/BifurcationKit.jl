@@ -22,6 +22,8 @@ abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 ################################################################################
+abstract type Abstract DiscreteBifProblem <: AbstractBifurcationProblem end # discrete time systems
+################################################################################
 abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
