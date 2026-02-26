@@ -1,7 +1,7 @@
 abstract type AbstractFlow end
 
-# The vector field `F(x, p)` associated to a Cauchy problem ẋ = F(x, p). Used for the differential of the shooting problem. The vector field is used like `vf(flow, x, p)`` and must return `F(x, p)``
-function vf(::AbstractFlow, x, par; k...) end
+# The vector field `F(x, p)` associated to a Cauchy problem ẋ = F(x, p). Used for the differential of the shooting problem. The vector field is used like `vector_field(flow, x, p)`` and must return `F(x, p)``
+function vector_field(::AbstractFlow, x, par; k...) end
 
 # return a real number (like 1e-8) used to compute derivative w.r.t. the parameter by finite differences. This is used for example in PALC, Moore-Penrose, etc.
 function getdelta(::AbstractFlow) end
@@ -98,7 +98,7 @@ end
 # constructors
 Flow(F, fl, df = nothing; k...) = Flow(;F = F, flow = fl, jvp = df, jvpSerial = df, k...)
 
-vf(fl::Flow, x, p) = fl.F(x, p)
+vector_field(fl::Flow, x, p) = fl.F(x, p)
 getdelta(fl::Flow) = fl.delta
 
 evolve(fl::Flow, x, p, t; k...)                          = fl.flow(x, p, t; k...)

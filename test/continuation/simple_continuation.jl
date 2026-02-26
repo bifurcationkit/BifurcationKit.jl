@@ -5,8 +5,6 @@ using ForwardDiff
 using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
 
-N = 1
-
 F0_simple(x, p) = p[1] .* x
 F_simple(x, p; k = 2) = @. p[1] * x + x^(k+1)/(k+1) + 0.01
 Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
@@ -91,11 +89,11 @@ let
     end
 end
 ####################################################################################################
-opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
-x0 = 0.01 * ones(N)
+
 ###############
 # test continuation interface
-begin
+let
+    opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
     prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)
     iter = ContIterable(prob, PALC(), opts)
     state = iterate(iter)
@@ -110,6 +108,10 @@ begin
     BK.in_bisection(nothing)
 end
 ###############
+let
+N = 1
+opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
+x0 = 0.01 * ones(N)
 # basic continuation, without saving much information
 _prob0 = BK.BifurcationProblem(F0_simple, [0.], -1.5, (@optic _))
 opts0 = ContinuationPar(detect_bifurcation = 0, p_min = -2., save_sol_every_step = 0, max_steps = 40, nev = 1)
@@ -395,3 +397,4 @@ brdc = continuation(prob2,
     callback_newton = BK.cbMaxNorm(1e6))
 
 plot(brdc)
+end

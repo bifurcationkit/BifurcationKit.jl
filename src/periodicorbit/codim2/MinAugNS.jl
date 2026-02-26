@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a NS bifurcation point located in ContResult.specialpoint, returns a point which can be refined using `newtonFold`.
+For an initial guess from the index of a NS bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newtonFold`.
 """
 function ns_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
@@ -27,16 +27,13 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
     end
 end
 ####################################################################################################
-@inline getvec(x, ::NeimarkSackerProblemMinimallyAugmented) = get_vec_bls(x, 2)
-@inline   getp(x, ::NeimarkSackerProblemMinimallyAugmented) = get_par_bls(x, 2)
-
 is_symmetric(::NSMAProblem) = false
 
 # test function for NS bifurcation
 nstest(JacNS, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacNS, v, w, J22, _zero, n)
 
 # this function encodes the functional
-function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
+function (𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Neimark-Sacker bifurcation point
     # input:
     # - x guess for the point at which the jacobian is singular
@@ -50,19 +47,22 @@ function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯
     σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
-
-# this function encodes the functional
-function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐍𝐒(x.u, x.p[1], x.p[2], params)
-    return BorderedArray(res[1], [res[2], res[3]])
-end
-
-@views function (𝐍𝐒::NeimarkSackerProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐍𝐒(x[begin:end-2], x[end-1], x[end], params)
-    return vcat(res[1], res[2], res[3])
-end
 ###################################################################################################
-function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, JNS, JNS★, ω)
+"""
+$(TYPEDSIGNATURES)
+
+Compute the solution of 
+
+```
+┌                 ┐ ┌  ┐   ┌   ┐
+│ J - iω    𝐍𝐒.a  │ │v │ = │ 0 │
+│  𝐍𝐒.b'      0   │ │σ │   │ 1 │
+└                 ┘ └  ┘   └   ┘
+```
+
+and the same for the adjoint system.
+"""
+function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, JNS, JNS★, ω)
     a = 𝐍𝐒.a
     b = 𝐍𝐒.b
     𝒯 = eltype(𝐍𝐒)
@@ -78,7 +78,7 @@ function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerProblemMinimallyAugmen
     return (; v, w, itv, itw)
 end
 
-function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
 
@@ -114,7 +114,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, x
 end
 ###################################################################################################
 function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
-    𝐍𝐒 = pdpb.prob
+    𝐍𝐒 = get_formulation(pdpb)
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
     POWrap = 𝐍𝐒.prob_vf
@@ -150,7 +150,7 @@ end
 # Struct to invert the jacobian of the ns MA problem.
 struct NSLinearSolverMinAug <: AbstractLinearSolver; end
 
-function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMinimallyAugmented, par,
+function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, par,
                             duu, dup, duω) where 𝒯
     ################################################################################################
     # Recall that the functional we want to solve is [F(x,p), σ(x,p)]
@@ -199,8 +199,8 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
         x1, x2, cv, (it1, it2) = 𝐍𝐒.linsolver(_Jpo, duu, dₚF)
         ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
 
-        σxx1 = LA.dot(vcat(σx,σt), x1)
-        σxx2 = LA.dot(vcat(σx,σt), x2)
+        σxx1 = LA.dot(vcat(σx, σt), x1)
+        σxx2 = LA.dot(vcat(σx, σt), x2)
 
     else
         error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
@@ -210,8 +210,8 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerProblemMi
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
     LS = Matrix{𝒯}(undef, 2, 2);
     rhs = Vector{𝒯}(undef, 2);
-    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
-    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    LS[1, 1] = real(σₚ - σxx2); LS[1, 2] = real(σω)
+    LS[2, 1] = imag(σₚ + σxx2); LS[2, 2] = imag(σω)
     rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
     dp, dω = LS \ rhs
 
@@ -230,18 +230,101 @@ function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kw
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
-get_wrap_po(pb::NSMAProblem) = get_wrap_po(pb.prob)
-residual(nspb::NSMAProblem, x, p) = nspb.prob(x, p)
-residual!(nspb::NSMAProblem, out, x, p) = (_copyto!(out, nspb.prob(x, p)); out)
-@inline getdelta(nspb::NSMAProblem) = getdelta(nspb.prob)
-save_solution(::NSMAProblem, x ,p) = x
-
+get_wrap_po(pb::NSMAProblem) = get_wrap_po(get_formulation(pb))
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
-jacobian(nspb::NSMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> nspb.prob(z, p), x)
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences(z -> nspb.prob(z, p), x; δ = 1e-8)
-jacobian(nspb::NSMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (nspb.prob(x .+ 1e-8 .* dx, p) .- nspb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
 ###################################################################################################
+function update!(𝐏𝐛::NSMAProblem, iter, state)
+    # it is called to update the Minimally Augmented problem
+    # by updating the vectors a, b
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information!
+    𝐍𝐒 = get_formulation(𝐏𝐛)
+    𝒯 = eltype(𝐍𝐒)
+    success = converged(state)
+    if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false) || in_bisection(state)
+        # we call the user update
+        return update!(𝐍𝐒, iter, state)
+    end
+    @debug "[codim2 NS] Update a / b in NS"
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐍𝐒)
+
+    # get the PO functional
+    POWrap = 𝐍𝐒.prob_vf
+
+    x = getvec(zu, 𝐍𝐒) # fold point
+    newpar = getparams(iter, state)
+
+    JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
+    JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
+
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
+    _copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/𝐍𝐒.norm(w))
+    # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
+    _copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/𝐍𝐒.norm(v))
+
+    # we stop continuation at R1, PD points
+    # test if we jumped to PD branch
+    pdjump = abs(abs(ω) - pi) < 100 * 𝐍𝐒.newton_options.tol
+
+    isbif = true#isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
+    # if the frequency is null, this is not a NS point, we halt the process
+    # tolerance for detecting R1 bifurcation and stopping continuation
+    ϵR1 = 100 * 𝐍𝐒.newton_options.tol
+    stop_R1 = 1-cos(ω) <= ϵR1
+    if stop_R1
+        p1 = get_parameter(zu, 𝐍𝐒)
+        p2 = getp(state)
+        @warn "[Codim 2 NS - update!]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
+    end
+
+    if pdjump
+        p1 = get_parameter(zu, 𝐍𝐒)
+        p2 = getp(state)
+        @warn "[Codim 2 NS - update!] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
+    end
+
+    # call the user-passed update
+    final_result = update!(𝐍𝐒, iter, state)
+
+    return ~stop_R1 && isbif && final_result && ~pdjump
+end
+###################################################################################################
+function finalise_solution(iter::ContIterable{NSPeriodicOrbitCont}, 
+                           state::AbstractContinuationState, 
+                           contres)
+    isbt = isnothing(contres) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
+    fin_user = iter.finalise_solution(getsolution(state),
+                                  state.τ,
+                                  state.step,
+                                  contres; 
+                                  state,
+                                  iter)
+    return isbt && fin_user
+end
+
+function record_from_solution(iter::ContIterable{NSPeriodicOrbitCont, <: NSMAProblem},
+                              state::AbstractContinuationState)
+    𝐏𝐛 = getprob(iter)
+    𝐍𝐒 = get_formulation(𝐏𝐛)
+    probwrap = 𝐍𝐒.prob_vf
+    lens1, lens2 = get_lenses(𝐏𝐛)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    return (; zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
+                ωₙₛ = getp(u, 𝐍𝐒)[2],
+                CH = real(𝐍𝐒.l1),
+                R₁ = 𝐍𝐒.R1,
+                R₂ = 𝐍𝐒.R2,
+                R₃ = 𝐍𝐒.R3,
+                R₄ = 𝐍𝐒.R4,
+                _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
+                )
+end
+
 function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         nspointguess::BorderedArray{vectype, 𝒯b}, par,
                         lens1::AllOpticTypes, lens2::AllOpticTypes,
@@ -265,10 +348,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # options for the Newton Solver inheritated from the ones the user provided
     newton_options = options_cont.newton_options
-    # tolerance for detecting R1 bifurcation and stopping continuation
-    ϵR1 = 100newton_options.tol
 
-    𝐍𝐒 = NeimarkSackerProblemMinimallyAugmented(
+    𝐍𝐒 = NeimarkSackerMinimallyAugmentedFormulation(
             prob,
             _copy(eigenvec),
             _copy(eigenvec_ad),
@@ -285,29 +366,15 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug(), FiniteDifferencesMF(), MinAugMatrixBased())
 
     # Jacobian for the NS problem
-    if jacobian_ma == AutoDiff()
+    record_ns = RecordForNS(record_from_solution, BifurcationKit.record_from_solution(prob))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, AutoDiff(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == FiniteDifferences()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferences(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == FiniteDifferencesMF()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, FiniteDifferencesMF(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == MinAugMatrixBased()
-        nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, MinAugMatrixBased(), nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
-        opt_ns_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, par, lens2, plot_solution, record_ns)
+        opt_ns_cont = deepcopy(options_cont)
     else
-        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, prob.recordFromSolution)
+        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, record_ns)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
-
-    # this functions allows to tackle the case where the two parameters have the same name
-    lenses = get_lens_symbol(lens1, lens2)
 
     # current lyapunov coefficient
     𝒯 = eltype(𝒯b)
@@ -317,93 +384,17 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     𝐍𝐒.R3 = zero(𝒯)
     𝐍𝐒.R4 = zero(𝒯)
 
-    # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented formulation
-    # by updating the vectors a, b
-    function update_min_aug_ns(z, tau, step, contResult; kUP...)
-        # user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
-        # we first check that the continuation step was successful
-        # if not, we do not update the problem with bad information!
-        success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) || success == false)
-            # we call the user finalizer
-            return _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
-        end
-        @debug "[codim2 NS] Update a / b dans NS"
-
-        x = getvec(z.u, 𝐍𝐒)   # NS point
-        p1, ω = getp(z.u, 𝐍𝐒) # first parameter
-        p2 = z.p              # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        # get the PO functional
-        POWrap = 𝐍𝐒.prob_vf
-
-        JNS = jacobian_neimark_sacker(POWrap, x, newpar, ω)
-        JNS★ = has_adjoint(𝐍𝐒) ? jacobian_adjoint_neimark_sacker(POWrap, x, newpar, ω) : adjoint(JNS)
-
-        (; v, w, itv, itw) = _compute_bordered_vectors(𝐍𝐒, JNS, JNS★, ω)
-        _copyto!(𝐍𝐒.a, w); LA.rmul!(𝐍𝐒.a, 1/normC(w))
-        # do not normalize with dot(newb, 𝐍𝐒.a), it prevents detection of resonances
-        _copyto!(𝐍𝐒.b, v); LA.rmul!(𝐍𝐒.b, 1/normC(v))
-
-        # we stop continuation at R1, PD points
-        # test if we jumped to PD branch
-        pdjump = abs(abs(ω) - pi) < 100newton_options.tol
-
-        isbif = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:R1, :pd), contResult.specialpoint))
-
-         # if the frequency is null, this is not a NS point, we halt the process
-         stop_R1 = 1-cos(ω) <= ϵR1
-         if stop_R1
-            @warn "[Codim 2 NS - Finalizer]\nThe NS curve seems to be close to a R1 point: ω ≈ $ω.\n Stopping computations at ($lens1, $lens2) = ($p1, $p2).\nIf the R1 point is not detected, try lowering Newton tolerance or dsmax."
-        end
-
-        if pdjump
-            @warn "[Codim 2 NS - Finalizer] The NS curve seems to jump to a PD curve.\nStopping computations at ($p1, $p2).\nPerhaps it is close to a R2 bifurcation for example."
-        end
-
-        # call the user-passed finalizer
-        final_result = _finsol(z, tau, step, contResult; prob = 𝐍𝐒, kUP...)
-
-        return ~stop_R1 && isbif && final_result && ~pdjump
-    end
-
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_finalise(prob_ns, kwargs, prob.prob.update_section_every_step)
-
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _recordsol = get(kwargs, :record_from_solution, nothing)
-    _recordsol2 = isnothing(_recordsol) ?
-        (u, p; kw...) -> (; 
-                zip(lenses, (getp(u, 𝐍𝐒)[1], p))...,
-                ωₙₛ = getp(u, 𝐍𝐒)[2],
-                CH = real(𝐍𝐒.l1),
-                R₁ = 𝐍𝐒.R1,
-                R₂ = 𝐍𝐒.R2,
-                R₃ = 𝐍𝐒.R3,
-                R₄ = 𝐍𝐒.R4,
-                _namedrecordfromsol(record_from_solution(prob)(getvec(u, 𝐍𝐒), p; kw...))... #putting it last is important for plotting
-                ) :
-        (u, p; kw...) -> (; 
-            _namedrecordfromsol(_recordsol(getvec(u, 𝐍𝐒), p; kw...))..., 
-            zip(lenses, (getp(u, 𝐍𝐒)[1], p))..., 
-            ωₙₛ = getp(u, 𝐍𝐒)[2], 
-            CH = real(𝐍𝐒.l1), )
-
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
     # change the plot and record functions
-    _kwargs = (record_from_solution = record_from_solution(prob), plot_solution = plot_solution)
+    _kwargs = (;plot_solution = plot_solution)
     _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
-    prob_ns = re_make(prob_ns, record_from_solution = _recordsol2, plot_solution = _plotsol)
+    prob_ns = re_make(prob_ns, plot_solution = _plotsol)
 
-    # Define event for detecting codim 2 bifurcations. Couple it with user passed events
+    # define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
-    event_bif = ContinuousEvent(5, test_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
+    event_bif = ContinuousEvent(5, test_for_ns_ch, compute_eigen_elements, ("R1", "R2", "R3", "R4", "ch",), 0)
     event = isnothing(event_user) ? event_bif : PairOfEvents(event_bif, event_user)
 
     # solve the NS equations
@@ -415,21 +406,20 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     kind,
                     event,
                     normC,
-                    finalise_solution = update_min_aug_ns,
                     )
-    correct_bifurcation(br_ns_po)
+    _correct_event_labels(br_ns_po)
 end
 
-function test_ch(iter, state)
-    probma = getprob(iter)
-    𝐍𝐒 = probma.prob
-    lens1, lens2 = get_lenses(probma)
+function test_for_ns_ch(iter, state)
+    𝐏𝐛 = getprob(iter)
+    𝐍𝐒 = get_formulation(𝐏𝐛)
+    lens1, lens2 = get_lenses(𝐏𝐛)
 
     z = getx(state)
     x = getvec(z, 𝐍𝐒)   # NS point
     p1, ω = getp(z, 𝐍𝐒) # first parameter
     p2 = getp(state)    # second parameter
-    par = getparams(probma)
+    par = getparams(𝐏𝐛)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
@@ -470,12 +460,12 @@ function test_ch(iter, state)
 end
 
 function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
-    probma = getprob(iter)
-    lens1, lens2 = get_lenses(probma)
-    x = getvec(u0, probma.prob)        # ns point
-    p1, ω = getp(u0, probma.prob)      # first parameter
-    p2 = getp(state.z)                 # second parameter
-    par = getparams(probma)
+    𝐏𝐛 = getprob(iter)
+    lens1, lens2 = get_lenses(𝐏𝐛)
+    x = getvec(u0, get_formulation(𝐏𝐛))        # ns point
+    p1, ω = getp(u0, get_formulation(𝐏𝐛))      # first parameter
+    p2 = getp(state.z)                             # second parameter
+    par = getparams(𝐏𝐛)
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

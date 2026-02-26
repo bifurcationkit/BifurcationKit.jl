@@ -66,19 +66,19 @@ end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 
-n = 10
-par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
-sol0 = zeros(2n)
-prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); J = Jbru_ana)
-
-# test that the jacobian is well computed
-@test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
-opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-opts_br0 = ContinuationPar(p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
-br = continuation(prob, PALC(), opts_br0)
-###################################################################################################
-# Hopf continuation with automatic procedure
 let
+    n = 10
+    par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
+    sol0 = zeros(2n)
+    prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); J = Jbru_ana)
+
+    # test that the jacobian is well computed
+    @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
+    opt_newton = NewtonPar(tol = 1e-11, verbose = false)
+    opts_br0 = ContinuationPar(p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
+    br = continuation(prob, PALC(), opts_br0)
+    ###################################################################################################
+    # Hopf continuation with automatic procedure
     newton(br, 1; start_with_eigen = false)
     newton(br, 1; start_with_eigen = true)
     optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 5, detect_bifurcation = 2)
@@ -91,7 +91,7 @@ let
     ind_hopf = 1
     hopfpt = BK.hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
-    𝐇 = HopfProblemMinimallyAugmented(
+    𝐇 = BK.HopfMinimallyAugmentedFormulation(
                         (@set prob.VF.d2F = nothing),
                         conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
                         (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
@@ -104,7 +104,7 @@ let
     # finite differences Jacobian
     Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian(u -> hopfpbVec(u, p), u0)
     # ``analytical'' jacobian
-    Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x = u0, params = p, hopfpb = pb))
+    Jac_hopf_MA(u0, p, pb::BK.HopfMinimallyAugmentedFormulation) = (return (x = u0, params = p, pbma = pb))
 
     rhs = rand(length(hopfpt))
     jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
@@ -112,8 +112,8 @@ let
     BK.get_frequency(rhs, 𝐇)
 
     # test against analytical jacobian
-    _hopf_ma_problem = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
-    J_ana = BK.jacobian(_hopf_ma_problem, Bd2Vec(hopfpt), par_bru)
+    𝐏𝐛 = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+    J_ana = BK.jacobian(𝐏𝐛, Bd2Vec(hopfpt), par_bru)
     @test norminf(J_ana - jac_hopf_fd) ≈ 0 atol = 1e-3
 
     # create a linear solver
@@ -166,9 +166,9 @@ let
     br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), 
                 ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, max_steps = 3, newton_options = NewtonPar(verbose = false)), 
                 jacobian_ma = BK.MinAug())
-end
+
 ####################################################################################################
-let 
+
     ind_hopf = 1
     hopfpt = BK.hopf_point(br, ind_hopf)
 

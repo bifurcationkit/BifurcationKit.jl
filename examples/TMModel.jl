@@ -36,6 +36,13 @@ plot(br_fold)
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
+function recordPO(x, p; k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+    return (max = maximum(xtt[1,:]),
+            min = minimum(xtt[1,:]),
+            period = getperiod(p.prob, x, p.p))
+end
+
 # arguments for periodic orbits
 function plotSolution(x, p; k...)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -45,12 +52,7 @@ function plotSolution(x, p; k...)
     plot!(br; subplot = 1, putspecialptlegend = false)
 end
 
-args_po = (	record_from_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-        return (max = maximum(xtt[1,:]),
-                min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, p.p))
-    end,
+args_po = (	record_from_solution = recordPO,
     plot_solution = plotSolution,
     normC = norminf
     )
@@ -100,7 +102,7 @@ br_posh = @time continuation(
     args_po...,
     )
 
-plot(br_posh, br, markersize=3)
+plot(br_posh, br, markersize = 3)
 ####################################################################################################
 # idem with Poincaré shooting
 opts_po_cont = ContinuationPar(opts_br, dsmax = 0.02, ds= 0.0001, max_steps = 50, newton_options = NewtonPar(tol = 1e-9, max_iterations=15), tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 5)
@@ -118,4 +120,4 @@ br_popsh = @time continuation(
     callback_newton = BK.cbMaxNorm(1e0),
     normC = norminf)
 
-plot(br, br_popsh, markersize=3)
+plot(br, br_popsh, markersize = 3)

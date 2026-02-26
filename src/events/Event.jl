@@ -6,7 +6,7 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 (eve::AbstractEvent)(iter, state) = eve.condition(iter, state)
 
 # initialize function, must return the same type as eve(iter, state)
-initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
+initialize(eve::AbstractEvent, 𝒯) = throw("Initialization method not implemented for event ", eve)
 
 # finalise event
 finalise_event!(event_point, eve::AbstractEvent, it, state, success) = event_point
@@ -73,8 +73,8 @@ end
 ####################################################################################################
 # for AbstractContinuousEvent and AbstractDiscreteEvent
 # return type when calling eve.fct(iter, state)
-initialize(eve::AbstractContinuousEvent, T) = ntuple(x -> T(1), eve.nb)
-initialize(eve::AbstractDiscreteEvent, T) = ntuple(x -> Int64(1), eve.nb)
+initialize(eve::AbstractContinuousEvent, 𝒯) = ntuple(x -> 𝒯(1), eve.nb)
+initialize(eve::AbstractDiscreteEvent, 𝒯) = ntuple(x -> Int64(1), eve.nb)
 
 @inline convert_to_tuple_eve(x::Tuple) = x
 @inline convert_to_tuple_eve(x::Real) = (x,)
@@ -224,7 +224,7 @@ function (eve::PairOfEvents)(iter, state)
     return outc..., outd...
 end
 
-initialize(eve::PairOfEvents, T) = initialize(eve.eventC, T)..., initialize(eve.eventD, T)...
+initialize(eve::PairOfEvents, 𝒯) = initialize(eve.eventC, 𝒯)..., initialize(eve.eventD, 𝒯)...
 
 function is_event_crossed(eve::PairOfEvents, iter, state, ind = :)
     nc = length(eve.eventC)
@@ -291,8 +291,8 @@ function (eve::SetOfEvents)(iter, state)
     return (outc..., outd...)
 end
 
-initialize(eve::SetOfEvents, T) = map(x -> initialize(x,T), eve.eventC)..., 
-                                  map(x -> initialize(x,T), eve.eventD)...
+initialize(eve::SetOfEvents, 𝒯) = map(x -> initialize(x, 𝒯), eve.eventC)..., 
+                                  map(x -> initialize(x, 𝒯), eve.eventD)...
 
 # is x actually an event, we just need to test the continuous events
 function isonevent(eves::SetOfEvents, eValues)
@@ -307,7 +307,7 @@ function is_event_crossed(event::SetOfEvents, iter, state)
     res = false
     nC = length(event.eventC)
     nD = length(event.eventD)
-    nCb = nC+nD
+    nCb = nC + nD
     for (i, eve) in enumerate(event.eventC)
         res = res | is_event_crossed(eve, iter, state, i)
     end

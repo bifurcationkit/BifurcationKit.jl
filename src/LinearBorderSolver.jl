@@ -150,7 +150,7 @@ function residualBEC(lbs::BorderingBLS,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
                             shift::𝒯s = nothing, 
-                            dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
+                            dotp = lbs.dot) where {𝒯, 𝒯ξ, 𝒯s}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
     # hence δx = R - (shift⋅I + J) * dX - dl * dR
@@ -189,17 +189,17 @@ function solve_bls_block(lbs::BorderingBLS,
         x2, flag, it = lbs.solver(J, b[ii])
         push!(x2s, x2)
         push!(its, it)
-        cv = cv & flag
+        cv &= flag
     end
     # produce Schur complement
     S = [ d[i,j] - VI.inner(c[i], x2s[j])  for i in 1:m, j in 1:m ]
     # reduce rhs
-    h = [ rhst[i] - VI.inner(c[i], x1)  for i in 1:m ]
+    h = [ rhsb[i] - VI.inner(c[i], x1)  for i in 1:m ]
     # solve Schur complement
     u2 = S \ h
     u1 = x1
     for ii in eachindex(c)
-        u1 .-= h[ii] .* x2s[ii]
+        u1 .-= u2[ii] .* x2s[ii]
     end
     return u1, u2, cv, (its...)
 end
@@ -273,7 +273,7 @@ function solve_bls_block(lbs::MatrixBLS,
                            c::AbstractMatrix,
                            rhst,
                            rhsb)
-    @assert length(a) == length(b) == size(c,1)
+    @assert length(a) == length(b) == size(c, 1)
     n = size(c, 1)
     # A = [J hcat(a...); hcat(b...)' c]
     A = vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
@@ -309,7 +309,7 @@ function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Nu
     if isnothing(lbmap.shift) == false
         VI.add!(out.u, x.u, lbmap.shift)
     end
-    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c  * x.p
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
 

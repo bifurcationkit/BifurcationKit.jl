@@ -55,13 +55,13 @@ end
 geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eig.eigsolver, vecs, n)
 
 function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; k...)
-    wrapprob = get_wrap_po(iter)
+    wrap = get_wrap_po(iter)
     if fl.matrix_free
         # Matrix Free version
-        monodromy = dx -> MonodromyQaD_matrix_free(wrapprob.prob, u0, par, dx)
+        monodromy = dx -> MonodromyQaD_matrix_free(get_discretization(wrap), u0, par, dx)
     else
-        J = jacobian(wrapprob, u0, par) # ca ne doit pas etre calcule!! cf cas trap
-        monodromy = MonodromyQaD(wrapprob.prob, J, u0, par)
+        J = jacobian(wrap, u0, par) # TODO must not be computed, cf TRAP
+        monodromy = MonodromyQaD(get_discretization(wrap), J, u0, par)
     end
     vals, vecs, cv, info = fl.eigsolver(monodromy, nev; k...)
 
@@ -76,7 +76,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     # floquet exponents
     σ = logvals[I]
     vp0 = minimum(abs, σ)
-    if (wrapprob isa WrapPOSh) && vp0 > 1e-8
+    if (wrap isa WrapPOSh) && vp0 > 1e-8
         @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
@@ -464,7 +464,7 @@ end
     return log.(μ[Ind]), geteigenvector(fl.eigsolver, vecs, indvalid[Ind]), true, 1
 end
 
-@views function (fl::FloquetGEV)(prob::AbstractShootingProblem, _J::AbstractMatrix, nev; k...)
+@views function (fl::FloquetGEV)(prob::AbstractPOShootingDiscretization, _J::AbstractMatrix, nev; k...)
     n = length(prob.flow.odeprob.u0)
     J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)
@@ -659,7 +659,7 @@ end
     return _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
 end
 
-@views function _eig_floquet_coll(J::AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
+@views function _eig_floquet_coll(J::SPA.AbstractSparseMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where 𝒯
     nbcoll = N * m
     In = LinearAlgebra.I(N)
 
@@ -687,7 +687,7 @@ end
     Lₜ = LA.LowerTriangular(copy(blockⱼ))
 
     first_column_block = Matrix{𝒯}[]
-    upper_triangular = SparseMatrixCSC{𝒯, Int64}[]
+    upper_triangular = SPA.SparseMatrixCSC{𝒯, Int64}[]
 
     for 𝐢 in 1:Ntst
         # blockⱼ .= J[rg, rg .+ N]

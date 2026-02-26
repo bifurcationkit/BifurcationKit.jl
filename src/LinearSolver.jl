@@ -1,7 +1,7 @@
-using IterativeSolvers
+import IterativeSolvers
 import Krylov, LinearAlgebra
-import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
-norminf(x) = LinearAlgebra.norm(x, Inf)
+import KrylovKit: KrylovDefaults # prevent from loading residual
+norminf(x) = LA.norm(x, Inf)
 
 # c'est tres mauvais comme interface, on ne peut pas utiliser le dispatch. Il vaut ieux utiliser solve
 

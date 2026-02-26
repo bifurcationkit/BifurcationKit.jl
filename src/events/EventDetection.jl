@@ -253,8 +253,8 @@ function get_event_type(event::AbstractEvent,
                         state,
                         verbosity,
                         status::Symbol,
-                        interval::Tuple{T, T}, 
-                        ind = :) where T
+                        interval::Tuple{𝒯, 𝒯}, 
+                        ind = :) where 𝒯
     # record information about the event point
     userpoint = EventSpecialPoint(iter, state, :user, status, interval)
     (verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
@@ -266,9 +266,9 @@ function get_event_type(event::AbstractContinuousEvent,
                         state, 
                         verbosity, 
                         status::Symbol, 
-                        interval::Tuple{T, T}, 
+                        interval::Tuple{𝒯, 𝒯}, 
                         ind = :; 
-                        typeE = "userC") where T
+                        typeE = "userC") where 𝒯
     event_index_C = Int32[]
 
     if length(event) == 1
@@ -305,9 +305,9 @@ function get_event_type(event::AbstractDiscreteEvent,
                         state, 
                         verbosity, 
                         status::Symbol, 
-                        interval::Tuple{T, T}, 
+                        interval::Tuple{𝒯, 𝒯}, 
                         ind = :; 
-                        typeE = "userD") where T
+                        typeE = "userD") where 𝒯
     event_index_D = Int32[]
     if length(event) == 1
         if abs(state.eventValue[1][ind][1] - state.eventValue[2][ind][1]) > 0
@@ -341,7 +341,7 @@ function get_event_type(event::PairOfEvents,
                         state, 
                         verbosity, 
                         status::Symbol, 
-                        interval::Tuple{T, T}) where T
+                        interval::Tuple{𝒯, 𝒯}) where 𝒯
     nC = length(event.eventC)
     n = length(event)
 
@@ -370,7 +370,7 @@ function get_event_type(event::SetOfEvents,
                         state, 
                         verbosity, 
                         status::Symbol, 
-                        interval::Tuple{T, T}) where T
+                        interval::Tuple{𝒯, 𝒯}) where 𝒯
     # find the active events
     event_index_C = Int32[]
     event_index_D = Int32[]

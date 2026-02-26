@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Construct a Poincaré return map `Π` to an hyperplane `Σ` from an `AbstractPeriodicOrbitProblem`.
+Construct a Poincaré return map `Π` to an hyperplane `Σ` from an `AbstractPeriodicOrbitDiscretization`.
 If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
 
 ## Fields
@@ -18,7 +18,7 @@ struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
     options::To
 end
 
-@inline get_mesh_size(Π::PoincaréMap{ <: WrapPOSh}) = get_mesh_size(Π.probpo.prob) - 1
+@inline get_mesh_size(Π::PoincaréMap{ <: WrapPOSh}) = get_mesh_size(get_discretization(Π.probpo)) - 1
 
 @views function get_time_slices(Π::PoincaréMap{ <: WrapPOSh}, x::AbstractVector)
     M = get_mesh_size(Π)
@@ -40,10 +40,10 @@ $(TYPEDSIGNATURES)
 Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
 function PoincareMap(wrap::WrapPOSh, po, par, optn)
-    sh = wrap.prob
-    Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
+    sh = get_discretization(wrap)
+    Π = PoincaréMap(wrap, po, deepcopy(sh.section), optn)
     poc = get_time_slices(sh, po)
-    @views update!(Π.Σ, vf(sh.flow, poc[:, begin], par), poc[:, begin])
+    @views update!(Π.Σ, vector_field(sh.flow, poc[:, begin], par), poc[:, begin])
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
 end
@@ -54,7 +54,7 @@ $(TYPEDSIGNATURES)
 Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
 function PoincareMap(wrap::WrapPOColl, po, par, optn)
-    coll = wrap.prob
+    coll = get_discretization(wrap)
     N, m, Ntst = size(coll)
     Σ = SectionSS(rand(N), rand(N))
     poc = get_time_slices(coll, po)
@@ -64,7 +64,7 @@ function PoincareMap(wrap::WrapPOColl, po, par, optn)
 end
 
 function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
 
     M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
@@ -112,7 +112,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
     # get the size of the state space
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     M = get_mesh_size(sh)
     N = div(length(Π.po) - 1, M)
     # we construct the initial guess
@@ -130,7 +130,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
 end
 
 function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     # we get the return time
     T⁰ = getperiod(sh, Π.po)
     tₘ = _extract_period(solΠ)
@@ -149,7 +149,7 @@ end
 
 @views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
     # collocation problem
-    coll = Π.probpo.prob
+    coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
 
     uc = get_time_slices(coll, u)
@@ -178,7 +178,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
 end
 
 function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
-    coll = Π.probpo.prob
+    coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
     T⁰ = getperiod(coll, Π.po)
     tₘ = _extract_period(solΠ)
@@ -188,11 +188,11 @@ end
 
 function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
     @assert length(x) == length(h)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
     # differential of return time
     ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
@@ -206,11 +206,11 @@ $(TYPEDSIGNATURES)
 Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
 function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     # monodromy matrix
     N = length(x)
     𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
@@ -230,13 +230,13 @@ end
 
 function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     ∂Πh2, ∂th2 = d1F(Π, x, pars, h₂) # not good, we recompute a lot
 
     ∂ϕ(z,h) = evolve(sh.flow, Val(:SerialdFlow), z, pars, h, tΣ).du
@@ -261,11 +261,11 @@ end
 
 function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
     @assert length(x) == length(h₁) == length(h₂) == length(h₃)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
     Πx, tΣ = Π(x, pars)
 
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
     d2vf(z,h1,h2) = ForwardDiff.derivative(t -> dvf(z .+ t .* h2, h1), 0)
 

@@ -2,8 +2,10 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
-for op in (:NeimarkSackerProblemMinimallyAugmented,
-            :PeriodDoublingProblemMinimallyAugmented)
+for (op, at) in (
+           (:NeimarkSackerMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Hopf_NS),
+           (:PeriodDoublingMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Fold_PD)
+           )
     @eval begin
         """
         $(TYPEDEF)
@@ -16,14 +18,14 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         """
         mutable struct $op{Tprob <: AbstractBifurcationProblem,
                            vectype,
-                           T <: Real,
+                           𝒯 <: Real,
                            S <: AbstractLinearSolver,
                            Sa <: AbstractLinearSolver,
                            Sbd <: AbstractBorderedLinearSolver,
                            Sbda <: AbstractBorderedLinearSolver,
                            Tmass,
-                           Tn,
-                           Tnewton} <: AbstractProblemMinimallyAugmented{Tprob}
+                           Tnorm,
+                           Tnewton} <: $at{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
             prob_vf::Tprob
             "close to null vector of Jᵗ"
@@ -33,23 +35,23 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             "vector zero, to avoid allocating it many times"
             zero::vectype
             "Lyapunov coefficient"
-            l1::Complex{T}
+            l1::Complex{𝒯}
             "Cusp test value"
-            CP::T
+            CP::𝒯
             "Fold-Neimark Sacker test value"
-            FOLDNS::T
+            FOLDNS::𝒯
             "Generalized period doubling test value"
-            GPD::T
+            GPD::𝒯
             "Fold-NS test values"
             FLIPNS::Int
             "Resonance 1"
-            R1::T
+            R1::𝒯
             "Resonance 2"
-            R2::T
+            R2::𝒯
             "Resonance 3"
-            R3::T
+            R3::𝒯
             "Resonance 4"
-            R4::T
+            R4::𝒯
             "linear solver. Used to invert the jacobian of MA functional"
             linsolver::S
             "linear solver for the jacobian adjoint"
@@ -63,7 +65,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
             "wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
             massmatrix::Tmass
             "norm to normalize vector in update or test"
-            norm::Tn
+            norm::Tnorm
             "Update the problem every such step"
             update_minaug_every_step::Int
             "Compute the PO normal forms with Poincaré Return Map?"
@@ -73,7 +75,7 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
         end
 
         @inline getdelta(pb::$op) = getdelta(pb.prob_vf)
-        @inline Base.eltype(pb::$op{Tprob, vectype, T}) where {Tprob, vectype, T} = T
+        @inline Base.eltype(pb::$op{Tprob, vectype, 𝒯}) where {Tprob, vectype, 𝒯} = 𝒯
         @inline has_hessian(pb::$op) = has_hessian(pb.prob_vf)
         @inline is_symmetric(pb::$op) = is_symmetric(pb.prob_vf)
         @inline has_adjoint(pb::$op) = has_adjoint(pb.prob_vf)
@@ -96,17 +98,17 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                         prm = false)
             # determine scalar type associated to vectors a and b
             α = norm(a) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
-            Ty = eltype(α)
+            𝒯 = eltype(α)
             return $op(prob, a, b, 0*a,
-                        complex(zero(Ty)), # l1
-                        real(one(Ty)),     # cp
-                        real(one(Ty)),     # fold-ns
-                        real(one(Ty)),     # gpd
+                        complex(zero(𝒯)), # l1
+                        real(one(𝒯)),     # cp
+                        real(one(𝒯)),     # fold-ns
+                        real(one(𝒯)),     # gpd
                         1,                 # flip-ns
-                        real(one(Ty)),     # R1
-                        real(one(Ty)),     # R2
-                        real(one(Ty)),     # R3
-                        real(one(Ty)),     # R4
+                        real(one(𝒯)),     # R1
+                        real(one(𝒯)),     # R2
+                        real(one(𝒯)),     # R3
+                        real(one(𝒯)),     # R4
                         linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
 
@@ -121,35 +123,37 @@ for op in (:NeimarkSackerProblemMinimallyAugmented,
                     prm = false)
             a = b = 0.
             α = norm(a) 
-            Ty = eltype(α)
+            𝒯 = eltype(α)
             return $op(prob, a, b, 0*a,
-                        complex(zero(Ty)), # l1
-                        real(one(Ty)),     # cp
-                        real(one(Ty)),     # fold-ns
-                        real(one(Ty)),     # gpd
-                        1,                 # flip-ns
-                        real(one(Ty)),     # R1
-                        real(one(Ty)),     # R2
-                        real(one(Ty)),     # R3
-                        real(one(Ty)),     # R4
+                        complex(zero(𝒯)), # l1
+                        real(one(𝒯)),     # cp
+                        real(one(𝒯)),     # fold-ns
+                        real(one(𝒯)),     # gpd
+                        1,                # flip-ns
+                        real(one(𝒯)),     # R1
+                        real(one(𝒯)),     # R2
+                        real(one(𝒯)),     # R3
+                        real(one(𝒯)),     # R4
                         linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
         end
     end
 end
 
-@inline update!(::PDMAProblem, args...; k...) = update_default(args...; k...)
-@inline update!(::NSMAProblem, args...; k...) = update_default(args...; k...)
-get_wrap_po(pb::FoldMAProblem) = get_wrap_po(pb.prob)
-get_wrap_po(pb::FoldProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::PeriodDoublingProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
-get_wrap_po(pb::NeimarkSackerProblemMinimallyAugmented) = get_wrap_po(pb.prob_vf)
+get_wrap_po(𝐏𝐛::FoldMAProblem) = get_wrap_po(𝐏𝐛.prob)
+get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
+get_wrap_po(𝐌𝐚::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
+get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
+
+__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
+__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
+__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
 ####################################################################################################
-function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
-    if contres.prob.prob isa FoldProblemMinimallyAugmented
+function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
+    if contres.prob.prob isa FoldMinimallyAugmentedFormulation
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
-    elseif contres.prob.prob isa PeriodDoublingProblemMinimallyAugmented
+    elseif contres.prob.prob isa PeriodDoublingMinimallyAugmentedFormulation
         conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2, :gpdR2 => :R2)
-    elseif contres.prob.prob isa NeimarkSackerProblemMinimallyAugmented
+    elseif contres.prob.prob isa NeimarkSackerMinimallyAugmentedFormulation
         conversion = Dict(:bp => :foldNS, :hopf => :nsns, :pd => :pdNS, :R1ch => :R1, :fold => :R1)
     else
         throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")
@@ -161,15 +165,53 @@ function correct_bifurcation(contres::ContResult{<: Union{FoldPeriodicOrbitCont,
     end
     return contres
 end
+####################################################################################################
+# the following resolve method ambiguity
+for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialProblem)
+    @eval begin
+        function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+            prob_po = pbwrap.prob
+            𝐏𝐛 = get_formulation(getprob(iter))
+            u = getx(state)
+            p = getp(state)
 
-__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
-__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
-__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
+            po = getvec(u, 𝐏𝐛)
+            period = getperiod(prob_po, po, nothing)
+            return (;period)
+        end
+    end
+end
+
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+    𝐏𝐛 = get_formulation(getprob(iter))
+    u = getx(state)
+    p = getp(state)
+    po = getvec(u, 𝐏𝐛)
+    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = p); iter, state)
+end
+
+# shooting functional
+# we pass the full parameters updated at the bifurcation point
+function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+    probma = getprob(iter)
+    𝐏𝐛 = get_formulation(probma)
+    lens1, lens2 = get_lenses(probma)
+    u = getx(state)
+
+    p2 = getp(state)
+    p1 = get_parameter(u, 𝐏𝐛)
+    par = getparams(probma)
+    newpar = set(par, lens1, p1)
+    newpar = set(newpar, lens2, p2)
+
+    po = getvec(u, 𝐏𝐛)
+    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = newpar); iter, state)
+end
 ####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
-                      probPO::AbstractPeriodicOrbitProblem;
+                      probPO::AbstractPeriodicOrbitDiscretization;
                       detect_codim2_bifurcation::Int = 0,
                       autodiff = true,
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
@@ -184,7 +226,7 @@ end
 function _continuation(gh::Bautin, 
                         br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitProblem;
+                        probPO::AbstractPeriodicOrbitDiscretization;
                         alg = br.alg,
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
@@ -192,10 +234,11 @@ function _continuation(gh::Bautin,
                         detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
-                        # start_with_eigen = false,
                         Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-                        kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem}}
+                        record_from_solution = nothing,
+                        plot_solution = nothing,
+                        kwargs...) where {Tkind, Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp |> abs
@@ -212,7 +255,7 @@ function _continuation(gh::Bautin,
     newparams = set(gh.params, lens1, pred.params[1])
     newparams = set(newparams, lens2, pred.params[2])
 
-    prob_ma = getprob(br).prob
+    prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
     # build the variable to hold the functional for computing PO based on finite differences
@@ -230,37 +273,22 @@ function _continuation(gh::Bautin,
     end
 
     # change the user provided functions by passing probPO in its parameters
-    if probPO isa PeriodicOrbitOCollProblem
-        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(probPO))), kwargs, probPO.update_section_every_step)
-    else
-        _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(probPO))), kwargs, probPO.update_section_every_step)
-    end
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); kwargs...)
-    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); kwargs...)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
+    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); plot_solution)
 
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
-
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
 
     contParams = _contParams
 
-    # set the second derivative
-    prob_po_fold = BifurcationProblem((x, p) -> residual(pbwrap, x, p), orbitguess, getparams(pbwrap), getlens(pbwrap);
-                J = (x, p) -> jacobian(pbwrap, x, p),
-                Jᵗ = Jᵗ,
-                d2F = (x, p, dx1, dx2) -> d2PO(z -> residual(probPO, z, p), x, dx1, dx2),
-                record_from_solution = _recordsol,
-                plot_solution = _plotsol,
-                )
-
     # create fold point guess
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
     # get the approximate null vectors
-    jacpo = jacobian(prob_po_fold, orbitguess, getparams(prob_po_fold))
+    jacpo = jacobian(pbwrap, orbitguess, getparams(pbwrap))
     ls = DefaultLS()
     nj = length(orbitguess)
     p = rand(nj); q = rand(nj)
@@ -274,8 +302,8 @@ function _continuation(gh::Bautin,
     ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
 
     # perform continuation
-    branch = continuation_fold(prob_po_fold, alg,
-        foldpointguess, getparams(prob_po_fold),
+    branch = continuation_fold(pbwrap, alg,
+        foldpointguess, getparams(pbwrap),
         lens1, lens2,
         # p, q,
         q, p,
@@ -283,15 +311,13 @@ function _continuation(gh::Bautin,
         kind = FoldPeriodicOrbitCont(),
         kwargs...,
         bdlinsolver,
-        finalise_solution = _finsol,
-        # linear_algo = _linear_algo,
     )
     return Branch(branch, gh)
 end
 
 function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
-            probPO::AbstractPeriodicOrbitProblem;
+            probPO::AbstractPeriodicOrbitDiscretization;
             whichns::Int = 1,
             alg = br.alg,
             linear_algo = nothing,
@@ -329,7 +355,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     newparams = set(hh.params, lens1, _params[1])
     newparams = set(newparams, lens2, _params[2])
 
-    prob_ma = getprob(br).prob
+    prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
     ~(lens1 == getlens(prob_vf)) && error("Please open an issue on the website of BifurcationKit")
@@ -351,12 +377,12 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
     # this is to remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _kwargs = (;plot_solution = plot_solution)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
     _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
 
     jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
 
     options = _contParams.newton_options
 
@@ -411,7 +437,7 @@ end
 
 function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitProblem;
+                        probPO::AbstractPeriodicOrbitDiscretization;
                         whichns::Int = 1,
                         alg = br.alg,
                         linear_algo = nothing,

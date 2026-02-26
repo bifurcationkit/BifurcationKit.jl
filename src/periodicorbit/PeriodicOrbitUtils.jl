@@ -1,16 +1,9 @@
-abstract type PeriodicOrbitAlgorithm end
-
-####################################################################################################
-@inline update!(::WrapPOColl, args...; k...) = update_default(args...; k...)
-@inline update!(::WrapPOSh, args...; k...) = update_default(args...; k...)
-@inline update!(::WrapPOTrap, args...; k...) = update_default(args...; k...)
-####################################################################################################
 """
 ($SIGNATURES)
 
 Update the continuation parameters according to a problem. This can be useful for branching from PD points where the linear solvers have to be updated, e.g. the number of unknowns is roughly doubled.
 """
-function _update_cont_params(contParams::ContinuationPar, pb::AbstractShootingProblem, orbitguess)
+function _update_cont_params(contParams::ContinuationPar, pb::AbstractPOShootingDiscretization, orbitguess)
     if contParams.newton_options.linsolver isa GMRESIterativeSolvers
         @reset contParams.newton_options.linsolver.N = length(orbitguess)
     end
@@ -24,105 +17,49 @@ function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOC
     return cont_params
 end
 
-function _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
-    return cont_params
-end
+@inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFiniteDifferencesDiscretization, orbitguess) = cont_params
 ####################################################################################################
-function modify_po_finalise(prob, kwargs, updateSectionEveryStep)
-    return Finaliser(prob, get(kwargs, :finalise_solution, nothing), updateSectionEveryStep)
+@inline user_passed_pofunction(rf::RecordForPeriodicOrbits) = user_passed_function(rf.user_record_from_solution)
+
+function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter, state)
+    p = set(getparams(pbwrap), getlens(pbwrap), getp(state))
+    return pbwrap.recordFromSolution(getx(state), (prob = get_discretization(pbwrap), p = p); iter, state)
 end
 
-function (finalizer::Finaliser{ <: AbstractPeriodicOrbitProblem})(z, tau, step, contResult; kF...)
-    updateSectionEveryStep = finalizer.updateSectionEveryStep
-    # we first check that the continuation step was successful
-    # if not, we do not update the problem with bad information
-    state = get(kF, :state, nothing)
-    success = converged(state)
-    bisection = in_bisection(state)
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
-        @debug "[Periodic orbit] update section"
-        # Trapezoid and Shooting need the parameters for section update:
-        updatesection!(finalizer.prob, z.u, setparam(contResult, z.p))
-    end
-    if isnothing(finalizer.finalise_solution)
-        return true
-    else
-        return finalizer.finalise_solution(z, tau, step, contResult; prob = finalizer.prob, kF...)
-    end
+function __user_record_solution_periodic_orbit(pbwrap, ::NoUserPassedFunction, iter, state)
+    return (period = getperiod(pbwrap, getx(state), set(getparams(pbwrap), getlens(pbwrap), getp(state))),)
 end
 
-# version specific to collocation. Handle mesh adaptation
-function (finalizer::Finaliser{ <: Union{ <: PeriodicOrbitOCollProblem,
-                                <: WrapPOColl}})(z, tau, step, contResult; kF...)
-    updateSectionEveryStep = finalizer.updateSectionEveryStep
-    coll = finalizer.prob
-    # we first check that the continuation step was successful
-    # if not, we do not update the problem with bad information
-    state = get(kF, :state, nothing)
-    success = converged(state)
-    bisection = in_bisection(state)
-    is_mesh_updated = false
-
-    # mesh adaptation
-    if success &&
-            coll.meshadapt && 
-            bisection == false && 
-            mod_counter(step, updateSectionEveryStep) == 1 &&
-            step > 2
-        @debug "[Collocation] update mesh"
-        is_mesh_updated = true
-        oldsol = _copy(z) # avoid possible overwrite in compute_error!
-        oldmesh = get_times(coll) .* getperiod(coll, oldsol.u, nothing)
-        adapt = compute_error!(coll, oldsol.u;
-                    verbosity = coll.verbose_mesh_adapt,
-                    K = coll.K,
-                    par = setparam(contResult, z.p)
-                    )
-        if ~adapt.success # stop continuation if mesh adaptation fails
-            return false
-        end
-    end
-
-    if success && mod_counter(step, updateSectionEveryStep) == 1 && bisection == false
-        @debug "[collocation] update section"
-        updatesection!(coll, z.u, setparam(contResult, z.p))
-    end
-    if is_mesh_updated
-        # we recompute the tangent predictor
-        it = get(kF, :iter, nothing)
-        # @debug "[collocation] update predictor"
-        getpredictor!(state, it)
-    end
-    if isnothing(finalizer.finalise_solution)
-        return true
-    else
-        return finalizer.finalise_solution(z, tau, step, contResult; prob = coll, kF...)
-    end
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPODifferentialProblem, ::NoUserPassedFunction, iter::ContIterable{Tkind}, state) where {Tkind}
+    disc_po = get_discretization(pbwrap)
+    x = getx(state)
+    period = getperiod(disc_po, x, nothing)
+    sol = get_periodic_orbit(disc_po, x, nothing)
+    _min, _max = @views extrema(sol[1, :])
+    return (;max = _max, min = _min, amplitude = _max - _min, period)
 end
 
-function modify_po_record(probPO, pars, lens; kwargs...)
-    if ~isnothing(get(kwargs, :record_from_solution, nothing))
-        _recordsol0 = get(kwargs, :record_from_solution, nothing)
-        @assert ~isnothing(_recordsol0) "Please open an issue on the website."
-        if probPO isa AbstractShootingProblem
-            return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = set(pars, lens, p)); k...)
-        else
-            return _recordsol = (x, p; k...) -> _recordsol0(x, (prob = probPO, p = p); k...)
-        end
-    else
-        if probPO isa AbstractPODiffProblem
-            # FAIRE FONCTION NE PAS FAIRE ANONYMOUS
-            return _recordsol = (x, p; k...) -> begin
-                period = getperiod(probPO, x, set(pars, lens, p))
-                sol = get_periodic_orbit(probPO, x, set(pars, lens, p))
-                _min, _max = @views extrema(sol[1,:])
-                min = @views minimum(sol[1,:])
-                return (max = _max, min = _min, amplitude = _max - _min, period = period)
-            end
-        else
-            return _recordsol = (x, p; k...) -> (period = getperiod(probPO, x, set(pars, lens, p)),)
-        end
-    end
+function record_from_solution(iter::ContIterable{PeriodicOrbitCont, <: AbstractWrapperPeriodicOrbitProblem},
+                              state::AbstractContinuationState)
+    probwrap = getprob(iter)
+    __user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state)
+end
+
+function record_from_solution(iter::ContIterable{FoldPeriodicOrbitCont, <: FoldMAProblem},
+                              state::AbstractContinuationState)
+    probma = getprob(iter) # TODO Make small function for this and merge with the one in MinAugFold.jl
+    𝐅 = get_formulation(probma)
+    probwrap = 𝐅.prob_vf
+    lens1, lens2 = get_lenses(probma)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+    return (; zip(lenses, (getp(u, 𝐅), p))..., 
+                    BT = 𝐅.BT, 
+                    CP = 𝐅.CP, 
+                    ZH = 𝐅.ZH,
+                    _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
+                    ) 
 end
 ####################################################################################################
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, pars, lens; kwargs...)

@@ -28,17 +28,17 @@ function cusp_normal_form(_prob,
     verbose && println("━"^53*"\n──▶ Cusp Normal form computation")
 
     # MA problem formulation
-    prob_ma = _prob.prob
+    𝐌𝐚 = get_formulation(_prob)
 
     # get the vector field
-    prob_vf = prob_ma.prob_vf
+    prob_vf = 𝐌𝐚.prob_vf
 
     # scalar type
     𝒯 = VI.scalartype(𝒯eigvec)
 
     # linear solvers
-    ls = prob_ma.linsolver
-    bls = prob_ma.linbdsolver
+    ls = 𝐌𝐚.linsolver
+    bls = 𝐌𝐚.linbdsolver
 
     # kernel dimension
     N = 1
@@ -111,7 +111,7 @@ function cusp_normal_form(_prob,
 
     pt = Cusp(
         x0, parbif,
-        (getlens(prob_ma), lens),
+        (getlens(𝐌𝐚), lens),
         ζ, ζ★,
         (c = c, ),
         :none
@@ -134,21 +134,21 @@ Compute the Bogdanov-Takens normal form.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
 """
-function bogdanov_takens_normal_form(prob_ma, L,
+function bogdanov_takens_normal_form(𝐌𝐚, L,
                                     pt::BogdanovTakens;
                                     δ = 1e-8,
                                     verbose = false,
                                     detailed::Val{detailed_type} = Val(true),
                                     autodiff = true,
                                     # bordered linear solver
-                                    bls = prob_ma.linbdsolver,
+                                    bls = 𝐌𝐚.linbdsolver,
                                     bls_block = bls) where {detailed_type}
     x0 = pt.x0
     parbif = pt.params
     Ty = VI.scalartype(x0)
 
     # vector field
-    VF = prob_ma.prob_vf
+    VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(VF, x, p)
 
     # for finite differences
@@ -156,7 +156,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
     ϵ2 = sqrt(ϵ) # for second order differential
 
     # linear solvers
-    ls = prob_ma.linsolver
+    ls = 𝐌𝐚.linsolver
 
     lens1, lens2 = pt.lens
 
@@ -517,12 +517,12 @@ function bogdanov_takens_normal_form(_prob,
 
     # functional
     # get the MA problem
-    prob_ma = _prob.prob
+    𝐌𝐚 = get_formulation(_prob)
 
     # get the initial vector field
-    prob_vf = prob_ma.prob_vf
+    prob_vf = 𝐌𝐚.prob_vf
 
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation
 
     # kernel dimension
     N = 2
@@ -540,11 +540,6 @@ function bogdanov_takens_normal_form(_prob,
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     𝒯 = VI.scalartype(𝒯eigvec)
     # jacobian at bifurcation point
@@ -593,7 +588,7 @@ function bogdanov_takens_normal_form(_prob,
         vl = real(ζs_ad[1])
     end
 
-    zerov = real.(prob_ma.zero)
+    zerov = real.(𝐌𝐚.zero)
     q0, _, cv, it = bls(L, vl, vr, zero(𝒯), zerov, one(𝒯))
     ~cv && @debug "[BT basis] Linear solver for J  did not converge. it = $it"
     p1, _, cv, it = bls_adjoint(Lᵗ, vr, vl, zero(𝒯), zerov, one(𝒯))
@@ -616,14 +611,14 @@ function bogdanov_takens_normal_form(_prob,
     p0 ./= ν
 
     pt = BogdanovTakens(
-        x0, parbif, (getlens(prob_ma), lens),
+        x0, parbif, (getlens(𝐌𝐚), lens),
         (;q0, q1), (;p0, p1),
         (a = zero(𝒯), b = zero(𝒯) ),
         (K2 = zero(𝒯),),
         :none
     )
 
-    return bogdanov_takens_normal_form(prob_ma, L, pt; 
+    return bogdanov_takens_normal_form(𝐌𝐚, L, pt; 
                 δ,
                 verbose,
                 detailed,
@@ -647,19 +642,19 @@ function bautin_normal_form(_prob::HopfMAProblem,
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
     # get the MA problem
-    prob_ma = _prob.prob
+    𝐌𝐚 = get_formulation(_prob)
 
     # get the initial vector field
-    prob_vf = prob_ma.prob_vf
+    prob_vf = 𝐌𝐚.prob_vf
 
     # scalar type
     𝒯 = VI.scalartype(𝒯eigvec)
     ϵ = 𝒯(δ)
 
     # functional
-    @assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of Hopf points."
-    ls = prob_ma.linsolver
-    bls = prob_ma.linbdsolver
+    @assert 𝐌𝐚 isa HopfMinimallyAugmentedFormulation "You need to provide a curve of Hopf points."
+    ls = 𝐌𝐚.linsolver
+    bls = 𝐌𝐚.linbdsolver
 
     # ``kernel'' dimension
     N = 2
@@ -675,18 +670,11 @@ function bautin_normal_form(_prob::HopfMAProblem,
     eigRes = br.eig
 
     # eigenvalue
-    ω = abs(getp(bifpt.x, prob_ma)[2])
+    ω = abs(bifpt.x.ω)
     λ = Complex(0, ω)
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-
-    # jacobian at bifurcation point
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -813,7 +801,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
 
     pt = Bautin(
         x0, parbif,
-        (getlens(prob_ma), lens),
+        (getlens(𝐌𝐚), lens),
         ζ, ζ★,
         (;ω, G21, G32, l2),
         :none
@@ -830,7 +818,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     # REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
 
     # this part is for branching to Fold of periodic orbits
-    VF = prob_ma.prob_vf
+    VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens
@@ -974,11 +962,11 @@ function zero_hopf_normal_form(_prob,
     ϵ = 𝒯(δ)
 
     # get the MA problem
-    prob_ma = _prob.prob
+    prob_ma = get_formulation(_prob)
 
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
 
     # linear solver
     ls = prob_ma.linsolver
@@ -1047,8 +1035,8 @@ function zero_hopf_normal_form(_prob,
 
     # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    p0, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-    p1, λ★1 = get_adjoint_basis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    p0, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev, verbose)
+    p1, λ★1 = get_adjoint_basis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # normalise left eigenvectors
     p0 ./= LA.dot(p0, q0)
@@ -1063,7 +1051,7 @@ function zero_hopf_normal_form(_prob,
 
     getp(l::AllOpticTypes) = _get(parbif, l)
     setp(l::AllOpticTypes, p::Number) = set(parbif, l, p)
-    setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+    setp(p1::Number, p2::Number) = _set(parbif, lenses, (p1, p2))
     if autodiff
         Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)), p)
     else
@@ -1323,18 +1311,18 @@ function hopf_hopf_normal_form(_prob,
     ϵ = 𝒯(δ)
 
     # get the MA problem
-    prob_ma = _prob.prob
+    𝐌𝐚 = get_formulation(_prob)
 
     # get the initial vector field
-    prob_vf = prob_ma.prob_vf
+    prob_vf = 𝐌𝐚.prob_vf
 
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    @assert 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation
 
     # linear solver
-    ls = prob_ma.linsolver
+    ls = 𝐌𝐚.linsolver
 
     # bordered linear solver
-    bls = prob_ma.linbdsolver
+    bls = 𝐌𝐚.linbdsolver
 
     # kernel dimension
     N = 4
@@ -1351,16 +1339,13 @@ function hopf_hopf_normal_form(_prob,
 
     # parameter for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
-    if 𝒯eigvec <: BorderedArray
-        x0 = convert(𝒯eigvec.parameters[1], getvec(bifpt.x, prob_ma))
-    else
-        x0 = convert(𝒯eigvec, getvec(bifpt.x , prob_ma))
-    end
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
-    p0, ω0 = getp(bifpt.x, prob_ma)
+    # p0, ω0 = getp(bifpt.x, 𝐌𝐚)
+    p0 = bifpt.x.p1
+    ω0 = bifpt.x.ω
 
     # right eigenvector
     # TODO IMPROVE THIS
@@ -1419,7 +1404,7 @@ function hopf_hopf_normal_form(_prob,
     @assert LA.dot(p2, q2) ≈ 1 "we found $(LA.dot(p2, q2)) instead of 1."
 
     # parameters
-    lenses = (getlens(prob_ma), lens)
+    lenses = (getlens(𝐌𝐚), lens)
     lens1, lens2 = lenses
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
@@ -1476,7 +1461,7 @@ function hopf_hopf_normal_form(_prob,
     G1011 = LA.dot(p1, tmp1011)
 
     # some more definitions
-    VF = prob_ma.prob_vf
+    VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
     lens1, lens2 = pt.lens

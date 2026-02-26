@@ -1,5 +1,4 @@
-using IterativeSolvers, Arpack
-import LinearAlgebra
+import Arpack
 
 # abstract type for generalised eigenvector
 abstract type AbstractGEigenSolver <: AbstractEigenSolver end

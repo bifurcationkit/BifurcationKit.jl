@@ -3,7 +3,7 @@ abstract type OneParamCont <: AbstractContinuationKind end
 abstract type TwoParamCont <: AbstractContinuationKind end
 abstract type TwoParamPeriodicOrbitCont <: TwoParamCont end
 
-struct EquilibriumCont <: OneParamCont end
+struct EquilibriumCont <: OneParamCont end # TODO rename abstract
 struct PeriodicOrbitCont <: OneParamCont end
 struct TravellingWaveCont <: OneParamCont end
 

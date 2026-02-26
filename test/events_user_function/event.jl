@@ -70,6 +70,7 @@ function Feve(X, p)
     out
 end
 
+let
 par = (p1 = -3., p2=-3., k=3)
 
 opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 1000, p_min = -3., p_max = 4.0, save_sol_every_step = 1, newton_options = NewtonPar(tol = 1e-10, verbose = false, max_iterations = 5), detect_bifurcation = 3, detect_event = 0, n_inversion = 8, detect_fold=false, plot_every_step = 10)
@@ -258,3 +259,4 @@ br = continuation(args2...; kwargs...,
         SaveAtEvent((0.001,.01))
     ),
     )
+end

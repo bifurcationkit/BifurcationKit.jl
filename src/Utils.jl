@@ -80,7 +80,6 @@ function compute_eigenvalues(iter::ContIterable,
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
-    # we compute the eigen-elements
     n = state.n_unstable[2]
     nev_ = max(n + 5, iter.contparams.nev)
     @debug "Computing spectrum..."
@@ -89,7 +88,7 @@ function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
     return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
-# same as previous but we save the eigen-elements in state
+# same as previous but we save the eigen-elements in `state`
 function compute_eigenvalues!(iter::ContIterable, state::ContState; kwargs...)
     eiginfo, _isstable, n_unstable, n_imag, cveig = compute_eigenvalues(iter, state; kwargs...)
     # we update the state
@@ -108,7 +107,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute a Jacobian by Finite Differences. Use the centered formula (f(x+δ)-f(x-δ))/2δ.
+Compute a jacobian by Finite Differences. Use the centered formula (f(x+δ) - f(x-δ))/2δ.
 """
 function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
@@ -129,7 +128,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Same as finite_differences but with inplace `F`
+Same as `finite_differences` but with inplace `F`
 """
 @views function finite_differences!(F, J, x::AbstractVector; δ = 1e-9, tmp = copy(x))
     x1 = copy(x)
@@ -144,22 +143,20 @@ Same as finite_differences but with inplace `F`
     return J
 end
 ####################################################################################################
-using BlockArrays, SparseArrays
-
-function block_to_sparse(J::AbstractBlockArray)
+function block_to_sparse(J::BA.AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
-    res = J[Block(1,1)]
+    res = J[BA.Block(1, 1)]
     @inbounds for j in 2:nc
-        res = hcat(res, J[Block(1,j)])
+        res = hcat(res, J[BA.Block(1, j)])
     end
     # continue with the other lines
     @inbounds for i in 2:nl
-        line = J[Block(i,1)]
+        line = J[BA.Block(i, 1)]
         for j in 2:nc
-            line = hcat(line, J[Block(i,j)])
+            line = hcat(line, J[BA.Block(i, j)])
         end
-        res = vcat(res,line)
+        res = vcat(res, line)
     end
     return res
 end
@@ -169,8 +166,8 @@ $(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix A which is a M x M Block matrix where each block N x N has the same sparsity.
 """
-function get_blocks(A::SparseMatrixCSC, N, M)
-    I, J, K = findnz(A)
+function get_blocks(A::SPA.SparseMatrixCSC, N, M)
+    I, J, K = SPA.findnz(A)
     out = [Vector{Int}() for i in 1:M+1, j in 1:M+1];
     for k in eachindex(I)
         m, l = div(I[k]-1, N), div(J[k]-1, N)
@@ -205,7 +202,7 @@ apply!(y, f, x) = f(y, x)
 """
 $(TYPEDSIGNATURES)
 
-Function to detect continuation branches which loop on themselves.
+Function to detect when continuation branches loop on themselves.
 """
 function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = true) where T
     if verbose == false
@@ -231,20 +228,3 @@ end
 detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol, verbose)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
 ####################################################################################################
-"""
-$(TYPEDEF)
-
-Structure to hold a specific finaliser and simplify dispatch on it. 
-It is mainly used for periodic orbits computation and adaption of mesh and section.
-It is meant to be called like a callable struct.
-"""
-struct Finaliser{Tp, Tf}
-    "Bifurcation problem"
-    prob::Tp
-    "Finalizer to be called"
-    finalise_solution::Tf
-    "Section updated every updateSectionEveryStep step"
-    updateSectionEveryStep::UInt
-end
-
-finalise_default(z, tau, step, contResult; k...) = true
