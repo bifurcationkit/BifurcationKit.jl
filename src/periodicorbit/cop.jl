@@ -6,11 +6,11 @@ Cache for the linear solver based on condensation of parameters (COP) [1].
 !!! danger "`dim` type parameter"
     When using the cache solve a linear problem associated to a matrix `A`, the type parameter `dim` is such that `length(coll) + 1 + dim = size(A, 1)`
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Constructor
+# Constructor
 
 ```
 COPCACHE(coll::PeriodicOrbitOCollProblem, Val(0))
@@ -69,16 +69,16 @@ $TYPEDEF
 
 Linear solver based on the condensation of parameters.
 
-## Fields
+# Internal fields
 
 $TYPEDFIELDS
 
-## Constructors
+# Constructors
 
 - `COPBLS()`
 - `COPBLS(coll::PeriodicOrbitOCollProblem; cache::COPCACHE, solver = nothing, J = nothing)`
 
-## Related
+# Related
 
 See `solve_cop`.
 """
@@ -91,16 +91,16 @@ $TYPEDEF
 
 Bordered linear solver based on the condensation of parameters. `dim` in the struct definition is the size of the border counting the phase condition. It is thus `dim = 1` for COPLS and `dim = 2` for the case of arclength continuation of periodic orbits as there are two constraints: the phase and the arclength.
 
-## Fields
+# Internal fields
 
 $TYPEDFIELDS
 
-## Constructors
+# Constructors
 
 - `COPBLS()`
 - `COPBLS(coll::PeriodicOrbitOCollProblem; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
 
-## Related
+# Related
 
 See `solve_cop`.
 """

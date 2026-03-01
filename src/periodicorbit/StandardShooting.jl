@@ -17,7 +17,7 @@ You can then call `residual(pb, orbitguess, par)` to apply the functional to a g
 - `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. 
 - `orbitguess::BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
-# Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 # Jacobian

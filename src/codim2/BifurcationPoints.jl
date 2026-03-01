@@ -3,6 +3,7 @@ for op in (:Cusp, :Bautin, :ZeroHopf, :HopfHopf)
         """
         $(TYPEDEF)
 
+        # Internal fields
         $(TYPEDFIELDS)
 
         """

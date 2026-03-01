@@ -90,7 +90,7 @@ $(TYPEDEF)
 
 This struct is used to provide the backslash operator `\`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 @with_kw struct DefaultLS <: AbstractDirectLinearSolver
@@ -124,7 +124,7 @@ $(TYPEDEF)
 [Mainly for debugging] This solver is used to test Moore-Penrose continuation. 
 This is defined as an iterative pseudo-inverse linear solver. Used to solve `J * x = rhs`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 @with_kw struct DefaultPILS <: AbstractIterativeLinearSolver
@@ -145,7 +145,7 @@ Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve 
 
 The struct is mutable so that you can modify the preconditioners.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESIterativeSolvers{T, Tl, Tr} <: AbstractIterativeLinearSolver
@@ -216,11 +216,11 @@ Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to s
 
 The struct is mutable so that you can modify the preconditioners.
 
-## Fields
-$(TYPEDFIELDS)
-
 !!! tip "Different linear solvers"
     By tuning the options, you can select CG, GMRES... see [here](https://jutho.github.io/KrylovKit.jl/stable/man/linear/#KrylovKit.linsolve)
+    
+# Internal fields
+$(TYPEDFIELDS)
 """
 @with_kw mutable struct GMRESKrylovKit{𝒯, 𝒯l} <: AbstractIterativeLinearSolver
     "Krylov Dimension"
@@ -299,18 +299,18 @@ You have access to `cg, cr, gmres, symmlq, cg_lanczos, cg_lanczos_shift_seq`...
 
 The struct is mutable so that you can modify the preconditioners.
 
-## Fields 
-$(TYPEDFIELDS)
-
-## Example
+# Example
 
 You can create a Krylov solver with the following code:
 
 `KrylovLS(atol=1e-11, rtol=1e-8)`
 
-## Other methods
+# Other methods
 
 Look at `KrylovLSInplace` for a method where the Krylov space is kept in memory
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 mutable struct KrylovLS{K, 𝒯l, 𝒯r} <: AbstractIterativeLinearSolver
     "Krylov method"
@@ -353,7 +353,7 @@ The Krylov space is pre-allocated. This is really great for GPU but also for CPU
 
 The struct is mutable so that you can modify the preconditioners.
 
-## Fields 
+# Internal fields
 $(TYPEDFIELDS)
 """
 mutable struct KrylovLSInplace{F, K, 𝒯l, 𝒯r} <: AbstractIterativeLinearSolver

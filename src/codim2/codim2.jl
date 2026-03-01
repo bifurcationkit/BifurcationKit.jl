@@ -23,7 +23,7 @@ for op in (:FoldProblemMinimallyAugmented, :HopfProblemMinimallyAugmented)
 
     Structure to encode Fold / Hopf functional based on a Minimally Augmented formulation.
 
-    # Fields
+    # Internal fields
 
     $(FIELDS)
     """

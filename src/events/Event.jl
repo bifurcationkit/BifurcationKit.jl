@@ -85,6 +85,7 @@ $(TYPEDEF)
 Structure to pass a ContinuousEvent function to the continuation algorithm.
 A continuous call back returns a **tuple/scalar** value and we seek its zeros.
 
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
@@ -137,6 +138,7 @@ $(TYPEDEF)
 Structure to pass a DiscreteEvent function to the continuation algorithm.
 A discrete call back returns a discrete value and we seek when it changes.
 
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct DiscreteEvent{Tcb, Tl, Tf, Td} <: AbstractDiscreteEvent
@@ -202,7 +204,7 @@ is constructed by passing to the constructor a `ContinuousEvent` and a `Discrete
 
     PairOfEvents(contEvent, discreteEvent)
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct PairOfEvents{Tc <: AbstractContinuousEvent, Td <: AbstractDiscreteEvent}  <: AbstractEvent
@@ -253,6 +255,7 @@ is constructed by passing to the constructor `ContinuousEvent`, `DiscreteEvent` 
 
 You can pass as many events as you like.
 
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct SetOfEvents{Tc <: Tuple, Td <: Tuple}  <: AbstractEvent

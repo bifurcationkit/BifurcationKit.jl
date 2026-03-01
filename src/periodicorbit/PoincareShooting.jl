@@ -7,7 +7,7 @@ $(TYPEDEF)
 
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
-# Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 ## Jacobian

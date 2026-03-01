@@ -106,9 +106,9 @@ $(TYPEDEF)
 Mutable structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
 
 !!! danger
-    If you mutate these fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
+    If you mutate these (internal) fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 

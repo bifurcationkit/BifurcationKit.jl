@@ -23,7 +23,7 @@ Structure which holds the results after a call to [`continuation`](@ref).
 
 You can see the propertynames of a result `br` by using `propertynames(br)` or `propertynames(br.branch)`.
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 

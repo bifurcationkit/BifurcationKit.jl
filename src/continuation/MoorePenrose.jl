@@ -13,7 +13,7 @@ Additional information is available on the [website](https://bifurcationkit.gith
 
 `alg = MoorePenrose(tangent = PALC())`
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """

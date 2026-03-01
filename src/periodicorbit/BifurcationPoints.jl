@@ -7,7 +7,7 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
         """
         $(TYPEDEF)
 
-        # Fields
+        # Internal fields
 
         $(TYPEDFIELDS)
 
@@ -86,7 +86,7 @@ end
 """
 $(TYPEDEF)
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 

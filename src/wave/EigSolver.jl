@@ -35,6 +35,8 @@ convertToGEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B f
 ####################################################################################################
 """
 $(TYPEDEF)
+
+# Internal fields
 $(TYPEDFIELDS)
 
 More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.

@@ -35,6 +35,7 @@ $(TYPEDEF)
 
 Structure to encode the flow associated to a Cauchy problem `dx/dt = F(x, p)`.
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Simplified constructor(s)

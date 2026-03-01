@@ -5,6 +5,7 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD)
         """
         $(TYPEDEF)
 
+        # Internal fields
         $(TYPEDFIELDS)
 
         # Associated methods

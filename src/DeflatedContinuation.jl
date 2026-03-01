@@ -7,7 +7,7 @@ $(TYPEDEF)
 
 Structure which holds the parameters specific to Deflated continuation.
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -52,6 +52,8 @@ end
 $(TYPEDEF)
 
 Structure holding the result from deflated continuation.
+
+# Internal fields
 
 $(TYPEDFIELDS)
 """

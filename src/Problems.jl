@@ -60,11 +60,11 @@ $(TYPEDEF)
 
 Structure to hold the vector field and its derivatives. It should rarely be called directly. Also, in essence, it is very close to `SciMLBase.ODEFunction`.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
 - `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o, x, p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
@@ -190,7 +190,7 @@ const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     For now, we ask the user to pass an out-of-place formulation of the functions.
 
-    ## Fields
+    # Internal fields
 
     $(TYPEDFIELDS)
     """
@@ -245,11 +245,9 @@ for (op, at) in (
 
             Structure to hold a bifurcation problem. $($(_dict_doc_string_prob[op]))
 
-            ## Fields
+            
 
-            $(TYPEDFIELDS)
-
-            ## Methods
+            # Methods
 
             - `re_make(pb; kwargs...)` modify a bifurcation problem
             - `getu0(pb)` calls `pb.u0`
@@ -261,7 +259,7 @@ for (op, at) in (
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
 
-            ## Constructors
+            # Constructors
             - `$($op)(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
             - `$($op)(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
@@ -273,6 +271,8 @@ for (op, at) in (
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x, p, dx1, dx2, dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
+            # Internal fields
+            $(TYPEDFIELDS)
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)."

@@ -84,7 +84,7 @@ $(TYPEDEF)
 
 Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct POSolutionAndState{T1, T2, T3, T4}
@@ -105,7 +105,7 @@ $(TYPEDEF)
 
 This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}

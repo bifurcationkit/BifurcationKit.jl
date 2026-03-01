@@ -3,11 +3,11 @@ $(TYPEDSIGNATURES)
 
 Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 
 - `hasbranch(diagram)`
 - `get_branch(diagram)` return the `AbstractBranch` stored inside the current node.

@@ -30,7 +30,7 @@ The "Quick and Dirty" (QaD) method computes Floquet multipliers through sequenti
 
 Despite precision limitations, the method is sufficient for bifurcation detection in most cases.
 
-## Fields
+# Internal fields
 
 - `eigsolver::AbstractEigenSolver`: eigensolver used to compute the eigenvalues of the monodromy matrix.
 - `matrix_free::Bool`: whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver).
@@ -406,7 +406,7 @@ FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
 - `eigls`: Eigensolver to use.
 - `ntot`: Total dimension of the generalized eigenvalue problem.
 - `n`: State space dimension.
-- `array_zeros`: Function to allocate zero arrays (defaults to `zeros`).
+- `array_zeros`: Function to allocate zero arrays: defaults to `zeros` but `spzeros` can be passed for sparse matrices.
 
 ## Example
 

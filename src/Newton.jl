@@ -3,9 +3,6 @@ $(TYPEDEF)
 
 Returns a variable containing parameters to affect the `newton` algorithm when solving `F(x) = 0`.
 
-# Arguments (with default values):
-$(TYPEDFIELDS)
-
 # Arguments for line search (Armijo)
 - `linesearch = false`: use line search algorithm (i.e. Newton with Armijo's rule)
 - `α = 1.0`: initial value of α (damping) parameter for line search algorithm
@@ -13,6 +10,9 @@ $(TYPEDFIELDS)
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Accessors.jl` to drastically simplify the mutation of different fields. See the tutorials for examples.
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
     "absolute tolerance for `F(x)`"
@@ -39,13 +39,12 @@ For example
 
     sol = newton(prob, NewtonPar())
 
-## Fields
-
-$(TYPEDFIELDS)
-
-## methods
+# methods
 
 - `converged(sol)` return whether the solution has converged.
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
     "solution"

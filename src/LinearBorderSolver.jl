@@ -42,6 +42,7 @@ $(TYPEDEF)
 
 This struct is used to provide the bordered linear solver based on the Bordering method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructors
@@ -208,6 +209,8 @@ end
 $(TYPEDEF)
 
 This struct is used to  provide the bordered linear solver based on inverting the full matrix.
+
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -377,11 +380,11 @@ $(TYPEDEF)
 
 This struct is used to provide a bordered linear solver based on a matrix free operator for the full system in `(x, p)`.
 
-## Constructor
+# Constructor
 
     MatrixFreeBLS(solver, ::Bool)
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -443,10 +446,11 @@ This structure is used to provide the following linear solver. To solve (1) J⋅
 
 > It is interesting for solving the linear system associated with Collocation / Trapezoid functionals, for example using `BorderingBLS(solver = BK.LSFromBLS(), tol = 1e-9, k = 2, check_precision = true)`
 
-$(TYPEDFIELDS)
-
 !!! warn "Warning"
     The solver only works for `AbstractMatrix`
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 struct LSFromBLS{Ts} <: AbstractLinearSolver
     "Linear solver used to solve the smaller linear systems."

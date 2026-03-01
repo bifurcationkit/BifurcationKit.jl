@@ -5,7 +5,7 @@ Continuation algorithm which switches automatically between Natural continuation
 
 `(1-θ)*abs(τ.p) > tol_param`
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 """

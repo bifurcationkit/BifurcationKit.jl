@@ -10,10 +10,12 @@ $(TYPEDEF)
 
 Structure to record special points on a curve. There are two types of special points that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
 
-## Associated methods
-- `BifurcationKit.type(::SpecialPoint)` returns the bifurcation type (`::Symbol`)
+# Internal fields
 
 $(TYPEDFIELDS)
+
+# Associated methods
+- `BifurcationKit.type(::SpecialPoint)` returns the bifurcation type (`::Symbol`)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
     "Description of the special points. In case of `Events`, this field records the user passed name to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following names:
@@ -48,22 +50,22 @@ $(TYPEDFIELDS)
     "Parameter value at the special point (this is an estimate)."
     param::T = 0.
 
-    "Norm of the equilibrium at the special point"
+    "Norm of the equilibrium at the special point."
     norm::T  = 0.
 
-    "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)"
+    "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)."
     printsol::Tp = 0.
 
-    "Equilibrium at the special point"
+    "Solution at the special point."
     x::Tv = Vector{T}(undef, 0)
 
-    "Tangent along the branch at the special point"
+    "Tangent along the branch at the special point."
     τ::BorderedArray{Tvτ, T} = BorderedArray(x, zero(T))
 
-    "Eigenvalue index responsible for detecting the special point (if applicable)"
+    "Eigenvalue index responsible for detecting the special point (if applicable)."
     ind_ev::Int64 = 0
 
-    "Continuation step at which the special occurs"
+    "Continuation step at which the special occurs."
     step::Int64 = 0
 
     "`status ∈ {:converged, :guess, :guessL}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point. If `status == :guess`, the bisection algorithm failed to meet the requirements given in `::ContinuationPar`. Same for `status == :guessL` but the bisection algorithm stopped on the left of the bifurcation point."

@@ -1,6 +1,7 @@
 """
 $(TYPEDEF)
 
+# Internal fields
 $(TYPEDFIELDS)
 
 This parametric type allows to define a new dot product from the one saved in `dt::dot`. More precisely:
@@ -53,7 +54,7 @@ Pseudo-arclength continuation algorithm.
 
 Additional information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/).
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -263,6 +264,7 @@ end
 """
     Polynomial Tangent predictor
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)

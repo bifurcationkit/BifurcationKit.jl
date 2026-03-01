@@ -57,14 +57,14 @@ The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``
 
 with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
 
-where ``h_1 = s_i-s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
+where ``h_1 = s_i - s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
 
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
-## Constructors
+# Constructors
 
 The structure can be created by calling `PeriodicOrbitTrapProblem(;kwargs...)`. For example, you can declare such a problem without vector field by doing
 

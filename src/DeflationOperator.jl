@@ -18,7 +18,7 @@ This operator allows to handle the following situation. Assume you want to solve
 
 where ``||u||² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -26,7 +26,7 @@ Given `defOp::DeflationOperator`, one can access its roots via `defOp[n]` as a s
 
 Also, one can add (resp. remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 
-## Constructors
+# Constructors
 
 - `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}; autodiff = false)`
 - `DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false)`
@@ -34,7 +34,7 @@ Also, one can add (resp. remove) a new root by using `push!(defOp, newroot)` (re
 
 The option `autodiff` triggers the use of automatic differentiation for the computation of the gradient of the scalar function `M`. This works only on `AbstractVector` for now.
 
-## Custom distance
+# Custom distance
 
 You are asked to pass a scalar product like `dot` to build a `DeflationOperator`. However, in some cases, you may want to pass a custom distance `dist(u, v)`. You can do this using
 
@@ -42,7 +42,7 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 
-## Linear solvers / jacobians
+# Linear solvers / jacobians
 
 When used with newton, you have access to the following linear solvers
 
