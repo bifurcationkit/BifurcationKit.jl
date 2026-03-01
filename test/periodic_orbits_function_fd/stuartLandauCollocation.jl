@@ -24,10 +24,10 @@ function Jsl!(J, u, p, t = 0)
     A = c3*u1 - μ*u2
     B = c3*u2 + μ*u1
 
-    J[1,1] = r - (2*u1*A + ua*c3)
+    J[1,1] =  r - (2*u1*A + ua*c3)
     J[1,2] = -ν - (2*u2*A - ua*μ)
     J[2,1] =  ν - (2*u1*B + ua*μ)
-    J[2,2] = r - (2*u2*B + ua*c3)
+    J[2,2] =  r - (2*u2*B + ua*c3)
 
     return J
 end
@@ -61,8 +61,12 @@ begin
     length(prob_col)
     BK.get_times(prob_col)
     BK.get_max_time_step(prob_col)
+    BK.get_gauss_nodes(prob_col)
     size(prob_col.mesh_cache)
     BK.update_mesh!(prob_col, prob_col.mesh_cache.τs)
+    @test BK.lagrange(1, 1.0, 1:10) == 1
+    @test BK.lagrange(1, 2.0, 1:10) == 0
+
     PeriodicOrbitOCollProblem(10, 2) |> BK.get_mesh_size
     BK.get_Ls(prob_col)
     show(prob_col)
@@ -73,17 +77,26 @@ begin
     @test BK.∂(sin, Val(2))(0.) == 0
     BK.residual(prob_col, _ci, par_sl) #|> scatter
     BK.get_time_slices(prob_col, _ci)
-    
+
     # interpolate solution
     sol = BK.POSolution(prob_col, _ci)
     sol(rand())
 end
 ####################################################################################################
-prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
-_ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
-BK.get_times(prob_col)
-sol = BK.POSolution(prob_col, _ci)
-sol(0.1)
+begin
+    prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
+    _ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
+    BK.get_times(prob_col)
+    sol = BK.POSolution(prob_col, _ci)
+    @test sol(0.1) ≈ cos(0.1) .* ones(1000)
+    for (i,t) in pairs(BK.get_times(prob_col))
+        @test sol(t)[1] ≈ cos(t)
+    end
+    _time = BK.get_times(prob_col)
+    for t in BK.getmesh(prob_col)
+        @test t in _time
+    end
+end
 ####################################################################################################
 # test precision of phase condition, it must work for non uniform mesh
 # recall that it is 1/T int(f,g')

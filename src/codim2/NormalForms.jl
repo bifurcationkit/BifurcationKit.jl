@@ -657,7 +657,9 @@ function bautin_normal_form(_prob::HopfMAProblem,
     ϵ = 𝒯(δ)
 
     # functional
-    @assert prob_ma isa HopfProblemMinimallyAugmented "You need to provide a curve of Hopf points."
+    if ~(prob_ma isa HopfProblemMinimallyAugmented)
+        error("[Bautin normal form] You need to provide a curve of Hopf points.\nThe underlying problem is not a `HopfProblemMinimallyAugmented`.\nWe found the type: $(typeof(prob_ma))")
+    end
     ls = prob_ma.linsolver
     bls = prob_ma.linbdsolver
 
@@ -978,7 +980,9 @@ function zero_hopf_normal_form(_prob,
 
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    if ~(prob_ma isa AbstractProblemMinimallyAugmented)
+        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(prob_ma))")
+    end
 
     # linear solver
     ls = prob_ma.linsolver
@@ -1328,7 +1332,9 @@ function hopf_hopf_normal_form(_prob,
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
 
-    @assert prob_ma isa AbstractProblemMinimallyAugmented
+    if ~(prob_ma isa AbstractProblemMinimallyAugmented)
+        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(prob_ma))")
+    end
 
     # linear solver
     ls = prob_ma.linsolver
