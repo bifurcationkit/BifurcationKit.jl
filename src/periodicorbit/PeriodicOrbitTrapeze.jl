@@ -51,9 +51,9 @@ $(TYPEDEF)
 
 This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
-The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one looks for `T = x[end]` such that
+The scheme is as follows. We first consider a partition of ``[0, 1]`` given by ``0 < s_0 < \\cdots < s_m = 1`` and one looks for `T = x[end]` such that
 
- ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
+ ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i = 1, \\cdots, m-1``
 
 with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
 
