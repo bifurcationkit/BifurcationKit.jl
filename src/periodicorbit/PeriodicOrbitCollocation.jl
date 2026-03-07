@@ -1,4 +1,4 @@
-using FastGaussQuadrature: gausslegendre
+import FastGaussQuadrature
 
 """
     cache = MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
