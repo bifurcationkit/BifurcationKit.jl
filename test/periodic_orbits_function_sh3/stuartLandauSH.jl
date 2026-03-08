@@ -271,12 +271,12 @@ normals = [[-1., 0.], [1, 0]]
 centers = [zeros(2), zeros(2)]
 initpo_bar = [0.2, -0.2]
 
-probPsh = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
+probPsh = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol=1e-11, reltol=1e-9, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
 # version with analytical jacobian
-probPsh2 = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol=1e-10, reltol=1e-9, δ = 0, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
+probPsh2 = PoincareShootingProblem(prob, ODE.KenCarp4(), normals, centers; abstol=1e-11, reltol=1e-9, δ = 0, lens = (@optic _.r), jacobian = BK.AutoDiffDenseAnalytical())
 
-# test of the analytical formula for jacobian of the functional
-_Jad = BK.finite_differences( x-> probPsh(x, par_hopf), initpo_bar)
+# test of the analytical formula for jacobian of the functional 
+_Jad = ForwardDiff.jacobian( x-> probPsh(x, par_hopf), initpo_bar)
 # _Jphifd = BK.finiteDifferences(x->probPsh.flow(x, par_hopf, Inf64), [0,0.4]; δ=1e-8)
 _Jana = probPsh(Val(:JacobianMatrix), initpo_bar, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-5
