@@ -334,7 +334,6 @@ function get_po_solution(prob::ShootingProblem, x, pars; kode...)
     end
 
     sol = (period = T, sol = sol_ode)
-
     return POSolution(prob, sol, pars)
 end
 
@@ -353,7 +352,7 @@ function (sol::POSolution{ <: ShootingProblem})(t)
             ii += 1
         end
     end
-    sol.x.sol[ii](t-t0)
+    sol.x.sol[ii](t - t0)
 end
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point

@@ -1,24 +1,26 @@
 # The next type is for holding the methods related to the vector field.
-# So, the residual, its jacobian and higher differentials.
-# It is a convenience for a bifurcation problem so it is not strictly necessary albeit useful.
+# Namely: the residual, its jacobian and higher differentials.
+# It is not strictly necessary but proves useful for the current implementation.
 abstract type AbstractBifurcationFunction end
-# This is the abstract type for a bifurcation problem. It should implement
+# The next type is the abstract type for a bifurcation problem. It should implement
+# the following methods. See below for a description.
 #   - getparams(pb::AbstractBifurcationProblem) 
 #   - getlens(pb::AbstractBifurcationProblem)
 #   - record_from_solution(pb::AbstractBifurcationProblem)
 #   - plot_solution(pb::AbstractBifurcationProblem)
-#   - residual(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p)
-#   - getdelta(pb::AbstractAllJetBifProblem)
-#   - dF(pb::AbstractAllJetBifProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
-#   - vjp(pb::AbstractAllJetBifProblem, x, p, dx)
+#   - residual(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian_adjoint(pb::AbstractBifurcationProblem, x, p)
+#   - getdelta(pb::AbstractBifurcationProblem)
+#   - dF(pb::AbstractBifurcationProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
+#   - vjp(pb::AbstractBifurcationProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
-# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# This current ``implementation'' of this abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
 # It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+################################################################################
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
 ################################################################################
