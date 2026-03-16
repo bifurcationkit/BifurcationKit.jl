@@ -1,6 +1,6 @@
-using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack, Random
 const BK = BifurcationKit
-
+Random.seed!(1234)
 # test that the top eigenvalues are sorted by decrasing real part
 _test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
