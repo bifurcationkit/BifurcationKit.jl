@@ -344,6 +344,7 @@ function (sol::POSolution{ <: ShootingProblem})(t)
     M = get_mesh_size(sol.pb)
     ii = 1
     while ii <= M
+        # TODO: it breaks for VoA! use getindex?
         tspan = sol.x.sol[ii].prob.tspan
         if t0 + tspan[1] <= t <= t0 + tspan[2]
             break

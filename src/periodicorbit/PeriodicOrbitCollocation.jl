@@ -251,8 +251,6 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 
     "Parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
-
-    @assert jacobian in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one in $_pocoll_jacobian_types."
 end
 
 # trivial constructor
@@ -290,6 +288,8 @@ end
 @inline get_mesh_size(coll::PeriodicOrbitOCollProblem) = coll.mesh_cache.Ntst
 
 """
+$(TYPEDSIGNATURES)
+
 The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProblem`
 """
 @inline Base.size(coll::PeriodicOrbitOCollProblem) = (coll.N, size(coll.mesh_cache)...)
@@ -317,8 +317,12 @@ get_Ls(coll::PeriodicOrbitOCollProblem) = get_Ls(coll.mesh_cache)
 
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
-# array of size Ntst ⋅ (m+1) ⋅ n
-get_time_slices(coll::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[begin:end-1], size(coll)...)
+"""
+$(TYPEDSIGNATURES)
+
+The method returns an array of size N x (m * Ntst + 1)
+"""
+get_time_slices(coll::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[begin:end-1], size(coll)...) # array of size Ntst ⋅ (m+1) ⋅ n
 get_time_slices(coll::PeriodicOrbitOCollProblem, x::POSolutionAndState) = get_time_slices(coll, x.sol)
 get_times(coll::PeriodicOrbitOCollProblem) = get_times(coll.mesh_cache)
 @inline get_gauss_nodes(coll::PeriodicOrbitOCollProblem) = get_gauss_nodes(coll.mesh_cache)
@@ -956,7 +960,7 @@ end
 ####
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::FullSparseInplace, orbitguess, pars; k...)
     _J = analytical_jacobian_sparse(coll, orbitguess, pars)
-    indx = get_blocks(coll, _J)
+    indx = _get_blocks_from_sparse_matrix(coll, _J)
     return (FullSparseInplace(), _J, indx)
 end
 
@@ -1296,7 +1300,7 @@ $(TYPEDSIGNATURES)
 
 This function extracts the indices of the blocks composing the matrix J which is a M x M Block matrix where each block N x N has the same sparsity.
 """
-function get_blocks(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
+function _get_blocks_from_sparse_matrix(coll::PeriodicOrbitOCollProblem, Jac::SparseMatrixCSC)
     N, m, Ntst = size(coll)
     blocks = N * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)

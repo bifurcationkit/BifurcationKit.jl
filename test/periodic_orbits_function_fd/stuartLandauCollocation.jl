@@ -323,7 +323,7 @@ begin
     @test norminf(Jco - Array(Jco_sp)) < 1e-15
     Jco2 = copy(Jco) |> sparse;
     Jco2 .= 0
-    _indx = BifurcationKit.get_blocks(prob_col, Jco2);
+    _indx = BifurcationKit._get_blocks_from_sparse_matrix(prob_col, Jco2);
     @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
     @test norminf(Jco - Jco2) < 1e-14
 end

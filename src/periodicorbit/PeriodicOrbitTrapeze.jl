@@ -834,7 +834,7 @@ function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace,
     M, N = size(trap)
     # sparse matrix to hold the jacobian
     J =  trap(Val(:JacFullSparse), orbitguess, getparams(trap.prob_vf))
-    indx = get_blocks(J, N, M)
+    indx = _get_blocks_from_sparse_matrix(J, N, M)
     return (FullSparseInplace(), J, indx)
 end
 
@@ -876,7 +876,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  trap(Val(:JacCyclicSparse), orbitguess, getparams(trap.prob_vf))
-            _indx = get_blocks(_J, N, M-1)
+            _indx = _get_blocks_from_sparse_matrix(_J, N, M-1)
             # inplace modification of the jacobian _J
             Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = LA.lu(_J), prob = trap, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
@@ -992,7 +992,7 @@ function continuation_potrap(prob::PeriodicOrbitTrapProblem,
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  prob(Val(:JacCyclicSparse), orbitguess, getparams(prob.prob_vf))
-            _indx = get_blocks(_J, N, M-1)
+            _indx = _get_blocks_from_sparse_matrix(_J, N, M-1)
             # inplace modification of the jacobian _J
             Aγ = AγOperatorSparseInplace(;Jc = _J,  Jcfact = LA.lu(_J), prob, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
