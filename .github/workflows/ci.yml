@@ -35,7 +35,7 @@ jobs:
 
       - name: Cache Julia packages (GitHub-hosted runners)
         if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'windows') || contains(matrix.os, 'macOs')
-        uses: julia-actions/cache@v2
+        uses: julia-actions/cache@v3
 
       - name: Cache Julia artifacts (self-hosted runners)
         if: contains(matrix.os, 'self-hosted')
