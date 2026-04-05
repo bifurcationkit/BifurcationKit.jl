@@ -485,7 +485,7 @@ end
     μ = @. Complex((1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
+        @debug "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
     end
     Ind = sortperm(log.(μ); by = real, rev = true)
     nev2 = min(nev, length(Ind))

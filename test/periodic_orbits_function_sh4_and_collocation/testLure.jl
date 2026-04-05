@@ -15,26 +15,23 @@ function lur!(dz, u, p, t = 0)
 end
 
 prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
-
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false
-br = continuation(prob, PALC(tangent = Bordered()), opts_br;
-bothside = true, normC = norminf)
-
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
 # plot(br)
 ####################################################################################################
 function plotPO(x, p; k...)
-	xtt = get_periodic_orbit(p.prob, x, p.p)
-	plot!(xtt.t, xtt[1,:]; markersize = 2, marker = :d, k...)
-	plot!(xtt.t, xtt[2,:]; k...)
-	plot!(xtt.t, xtt[3,:]; legend = false, k...)
+    xtt = get_periodic_orbit(p.prob, x, p.p)
+    plot!(xtt.t, xtt[1,:]; markersize = 2, marker = :d, k...)
+    plot!(xtt.t, xtt[2,:]; k...)
+    plot!(xtt.t, xtt[3,:]; legend = false, k...)
 end
 
 # record function
 function recordPO(x, p; k...)
-	xtt = get_periodic_orbit(p.prob, x, p.p)
-	period = getperiod(p.prob, x, p.p)
-	return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
+    xtt = get_periodic_orbit(p.prob, x, p.p)
+    period = getperiod(p.prob, x, p.p)
+    return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
 # continuation parameters
@@ -85,13 +82,13 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, detect_bifurca
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, p_max = 1.8, p_min=-0.9, max_steps = 120, newton_options = NewtonPar(tol = 1e-11,  max_iterations = 25), nev = 3, tol_stability = 1e-4, detect_bifurcation = 3, plot_every_step = 20, save_sol_every_step = 1, n_inversion = 8)
 
 for meshadapt in (false, true)
-    br_po = continuation(
-        br, 2, opts_po_cont,
-        PeriodicOrbitOCollProblem(40, 4; meshadapt, K = 200);
-        alg = PALC(),
-        record_from_solution = recordPO,
-        plot_solution = plotPO,
-        normC = norminf)
+    local br_po = continuation(
+                br, 2, opts_po_cont,
+                PeriodicOrbitOCollProblem(40, 4; meshadapt, K = 200);
+                alg = PALC(),
+                record_from_solution = recordPO,
+                plot_solution = plotPO,
+                normC = norminf)
 
     # test normal forms
     for _ind in (1,)
@@ -146,7 +143,7 @@ show(br_po)
 for _ind in (1,3)
     if length(br_po.specialpoint) >=3 && br_po.specialpoint[_ind].type ∈ (:bp, :pd, :ns)
         println("")
-        pt = get_normal_form(br_po, _ind; verbose = true, δ = 1e-5)
+        local pt = get_normal_form(br_po, _ind; verbose = true, δ = 1e-5)
         show(pt)
         predictor(pt, 0.1, 1.)
         show(pt)
