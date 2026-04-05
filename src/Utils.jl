@@ -81,6 +81,7 @@ end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
     # we compute the eigen-elements
+    # we compute more eigenvalues than the number of unstable eigenvalues in the previous step
     n = state.n_unstable[2]
     nev_ = max(n + 5, iter.contparams.nev)
     @debug "Computing spectrum..."

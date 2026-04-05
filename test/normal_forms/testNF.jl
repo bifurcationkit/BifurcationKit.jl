@@ -149,7 +149,7 @@ let
     Fdegenerate(x, p) = [x[1]^2 - p[1]^2]
     prob = BK.ODEBifProblem(Fdegenerate, [1.], (-1.0), 1; record_from_solution = (x,p;k...)->x[1])
     br = continuation(prob, PALC(), ContinuationPar(n_inversion = 6); normC = norminf)
-    br1 = continuation(br, 1, verbosity = 3, bothside = true)
+    br1 = continuation(br, 1, verbosity = 0, bothside = true)
     bp = get_normal_form(br, 1; verbose = true)
     show(bp)
     predictor(bp, 0.1)
@@ -161,7 +161,6 @@ let
         n1, n2, n3 = size(a)
         @assert n1 == n2 == n3
         n = n1
-
         for i in 1:n, j in 1:n, k in 1:n
             v = (
                 a[i,j,k] + a[i,k,j] +
@@ -170,7 +169,6 @@ let
             ) / 6
             a[i,j,k] = a[i,k,j] = a[j,i,k] = a[j,k,i] = a[k,i,j] = a[k,j,i] = v
         end
-
         return a
     end
     P = rand(2,2)
@@ -183,8 +181,8 @@ let
                                 b20 = rand(2,2,2),
                                 b30 = rand(2,2,2,2)),
                             :none)
-    vf.nf.b20[1,:,:] .= Symmetric(vf.nf.b20[1,:,:])
-    vf.nf.b20[2,:,:] .= Symmetric(vf.nf.b20[2,:,:])
+    vf.nf.b20[1,:,:] = Symmetric(vf.nf.b20[1,:,:])
+    vf.nf.b20[2,:,:] = Symmetric(vf.nf.b20[2,:,:])
     symmetrize3!(@view vf.nf.b30[1,:,:,:])
     symmetrize3!(@view vf.nf.b30[2,:,:,:])
     prob2d = BK.ODEBifProblem((x,p)->vf(Val(:reducedForm), x, p[1]), [0., 0], [-.1], 1)
@@ -286,7 +284,7 @@ let
         #     (Base.display(contResult.eig[end].eigenvals) ;true)
         )
 
-    plot(br_snd1, br_snd2, putbifptlegend=false)
+    plot(br_snd1, br_snd2)
 
     bdiag = bifurcationdiagram(prob, PALC(), 2,
         ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);

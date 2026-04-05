@@ -48,7 +48,7 @@ function testBranch(br)
     for bp in br.specialpoint
         if bp.type!=:endpoint
             id = bp.idx
-            if isempty(br.eig) == false && bp.type ∈ [:fold, :hopf, :bp, :nd, :none, :ns, :pd, :bt, :cusp, :gh, :zh, :hh]
+            if isempty(br.eig) == false && bp.type ∈ (:fold, :hopf, :bp, :nd, :none, :ns, :pd, :bt, :cusp, :gh, :zh, :hh)
                 # test that the states marked as bifurcation points are always after true bifurcation points
                 @test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
             end
@@ -70,6 +70,7 @@ function Feve(X, p)
     out
 end
 
+let
 par = (p1 = -3., p2=-3., k=3)
 
 opts0 = ContinuationPar(dsmax = 0.1, ds = 0.001, max_steps = 1000, p_min = -3., p_max = 4.0, save_sol_every_step = 1, newton_options = NewtonPar(tol = 1e-10, verbose = false, max_iterations = 5), detect_bifurcation = 3, detect_event = 0, n_inversion = 8, detect_fold=false, plot_every_step = 10)
@@ -82,15 +83,19 @@ testBranch(br0)
 # plot(br0, plotspecialpoints=true)
 ####################################################################################################
 # continuous events
-opts = ContinuationPar(opts0; save_sol_every_step = 1, detect_bifurcation = 0, detect_event = 2)
+opts = ContinuationPar(opts0; detect_bifurcation = 0, detect_event = 2)
 br = continuation(prob, PALC(), opts)
 
 # arguments for continuation
 args = (BK.re_make(prob; record_from_solution = (x,p; k...) -> x[1]), PALC(), opts)
 kwargs = (plot = false, verbosity = 0, linear_algo = MatrixBLS(),)
 
-br = continuation(args...; kwargs...,
+br = continuation(args[1:end-1]..., ContinuationPar(opts; max_steps = 10); kwargs...,
     verbosity = 3, # test printing
+    event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
+
+br = continuation(args...; kwargs...,
+    verbosity = 0, # test printing
     event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
 @test br.specialpoint[1].type == :userC
@@ -258,3 +263,5 @@ br = continuation(args2...; kwargs...,
         SaveAtEvent((0.001,.01))
     ),
     )
+
+end

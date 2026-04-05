@@ -100,7 +100,7 @@ outpo = newton(_pb, initpo, optn; normN = norminf)
 BK.getperiod(_pb, outpo.u, par_hopf)
 BK.get_periodic_orbit(_pb, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, p_max = 4.0, max_steps = 5, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-7), tol_stability = 1e-5)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, p_max = 4.0, max_steps = 5, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-10), tol_stability = 1e-5)
 br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
     opts_po_cont;
     # verbosity = 0, plot = false,

@@ -399,7 +399,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             optimal_period::Bool = true,
                             use_adapted_mesh::Bool = false)
     if use_adapted_mesh || ~pb.meshadapt
-        @warn "You initialize an adapted mesh but do not use mesh adaptation in the collocation problem!"
+        @warn "You initialize an adapted mesh but do not use mesh adaptation in the collocation problem!\nHopefully, this is what you want."
     end
     t0 = sol_ode.t[begin]
     u0 = sol_ode(t0)

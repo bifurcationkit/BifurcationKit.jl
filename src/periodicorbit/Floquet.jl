@@ -79,7 +79,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     σ = logvals[I]
     vp0 = minimum(abs, σ)
     if (wrapprob isa WrapPOSh) && vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
+        @debug "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end

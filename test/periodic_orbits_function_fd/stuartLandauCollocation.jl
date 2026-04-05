@@ -249,7 +249,7 @@ begin
 
     # test the values of the Floquet exponents
     for k in 1:length(br_po)-1
-        _eigvals = br_po[k].eigenvals
+        local _eigvals = br_po[k].eigenvals
         μ1_bk = minimum(real, _eigvals)
         μ1 = -2*br_po[k].param*(br_po[k].period)
         @test isapprox(μ1_bk, μ1, atol = 1e-5 )
