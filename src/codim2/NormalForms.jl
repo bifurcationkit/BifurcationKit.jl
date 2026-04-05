@@ -732,15 +732,15 @@ function bautin_normal_form(_prob::HopfMAProblem,
     # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
     # formula (7.2) in REF1
-    H20,cv,it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+    H20, cv, it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
     ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
 
     # formula (7.3) in REF1
-    H11,cv,it = ls(L, -B(q0, cq0))
+    H11, cv, it = ls(L, -B(q0, cq0))
     ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
 
     # formula (7.4) in REF1
-    H30,cv,it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+    H30, cv, it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
     ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
 
     # formula (7.5) in REF1
@@ -749,7 +749,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     h21 .= G21 .* q0 .- h21 # (7.7)
 
     # formula (7.7) in REF1
-    H21,_,cv,it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+    H21, _, cv, it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
 
     # 4-th order coefficient

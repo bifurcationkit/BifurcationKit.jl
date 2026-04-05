@@ -567,7 +567,7 @@ function continuation_hopf(prob,
     bifpt = br.specialpoint[ind_hopf]
 
     if isnothing(br.eig) 
-        error("The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website.")
+        error("The branch contains no eigen elements.\nThis is strange because a Hopf point was detected.\nPlease open an issue on the website.")
     end
 
     p = bifpt.param
@@ -660,6 +660,7 @@ function test_bt_gh(iter, state)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
     hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO! WE NEED A KWARGS here
+
     # lyapunov coefficient
     𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.

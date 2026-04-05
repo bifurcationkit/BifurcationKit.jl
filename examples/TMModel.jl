@@ -118,3 +118,19 @@ br_popsh = @time continuation(
     normC = norminf)
 
 plot(br, br_popsh, markersize=3)
+####################################################################################################
+# periodic orbit from curve of Hopf bifurcations
+br_po_coll = @time BK.continuation_from_hopf_point(
+    br_hopf, 2,
+    # arguments for continuation
+    ContinuationPar(opts_po_cont; max_steps = 15, ds = 0.001),
+    PeriodicOrbitOCollProblem(20, 4; jacobian = BK.DenseAnalyticalInplace());
+    # lens = BK.getlens(prob),
+    # verbosity = 2,
+    δp = 1e-3,
+    # plot = true,
+    args_po...,
+    autodiff_nf = false
+    )
+
+plot(br_po_coll)

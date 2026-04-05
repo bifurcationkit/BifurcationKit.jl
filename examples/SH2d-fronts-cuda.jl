@@ -25,7 +25,6 @@ plotsol!(x; k...) = heatmap!(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)
 ####################################################################################################
 using AbstractFFTs, FFTW, KrylovKit
 import Base: *, \
-
 # Making the linear operator a subtype of BK.LinearSolver is handy as we will use it
 # in the Newton iterations.
 struct SHLinearOp{Treal, Tcomp, Tl1, Tplan, Tiplan} <: BK.AbstractIterativeLinearSolver
@@ -111,11 +110,11 @@ end
 
 J_shfft(u, p) = (u, p.l, p.ν)
 
-L = SHLinearOp(Nx, lx, Ny, ly, AF = AF)
+L = SHLinearOp(Nx, TY(lx), Ny, TY(ly), AF = AF)
 Leig = SHEigOp(L, 0.1, nothing) # for eigenvalues computation
 # @time Leig((sol_hexa.u, -0.15, 1.3), 10; σ = 0.1)
 
-par = (l = -0.15, ν = 1.3, L = L)
+par = (l = TY(-0.15), ν = TY(1.3), L = L)
 
 @time F_shfft!(similar(AF(sol0)), AF(sol0), par); # 0.008022 seconds (12 allocations: 1.500 MiB)
 
@@ -125,7 +124,7 @@ prob = BK.BifurcationProblem(F_shfft!, AF(sol0), par, (@optic _.l) ;
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
     record_from_solution = (x, p; k...) -> norm(x))
 
-opt_new = NewtonPar(verbose = true, tol = 1e-6, linsolver = L, eigsolver = Leig)
+opt_new = NewtonPar(verbose = true, tol = TY(1e-6), linsolver = L, eigsolver = Leig)
 sol_hexa = @time BK.solve(prob, Newton(), opt_new, normN = norminf);
 println("--> norm(sol) = ", norminf(sol_hexa.u))
 

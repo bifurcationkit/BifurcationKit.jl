@@ -44,17 +44,17 @@ optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_
 br = continuation(probsl, PALC(), optconteq)
 ####################################################################################################
 # test hopf predictor
-begin
+let
     hp = get_normal_form(br, 1)
     pred = predictor(hp, 0.1)
     @test pred.orbit(0)[1] ≈ sqrt(0.1)
 end
 ####################################################################################################
-begin
+let
     Ntst = 4
     m = 4
     N = 3
-    const Mf = rand(N, N)
+    Mf = rand(N, N)
     prob1 = BK.BifurcationProblem((x,p) -> Mf * x.^2, zeros(1), nothing)
     prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
     size(prob_col)
@@ -83,7 +83,7 @@ begin
     sol(rand())
 end
 ####################################################################################################
-begin
+let
     prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
     _ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
     BK.get_times(prob_col)
@@ -165,7 +165,7 @@ let
     end
 end
 
-begin
+let
     prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
     _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
     _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
@@ -178,7 +178,7 @@ begin
     @test BK.∫(prob_col, _ci1, _ci2, 3) ≈ 3/2 # test vector form
 end
 ####################################################################################################
-begin
+let
     Ntst = 50
     m = 4
     N = 2
@@ -257,10 +257,7 @@ begin
 
     newton(prob_col2, _ci, NewtonPar())
     newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
-end
-####################################################################################################
-## test of the computation of the Floquet exponents
-begin
+
     Jw = @time (BK.jacobian(br_po.prob, br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
     J = (Jw) |> copy
     @test BK._eig_floquet_coll((J),2,4,50,2)[1] ≈ BK._eig_floquet_coll(sparse(J),2,4,50,2)[1] atol=1e-10
@@ -269,7 +266,7 @@ begin
 end
 ####################################################################################################
 # test analytical jacobian
-begin
+let
     Ntst = 10
     m = 3
     N = 4
@@ -287,7 +284,7 @@ begin
     Ntst = 140
     m = 4
     N = 5
-    const _al = I(N) + 0.1 .* rand(N,N)
+    _al = I(N) + 0.1 .* rand(N,N)
     idvf(x,p) = _al*x
     prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
     prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
@@ -312,7 +309,7 @@ begin
     BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = Val(true), ρF = 1);
     # test for the case of sparse arrays
     # jacobian using BlockArray
-    const _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
+    _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
     prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
     prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
     prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
@@ -330,6 +327,7 @@ end
 ####################################################################################################
 # test Hopf aBS
 let
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
     for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), ), use_nf in (true, false)
         useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
         _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)

@@ -1095,7 +1095,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("The provided index does not refer to a Hopf Point")
     end
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
-
     options = br.contparams.newton_options
 
     # bifurcation point
