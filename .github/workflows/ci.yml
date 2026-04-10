@@ -24,18 +24,18 @@ jobs:
         # arch:
           # - x64
     steps:
-    - name: Fix PATH (macOS)
-      # necessary to find gpg for coverage step
-      # Homebrew is located differently on macOSX/Intel and macOS/ARM
-      if: runner.os == 'macOS'
-      run: |
-        if [ "${{ runner.arch }}" = "ARM64" ]; then
-          echo "/opt/homebrew/bin:/opt/homebrew/sbin" >> $GITHUB_PATH
-        else
-          echo "/usr/local/bin" >> $GITHUB_PATH
-        fi
+      - name: Fix PATH (macOS)
+        # necessary to find gpg for coverage step
+        # Homebrew is located differently on macOSX/Intel and macOS/ARM
+        if: runner.os == 'macOS'
+        run: |
+          if [ "${{ runner.arch }}" = "ARM64" ]; then
+            echo "/opt/homebrew/bin:/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+          fi
 
-    - name: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Setup julia
