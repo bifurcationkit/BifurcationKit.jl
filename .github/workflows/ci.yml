@@ -24,14 +24,25 @@ jobs:
         # arch:
           # - x64
     steps:
-      - name: Checkout repository
+    - name: Fix PATH (macOS)
+      # necessary to find gpg for coverage step
+      # Homebrew is located differently on macOSX/Intel and macOS/ARM
+      if: runner.os == 'macOS'
+      run: |
+        if [ "${{ runner.arch }}" = "ARM64" ]; then
+          echo "/opt/homebrew/bin:/opt/homebrew/sbin" >> $GITHUB_PATH
+        else
+          echo "/usr/local/bin" >> $GITHUB_PATH
+        fi
+
+    - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Setup julia
         uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          # arch: ${{ matrix.arch }} \todo required? 
+          # arch: ${{ matrix.arch }} \todo required?
 
       - name: Cache Julia packages (GitHub-hosted runners)
         if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'windows') || contains(matrix.os, 'macOs')
@@ -102,6 +113,7 @@ jobs:
             # Run tests
             Pkg.test(coverage=true, test_args=test_args)
           '
+
       - name: Compute coverage
         uses: julia-actions/julia-processcoverage@v1
 
