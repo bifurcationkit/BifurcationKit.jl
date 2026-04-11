@@ -572,8 +572,6 @@ $(TYPEDSIGNATURES)
 Print the normal form `bp` with a nice string.
 """
 function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
-    superDigits = [c for c in "⁰ ²³⁴⁵⁶⁷⁸⁹"]
-
     nf = bp.nf
     N = length(nf.a01)
     out = ["" for _ in 1:N]

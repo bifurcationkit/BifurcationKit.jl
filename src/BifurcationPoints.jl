@@ -298,61 +298,6 @@ end
 
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
-
-# """
-# This is a type which holds information for the bifurcation points of equilibria with dim(Ker)>1.
-
-# $(TYPEDEF)
-
-# ## Fields
-
-# $(TYPEDFIELDS)
-
-# ## Associated methods
-
-# You can call `type(bp::NdBranchPoint), length(bp::NdBranchPoint)`.
-
-# ## Predictor
-
-# You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zeros of the normal form polynomials.
-
-# ## Manipulating the normal form
-
-# - You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on the vector `x` for (scalar) parameter `p`.
-
-# - You can use `bp(x, δp::Real)` to get the (large dimensional guess) associated to the low dimensional vector `x`. Note that we must have `length(x) == length(bp)`.
-
-# - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
-# """
-# mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: AbstractBranchPoint
-#     "Bifurcation point"
-#     x0::Tv
-
-#     "Tangent of the curve at the bifurcation point."
-#     τ::Tτ
-
-#     "Parameter value at the bifurcation point"
-#     p::T
-
-#     "Parameters used by the vector field."
-#     params::Tpar
-
-#     "Parameter axis used to compute the branch on which this bifurcation point was detected."
-#     lens::Tlens
-
-#     "Right eigenvectors"
-#     ζ::Tevr
-
-#     "Left eigenvectors"
-#     ζ★::Tevl
-
-#     "Normal form coefficients"
-#     nf::Tnf
-
-#     "Type of bifurcation point"
-#     type::Symbol
-# end
-
 type(::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
