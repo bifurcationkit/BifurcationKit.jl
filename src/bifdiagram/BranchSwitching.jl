@@ -245,7 +245,6 @@ function multicontinuation(br::AbstractBranchResult,
                             bls_block = MatrixBLS(),
 
                             verbosedeflation::Bool = false,
-                            perturb_guess = identity,
 
                             plot_solution = plot_solution(br.prob),
                             kwargs...) where {𝒯eigvec}
@@ -298,7 +297,6 @@ function get_first_points_on_branch(br::AbstractBranchResult,
                                     bpnf::NdBranchPoint, solfromRE,
                                     options_cont::ContinuationPar = br.contparams ;
                                     δp = nothing,
-                                    Teigvec = _getvectortype(br),
                                     usedeflation = true,
                                     verbosedeflation = false,
                                     max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
@@ -363,7 +361,7 @@ function multicontinuation(br::AbstractBranchResult,
                             lsdefop = DeflatedProblemCustomLS(),
                             perturb_guess = identity,
                             kwargs...)
-
+    # lsdefop = DeflatedProblemCustomLS()
     defOpm, defOpp, _, _ = get_first_points_on_branch(br,
                                             bpnf,
                                             solfromRE,
@@ -371,7 +369,7 @@ function multicontinuation(br::AbstractBranchResult,
                                             δp,
                                             verbosedeflation,
                                             max_iter_deflation,
-                                            lsdefop,
+                                            lsdefop, # TODO: this makes it type unstable. Pass DeflatedProblemCustomLS() directly
                                             perturb_guess,
                                             kwargs...)
 
@@ -406,7 +404,6 @@ function multicontinuation(br::AbstractBranchResult,
                            δp = nothing,
                            verbosedeflation = false,
                            max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
-                           lsdefop = DeflatedProblemCustomLS(),
                            plot_solution = plot_solution(getprob(br)),
                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                            kwargs...) where {𝒯eigvec}
@@ -415,7 +412,7 @@ function multicontinuation(br::AbstractBranchResult,
     dscont = abs(options_cont.ds)
     par = bpnf.params
     x0 = convert(𝒯eigvec, bpnf.x0)
-    # prob = re_make(br.prob; plot_solution)
+    prob = re_make(br.prob; plot_solution)
 
     # compute the different branches
     function _continue(_sol, _dp, _ds)
@@ -428,15 +425,14 @@ function multicontinuation(br::AbstractBranchResult,
             (@set options_cont.ds = _ds); kwargs...)
     end
 
-    branches = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
+    brs = [_continue(defOpm[id], -ds, -dscont) for id in 2:length(defOpm)]
+    @error "" typeof(brs)
+    branches = Branch(brs, bpnf)
 
     for id in 2:length(defOpp)
-        br = _continue(defOpp[id], ds, dscont); push!(branches, Branch(br, bpnf))
+        br = _continue(defOpp[id], ds, dscont); push!(branches.γ, br)
         # br = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
     end
 
     return branches
 end
-
-# same but for a Branch
-multicontinuation(br::Branch, ind_bif::Int, options_cont::ContinuationPar = br.contparams; kwargs...) = multicontinuation(get_contresult(br), ind_bif, options_cont ; kwargs...)
