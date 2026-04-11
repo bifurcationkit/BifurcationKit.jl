@@ -12,14 +12,11 @@ $(TYPEDFIELDS)
 struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
     "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
     alg::Talg
-
     "tolerance for switching to PALC(), default value = 1//2"
     tol_param::T
 end
 
-function AutoSwitch(;alg = PALC(), tol_param = 1//2)
-    return AutoSwitch(alg, tol_param)
-end
+AutoSwitch(;alg = PALC(), tol_param = 1//2) = AutoSwitch(alg, tol_param)
 
 Base.empty!(alg::AutoSwitch) = empty!(alg.alg)
 getθ(alg::AutoSwitch) = getθ(alg.alg)
@@ -65,7 +62,7 @@ function corrector!(state::AbstractContinuationState,
     θ = getθ(it)
     dotθ = getdot(alg.alg)
     @debug "" (1-θ)*abs(λ) dotθ(τ, θ)
-    if (1-θ)*abs(λ) > alg.tol_param
+    if (1-θ)*abs(λ) > alg.tol_param && ~in_bisection(state)
         @debug "NATURAL" λ
         corrector!(state, it, Natural(); kwargs...)
     else

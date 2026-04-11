@@ -405,7 +405,7 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifu
 
 for probPO in (
                 PeriodicOrbitOCollProblem(20, 3), 
-                ShootingProblem(9, prob_ode, ODE.Rodas5(), parallel = true)
+                ShootingProblem(9, prob_ode, ODE.Vern9(), parallel = false)
               )
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
             normC = norminf,

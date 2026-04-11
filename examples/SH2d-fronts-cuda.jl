@@ -42,13 +42,13 @@ struct SHEigOp{Tsh <: SHLinearOp, Tσ, Tc} <: BK.AbstractEigenSolver
 end
 BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
 
-function SHLinearOp(Nx, lx, Ny, ly; AF = Array{TY})
+function SHLinearOp(Nx, lx::T, Ny, ly; AF = Array{T}) where T
     # AF is a type, it could be CuArray{TY} to run the following on GPU
     k1 = vcat(collect(0:Nx/2), collect(Nx/2+1:Nx-1) .- Nx)
     k2 = vcat(collect(0:Ny/2), collect(Ny/2+1:Ny-1) .- Ny)
-    d2 = [(1-(pi/lx * kx)^2 - (pi/ly * ky)^2)^2 + 1. for kx in k1, ky in k2]
-    tmpc = Complex.(AF(zeros(Nx, Ny)))
-    return SHLinearOp(AF(zeros(Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
+    d2 = [(1-(pi/lx * kx)^2 - (pi/ly * ky)^2)^2 + 1 for kx in k1, ky in k2]
+    tmpc = Complex.(AF(zeros(T, Nx, Ny)))
+    return SHLinearOp(AF(zeros(T, Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
 
 function apply!(dest, c::SHLinearOp, u, multiplier, op = *)
@@ -105,7 +105,7 @@ end
 function F_shfft!(dest, u, p)
     (;l, ν, L) = p
     apply!(dest, L, u, L.l1)
-    dest .= (-1) .* dest .+ ((l+1) .* u .+ ν .* u.^2 .- u.^3)
+    dest .= @. (-1) * dest + ((l+1) * u + ν * u^2 - u^3)
 end
 
 J_shfft(u, p) = (u, p.l, p.ν)
