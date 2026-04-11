@@ -117,10 +117,8 @@ end
 
 function init(contparams::ContinuationPar{T,S,E}, 
                prob::Union{ODEBifProblem, DAEBifProblem}, 
-               alg::AbstractContinuationAlgorithm) where {T,S,E}
-    if E <: DefaultEig
-        n = length(getu0(prob))
-        @reset contparams.nev = n
-    end
+               alg::AbstractContinuationAlgorithm) where {T,S,E <: DefaultEig}
+    n = length(getu0(prob))
+    @reset contparams.nev = n
     return contparams
 end

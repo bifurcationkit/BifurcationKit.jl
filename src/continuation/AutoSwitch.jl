@@ -16,7 +16,7 @@ struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
     tol_param::T
 end
 
-AutoSwitch(;alg = PALC(), tol_param = 1//2) = AutoSwitch(alg, tol_param)
+AutoSwitch(;alg = PALC(tangent = Bordered()), tol_param = 1//2) = AutoSwitch(alg, tol_param)
 
 Base.empty!(alg::AutoSwitch) = empty!(alg.alg)
 getθ(alg::AutoSwitch) = getθ(alg.alg)
@@ -62,11 +62,11 @@ function corrector!(state::AbstractContinuationState,
     θ = getθ(it)
     dotθ = getdot(alg.alg)
     @debug "" (1-θ)*abs(λ) dotθ(τ, θ)
-    if (1-θ)*abs(λ) > alg.tol_param && ~in_bisection(state)
-        @debug "NATURAL" λ
+    if (1-θ) * abs(λ) > alg.tol_param && ~in_bisection(state)
+        @debug "[corrector! NATURAL]" λ
         corrector!(state, it, Natural(); kwargs...)
     else
-        @debug "PALC" λ
+        @debug "[corrector! PALC]" λ
         corrector!(state, it, alg.alg; kwargs...)
     end
     return true

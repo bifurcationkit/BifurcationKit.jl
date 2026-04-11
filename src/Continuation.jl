@@ -633,7 +633,9 @@ function continuation(prob::AbstractBifurcationProblem,
                       linear_algo = nothing,
                       bothside::Bool = false,
                       kwargs...)
-    # init the continuation parameters
+    # Note that bothside and kwargs are parameters that are easy to switch for debug/plot purposes. 
+    # They could have been placed in ContinuationPar but it would have been less convenient.
+    # Init the continuation parameters
     contparams = init(contparams, prob, alg)
 
     # update the parameters of alg

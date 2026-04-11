@@ -21,9 +21,9 @@ function record_from_solution(x,p;k...)
     (x = x[1], y = x[2], s = x[3])
 end
 
-prob = BifurcationProblem(COm!, z0, par_com, (@optic _.q2); record_from_solution)
+prob = ODEBifProblem(COm!, z0, par_com, (@optic _.q2); record_from_solution)
 
-opts_br = ContinuationPar(dsmax = 0.015, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 6, detect_bifurcation = 3, nev = 3)
+opts_br = ContinuationPar(dsmax = 0.015, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 6, detect_bifurcation = 3)
 br = @time continuation(prob, PALC(), opts_br;
     plot = true, verbosity = 0,
     normC = norminf,

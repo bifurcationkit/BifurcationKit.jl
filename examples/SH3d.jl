@@ -87,7 +87,7 @@ par = (l = 0.1, ν = 1.2, L1 = L1);
 
 Prec = cholesky(Symmetric(L1));
 using SuiteSparse
-LinearAlgebra.ldiv!(o::Vector, P::SuiteSparse.CHOLMOD.Factor{Float64}, v::Vector) = o .= (P \ v)
+LinearAlgebra.ldiv!(o::Vector{Float64}, P::SparseArrays.CHOLMOD.Factor{Float64, Int64}, v::Vector{Float64}) = o .= (P \ v)
 
 # rtol must be small enough to pass the folds and to get precise eigenvalues
 ls = GMRESKrylovKit(verbose = 0, rtol = 1e-9, maxiter = 150, ishermitian = true, Pl = Prec)

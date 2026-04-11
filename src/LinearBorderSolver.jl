@@ -5,7 +5,7 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing, dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
 
-# Reminder we want to solve the linear system
+# Reminder: we want to solve the linear system
 # Cramer's rule gives σ = det(J) / det(M)
 #     ┌        ┐┌   ┐   ┌ ┐
 # M = │ J    b ││ v │ = │0│
@@ -40,7 +40,7 @@ update_bls(lbs::AbstractBorderedLinearSolver, ls) = error("update_bls not implem
 """
 $(TYPEDEF)
 
-This struct is used to provide the bordered linear solver based on the Bordering method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
+This struct is used to provide the bordered linear solver based on the Bordering method. Using the options, you can trigger a sequence of Bordering reductions to meet a given precision.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -48,7 +48,7 @@ $(TYPEDFIELDS)
 # Constructors
 
 - there is a  simple constructor `BorderingBLS(ls)` where `ls` is a linear solver, for example `ls = DefaultLS()`
-- you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
+- you can pass keyword arguments to create the solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
 
 # Reference(s)
 
@@ -69,10 +69,10 @@ Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SI
     "Number of recursions to achieve tolerance."
     k::Int64 = 1
 
-    "Inner product used in by the solver."
+    "Inner product used by the solver."
     dot::Tdot = VI.inner
 
-    "Norm used in by the solver."
+    "Norm used by the solver."
     norm::Tnorm = VI.norm
 
     @assert k > 0 "Number of recursions must be positive"
@@ -389,7 +389,7 @@ This struct is used to provide a bordered linear solver based on a matrix free o
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
-    "Linear solver for solving the extended linear system"
+    "Linear solver for solving the extended linear system."
     solver::S
     "Structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used which is analogous to `vcat(x, p)`."
     use_bordered_array::Bool

@@ -5,6 +5,7 @@ using BifurcationKit
 const BK = BifurcationKit
 
 TY = Float64
+TY = Float32
 AF = Array{TY}
 ####################################################################################################
 
@@ -17,6 +18,9 @@ CUDA.allowscalar(false)
 
 TY = Float64
 AF = CuArray{TY}
+####################################################################################################
+using Metal
+AF = MtlArray{Float32}
 ####################################################################################################
 using Plots
 # to simplify plotting of the solution
@@ -77,10 +81,12 @@ sol0 = sol0 .- 0.25
 sol0 .*= 1.7
 # heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs; shift = zero(eltype(rhs)), rtol = convert(eltype(rhs), 1e-8))
+function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = convert(T, 1e-8)) where {T}
     u, l, ν = J
     udiag = @. l + 1 + (2ν) * u - 3 * u^2 - shift
     tmp = copy(udiag); dudiag = copy(udiag)
+    n = size(tmp, 1)
+
     function h(du)
         dudiag .= udiag .* du
         apply!(tmp, sh, dudiag, sh.l1, /)
