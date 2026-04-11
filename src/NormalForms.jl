@@ -10,7 +10,7 @@ function get_adjoint_basis(L★, λs::AbstractVector, eigsolver::AbstractEigenSo
     # This is a horrible hack to get the type of the left eigenvectors
     ζ★s = Vector{typeof(geteigenvector(eigsolver, ev★, 1))}()
 
-    for (idvp, λ) in enumerate(λs)
+    for (idvp, λ) in pairs(λs)
         I = argmin(abs.(λ★ .- λ))
         abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
         verbose && println("──▶ VP[$idvp] paired with VP★[$I]")
@@ -194,14 +194,14 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     tol_fold = 1e-3,
                     scaleζ = LA.norm,
 
-                    ζ = nothing,
-                    ζ_ad = nothing,
+                    ζ::Tevecs = nothing,
+                    ζ_ad::Tevecs_ad = nothing,
 
                     autodiff::Bool = true,
                     detailed::Bool = true,
 
                     bls = MatrixBLS(),
-                    ) where {𝒯eigvec}
+                    ) where {𝒯eigvec, Tevecs, Tevecs_ad}
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     plens = get_lens_symbol(lens)
@@ -225,7 +225,6 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     parbif = set(getparams(br), lens, p)
 
     L = jacobian(prob, x0, parbif)
-    ls = options.linsolver
 
     # "zero" eigenvalue at bifurcation point, it must be real
     λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -235,7 +234,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
     # corresponding eigenvector, it must be real
-    if isnothing(ζ) # do we have a basis for the kernel?
+    if Tevecs == Nothing # do we have a basis for the kernel?
         if ~haseigenvector(br)
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             nev_required = max(nev, bifpt.ind_ev + 2)
@@ -244,15 +243,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
             if ~(_λ[bifpt.ind_ev] ≈ λ)
                 error("We did not find the correct eigenvalue $λ. We found $(_λ)")
             end
-            ζ = real(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
+            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)))
         else
-            ζ = real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
         end
     end
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
-    if isnothing(ζ_ad)
+    if Tevecs_ad == Nothing
         if is_symmetric(prob)
             λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
             ζ★ = _copy(ζ)
@@ -265,8 +264,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         ζ★ = _copy(ζ_ad)
     end
 
-    ζ★ = real(ζ★)
-    λ★ = real(λ★)
+    ζ★ = 𝒯eigvec(real(ζ★))
     if ~(abs(VI.inner(ζ, ζ★)) > 1e-10)
         error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
@@ -666,7 +664,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
                             scaleζ = LA.norm,
                             autodiff = false
-                            ) where {𝒯eigvec,Tevecs,Tevecs_ad}
+                            ) where {𝒯eigvec, Tevecs, Tevecs_ad}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob

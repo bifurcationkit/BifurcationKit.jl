@@ -251,7 +251,7 @@ function multicontinuation(br::AbstractBranchResult,
                             kwargs...) where {𝒯eigvec}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
-
+    # TODO: the following makes the function type unstable. Calling directly get_normal_formNd impeds logic because of L270 multicontinuation(...) = nothing
     bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff, bls_block)
 
     return multicontinuation(br,

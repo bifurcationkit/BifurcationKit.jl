@@ -284,7 +284,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         empty!(deflationOp)
 
         # update the known branches
-        for (idb, dcstate) in enumerate(dcstates)
+        for (idb, dcstate) in pairs(dcstates)
             # this computes the solution for the new parameter value current_param
             # it also updates deflationOp
             # if the branch is inactive, it returns

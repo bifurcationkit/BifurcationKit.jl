@@ -183,7 +183,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         )
     end
 
-    for (id, pt) in enumerate(node.γ.specialpoint)
+    for (id, pt) in pairs(node.γ.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
         if pt.step > 1 && (pt.type in (:bp, :nd))
@@ -219,7 +219,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
             end
         end
     end
-    for (ii, nd) in enumerate(node.child)
+    for (ii, nd) in pairs(node.child)
         bifurcationdiagram!(prob, 
                             nd, 
                             maxlevel, 

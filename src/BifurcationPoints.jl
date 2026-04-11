@@ -153,8 +153,8 @@ end
 # types for bifurcation point with 1d kernel for the jacobian
 
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
-                  (:Pitchfork, AbstractSimpleBranchPoint),
                   (:Fold, AbstractSimpleBranchPoint),
+                  (:Pitchfork, AbstractSimpleBranchPoint),
                   (:Transcritical, AbstractSimpleBranchPoint),
                   (:PeriodDoubling, AbstractSimpleBranchPointForMaps),
                   (:BranchPointMap, AbstractSimpleBranchPointForMaps),

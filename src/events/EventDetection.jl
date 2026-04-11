@@ -374,14 +374,14 @@ function get_event_type(event::SetOfEvents,
     # find the active events
     event_index_C = Int32[]
     event_index_D = Int32[]
-    for (ind, eve) in enumerate(event.eventC)
+    for (ind, eve) in pairs(event.eventC)
         if is_event_crossed(eve, iter, state, ind)
             push!(event_index_C, ind)
         end
     end
 
     nC = length(event.eventC)
-    for (ind, eve) in enumerate(event.eventD)
+    for (ind, eve) in pairs(event.eventD)
         if is_event_crossed(eve, iter, state, nC + ind)
             push!(event_index_D, ind)
         end

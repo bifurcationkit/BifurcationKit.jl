@@ -183,7 +183,7 @@ function bogdanov_takens_normal_form(prob_ma, L,
 
     # return the normal form coefficients
     pt.nf = (; a, b)
-    if detailed_type == false # THIS MAKES IT TYPE UNSTABLE
+    if detailed_type == false # TODO! THIS MAKES IT TYPE UNSTABLE
         return pt
     end
 
@@ -387,11 +387,13 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     # compute point on the Hopf curve
     x0 = getx(ds)
 
-    return (hopf = t -> HopfCurve(t).pars,
+    return (
+            hopf = t -> HopfCurve(t).pars,
             ω = t -> HopfCurve(t).ω,
             EigenVec = EigenVec,
             EigenVecAd = EigenVecAd,
-            x0 = t -> getx(t) .* bt.ζ[1])
+            x0 = t -> getx(t) .* bt.ζ[1]
+            )
 end
 
 
@@ -420,10 +422,12 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
         β2 = s
         return par0 .+ K10 .* β1 .+ K11 .* β2 .+ K2 .* (β2^2/2)
     end
-    return (fold = FoldCurve,
+    return (
+            fold = FoldCurve,
             EigenVec = t -> (bt.ζ[1]),
             EigenVecAd = t -> (bt.ζ★[2]),
-            x0 = t -> getx(t) .* bt.ζ[1])
+            x0 = t -> getx(t) .* bt.ζ[1]
+            )
 end
 
 """
@@ -501,7 +505,7 @@ function bogdanov_takens_normal_form(_prob,
                                     br::AbstractBranchResult, ind_bif::Int,
                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                     δ = 1e-8,
-                                    nev = length(eigenvalsfrombif(br, ind_bif)),
+                                    nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
                                     ζs = nothing,
                                     ζs_ad = nothing,
@@ -536,7 +540,6 @@ function bogdanov_takens_normal_form(_prob,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    eigRes = br.eig
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
@@ -1278,7 +1281,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
                     ampfactor = one(T)) where T
-    (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2) = zh.nf
+    (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
     p2 = _get(zh.params, lens2)
@@ -1338,9 +1341,6 @@ function hopf_hopf_normal_form(_prob,
 
     # linear solver
     ls = prob_ma.linsolver
-
-    # bordered linear solver
-    bls = prob_ma.linbdsolver
 
     # kernel dimension
     N = 4

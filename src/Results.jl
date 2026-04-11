@@ -368,7 +368,7 @@ Return the bifurcation point of a `::Branch`.
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
-_getfirstusertype(br::Branch) = _getfirstusertype(first(br.γ))
+_getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.firstindex(br::Branch) = firstindex(br.γ)
 Base.lastindex(br::Branch) = lastindex(br.γ)

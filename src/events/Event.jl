@@ -310,10 +310,10 @@ function is_event_crossed(event::SetOfEvents, iter, state)
     res = false
     nC = length(event.eventC)
     nD = length(event.eventD)
-    for (i, eve) in enumerate(event.eventC)
+    for (i, eve) in pairs(event.eventC)
         res = res | is_event_crossed(eve, iter, state, i)
     end
-    for (i, eve) in enumerate(event.eventD)
+    for (i, eve) in pairs(event.eventD)
         res = res | is_event_crossed(eve, iter, state, nC + i)
     end
     return  res
