@@ -308,7 +308,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         if mod(nstep, alg.seek_every_step) == 0 && nactive < alg.max_branches
             n_active = 0
             # we restrict to 1:nbrs because we don't want to update the newly found branches
-            for (idb, dcstate) in enumerate(dcstates[begin:nbrs])
+            for (idb, dcstate) in enumerate(Iterators.take(dcstates, nbrs))
                 if isactive(dcstate) && (n_active < alg.max_branches)
                     n_active += 1
                     _success = true
