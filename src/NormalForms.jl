@@ -670,7 +670,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     prob_vf = prob
 
     # kernel dimension:
-    N::Int = abs(bifpt.δ[1])
+    N::Int = kernel_dimension(bifpt)
 
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(2N, nev)
