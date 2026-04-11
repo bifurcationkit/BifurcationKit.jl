@@ -139,7 +139,6 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     z0 = getsolution(state)
     τ0 = state.τ
     z_pred = state.z_pred
-    ds = state.ds
 
     (;tol, max_iterations, verbose) = contparams.newton_options
     (;p_min, p_max) = contparams

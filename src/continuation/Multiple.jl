@@ -79,8 +79,11 @@ function getpredictor!(state::AbstractContinuationState,
     return nothing
 end
 
-function corrector!(_state::AbstractContinuationState, it::AbstractContinuationIterable,
-        algo::Multiple, linear_algo = MatrixFreeBLS(); kwargs...)
+function corrector!(_state::AbstractContinuationState,
+                    it::AbstractContinuationIterable,
+                    algo::Multiple,
+                    linear_algo = MatrixFreeBLS(); 
+                    kwargs...)
     verbose = it.verbosity
     # we create a copy of the continuation cache
     state = copy(_state)

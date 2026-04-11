@@ -3,7 +3,7 @@ abstract type AbstractBranchPoint <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBranchPoint <: AbstractBranchPoint end
 abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
 
-istranscritical(bp::AbstractBranchPoint) = false
+istranscritical(::AbstractBranchPoint) = false
 ####################################################################################################
 """
 $(TYPEDEF)
@@ -212,13 +212,13 @@ for op in (:Pitchfork, :PitchforkMap)
 end
 
 istranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
-type(bp::BranchPoint) = :BranchPoint
-type(bp::Pitchfork) = :Pitchfork
-type(bp::PitchforkMap) = :Pitchfork
-type(bp::Fold) = :Fold
-type(bp::Transcritical) = :Transcritical
-type(bp::TranscriticalMap) = :Transcritical
-type(bp::PeriodDoubling) = :PeriodDoubling
+type(::BranchPoint) = :BranchPoint
+type(::Pitchfork) = :Pitchfork
+type(::PitchforkMap) = :Pitchfork
+type(::Fold) = :Fold
+type(::Transcritical) = :Transcritical
+type(::TranscriticalMap) = :Transcritical
+type(::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function printnf1d(io, nf; prefix = "")
@@ -344,7 +344,7 @@ mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tev
     type::Symbol
 end
 
-type(bp::NdBranchPoint) = :NonSimpleBranchPoint
+type(::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
@@ -462,7 +462,7 @@ mutable struct NeimarkSacker{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr
     type::Symbol
 end
 
-type(bp::NeimarkSacker) = :NeimarkSacker
+type(::NeimarkSacker) = :NeimarkSacker
 
 function Base.show(io::IO, bp::NeimarkSacker)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)

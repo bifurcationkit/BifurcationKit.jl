@@ -72,7 +72,6 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 
     x = _copy(x0)
     fx = residual(prob, x, p0)
-    u = _copy(fx)
 
     res = normN(fx)
     residuals = [res]

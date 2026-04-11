@@ -269,7 +269,7 @@ end
 # │  J    a │
 # │  b'   c │
 # └         ┘
-function solve_bls_block(lbs::MatrixBLS,
+function solve_bls_block(::MatrixBLS,
                            J,
                            a::Tuple,
                            b::Tuple,

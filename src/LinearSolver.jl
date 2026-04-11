@@ -303,7 +303,7 @@ The struct is mutable so that you can modify the preconditioners.
 
 You can create a Krylov solver with the following code:
 
-`KrylovLS(atol=1e-11, rtol=1e-8)`
+`KrylovLS(atol = 1e-11, rtol = 1e-8)`
 
 # Other methods
 

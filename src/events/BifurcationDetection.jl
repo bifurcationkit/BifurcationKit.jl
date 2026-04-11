@@ -74,6 +74,7 @@ function get_event_type(event::BifEvent,
                         verbosity, 
                         status::Symbol, 
                         interval::Tuple{T, T}, 
-                        ind = :; typeE = :user) where T
+                        ind = : ; 
+                        typeE = :user) where T
     return get_bifurcation_type(iter, state, status, interval)
 end

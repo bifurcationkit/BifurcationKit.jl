@@ -10,7 +10,7 @@ abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # The following function returns the n-th eigenvectors computed by an eigen solver. 
 # This function is necessary given the different return types each eigensolver has
-geteigenvector(eigsolve::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
+geteigenvector(::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
 
 getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
@@ -175,7 +175,7 @@ function (eig::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     return vals, vec, info.converged > 0, info.numops
 end
 
-geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
+geteigenvector(::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
 ####################################################################################################
 # Solvers for ArnoldiMethod
 ####################################################################################################

@@ -1163,7 +1163,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     else
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
-        (; v, w, itv, itw) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v
         ζ★ = w
         λ★ = conj(λ)
@@ -1214,7 +1214,7 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `p` new parameter value
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
-function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
+function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     # get the element type
     𝒯 = VI.scalartype(hp.x0)
 
@@ -1338,7 +1338,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     return setproperties(pt; nf, type)
 end
 
-function predictor(pd::PeriodDoubling, δp; verbose = false, ampfactor = 1 )
+function predictor(pd::PeriodDoubling, δp; verbose::Bool = false, ampfactor = 1 )
     # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
     # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
     #               = (1-2∂p)x - 2cx^3 + h.o.t.
@@ -1553,7 +1553,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     if abs(LA.dot(ζ, ζ★)) <= 1e-10
-        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero")
     end
     ζ★ ./= LA.dot(ζ, ζ★)
 

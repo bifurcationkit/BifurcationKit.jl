@@ -502,7 +502,6 @@ function phase_condition(coll::PeriodicOrbitOCollProblem,
                         Ls,
                         period)
     𝒯 = eltype(uc)
-    n, m, Ntst = size(coll)
 
     puj = get_tmp(coll.cache.gj, uc) # zeros(𝒯, n, m)
     uj  = get_tmp(coll.cache.uj, uc)  #zeros(𝒯, n, m+1)
@@ -740,7 +739,6 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
                                 kwargs...) 
     n, m, Ntst = size(coll)
     blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
-    n_blocks = length(blocks)
     J = BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
     jacobian_poocoll_block!(J, coll, u, pars; kwargs...)
     return J
@@ -910,7 +908,7 @@ Function needed for automatic branch switching from a Hopf bifurcation point.
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
                  hopfpt,
-                 ζr::AbstractVector,
+                 ::AbstractVector,
                  orbitguess_a,
                  period; 
                  orbit = identity,

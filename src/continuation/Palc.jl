@@ -42,8 +42,8 @@ Compute
 function arc_length_eq(dt::DotTheta, u1, u2, p, du, dp, θ, ds)
     # θ⋅dot(x - z0.u, τ0.u) / n + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
     #  arc_length_eq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
-    out = arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
-          arc_length_eq(dt, u2, p, du, 0, θ, 0)
+    return arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
+           arc_length_eq(dt, u2, p, du, 0, θ, 0)
 
 end
 ####################################################################################################
@@ -145,8 +145,8 @@ function addtangent!(state::AbstractContinuationState, nrm = false)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                  iter::AbstractContinuationIterable,
-                  alg::PALC,
+                  ::AbstractContinuationIterable,
+                  ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
@@ -185,7 +185,7 @@ _shortname(::PALC{Secant}) = "PALC [Secant]"
 function _secant_tangent!(τ::M, 
                           z₁::M, 
                           z₀::M, 
-                          it::AbstractContinuationIterable, 
+                          ::AbstractContinuationIterable, 
                           ds, 
                           θ, 
                           verbosity, 
@@ -229,7 +229,7 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 # it is updated inplace
 function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    tgt_algo::Bordered, 
+                    ::Bordered, 
                     dotθ)
     (it.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(it.prob)
@@ -432,8 +432,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     x_pred = _copy(x)
 
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
-    dp = zero(𝒯)
-    up = zero(𝒯)
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))

@@ -316,8 +316,6 @@ function _contresult(iter,
     bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
     # save full solution? At least, we keep the first one
     sol = [(x = x0, p = getparam(iter.prob), step = 0)]
-    n_unstable = n_imag = 0
-    stability = true
     eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
     _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
     return ContResult(
@@ -358,9 +356,9 @@ struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ContResult}}, Tbp} <: 
 end
 
 Base.length(br::Branch) = length(br.γ)
-@inline kernel_dimension(br::Branch, ind) = kernel_dimension(br.γ, ind)
-get_solution(br::Branch, ind) = get_solution(br.γ, ind)
-getprob(br::Branch) = getprob(br.γ)
+@inline kernel_dimension(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = kernel_dimension(br.γ, ind)
+get_solution(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = get_solution(br.γ, ind)
+getprob(br::Branch{Tk, Tp, T}) where {Tk, Tp, T <: ContResult} = getprob(br.γ)
 
 """
 $(TYPEDSIGNATURES)
@@ -369,8 +367,8 @@ Return the bifurcation point of a `::Branch`.
 """
 from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(first(br)) : nothing
-from(tree::ContResult) = nothing
-_getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
+from(::ContResult) = nothing
+_getfirstusertype(br::Branch) = _getfirstusertype(first(br.γ))
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.firstindex(br::Branch) = firstindex(br.γ)
 Base.lastindex(br::Branch) = lastindex(br.γ)

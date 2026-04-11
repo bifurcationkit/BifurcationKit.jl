@@ -143,7 +143,7 @@ jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobi
 get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
 get_wrap_po(pb::AbstractWrapperPOProblem) = pb
 
-_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense,
+_generate_jacobian(::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense,
                                                                 FiniteDifferences,
                                                                 AutoDiffMF,
                                                                 MatrixFree,
@@ -152,7 +152,7 @@ _generate_jacobian(probPO::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense,
                                                                 FullSparse,
                                                                 DenseAnalytical}, o, pars; k...) = J
 
-_generate_jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+_generate_jacobian(::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
 
 function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
     _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
@@ -377,8 +377,6 @@ function _continuation(hopfpt::Hopf,
                       ampfactor = 1,
                       usedeflation = false,
                       kwargs...)
-    par_hopf = hopfpt.params
-
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
     𝒯 = typeof(ds)
@@ -656,8 +654,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
 
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
-
-    wrap = br.prob
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten by the following

@@ -9,7 +9,7 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
 
 # finalise event
-finalise_event!(event_point, eve::AbstractEvent, it, state, success) = event_point
+finalise_event!(event_point, ::AbstractEvent, it, state, success) = event_point
 default_finalise_event!(event_point, it, state, success) = event_point
 
 # whether the event requires computing eigen-elements
@@ -55,7 +55,7 @@ function is_event_crossed(eve::AbstractContinuousEvent, iter, state, ind = :)
 end
 
 # general condition for detecting a discrete event
-test_event(eve::AbstractDiscreteEvent, x, y) = x != y
+test_event(::AbstractDiscreteEvent, x, y) = x != y
 isonevent(::AbstractDiscreteEvent, x) = false
 
 function is_event_crossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
@@ -269,7 +269,7 @@ end
 SetOfEvents(callback::AbstractDiscreteEvent) = SetOfEvents((), (callback,))
 SetOfEvents(callback::AbstractContinuousEvent) = SetOfEvents((callback,), ())
 SetOfEvents() = SetOfEvents((), ())
-SetOfEvents(cb::Nothing) = SetOfEvents()
+SetOfEvents(::Nothing) = SetOfEvents()
 
 # For Varargs, use recursion to make it type-stable
 SetOfEvents(events::Union{AbstractEvent, Nothing}...) = SetOfEvents(split_events((), (), events...)...)
@@ -310,7 +310,6 @@ function is_event_crossed(event::SetOfEvents, iter, state)
     res = false
     nC = length(event.eventC)
     nD = length(event.eventD)
-    nCb = nC+nD
     for (i, eve) in enumerate(event.eventC)
         res = res | is_event_crossed(eve, iter, state, i)
     end

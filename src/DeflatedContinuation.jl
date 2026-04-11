@@ -108,7 +108,6 @@ function updatebranch!(dcIter::DefContIterable,
     it = dcIter.it                 # continuation iterator
     alg = dcIter.alg
     (;step, ds) = state
-    (; verbosity) = it
     state.z_pred.p = current_param
 
     getpredictor!(state, it)
@@ -257,7 +256,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         prob_df = re_make(cont_iter.prob;
                             u0 = alg.perturb_solution(u0, _p, _idb),
                             params = set(par, lens, _p))
-        soln = solve(prob_df, deflationOp,
+        local soln = solve(prob_df, deflationOp,
                 setproperties(optnewton; max_iterations = alg.max_iter_defop);
                 normN = cont_iter.normC,
                 callback = cont_iter.callback_newton,

@@ -248,7 +248,7 @@ EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Sym
 
 # I put the callback in first argument even if it is in iter in order to allow for dispatch
 # function to tell the event type based on the coordinates of the zero
-function get_event_type(event::AbstractEvent, 
+function get_event_type(::AbstractEvent, 
                         iter::AbstractContinuationIterable,
                         state,
                         verbosity,

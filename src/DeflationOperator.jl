@@ -80,7 +80,7 @@ DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = fals
 DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, VI.inner, α, roots, v, autodiff, T(1e-8))
 
 # methods to deal with DeflationOperator
-Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
+Base.eltype(::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
 Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, Tdot, T, vectype} = push!(df.roots, v)
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
 Base.getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
@@ -88,7 +88,7 @@ Base.length(df::DeflationOperator) = length(df.roots)
 Base.isempty(df::DeflationOperator) = isempty(df.roots)
 Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
-Base.firstindex(df::DeflationOperator) = 1
+Base.firstindex(::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
 Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff, df.δ)
 
