@@ -1,6 +1,7 @@
 # using Revise
 using Plots
 using Test
+using Core.Compiler: return_type # for type stability testing
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
@@ -233,6 +234,9 @@ let
                                     autodiff, 
                                     verbose = false)
 
+        # test for type stable implementation
+        @test isconcretetype(return_type(BK.get_normal_formNd, typeof((prob2d, br, 1))))
+        @test isconcretetype(return_type(BK.multicontinuation, typeof((br, BK.get_normal_form(br, 1))) )) == false # not type stable yet TODO
         @test bp2d.ζ[1] ≈ [1, 0, 0.]
         @test bp2d.ζ[2] ≈ [0, 1, 0.]
 

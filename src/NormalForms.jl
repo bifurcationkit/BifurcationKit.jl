@@ -48,7 +48,7 @@ Bi-orthogonalise the two sets of vectors.
 # Optional argument
 - `_dot = VectorInterface.inner` specify your own dot product.
 """
-function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
+function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use the projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
@@ -634,12 +634,28 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
     return out
 end
 
+Base.@kwdef struct NdBPNormalForm{T}
+    a01::Array{T, 1}
+    a02::Array{T, 1}
+    b11::Array{T, 2}
+    b20::Array{T, 3}
+    b30::Array{T, 4}
+end
+
+function E(x, ζs, ζ★s)
+    out = _copy(x)
+    for ii in eachindex(ζs)
+        out .= out .- VI.inner(x, ζ★s[ii]) .* ζs[ii]
+    end
+    return out
+end
+
 function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
                             id_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            nev = length(eigenvalsfrombif(br, ind_bif)),
-                            verbose = false,
+                            nev::Int = length(eigenvalsfrombif(br, id_bif)),
+                            verbose::Bool = false,
                             lens = getlens(br),
                             tol_fold = 1e-3,
 
@@ -656,14 +672,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     prob_vf = prob
 
     # kernel dimension:
-    N = abs(bifpt.δ[1])
+    N::Int = abs(bifpt.δ[1])
 
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(2N, nev)
     verbose && println("━"^53*"\n──▶ Normal form Computation for a $N-d kernel")
     verbose && println("──▶ analyse bifurcation at p = ", bifpt.param)
 
-    options = br.contparams.newton_options
+    options = getcontparams(br).newton_options
     ls = options.linsolver
 
     # bifurcation point
@@ -706,6 +722,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
     # only adjust ζ★s
     for ζ in ζs; ζ ./= scaleζ(ζ); end
+
     L★ = if is_symmetric(prob_vf)
         L
         else
@@ -740,13 +757,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # bls(z) = (ls(L, z)[1], 0, true,1)
     bls(z) = solve_bls_block(bls_block, L, as, bs, cs, z, zeros(𝒯, 2))
     # projector on Range(L)
-    function E(x)
-        out = _copy(x)
-        for ii in 1:N
-            out .= out .- VI.inner(x, ζ★s[ii]) .* ζs[ii]
-        end
-        return out
-    end
 
     # eigenvector eltype
     𝒯vec = VI.scalartype(ζs[1])
@@ -765,7 +775,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
     end
    
-    for ii in 1:N
+    for ii in eachindex(ζ★s)
         ∂gᵢ∂p[ii] = VI.inner(R01, ζ★s[ii])
     end
     verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gᵢ∂p, "\n")
@@ -773,7 +783,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # coefficients of x*p and p^2
     ∂²gᵢ∂xⱼ∂pₖ = zeros(𝒯vec, N, N)
     ∂²gᵢ∂p² = zeros(𝒯vec, N)
-    for jj in 1:N
+    for jj in eachindex(ζs)
         if autodiff
             R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
         else
@@ -781,7 +791,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                    dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
         end
 
-        Ψ01, _, cv, it  = bls(-E(R01))
+        Ψ01, _, cv, it  = bls(-E(R01, ζs, ζ★s))
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
         tmp = R11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
@@ -827,17 +837,17 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         if jj==kk==ll || jj==kk || jj<kk<ll
             b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 
-            b2 = E(R2(ζs[ll], ζs[kk]))
+            b2 = E(R2(ζs[ll], ζs[kk]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[jj], wst)
 
-            b2 = E(R2(ζs[ll], ζs[jj]))
+            b2 = E(R2(ζs[ll], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[kk], wst)
 
-            b2 = E(R2(ζs[kk], ζs[jj]))
+            b2 = E(R2(ζs[kk], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[ll], wst)
@@ -866,12 +876,19 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
 
     bp_type = max(norminf(∂gᵢ∂p), norminf(∂²gᵢ∂p²), norminf(∂²gᵢ∂xⱼ∂pₖ)) < tol_fold ? :NonQuadraticParameter :  Symbol("$N-d")   
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gᵢ∂p,
-                                                           a02 = ∂²gᵢ∂p²,
-                                                           b11 = ∂²gᵢ∂xⱼ∂pₖ,
-                                                           b20 = ∂²gᵢ∂xⱼ∂xₖ,
-                                                           b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
-                        bp_type)
+    return NdBranchPoint(x0,
+                         τ,
+                         p,
+                         parbif,
+                         lens,
+                         ζs,
+                         ζ★s,
+                         NdBPNormalForm{𝒯vec}(;a01 = ∂gᵢ∂p,
+                                    a02 = ∂²gᵢ∂p²,
+                                    b11 = ∂²gᵢ∂xⱼ∂pₖ,
+                                    b20 = ∂²gᵢ∂xⱼ∂xₖ,
+                                    b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
+                         bp_type)
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)

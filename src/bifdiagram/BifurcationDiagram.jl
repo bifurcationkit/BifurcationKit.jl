@@ -177,19 +177,20 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         @reset optscont.ds *= _dsfactor
 
         continuation(get_contresult(node.γ), _id, optscont;
-            nev = optscont.nev, 
-            kwargs...,
-            ampfactor = _ampfactor,  
+                    nev = optscont.nev, 
+                    kwargs...,
+                    ampfactor = _ampfactor,  
         )
     end
 
     for (id, pt) in enumerate(node.γ.specialpoint)
-        # we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
+        # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
+        # If we remove this, we may keep computing the same branch.
         if pt.step > 1 && (pt.type in (:bp, :nd))
             try
                 if verbose
                     println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", 
-                                kernel_dimension(pt), 
+                                    kernel_dimension(pt), 
                                     ", code = $code, from bp #", id,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))

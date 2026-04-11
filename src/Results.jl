@@ -71,7 +71,15 @@ julia> br.param
 - `continuation(br, ind, lens2)` performs two parameters `(getlens(br), lens2)` continuation of the  ind-th bifurcation point.
 - `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
-@with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind, Tbr, Teigvals, Teigvec, Biftype, Tsol, Tparc, Tprob, Talg} <: AbstractResult{Tkind, Tprob}
+@with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind,
+                                    Tbr,
+                                    Teigvals,
+                                    Teigvec,
+                                    Biftype,
+                                    Tsol,
+                                    Tparc,
+                                    Tprob,
+                                    Talg} <: AbstractResult{Tkind, Tprob}
     "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations.
   - `itlinear` total number of linear iterations during newton (corrector).
@@ -109,19 +117,17 @@ end
 Base.length(br::AbstractBranchResult) = length(br.branch)
 getalg(br::AbstractBranchResult) = br.alg
 get_solution(br::ContResult, i) = br.sol[i]
+@inline getcontparams(br::ContResult) = br.contparams
+
 """
 Return the parameters of the bifurcation problem of the branch.
 """
-function getparams(br::AbstractBranchResult) 
-    return getparams(br.prob)
-end
+getparams(br::AbstractBranchResult) = getparams(br.prob)
 
 """
 Return the parameters corresponding to the ind-th step in the branch.
 """
-function getparams(br::AbstractBranchResult, ind::Int)
-    return setparam(br, get_solp(br, ind))
-end
+getparams(br::AbstractBranchResult, ind::Int) = setparam(br, get_solp(br, ind))
 
 getlens(br::AbstractBranchResult) = getlens(br.prob)
 @inline getprob(br::AbstractBranchResult) = br.prob
@@ -134,12 +140,12 @@ getlens(br::AbstractBranchResult) = getlens(br.prob)
 
 # check whether the solution are saved in the branch
 # c'est faux ca! a tester
-@inline hassolution(br::ContResult) = br.contparams.save_sol_every_step > 0
+@inline hassolution(br::ContResult) = getcontparams(br).save_sol_every_step > 0
 @inline hassolution(br::AbstractBranchResult) = hassolution(br.γ)
 
 # check whether the eigenvectors are saved in the branch
 # c'est faux ca, a tester
-@inline haseigenvector(br::ContResult) = br.contparams.save_eigenvectors && haseigenvalues(br)
+@inline haseigenvector(br::ContResult) = getcontparams(br).save_eigenvectors && haseigenvalues(br)
 @inline haseigenvector(br::AbstractBranchResult) = haseigenvector(br.γ)
 
 @inline _hasstability(br::AbstractBranchResult) = _hasstability(br.branch)
@@ -292,7 +298,7 @@ get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Bi
 
 """
 $(TYPEDSIGNATURES)
-Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
+[Internal] Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 
 # Arguments
 - `br` result from `get_state_summary`
@@ -362,7 +368,7 @@ $(TYPEDSIGNATURES)
 Return the bifurcation point of a `::Branch`.
 """
 from(br::Branch) = br.bp
-from(br::Vector{Branch}) = length(br) > 0 ? from(br[1]) : nothing
+from(br::Vector{Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(tree::ContResult) = nothing
 _getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
 Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)

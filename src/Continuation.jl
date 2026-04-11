@@ -1,5 +1,5 @@
 import Base: iterate
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Iterator interface
 """
 $(TYPEDEF)
@@ -99,7 +99,7 @@ Base.length(it::ContIterable) = it.contparams.max_steps
 @inline is_on_boundary(it::ContIterable, p) = (it.contparams.p_min == p) || (p == it.contparams.p_max)
 # clamp p value
 clamp_predp(p::Number, it::AbstractContinuationIterable) = clamp(p, it.contparams.p_min, it.contparams.p_max)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -231,7 +231,7 @@ end
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
 @inline update_prob!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # condition for halting the continuation procedure (i.e. when returning false)
 @inline done(it::ContIterable, state::ContState) =
             (state.step <= it.contparams.max_steps) &&
@@ -319,7 +319,7 @@ function update_event!(it::ContIterable, state::ContState)
     # update the number of positive values
     return is_event_crossed(it.event, it, state)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Continuation Iterator based on the Julia interface:
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration
 # In a nutshell, one needs to provide
@@ -486,7 +486,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
     while ~isnothing(next)
         # get the current state
         _, state = next
-        ########################################################################################
+        #──────────────────────────────────────────────────────────────────────────────────
         # the new solution has been successfully computed
         # we perform saving, plotting, computation of eigenvalues...
         # the case state.step = 0 was just done above
@@ -557,7 +557,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             # plot current state
             plot_branch_cont(contRes, state, it)
         end
-        ########################################################################################
+        #──────────────────────────────────────────────────────────────────────────────────
         # body
         next = iterate(it, state)
     end
@@ -586,9 +586,9 @@ function continuation(it::ContIterable)
     contRes = ContResult(it, state)
 
     # perform the continuation
-    return continuation!(it, state, contRes)
+    return @time "CT" continuation!(it, state, contRes)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 """
 $(TYPEDSIGNATURES)

@@ -172,7 +172,6 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
     if usedeflation
         verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
         optn = options_cont.newton_options
-        bifpt = br.specialpoint[ind_bif]
         # find the bifurcated branch using nonlinear deflation
         solbif = newton(br.prob, 
                         convert(Teigvec, pred.x0), 
@@ -188,7 +187,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
 
     # perform continuation
     kwargs_cont = _keep_opts_cont(values(kwargs))
-    branch = continuation(re_make(br.prob; plot_solution),
+    branch = continuation(re_make(getprob(br); plot_solution),
                             bp.x0, bp.params, # first point on the branch
                             pred.x1, pred.p,  # second point on the branch
                             alg, getlens(br),
@@ -267,7 +266,7 @@ function multicontinuation(br::AbstractBranchResult,
 end
 
 # for AbstractBifurcationPoint (like Hopf, BT, ...), it must return nothing to prevent from calling the function
-multicontinuation(br::AbstractBranchResult, bpnf::AbstractBifurcationPoint, options_cont::ContinuationPar; kwargs...) = nothing
+multicontinuation(::AbstractBranchResult, ::AbstractBifurcationPoint, ::ContinuationPar; kwargs...) = nothing
 
 # general function for branching from Nd bifurcation points
 function multicontinuation(br::AbstractBranchResult,
@@ -308,7 +307,6 @@ function get_first_points_on_branch(br::AbstractBranchResult,
                                     kwargs...)
     # compute predictor for point on new branch
     ds = isnothing(δp) ? options_cont.ds : δp |> abs
-    dscont = abs(options_cont.ds)
 
     rootsNFm = solfromRE.before
     rootsNFp = solfromRE.after
@@ -326,8 +324,8 @@ function get_first_points_on_branch(br::AbstractBranchResult,
     printstyled(color = :magenta, "──▶ Looking for solutions after the bifurcation point...\n")
     defOpp = DeflationOperator(2, one(𝒯), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
 
-    for (ind, xsol) in pairs(rootsNFp)
-        probp = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
+    for xsol in rootsNFp
+        probp = re_make(getprob(br); u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p + ds))
         if usedeflation
             solbif = solve(probp, defOpp, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -339,8 +337,8 @@ function get_first_points_on_branch(br::AbstractBranchResult,
 
     printstyled(color = :magenta, "──▶ Looking for solutions before the bifurcation point...\n")
     defOpm = DeflationOperator(2, one(𝒯), Vector{typeof(bpnf.x0)}(), _copy(bpnf.x0); autodiff = true)
-    for (ind, xsol) in pairs(rootsNFm)
-        probm = re_make(br.prob; u0 = perturb_guess(bpnf(xsol, ds)),
+    for xsol in rootsNFm
+        probm = re_make(getprob(br); u0 = perturb_guess(bpnf(xsol, ds)),
                                 params = setparam(br, bpnf.p - ds))
         if usedeflation
             solbif = solve(probm, defOpm, optnDf, lsdefop; callback = cbnewton, normN = normn)
@@ -355,7 +353,8 @@ end
 
 # In this function, I keep usedeflation although it is not used to simplify the calls
 function multicontinuation(br::AbstractBranchResult,
-                            bpnf::NdBranchPoint, solfromRE,
+                            bpnf::NdBranchPoint, 
+                            solfromRE,
                             options_cont::ContinuationPar = br.contparams ;
                             δp = nothing,
                             Teigvec = _getvectortype(br),
@@ -377,12 +376,12 @@ function multicontinuation(br::AbstractBranchResult,
                                             kwargs...)
 
     multicontinuation(br,
-                    bpnf, defOpm, defOpp, options_cont;
+                    bpnf, defOpm, defOpp, 
+                    options_cont;
                     δp,
                     Teigvec,
                     verbosedeflation,
                     max_iter_deflation,
-                    lsdefop,
                     kwargs...)
 end
 
@@ -405,34 +404,31 @@ function multicontinuation(br::AbstractBranchResult,
                            options_cont::ContinuationPar = br.contparams ;
                            alg = getalg(br),
                            δp = nothing,
-                           Teigvec = _getvectortype(br),
                            verbosedeflation = false,
                            max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
                            lsdefop = DeflatedProblemCustomLS(),
                            plot_solution = plot_solution(getprob(br)),
-                           kwargs...)
+                           Teigvec::Type{𝒯eigvec} = _getvectortype(br),
+                           kwargs...) where {𝒯eigvec}
 
     ds = isnothing(δp) ? options_cont.ds : δp |> abs
     dscont = abs(options_cont.ds)
     par = bpnf.params
-    prob = re_make(br.prob; plot_solution)
+    x0 = convert(𝒯eigvec, bpnf.x0)
+    # prob = re_make(br.prob; plot_solution)
 
     # compute the different branches
     function _continue(_sol, _dp, _ds)
         # needed to reset the tangent algorithm in case fields are used
         println("━"^50)
-        continuation(prob,
-            bpnf.x0, par,       # first point on the branch
+        continuation(getprob(br),
+            x0, par,            # first point on the branch
             _sol, bpnf.p + _dp, # second point on the branch
             empty(alg), getlens(br),
             (@set options_cont.ds = _ds); kwargs...)
     end
 
-    branches = Branch[]
-    for id in 2:length(defOpm)
-        br = _continue(defOpm[id], -ds, -dscont); push!(branches, Branch(br, bpnf))
-        # br = _continue(defOpm[id], -ds, dscont); push!(branches, Branch(br, bpnf))
-    end
+    branches = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
 
     for id in 2:length(defOpp)
         br = _continue(defOpp[id], ds, dscont); push!(branches, Branch(br, bpnf))
