@@ -41,7 +41,7 @@ function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
     return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
 end
 
-_isempty(sect::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
+_isempty(::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
 
 
 """
@@ -109,7 +109,7 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
 end
 
 (hyp::SectionPS)(out, u) = _section_hyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
-_isempty(sect::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
+_isempty(::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
 _select_index(v) = argmax(abs.(v))
 # ==================================================================================================
@@ -182,9 +182,7 @@ end
 function dE!(hyp::SectionPS, out, dxbar::AbstractVector, ii::Int)
     k = hyp.indices[ii]
     nbar = hyp.normals_bar[ii]
-    xcbar = hyp.centers_bar[ii]
     coord_k = - VI.inner(nbar, dxbar) / hyp.normals[ii][k]
-
     @views out[1:k-1]   .= dxbar[1:k-1]
     @views out[k+1:end] .= dxbar[k:end]
     out[k] = coord_k

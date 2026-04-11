@@ -24,7 +24,7 @@ function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOC
     return cont_params
 end
 
-function _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFDProblem, orbitguess)
+function _update_cont_params(cont_params::ContinuationPar, ::AbstractPOFDProblem, orbitguess)
     return cont_params
 end
 ####################################################################################################

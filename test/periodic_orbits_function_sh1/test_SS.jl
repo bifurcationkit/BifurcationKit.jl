@@ -219,8 +219,8 @@ let
     amesh = copy(tmesh)
     ds = BK.minus(sol1, sol2)
     
-    p1 = BK.POSolutionAndState(tmesh, sol1, amesh, phase)
-    p2 = BK.POSolutionAndState(tmesh, sol2, amesh, phase)
+    p1 = BK.POSolutionAndState(tmesh, sol1, amesh, 0.)
+    p2 = BK.POSolutionAndState(tmesh, sol2, amesh, 0.)
     
     d = BK.minus(p1, p2)
     @test BK.norm(BK.minus(d, ds)) < 1e-16

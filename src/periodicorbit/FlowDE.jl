@@ -143,13 +143,13 @@ end
 # this function takes into account a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: ODEProblem}
     _prob = remake(fl.odeprob; u0 = x, tspan = (zero(tm), tm), p = pars)
-    sol = SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
+    return SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
     _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
     _epb = setproperties(fl.odeprob, prob_func = _prob_func)
-    sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
+    return SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, pars, δt; k...) where {T1 <: ODEProblem}

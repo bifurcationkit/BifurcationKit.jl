@@ -232,7 +232,6 @@ function branch_normal_form(pbwrap::WrapPOColl,
     verbose && println("━"^53*"\n──▶ Branch point normal form computation")
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
-    period = getperiod(pbwrap.prob, bifpt.x, par)
     
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
@@ -384,7 +383,7 @@ end
 
 function branch_normal_form_iooss(pbwrap::WrapPOColl,
                                     bp0::BranchPoint;
-                                    nev = 3,
+                                    nev::Int = 3,
                                     δ = getdelta(pbwrap),
                                     verbose = false,
                                     lens = getlens(pbwrap),
@@ -409,7 +408,7 @@ function period_doubling_normal_form(pbwrap,
                                 br,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
                                 scaleζ = norminf,
@@ -480,7 +479,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProble
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
-                                nev = 3,
+                                nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 kwargs_nf...)
@@ -494,7 +493,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
-                                nev = 3,
+                                nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 δ = 1e-9,
@@ -550,16 +549,14 @@ function period_doubling_normal_form(pbwrap::WrapPOColl,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 verbose = false,
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
                                 detailed::Val{detailed_type} = Val(true),
                                 kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
     # first, get the bifurcation point parameters
     verbose && println("━"^53*"\n──▶ Period-Doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
-    bptype = bifpt.type
     par = setparam(br, bifpt.param)
-    period = getperiod(pbwrap.prob, bifpt.x, par)
 
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
@@ -580,7 +577,7 @@ end
 
 function period_doubling_normal_form_iooss(pbwrap,
                                 pd::PeriodDoubling;
-                                nev = 3,
+                                nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 detailed::Val{detailed_type} = Val(true),
@@ -812,7 +809,7 @@ end
 function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
                                     pd0::PeriodDoubling,
                                     optn::NewtonPar;
-                                    nev = 3,
+                                    nev::Int = 3,
                                     δ = 1e-7,
                                     verbose = false,
                                     detailed::Val{detailed_type} = Val(true),
@@ -889,7 +886,7 @@ function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
                                 scaleζ = norminf,
@@ -954,7 +951,7 @@ end
 function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
                                     ns0::NeimarkSacker,
                                     optn::NewtonPar;
-                                    nev = 3,
+                                    nev::Int = 3,
                                     δ = 1e-7,
                                     verbose = false,
                                     lens = getlens(pbwrap),
@@ -1008,7 +1005,7 @@ end
 
 function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
                                         ns::NeimarkSacker;
-                                        nev = 3,
+                                        nev::Int = 3,
                                         verbose = false,
                                         lens = getlens(pbwrap),
                                         _NRMDEBUG = false, # normalise to compare to ApproxFun
@@ -1212,7 +1209,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
                                 detailed::Val{detailed_type} = Val(true),
@@ -1225,7 +1222,6 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    bptype = bifpt.type
     pars = setparam(br, bifpt.param)
     period = getperiod(sh, bifpt.x, pars)
 
@@ -1249,7 +1245,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                 ns0::NeimarkSacker,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
-                                nev = 3,
+                                nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 kwargs_nf...)
@@ -1428,7 +1424,6 @@ function predictor(nf::BranchPointPO{ <: PeriodicOrbitOCollProblem},
                     override = false)
     pbnew = deepcopy(nf.prob)
     N, m, Ntst = size(nf.prob)
-    orbitguess0 = _getsolution(nf.po)[begin:end-1]
 
     # we update the problem by doubling Ntst
     # we need to save the mesh for adaptation
@@ -1498,8 +1493,6 @@ function predictor(nf::BranchPointPO{ <: ShootingProblem },
         δp = pred.δp
     end
 
-    pbnew = deepcopy(nf.prob)
-    pnew = nf.nf.p + δp
     ζs = nf.ζ .* ampfactor
     orbitguess = copy(nf.po)
     orbitguess[eachindex(ζs)] .+= ζs

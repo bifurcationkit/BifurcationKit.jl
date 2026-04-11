@@ -150,7 +150,7 @@ function MonodromyQaD(sh::ShootingProblem, J::AbstractMatrix, x, p)
     end
     tmp = similar(mono)
     r = N
-    for ii = 1:M-1
+    for _ = 1:M-1
         # mono .= J[r+1:r+N, r+1:r+N] * mono
         @views LA.mul!(tmp, J[r+1:r+N, r+1:r+N], mono)
         mono .= tmp

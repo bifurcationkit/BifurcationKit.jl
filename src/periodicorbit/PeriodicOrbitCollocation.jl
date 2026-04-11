@@ -908,7 +908,7 @@ Function needed for automatic branch switching from a Hopf bifurcation point.
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
                  hopfpt,
-                 ::AbstractVector,
+                 ζr::AbstractVector,
                  orbitguess_a,
                  period; 
                  orbit = identity,

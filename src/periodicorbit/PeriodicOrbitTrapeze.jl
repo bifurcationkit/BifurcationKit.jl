@@ -360,7 +360,6 @@ function Aγ!(pb::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::A
     # du of size N * M
     M, N = size(pb)
     T = _extract_period_fdtrap(pb, u0)
-    u0c = get_time_slices(pb, u0)
 
     # compute the cyclic part
     @views Jc(pb, outc, u0[begin:end-1-N], par, T, du[begin:end-N], outc[:, M])

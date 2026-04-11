@@ -208,7 +208,7 @@ d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* d
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0)
 @inline update!(::WrapTW, args...; k...) = update_default(args...; k...)
 
-_generate_jacobian(probPO::TWProblem, J::Union{MatrixFree, AutoDiffMF, FullLU, FiniteDifferences, AutoDiff}, o, pars; k...) = J
+_generate_jacobian(::TWProblem, J::Union{MatrixFree, AutoDiffMF, FullLU, FiniteDifferences, AutoDiff}, o, pars; k...) = J
 jacobian(prob::WrapTW, ::AutoDiff, x, p) = ForwardDiff.jacobian(z -> residual(prob, z, p), x)
 jacobian(prob::WrapTW, ::FullLU, x, p) = prob.prob(Val(:JacFullSparse), x, p)
 jacobian(prob::WrapTW, ::MatrixFree, x, p) = (dx ->  prob.prob(x, p, dx))
