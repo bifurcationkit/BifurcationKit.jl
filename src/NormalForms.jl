@@ -659,14 +659,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             lens = getlens(br),
                             tol_fold = 1e-3,
 
-                            ζs = nothing,
-                            ζs_ad = nothing,
+                            ζs::Tevecs = nothing,
+                            ζs_ad::Tevecs_ad = nothing,
 
                             bls_block = MatrixBLS(),
 
                             scaleζ = LA.norm,
                             autodiff = false
-                            ) where {𝒯eigvec}
+                            ) where {𝒯eigvec,Tevecs,Tevecs_ad}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
@@ -703,7 +703,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     λs = rightEv[indev-N+1:indev]
     verbose && println("──▶ smallest eigenvalues at bifurcation = ", real.(λs))
     # and corresponding eigenvectors
-    if isnothing(ζs) # do we have a basis for the kernel?
+    if Tevecs == Nothing # do we have a basis for the kernel?
         if haseigenvector(br) == false # are the eigenvector saved in the branch?
             @info "No eigenvector recorded, computing them on the fly..."
             # we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -712,9 +712,9 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
-            ζs = [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
+            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev])
         else
-            ζs = [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev]
+            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev])
         end
     end
 
@@ -729,7 +729,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
         end
 
-    if ~isnothing(ζs_ad) # left eigenvectors are provided by the user
+    if Tevecs_ad != Nothing # left eigenvectors are provided by the user
         λ★s = copy(λs)
         ζ★s = _copy.(ζs_ad)
     else
@@ -740,8 +740,8 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             ζ★s, λ★s = get_adjoint_basis(L★, conj.(λs), options.eigsolver; nev, verbose)
         end
     end
-    ζ★s = real.(ζ★s); λ★s = real.(λ★s)
-    ζs = real.(ζs); λs = real.(λs)
+    ζ★s::Vector{𝒯eigvec} = real.(ζ★s); λ★s = real.(λ★s) # to enforce type stable code
+    ζs::Vector{𝒯eigvec}  = real.(ζs);   λs = real.(λs)
     verbose && println("──▶ VP  = ", λs, "\n──▶ VP★ = ", λ★s)
 
     ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
