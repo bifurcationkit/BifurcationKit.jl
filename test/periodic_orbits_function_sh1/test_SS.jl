@@ -208,3 +208,20 @@ let
     display(_out2)
     @test _out2 ≈ _out1 atol = 1e-5
 end
+####################################################################################################
+# test minus for POSolutionAndState
+let
+    N = 5
+    M = 3
+    sol1 = BK.BorderedArray(BK.VI.MinimalMVec([rand(N) for _ in 1:M]), 1.0)
+    sol2 = BK.BorderedArray(BK.VI.MinimalMVec([rand(N) for _ in 1:M]), 2.0)
+    tmesh = LinRange(0, 1, M + 1)
+    amesh = copy(tmesh)
+    ds = BK.minus(sol1, sol2)
+    
+    p1 = BK.POSolutionAndState(tmesh, sol1, amesh, phase)
+    p2 = BK.POSolutionAndState(tmesh, sol2, amesh, phase)
+    
+    d = BK.minus(p1, p2)
+    @test BK.norm(BK.minus(d, ds)) < 1e-16
+end

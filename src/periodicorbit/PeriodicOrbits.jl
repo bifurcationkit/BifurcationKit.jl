@@ -99,6 +99,7 @@ struct POSolutionAndState{T1, T2, T3, T4}
 end
 @inline _getsolution(x) = x
 @inline _getsolution(pb::POSolutionAndState) = pb.sol
+minus(x::POSolutionAndState, y::POSolutionAndState) = minus(_getsolution(x), _getsolution(y))
 ####################################################################################################
 """
 $(TYPEDEF)

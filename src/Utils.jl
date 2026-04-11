@@ -208,7 +208,7 @@ $(TYPEDSIGNATURES)
 
 Function to detect continuation branches which loop on themselves.
 """
-function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = true) where T
+function detect_loop(br::ContResult, x, p::T; rtol = convert(T, 1e-3), verbose::Bool = true) where T
     if verbose == false
         return false
     end
@@ -220,7 +220,7 @@ function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = tr
                     ", ||δx|| = ", norminf(minus(bp.x, x))::T, 
                     ", |δp| = ", abs(bp.param - p)::T,
                     " \n")
-        if (norminf(minus(bp.x, x)) / norminf(x) < rtol) && isapprox(bp.param, p; rtol)
+        if (norminf(minus(bp.x, x)) / norminf(_getsolution(x)) < rtol) && isapprox(bp.param, p; rtol)
             out = true
             printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
             break
@@ -229,7 +229,7 @@ function detect_loop(br::ContResult, x, p::T; rtol = T(1e-3), verbose::Bool = tr
     printstyled(color = :magenta, "    └─ Loop detected = $out\n")
     return out
 end
-detect_loop(br::ContResult, u; rtol = 1e-3, verbose = true) = detect_loop(br, u.x, u.param; rtol, verbose)
+detect_loop(br::ContResult, u; kwargs...) = detect_loop(br, u.x, u.param; kwargs...)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
 ####################################################################################################
 """

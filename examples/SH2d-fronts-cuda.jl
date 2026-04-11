@@ -48,9 +48,9 @@ BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteig
 
 function SHLinearOp(Nx, lx::T, Ny, ly; AF = Array{T}) where T
     # AF is a type, it could be CuArray{TY} to run the following on GPU
-    k1 = vcat(collect(0:Nx/2), collect(Nx/2+1:Nx-1) .- Nx)
-    k2 = vcat(collect(0:Ny/2), collect(Ny/2+1:Ny-1) .- Ny)
-    d2 = [(1-(pi/lx * kx)^2 - (pi/ly * ky)^2)^2 + 1 for kx in k1, ky in k2]
+    k1 = vcat(collect(0:div(Nx,2)), collect(div(Nx,2)+1:Nx-1) .- Nx)
+    k2 = vcat(collect(0:div(Ny,2)), collect(div(Ny,2)+1:Ny-1) .- Ny)
+    d2 = [(1-(pi * (kx/lx))^2 - (pi * (ky/ly))^2)^2 + 1 for kx in k1, ky in k2]
     tmpc = Complex.(AF(zeros(T, Nx, Ny)))
     return SHLinearOp(AF(zeros(T, Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
@@ -116,7 +116,7 @@ end
 
 J_shfft(u, p) = (u, p.l, p.ν)
 
-L = SHLinearOp(Nx, TY(lx), Ny, TY(ly), AF = AF)
+L = SHLinearOp(Nx, TY(lx), Ny, TY(ly); AF = AF)
 Leig = SHEigOp(L, 0.1, nothing) # for eigenvalues computation
 # @time Leig((sol_hexa.u, -0.15, 1.3), 10; σ = 0.1)
 
@@ -130,7 +130,7 @@ prob = BK.BifurcationProblem(F_shfft!, AF(sol0), par, (@optic _.l) ;
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
     record_from_solution = (x, p; k...) -> norm(x))
 
-opt_new = NewtonPar(verbose = true, tol = TY(1e-6), linsolver = L, eigsolver = Leig)
+opt_new = NewtonPar(verbose = true, tol = TY(1e-6), linsolver = L, eigsolver = Leig, max_iterations = 10)
 sol_hexa = @time BK.solve(prob, Newton(), opt_new, normN = norminf);
 println("--> norm(sol) = ", norminf(sol_hexa.u))
 

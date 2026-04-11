@@ -14,7 +14,6 @@ function COm!(du, u, p, t = 0)
 end
 
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
-
 z0 = [0.001137, 0.891483, 0.062345]
 
 function record_from_solution(x,p;k...)
