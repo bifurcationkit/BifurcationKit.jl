@@ -7,11 +7,20 @@ const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
             -x[2] + p.γ * x[1]^2]
+
+function Jbp(x, p)
+    J = zeros(eltype(x), 2, 2)
+    J[1,1] = 3.23*p.μ - 2*p.x2*x[1] + 3*p.x3*x[1]^2
+    J[1,2] = 1.0
+    J[2,1] = 2*p.γ*x[1]
+    J[2,2] = -1.0
+    return J
+end
 ####################################################################################################
 let
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
 
-    prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ))
+    prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ); J = Jbp)
     br = continuation(prob, PALC(), opts_br; normC = norminf)
     plot(br)
 

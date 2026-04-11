@@ -175,6 +175,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     return get_normal_formNd(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf..., ζs, ζs_ad, bls_block)
 end
 
+@inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
+
 """
 $(TYPEDSIGNATURES)
 
@@ -208,8 +210,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if bifpt.type ∉ (:bp, :fold)
         error("The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt.")
     end
-    if ~(abs(bifpt.δ[1]) <= 1)
-        error("We only provide normal form computation for simple bifurcation points e.g. when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
+    if ~(kernel_dimension(bifpt) <= 1)
+        error("We only provide normal form computation for simple bifurcation points e.g. when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(kernel_dimension(bifpt)).")
     end
 
     verbose && println("━"^53*"\n┌─ Normal form computation for 1d kernel")
@@ -220,6 +222,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, bifpt.x)
     p = bifpt.param
+    𝒯 = VI.scalartype(x0)
+    δ = getdelta(prob)
 
     # parameter for vector field
     parbif = set(getparams(br), lens, p)
@@ -264,25 +268,22 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         ζ★ = _copy(ζ_ad)
     end
 
-    ζ★ = 𝒯eigvec(real(ζ★))
+    ζ★ = convert(𝒯eigvec, real(ζ★))
+
     if ~(abs(VI.inner(ζ, ζ★)) > 1e-10)
         error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
     ζ★ ./= VI.inner(ζ, ζ★)
+    ζ★ = convert(𝒯eigvec, real(ζ★))
 
     # differentials and projector on Range(L), there are real valued
     R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
     R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
-    E(x) = x .- VI.inner(x, ζ★) .* ζ
-    # bordered linear solver
-    𝒯 = VI.scalartype(x0)
-    mybls(z) = bls(L, ζ★, ζ, zero(𝒯), z, zero(𝒯))
 
     verbose && println("┌── Normal form:   a01⋅δ$plens + a02⋅δ$(plens)²/2 + b11⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6")
 
     # we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
-    δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
         R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
@@ -297,12 +298,12 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── a01   = ", a01)
 
     # coefficient of p, Golub. Schaeffer Vol 1 page 33, eq 3.22 (b)
-    Ψ01, _, cv, it  = mybls(-E(R01))
+    Ψ01, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-R01, ζ, ζ★), zero(𝒯))
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
+        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p) # TODO: this line makes it type unstable
     else
         R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
@@ -327,7 +328,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── b20/2 = ", b20/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ), Golub. Schaeffer Vol 1 page 33, eq 3.22 (a)
-    Ψ20, _, cv, it  = mybls(-E(b2v))
+    Ψ20, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-b2v, ζ, ζ★), zero(𝒯))
     ~cv && @debug "[Normal form Ψ20] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .+ 3 .* R2(ζ, Ψ20)
     b30 = VI.inner(b3v, ζ★)
@@ -393,7 +394,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     # This leads to the two cases below.
     nf = bp.nf
     τ = bp.τ
-    (;a01, b11, b20, b30, Ψ01) = nf
+    (; b11, b20, Ψ01) = nf
     pnew = bp.p + ds
     # we solve b11 * ds + b20 * amp / 2 = 0
     amp = -2ds * b11 / b20 * ampfactor
@@ -454,7 +455,7 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
                     verbose = false, 
                     ampfactor = one(𝒯)) where 𝒯
     nf = bp.nf
-    (;a01, b11, b20, b30) = nf
+    (; b11, b30) = nf
 
     # we need to find the type, supercritical or subcritical
     dsfactor = b11 * b30 < 0 ? 𝒯(1) : 𝒯(-1)
@@ -493,7 +494,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
                     ampfactor = one(𝒯)) where {𝒯}
     nf = bp.nf
     τ = bp.τ
-    (;a01, a02, b11, b20, b30, Ψ01) = nf
+    (;a01, a02, b11, b20, b30) = nf
     pnew = bp.p + ds
 
     ads = abs(ds)
@@ -638,7 +639,7 @@ Base.@kwdef struct NdBPNormalForm{T}
     b30::Array{T, 4}
 end
 
-function E(x, ζs, ζ★s)
+function E_nd(x, ζs, ζ★s)
     out = _copy(x)
     for ii in eachindex(ζs)
         out .= out .- VI.inner(x, ζ★s[ii]) .* ζs[ii]
@@ -787,7 +788,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                    dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
         end
 
-        Ψ01, _, cv, it  = bls(-E(R01, ζs, ζ★s))
+        Ψ01, _, cv, it  = bls(-E_nd(R01, ζs, ζ★s))
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
         tmp = R11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
@@ -833,17 +834,17 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         if jj==kk==ll || jj==kk || jj<kk<ll
             b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 
-            b2 = E(R2(ζs[ll], ζs[kk]), ζs, ζ★s)
+            b2 = E_nd(R2(ζs[ll], ζs[kk]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[jj], wst)
 
-            b2 = E(R2(ζs[ll], ζs[jj]), ζs, ζ★s)
+            b2 = E_nd(R2(ζs[ll], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[kk], wst)
 
-            b2 = E(R2(ζs[kk], ζs[jj]), ζs, ζ★s)
+            b2 = E_nd(R2(ζs[kk], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[ll], wst)

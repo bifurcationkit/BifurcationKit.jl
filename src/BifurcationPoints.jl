@@ -184,7 +184,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 
         - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string."
         """
-        mutable struct $op{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: $opt
+        mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
 
