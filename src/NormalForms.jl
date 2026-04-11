@@ -524,6 +524,14 @@ function _predictor(bp::AbstractSimpleBranchPoint,
             δp = pnew - bp.p)
 end
 ####################################################################################################
+Base.@kwdef struct NdBPNormalForm{T}
+    a01::Array{T, 1}
+    a02::Array{T, 1}
+    b11::Array{T, 2}
+    b20::Array{T, 3}
+    b30::Array{T, 4}
+end
+
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x::AbstractVector, p::𝒯) where 𝒯
     # dimension of the kernel
     N = length(bp.ζ)
@@ -561,7 +569,7 @@ end
 
 function (bp::NdBranchPoint)(x::AbstractVector, δp::Real)
     out = bp.x0 .+ x[begin] .* bp.ζ[begin]
-    for ii in eachindex(x)[2:end]
+    for ii in eachindex(x)[2:end] # TODO start at 2 or begin+1 ??
         out .+= x[ii] .* bp.ζ[ii]
     end
     return out
@@ -629,14 +637,6 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
         end
     end
     return out
-end
-
-Base.@kwdef struct NdBPNormalForm{T}
-    a01::Array{T, 1}
-    a02::Array{T, 1}
-    b11::Array{T, 2}
-    b20::Array{T, 3}
-    b30::Array{T, 4}
 end
 
 function E_nd(x, ζs, ζ★s)

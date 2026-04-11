@@ -27,15 +27,14 @@ function get_normal_form(prob::AbstractPeriodicOrbitProblem,
                         br::AbstractResult{ <: PeriodicOrbitCont}, 
                         id_bif::Int,
                         Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                        nev = length(eigenvalsfrombif(br, id_bif)),
+                        nev::Int = length(eigenvalsfrombif(br, id_bif)),
                         verbose = false,
                         ζs = nothing,
                         lens = getlens(br),
                         scaleζ = norm,
                         autodiff = false,
                         δ = getdelta(prob),
-                        k...
-            ) where {𝒯eigvec}
+                        k...) where {𝒯eigvec}
     bifpt = br.specialpoint[id_bif]
 
     if bifpt.type == :endpoint
@@ -96,7 +95,7 @@ function branch_normal_form(pbwrap::WrapPOSh,
                             br,
                             ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            nev = length(eigenvalsfrombif(br, ind_bif)),
+                            nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
                             scaleζ = norminf,
@@ -178,7 +177,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
                                     (ζ₁, ζs, ζₚₒ),
                                     optn::NewtonPar,
                                     τ;
-                                    nev = 3,
+                                    nev::Int = 3,
                                     verbose = false,
                                     lens = getlens(pbwrap),
                                     autodiff = false,
@@ -220,9 +219,9 @@ end
 function branch_normal_form(pbwrap::WrapPOColl,
                             br,
                             ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            ::Type{𝒯eigvec} = _getvectortype(br);
                             verbose = false,
-                            nev = length(eigenvalsfrombif(br, ind_bif)),
+                            nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             prm::Val{prm_type} = Val(false),
                             detailed::Val{detailed_type} = Val(true),
                             kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
@@ -329,7 +328,7 @@ end
 function branch_normal_form_prm(pbwrap::WrapPOColl,
                                 bp0::BranchPoint,
                                 optn::NewtonPar;
-                                nev = 3,
+                                nev::Int = 3,
                                 δ = 1e-7,
                                 verbose = false,
                                 lens = getlens(pbwrap),
@@ -440,7 +439,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
                                 br,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
                                 detailed::Val{detailed_type} = Val(true),
@@ -478,7 +477,7 @@ end
 function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
-                                optn::NewtonPar;
+                                ::NewtonPar;
                                 nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
@@ -910,7 +909,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                 verbose = false,
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
+                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
                                 detailed::Val{detailed_type} = Val(true),
                                 kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}

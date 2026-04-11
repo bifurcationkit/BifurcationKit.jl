@@ -1,7 +1,7 @@
 """
 $(TYPEDSIGNATURES)
 
-Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`.
+Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`(s).
 
 # Internal fields
 
@@ -15,7 +15,7 @@ $(TYPEDFIELDS)
 - `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`.
 """
 mutable struct BifDiagNode{Tγ, Tc}
-    "current recursion level."
+    "current recursion level in the tree."
     level::Int64
 
     "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
@@ -35,7 +35,7 @@ get_branch(tree::BifDiagNode) = tree.γ
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
-add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
+add!(::BifDiagNode, ::Nothing, ::Int, ::Int) = nothing
 get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
 getalg(tree::BifDiagNode) = tree.γ.alg
@@ -47,7 +47,7 @@ get_normal_form(tree::BifDiagNode, args...; kwargs...) = get_normal_form(tree.γ
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
     println(io, " ┌─ From $(tree.code)-th bifurcation point.")
-    println(io, " ├─ Children number: $(length(tree.child))" );
+    println(io, " ├─ Number of children: $(length(tree.child))" );
     println(io, " └─ Root (recursion level $(tree.level))")
     show(io, tree.γ; prefix = "      ")
 end
@@ -172,10 +172,8 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
     # convenient function for branching
     function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        plotfunc = get(kwargs, :plot_solution, plot_default)
         optscont = options(_pt.x, _pt.param, _level + 1)
         @reset optscont.ds *= _dsfactor
-
         continuation(get_contresult(node.γ), _id, optscont;
                     nev = optscont.nev, 
                     kwargs...,

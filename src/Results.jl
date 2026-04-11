@@ -369,7 +369,6 @@ from(br::Branch) = br.bp
 from(br::Vector{Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
 _getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
-Base.show(io::IO, br::Branch{Tk, Tp, T, Tbp}; k...) where {Tk, Tp, T <: ContResult, Tbp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
 Base.firstindex(br::Branch) = firstindex(br.γ)
 Base.lastindex(br::Branch) = lastindex(br.γ)
 @inline getparams(br::Branch) = getparams(br.γ)
@@ -378,7 +377,15 @@ Base.lastindex(br::Branch) = lastindex(br.γ)
 # for example, it allows to use the plot recipe for ContResult as is
 Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
 Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
-Base.getindex(br::Branch, k::UnitRange{<:Integer}) = setproperties(br; γ = getindex(br.γ, k))
+Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(br.γ, k))
+
+Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
+
+function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: AbstractVector}
+    for contresult in br.γ
+        show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
+    end
+end
 ####################################################################################################
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing

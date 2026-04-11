@@ -425,12 +425,10 @@ function multicontinuation(br::AbstractBranchResult,
             (@set options_cont.ds = _ds); kwargs...)
     end
 
-    brs = [_continue(defOpm[id], -ds, -dscont) for id in 2:length(defOpm)]
-    @error "" typeof(brs)
-    branches = Branch(brs, bpnf)
+    branches = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
 
     for id in 2:length(defOpp)
-        br = _continue(defOpp[id], ds, dscont); push!(branches.γ, br)
+        br = _continue(defOpp[id], ds, dscont); push!(branches, Branch(br, bpnf))
         # br = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
     end
 
