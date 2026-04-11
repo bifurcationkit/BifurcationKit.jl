@@ -401,7 +401,7 @@ mutable struct Hopf{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, T
 end
 
 type(bp::Hopf) = :Hopf
-Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
+Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::Hopf)
     plens = get_lens_symbol(bp.lens)

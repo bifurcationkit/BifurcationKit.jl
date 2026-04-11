@@ -481,7 +481,7 @@ end
 function ∫(coll::PeriodicOrbitOCollProblem,
             u::AbstractVector,
             v::AbstractVector,
-            period = one(eltype(uc)))
+            period = one(eltype(u)))
     uc = get_time_slices(coll, u)
     vc = get_time_slices(coll, v)
     return ∫(coll, uc, vc, period)

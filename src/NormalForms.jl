@@ -1460,7 +1460,7 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     br::AbstractBranchResult,
                     ind_ns::Int;
-                    nev = length(eigenvalsfrombif(br, id_bif)),
+                    nev::Int = length(eigenvalsfrombif(br, ind_ns)),
                     verbose::Bool = false,
                     lens = getlens(br),
                     Teigvec::Type = _getvectortype(br),
