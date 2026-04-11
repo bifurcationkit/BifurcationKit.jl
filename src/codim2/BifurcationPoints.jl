@@ -7,7 +7,7 @@ for op in (:Cusp, :Bautin, :ZeroHopf, :HopfHopf)
         $(TYPEDFIELDS)
 
         """
-        mutable struct $op{Tv, Tpar, Tlens, Tevr, Tevl, Tnf} <: AbstractBifurcationPoint
+        mutable struct $op{Tv, Tpar, Tlens, Tevr, Tevl, Tnf} <: AbstractBifurcationPointCodim2
             "Bifurcation point"
             x0::Tv
 

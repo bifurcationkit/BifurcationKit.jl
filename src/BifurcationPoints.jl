@@ -2,6 +2,7 @@ abstract type AbstractBifurcationPoint end
 abstract type AbstractBranchPoint <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBranchPoint <: AbstractBranchPoint end
 abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
+abstract type AbstractBifurcationPointCodim2 <: AbstractBifurcationPoint end
 
 istranscritical(::AbstractBranchPoint) = false
 ####################################################################################################
