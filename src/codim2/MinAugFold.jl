@@ -137,7 +137,7 @@ function foldMALinearSolver(x, p::𝒯, 𝐅::FoldMinimallyAugmentedFormulation,
         # We invert the jacobian of the Fold problem when the Hessian of x -> F(x, p) is not known analytically.
         # apply Jacobian adjoint
         u1 = apply_jacobian(𝐅.prob_vf, x + ϵₓ * v, par0, w, true)
-        u2 = apply(JAd_at_xp, w) # TODO ON CONNAIT u2!!
+        u2 = apply(JAd_at_xp, w) # TODO we already know u2!!
         σₓ = minus(u2, u1); VI.scale!(σₓ, 1 / ϵₓ)
         ########## Resolution of the bordered linear system ########
         # we invert Jfold
@@ -292,9 +292,6 @@ function update!(probma::FoldMAProblem, iter, state)
     end
 
     @debug "[Fold] Update vectors a and b"
-    a = 𝐅.a
-    b = 𝐅.b
-
     # expression of the jacobian
     zu = getx(state)
     x = getvec(zu, 𝐅) # fold point
@@ -475,7 +472,6 @@ function continuation_fold(prob,
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
     ζ = bifpt.τ.u; VI.scale!(ζ, 1 / norm(ζ))
-    ζad = _copy(ζ)
 
     p = bifpt.param
     parbif = setparam(br, p)
@@ -549,7 +545,6 @@ end
 function test_bt_cusp(iter, state)
     probma = getprob(iter)
     𝐅 = get_formulation(probma)
-    𝒯 = eltype(𝐅)
 
     # expression of the jacobian
     zu = getx(state)

@@ -1,25 +1,26 @@
 # The next type is for holding the methods related to the vector field.
-# So, the residual, its jacobian and higher differentials.
-# It is a convenience for a bifurcation problem so it is not strictly necessary albeit useful.
+# Namely: the residual, its jacobian and higher differentials.
+# It is not strictly necessary but proves useful for the current implementation.
 abstract type AbstractBifurcationFunction end
-# This is the abstract type for a bifurcation problem. It should implement
+# The next type is the abstract type for a bifurcation problem. It should implement
+# the following methods. See below for a description.
 #   - getparams(pb::AbstractBifurcationProblem) 
 #   - getlens(pb::AbstractBifurcationProblem)
 #   - record_from_solution(pb::AbstractBifurcationProblem)
 #   - plot_solution(pb::AbstractBifurcationProblem)
-#   - residual(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p)
-#   - getdelta(pb::AbstractAllJetBifProblem)
-#   - dF(pb::AbstractAllJetBifProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
-#   - vjp(pb::AbstractAllJetBifProblem, x, p, dx)
+#   - residual(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian_adjoint(pb::AbstractBifurcationProblem, x, p)
+#   - getdelta(pb::AbstractBifurcationProblem)
+#   - dF(pb::AbstractBifurcationProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
+#   - vjp(pb::AbstractBifurcationProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
-# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# This current ``implementation'' of this abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
 # It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
-
+################################################################################
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T, Tjac} <: AbstractBifurcationProblem end
 ################################################################################
@@ -63,11 +64,11 @@ $(TYPEDEF)
 
 Structure to hold the vector field and its derivatives. It should rarely be called directly. Also, in essence, it is very close to `SciMLBase.ODEFunction`.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
 - `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o, x, p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
@@ -193,7 +194,7 @@ const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     For now, we ask the user to pass an out-of-place formulation of the functions.
 
-    ## Fields
+    # Internal fields
 
     $(TYPEDFIELDS)
     """
@@ -250,11 +251,9 @@ for (op, at) in (
 
             Structure to hold a bifurcation problem. $($(_dict_doc_string_prob[op]))
 
-            ## Fields
+            
 
-            $(TYPEDFIELDS)
-
-            ## Methods
+            # Methods
 
             - `re_make(pb; kwargs...)` modify a bifurcation problem
             - `getu0(pb)` calls `pb.u0`
@@ -266,7 +265,7 @@ for (op, at) in (
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
 
-            ## Constructors
+            # Constructors
             - `$($op)(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
             - `$($op)(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
@@ -278,6 +277,8 @@ for (op, at) in (
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x, p, dx1, dx2, dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
+            # Internal fields
+            $(TYPEDFIELDS)
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)."

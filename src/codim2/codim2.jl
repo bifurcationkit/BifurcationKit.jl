@@ -16,7 +16,7 @@ for (op, at) in (
 
     Structure to encode Fold / Hopf functional based on a Minimally Augmented formulation.
 
-    # Fields
+    # Internal fields
 
     $(FIELDS)
     """
@@ -150,6 +150,8 @@ struct MASolutionFreq{T1, T2}
 end
 
 save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_formulation(𝐏𝐛), x, p)
+get_frequency(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = sol.ω
+getvec(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = sol.x
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
@@ -430,7 +432,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     end
 
     # functional
-    prob_ma = br.prob.prob
+    prob_ma = getprob(br).prob
     prob_vf = prob_ma.prob_vf
 
     # continuation parameters

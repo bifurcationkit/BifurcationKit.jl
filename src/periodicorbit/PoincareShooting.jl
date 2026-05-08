@@ -7,7 +7,7 @@ $(TYPEDEF)
 
 This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
-# Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 ## Jacobian
@@ -269,7 +269,7 @@ This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x)
 """
 function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
     normal = psh.section.normals[ii]
-    abs(VI.inner(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(VI.inner(normal, dx))) > 1e-12 and $(VI.inner(dx, dx))"
+    abs(VI.inner(normal, dx)) > 1e-12 && @warn "[Poincare shooting] Vector does not belong to hyperplane!\nWe found abs < normal, dx > = $(abs(VI.inner(normal, dx))) > 1e-12 and\n             < dx, dx > = $(VI.inner(dx, dx))"
     # compute the Poincare map from x
     tΣ, solΣ = evolve(psh.flow, Val(:SerialTimeSol), x, par, Inf)
     z = vector_field(psh.flow, solΣ, par)

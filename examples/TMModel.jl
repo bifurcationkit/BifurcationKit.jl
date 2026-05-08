@@ -19,19 +19,19 @@ end
 par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF = 1.5, τS = 0.007)
 z0 = [0.238616, 0.982747, 0.367876 ]
 
-prob = BifurcationProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
+prob = ODEBifProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
+opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, max_steps = 100)
 
-opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, nev = 3)
 br = @time continuation(prob, PALC(), opts_br; normC = norminf)
 
 plot(br, plotfold = false)
 ####################################################################################################
-br_fold = BK.continuation(br, 2, (@optic _.α),
+br_hopf = @time BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
         jacobian_ma = BK.MinAug(),
         bothside = true,)
-plot(br_fold)
+plot(br_hopf)
 ####################################################################################################
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
@@ -74,8 +74,7 @@ br_pocoll = @time continuation(
     br, 4, opts_po_cont,
     PeriodicOrbitOCollProblem(100, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
     alg = PALC(tangent = Bordered()),
-    verbosity = 3,
-    plot = true,
+    # verbosity = 3, plot = true,
     args_po...,
     linear_algo = BK.COPBLS(),
     )

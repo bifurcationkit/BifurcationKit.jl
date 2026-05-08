@@ -192,7 +192,7 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwargs...)  where {vectype, 𝒯}
+function (::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwargs...)  where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = _hopf_MA_linear_solver((Jhopf.x).u, #!! TODO !! This seems TU
                 (Jhopf.x).p[1],
@@ -307,7 +307,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζstar, λstar = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
+        ζstar, _ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose = false)
         ζad .= ζstar ./ VI.inner(ζstar, ζ)
     end
 
@@ -322,7 +322,6 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
     𝐇 = get_formulation(𝐏𝐛)
-    𝒯 = eltype(𝐇)
     success = converged(state)
     step = state.step
     if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false) || in_bisection(state)
@@ -333,9 +332,6 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
     @debug "[Hopf] Update vectors a and b"
     zu = getx(state)
     ω = get_frequency(zu, 𝐇)
-
-    a = 𝐇.a
-    b = 𝐇.b
 
     # expression of the jacobian
     x = getvec(zu, 𝐇) # fold point
@@ -538,7 +534,7 @@ function continuation_hopf(prob,
     bifpt = br.specialpoint[ind_hopf]
 
     if isnothing(br.eig) 
-        error("The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website.")
+        error("The branch contains no eigen elements.\nThis is strange because a Hopf point was detected.\nPlease open an issue on the website.")
     end
 
     p = bifpt.param
@@ -602,9 +598,6 @@ function test_bt_gh(iter, state)
     zu = getx(state)
     ω = get_frequency(zu, 𝐇)
 
-    a = 𝐇.a
-    b = 𝐇.b
-
     # expression of the jacobian
     x = getvec(zu, 𝐇) # fold point
     newpar = getparams(iter, state)
@@ -622,7 +615,6 @@ function test_bt_gh(iter, state)
 
     # test function for Bogdanov-Takens
     𝐇.BT = ω
-    BT2 = real( VI.inner(ζ★ ./ 𝐇.norm(ζ★), ζ) )
     ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(𝐏𝐛)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
@@ -645,7 +637,7 @@ end
 function (eig::HopfEig)(Jma, nev; k...)
     n = min(nev, length(getvec(Jma.x)))
     x = Jma.x.u     # hopf point
-    p1, ω = Jma.x.p # first parameter
+    p1, _ = Jma.x.p # first parameter
     newpar = set(Jma.params, getlens(Jma.pbma), p1)
     J = jacobian(Jma.pbma.prob_vf, x, newpar)
     eigenelts = eig.eigsolver(J, n; k...)

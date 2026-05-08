@@ -1,18 +1,28 @@
 # using Revise
 using Plots
 using Test
+using Core.Compiler: return_type # for type stability testing
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
             -x[2] + p.γ * x[1]^2]
+
+function Jbp(x, p)
+    J = zeros(eltype(x), 2, 2)
+    J[1,1] = 3.23*p.μ - 2*p.x2*x[1] + 3*p.x3*x[1]^2
+    J[1,2] = 1.0
+    J[2,1] = 2*p.γ*x[1]
+    J[2,2] = -1.0
+    return J
+end
 ####################################################################################################
 let
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
 
-    prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ))
+    prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ); J = Jbp)
     br = continuation(prob, PALC(), opts_br; normC = norminf)
-    plot(br)
+    BK.plot(br)
 
     @test br.specialpoint[1].interval[1] < 0
     @test br.specialpoint[1].interval[2] > 0
@@ -23,6 +33,8 @@ let
     @reset br.specialpoint[1].param = 0.
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζs = [1., 0], ζs_ad = [1., 1])
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζs = [1., 0], ζs_ad = [1., 1])
+    # TODO this is not type stable because detailed isa Val that must be passed
+    @test isconcretetype(return_type(BK.get_normal_form1d, typeof((prob, br, 1)))) == false
     # on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
     @test bp.nf.Ψ20 ≈ [0, 2prob.params.γ]
     # normal form
@@ -73,7 +85,7 @@ let
     BK._getfirstusertype(br2)
     @test length(br2) == 12
     get_normal_form(br2, 1)
-    plot(br_noev, br2)
+    BK.plot(br_noev, br2)
 
     br3 = continuation(br_noev, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
     @test isnothing(BK.multicontinuation(br_noev, 1))
@@ -85,7 +97,7 @@ let
         ContinuationPar(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
         normC = norminf)
 
-    plot(bdiag)
+    BK.plot(bdiag)
 
     # same from the non-trivial branch
     prob = BK.ODEBifProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0, γ = 0), (@optic _.μ))
@@ -97,7 +109,7 @@ let
     @test nf.b20/2 ≈ -prob.params.x2   atol = 1e-6
     @test nf.b30/6 ≈  prob.params.x3   atol = 1e-10
     br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
-    plot(br, br2)
+    BK.plot(br, br2)
 end
 ####################################################################################################
 # Case of the pitchfork like
@@ -124,7 +136,7 @@ let
 
     # test automatic branch switching
     br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2))
-    plot(brp, br2)
+    BK.plot(brp, br2)
 
     # test methods for aBS
     BK.from(br2) |> BK.type
@@ -140,7 +152,7 @@ let
     BK.getalg(bdiag)
     BK.get_solution(bdiag, 1)
     bdiag[1]
-    plot(bdiag)
+    BK.plot(bdiag)
 end
 ####################################################################################################
 # Automatic branch switching, degenerate case. The quadratic parameter makes it difficult for aBS 
@@ -149,7 +161,7 @@ let
     Fdegenerate(x, p) = [x[1]^2 - p[1]^2]
     prob = BK.ODEBifProblem(Fdegenerate, [1.], (-1.0), 1; record_from_solution = (x,p;k...)->x[1])
     br = continuation(prob, PALC(), ContinuationPar(n_inversion = 6); normC = norminf)
-    br1 = continuation(br, 1, verbosity = 3, bothside = true)
+    br1 = continuation(br, 1, verbosity = 0, bothside = true)
     bp = get_normal_form(br, 1; verbose = true)
     show(bp)
     predictor(bp, 0.1)
@@ -161,7 +173,6 @@ let
         n1, n2, n3 = size(a)
         @assert n1 == n2 == n3
         n = n1
-
         for i in 1:n, j in 1:n, k in 1:n
             v = (
                 a[i,j,k] + a[i,k,j] +
@@ -170,7 +181,6 @@ let
             ) / 6
             a[i,j,k] = a[i,k,j] = a[j,i,k] = a[j,k,i] = a[k,i,j] = a[k,j,i] = v
         end
-
         return a
     end
     P = rand(2,2)
@@ -235,6 +245,9 @@ let
                                     autodiff, 
                                     verbose = false)
 
+        # test for type stable implementation
+        @test isconcretetype(return_type(BK.get_normal_formNd, typeof((prob2d, br, 1))))
+        @test isconcretetype(return_type(BK.multicontinuation, typeof((br, BK.get_normal_form(br, 1))) )) == false # not type stable yet TODO
         @test bp2d.ζ[1] ≈ [1, 0, 0.]
         @test bp2d.ζ[2] ≈ [0, 1, 0.]
 
@@ -277,7 +290,7 @@ let
     br_snd1 = BK.continuation(prob, PALC(),
         ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation=3); normC = norminf)
 
-    plot(br_snd1)
+    BK.plot(br_snd1)
 
     br_snd2 = BK.continuation(
         br_snd1, 1,
@@ -286,7 +299,7 @@ let
         #     (Base.display(contResult.eig[end].eigenvals) ;true)
         )
 
-    plot(br_snd1, br_snd2, putbifptlegend=false)
+    BK.plot(br_snd1, br_snd2)
 
     bdiag = bifurcationdiagram(prob, PALC(), 2,
         ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
@@ -364,15 +377,52 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x .* p.r), x, p, 0.)
 
+function JFsl2(u, p)
+    (; r, μ, ν, c3, c5) = p
+
+    u1 = u[1]
+    u2 = u[2]
+
+    a = u1^2 + u2^2
+
+    J11 = r - c3*(3u1^2 + u2^2) +
+          2*μ*u1*u2 -
+          c5*a*(5u1^2 + u2^2)
+
+    J12 = -ν -
+          2*c3*u1*u2 +
+          μ*(u1^2 + 3u2^2) -
+          4*c5*a*u1*u2
+
+    J21 = ν -
+          2*c3*u1*u2 -
+          μ*(3u1^2 + u2^2) -
+          4*c5*a*u1*u2
+
+    J22 = r -
+          c3*(u1^2 + 3u2^2) -
+          2*μ*u1*u2 -
+          c5*a*(u1^2 + 5u2^2)
+
+    return [
+        J11 J12
+        J21 J22
+    ]
+end
+
 let
     for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
         par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
         probsl2 = BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
         # detect hopf bifurcation
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3)
 
         br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
+
+        # test for type stable implementation
+        # @code_warntype BK.hopf_normal_form(BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1; detailed = Val(true))
+        @test isconcretetype(return_type(BK.hopf_normal_form, typeof((BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1))) )
 
         hp = BK.get_normal_form(br, 1; detailed = Val(false))
         hp = BK.get_normal_form(br, 1; autodiff, start_with_eigen = Val(false))
@@ -441,7 +491,7 @@ let
         @test sn_codim2.specialpoint[1].type == :bt
         @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
         @test length(unique(sn_codim2.BT)) == length(sn_codim2)
-        plot(sn_codim2)
+        BK.plot(sn_codim2)
 
         hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
             detect_codim2_bifurcation = 2,
@@ -564,6 +614,7 @@ function Fzh!(f, u, p)
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
+
 let
     for _F in (Fzh!, Fzh)
         par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)

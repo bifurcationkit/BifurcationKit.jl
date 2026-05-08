@@ -183,7 +183,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
 
     # return the normal form coefficients
     pt.nf = (; a, b)
-    if detailed_type == false # THIS MAKES IT TYPE UNSTABLE
+    if detailed_type == false # TODO! THIS MAKES IT TYPE UNSTABLE
         return pt
     end
 
@@ -387,11 +387,13 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     # compute point on the Hopf curve
     x0 = getx(ds)
 
-    return (hopf = t -> HopfCurve(t).pars,
+    return (
+            hopf = t -> HopfCurve(t).pars,
             ω = t -> HopfCurve(t).ω,
             EigenVec = EigenVec,
             EigenVecAd = EigenVecAd,
-            x0 = t -> getx(t) .* bt.ζ[1])
+            x0 = t -> getx(t) .* bt.ζ[1]
+            )
 end
 
 
@@ -420,10 +422,12 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
         β2 = s
         return par0 .+ K10 .* β1 .+ K11 .* β2 .+ K2 .* (β2^2/2)
     end
-    return (fold = FoldCurve,
+    return (
+            fold = FoldCurve,
             EigenVec = t -> (bt.ζ[1]),
             EigenVecAd = t -> (bt.ζ★[2]),
-            x0 = t -> getx(t) .* bt.ζ[1])
+            x0 = t -> getx(t) .* bt.ζ[1]
+            )
 end
 
 """
@@ -501,7 +505,7 @@ function bogdanov_takens_normal_form(_prob,
                                     br::AbstractBranchResult, ind_bif::Int,
                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
                                     δ = 1e-8,
-                                    nev = length(eigenvalsfrombif(br, ind_bif)),
+                                    nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
                                     ζs = nothing,
                                     ζs_ad = nothing,
@@ -536,7 +540,6 @@ function bogdanov_takens_normal_form(_prob,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    eigRes = br.eig
 
     # parameters for vector field
     x0, parbif = get_bif_point_codim2(br, ind_bif)
@@ -718,15 +721,15 @@ function bautin_normal_form(_prob::HopfMAProblem,
     # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
     # formula (7.2) in REF1
-    H20,cv,it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+    H20, cv, it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
     ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
 
     # formula (7.3) in REF1
-    H11,cv,it = ls(L, -B(q0, cq0))
+    H11, cv, it = ls(L, -B(q0, cq0))
     ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
 
     # formula (7.4) in REF1
-    H30,cv,it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+    H30, cv, it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
     ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
 
     # formula (7.5) in REF1
@@ -735,7 +738,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     h21 .= G21 .* q0 .- h21 # (7.7)
 
     # formula (7.7) in REF1
-    H21,_,cv,it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+    H21, _, cv, it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
 
     # 4-th order coefficient
@@ -966,7 +969,9 @@ function zero_hopf_normal_form(_prob,
 
     # get the initial vector field
     prob_vf = prob_ma.prob_vf
-    @assert prob_ma isa AbstractMinimallyAugmentedFormulation
+    if ~(prob_ma isa AbstractMinimallyAugmentedFormulation)
+        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(prob_ma))")
+    end
 
     # linear solver
     ls = prob_ma.linsolver
@@ -1262,7 +1267,7 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; 
                     verbose = false, 
                     ampfactor = one(T)) where T
-    (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS, τ1, τ2) = zh.nf
+    (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
     p2 = _get(zh.params, lens2)
@@ -1316,13 +1321,12 @@ function hopf_hopf_normal_form(_prob,
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
 
-    @assert 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(prob_ma))")
+    end
 
     # linear solver
     ls = 𝐌𝐚.linsolver
-
-    # bordered linear solver
-    bls = 𝐌𝐚.linbdsolver
 
     # kernel dimension
     N = 4

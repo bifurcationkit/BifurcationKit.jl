@@ -390,11 +390,11 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifu
 @reset opts_fold_po.newton_options.verbose = false
 @reset opts_fold_po.newton_options.tol = 1e-8
 
-for probPO in (
+for disc in (
                 PeriodicOrbitOCollProblem(20, 3), 
-                ShootingProblem(9, prob_ode, ODE.Rodas5(), parallel = true)
+                ShootingProblem(9, prob_ode, ODE.Vern9(), parallel = false)
               )
-    fold_po = continuation(hp_codim2_1, 3, opts_fold_po, probPO;
+    fold_po = continuation(hp_codim2_1, 3, opts_fold_po, disc;
             normC = norminf,
             δp = 0.02,
             update_minaug_every_step = 1,
@@ -410,10 +410,10 @@ opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurc
 # @reset opts_ns_po.newton_options.verbose = true
 @reset opts_ns_po.newton_options.tol = 1e-12
 @reset opts_ns_po.newton_options.max_iterations = 10
-for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), 
+for disc in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), 
                 ShootingProblem(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
-        probPO;
+        disc;
         usehessian = false,
         detect_codim2_bifurcation = 0,
         δp = 0.02,
@@ -424,6 +424,29 @@ for probPO in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1),
         )
     # test that the Floquet coefficients equal     ns_po.ωₙₛ
     @test abs(imag(ns_po.eig[end].eigenvals[2])) ≈ ns_po[end].ωₙₛ
+end
+
+####################################################################################################
+# branching from Hopf points to periodic orbits
+let
+hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
+    verbosity = 0,
+    normC = norminf,
+    detect_codim2_bifurcation = 1,
+    update_minaug_every_step = 1,
+    start_with_eigen = true,
+    bothside = true,
+    jacobian_ma = BK.MinAug(),
+    record_from_solution = recordFromSolutionLor,
+    bdlinsolver = MatrixBLS())
+
+_br_po = BK.continuation_from_hopf_point(hp_codim2_1, 20, 
+        ContinuationPar(opts_br; detect_bifurcation = 2, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
+        PeriodicOrbitOCollProblem(20, 5); 
+        # verbosity = 3,
+        # autodiff = false, 
+        lens = getlens(br)
+        )
 end
 
 end # let

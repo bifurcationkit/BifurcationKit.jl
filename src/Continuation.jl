@@ -1,5 +1,5 @@
 import Base: iterate
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Iterator interface
 """
 $(TYPEDEF)
@@ -116,9 +116,9 @@ $(TYPEDEF)
 Mutable structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
 
 !!! danger
-    If you mutate these fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
+    If you mutate these (internal) fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -332,7 +332,7 @@ function update_event!(it::ContIterable, state::ContState)
     # update the number of positive values
     return is_event_crossed(it.event, it, state)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Continuation Iterator based on the Julia interface:
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration
 # In a nutshell, one needs to provide
@@ -400,9 +400,9 @@ end
 
 # same as previous function but when two (initial guesses) points are provided
 function iterate_from_two_points(it::ContIterable, 
-                                    u₀, p₀::T, 
+                                    u₀, p₀::T,
                                     u₁, p₁::T; 
-                                    _verbosity = it.verbosity) where T
+                                    _verbosity = it.verbosity) where {T}
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
     # Compute eigenvalues to get the eigenvecs type. Necessary for creating a ContResult.
@@ -499,7 +499,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
     while ~isnothing(next)
         # get the current state
         _, state = next
-        ########################################################################################
+        #──────────────────────────────────────────────────────────────────────────────────
         # the new solution has been successfully computed
         # we perform saving, plotting, computation of eigenvalues...
         # the case state.step = 0 was just done above
@@ -573,7 +573,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
             # plot current state
             plot_branch_cont(contRes, state, it)
         end
-        ########################################################################################
+        #──────────────────────────────────────────────────────────────────────────────────
         # body
         next = iterate(it, state)
     end
@@ -589,7 +589,7 @@ function continuation(it::ContIterable)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # The return type of this method, e.g. ContResult
     # is not known at compile time so we
-    # use a function barrier to resolve it
+    # use a function barrier
     # this is also true for states (record function, eigenvectors, events, ...)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -602,9 +602,9 @@ function continuation(it::ContIterable)
     contRes = ContResult(it, state)
 
     # perform the continuation
-    return continuation!(it, state, contRes)
+    return @time "CT" continuation!(it, state, contRes)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 """
 $(TYPEDSIGNATURES)
@@ -649,7 +649,9 @@ function continuation(prob::AbstractBifurcationProblem,
                       linear_algo = nothing,
                       bothside::Bool = false,
                       kwargs...)
-    # init the continuation parameters
+    # Note that bothside and kwargs are parameters that are easy to switch for debug/plot purposes. 
+    # They could have been placed in ContinuationPar but it would have been less convenient.
+    # Init the continuation parameters
     contparams = init(contparams, prob, alg)
 
     # update the parameters of alg

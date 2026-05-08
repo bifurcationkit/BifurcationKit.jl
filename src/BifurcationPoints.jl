@@ -2,18 +2,21 @@ abstract type AbstractBifurcationPoint end
 abstract type AbstractBranchPoint <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBranchPoint <: AbstractBranchPoint end
 abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
+abstract type AbstractBifurcationPointCodim2 <: AbstractBifurcationPoint end
 
-istranscritical(bp::AbstractBranchPoint) = false
+istranscritical(::AbstractBranchPoint) = false
 ####################################################################################################
 """
 $(TYPEDEF)
 
 Structure to record special points on a curve. There are two types of special points that are recorded in this structure: bifurcation points and events (see https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/EventCallback/).
 
-## Associated methods
-- `BifurcationKit.type(::SpecialPoint)` returns the bifurcation type (`::Symbol`)
+# Internal fields
 
 $(TYPEDFIELDS)
+
+# Associated methods
+- `BifurcationKit.type(::SpecialPoint)` returns the bifurcation type (`::Symbol`)
 """
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
     "Description of the special points. In case of `Events`, this field records the user passed name to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following names:
@@ -48,22 +51,22 @@ $(TYPEDFIELDS)
     "Parameter value at the special point (this is an estimate)."
     param::T = 0.
 
-    "Norm of the equilibrium at the special point"
+    "Norm of the equilibrium at the special point."
     norm::T  = 0.
 
-    "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)"
+    "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)."
     printsol::Tp = 0.
 
-    "Equilibrium at the special point"
+    "Solution at the special point."
     x::Tv = Vector{T}(undef, 0)
 
-    "Tangent along the branch at the special point"
+    "Tangent along the branch at the special point."
     τ::BorderedArray{Tvτ, T} = BorderedArray(x, zero(T))
 
-    "Eigenvalue index responsible for detecting the special point (if applicable)"
+    "Eigenvalue index responsible for detecting the special point (if applicable)."
     ind_ev::Int64 = 0
 
-    "Continuation step at which the special occurs"
+    "Continuation step at which the special occurs."
     step::Int64 = 0
 
     "`status ∈ {:converged, :guess, :guessL}` indicates whether the bisection algorithm was successful in detecting the special (bifurcation) point. If `status == :guess`, the bisection algorithm failed to meet the requirements given in `::ContinuationPar`. Same for `status == :guessL` but the bisection algorithm stopped on the left of the bifurcation point."
@@ -151,13 +154,14 @@ end
 # types for bifurcation point with 1d kernel for the jacobian
 
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
-                  (:Pitchfork, AbstractSimpleBranchPoint),
                   (:Fold, AbstractSimpleBranchPoint),
+                  (:Pitchfork, AbstractSimpleBranchPoint),
                   (:Transcritical, AbstractSimpleBranchPoint),
                   (:PeriodDoubling, AbstractSimpleBranchPointForMaps),
                   (:BranchPointMap, AbstractSimpleBranchPointForMaps),
                   (:PitchforkMap, AbstractSimpleBranchPointForMaps),
-                  (:TranscriticalMap, AbstractSimpleBranchPointForMaps)
+                  (:TranscriticalMap, AbstractSimpleBranchPointForMaps),
+                  (:NdBranchPoint, AbstractBranchPoint),
                   )
     @eval begin
         """
@@ -171,8 +175,16 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 
         You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
         to find the zeros of the normal form polynomials.
+
+        ## Manipulating the normal form for `NdBranchPoint`
+
+        - You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on the vector `x` for (scalar) parameter `p`.
+
+        - You can use `bp(x, δp::Real)` to get the (large dimensional guess) associated to the low dimensional vector `x`. Note that we must have `length(x) == length(bp)`.
+
+        - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string."
         """
-        mutable struct $op{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: $opt
+        mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
 
@@ -210,13 +222,13 @@ for op in (:Pitchfork, :PitchforkMap)
 end
 
 istranscritical(bp::AbstractSimpleBranchPoint) = bp isa Transcritical
-type(bp::BranchPoint) = :BranchPoint
-type(bp::Pitchfork) = :Pitchfork
-type(bp::PitchforkMap) = :Pitchfork
-type(bp::Fold) = :Fold
-type(bp::Transcritical) = :Transcritical
-type(bp::TranscriticalMap) = :Transcritical
-type(bp::PeriodDoubling) = :PeriodDoubling
+type(::BranchPoint) = :BranchPoint
+type(::Pitchfork) = :Pitchfork
+type(::PitchforkMap) = :Pitchfork
+type(::Fold) = :Fold
+type(::Transcritical) = :Transcritical
+type(::TranscriticalMap) = :Transcritical
+type(::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function printnf1d(io, nf; prefix = "")
@@ -287,62 +299,7 @@ end
 
 ####################################################################################################
 # type for bifurcation point Nd kernel for the jacobian
-
-"""
-This is a type which holds information for the bifurcation points of equilibria with dim(Ker)>1.
-
-$(TYPEDEF)
-
-## Fields
-
-$(TYPEDFIELDS)
-
-## Associated methods
-
-You can call `type(bp::NdBranchPoint), length(bp::NdBranchPoint)`.
-
-## Predictor
-
-You can call `predictor(bp, ds)` on such bifurcation point `bp` to find the zeros of the normal form polynomials.
-
-## Manipulating the normal form
-
-- You can use `bp(Val(:reducedForm), x, p)` to evaluate the normal form polynomials on the vector `x` for (scalar) parameter `p`.
-
-- You can use `bp(x, δp::Real)` to get the (large dimensional guess) associated to the low dimensional vector `x`. Note that we must have `length(x) == length(bp)`.
-
-- You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string.
-"""
-mutable struct NdBranchPoint{Tv, Tτ, T, Tpar, Tlens <: AllOpticTypes, Tevl, Tevr, Tnf} <: AbstractBranchPoint
-    "Bifurcation point"
-    x0::Tv
-
-    "Tangent of the curve at the bifurcation point."
-    τ::Tτ
-
-    "Parameter value at the bifurcation point"
-    p::T
-
-    "Parameters used by the vector field."
-    params::Tpar
-
-    "Parameter axis used to compute the branch on which this bifurcation point was detected."
-    lens::Tlens
-
-    "Right eigenvectors"
-    ζ::Tevr
-
-    "Left eigenvectors"
-    ζ★::Tevl
-
-    "Normal form coefficients"
-    nf::Tnf
-
-    "Type of bifurcation point"
-    type::Symbol
-end
-
-type(bp::NdBranchPoint) = :NonSimpleBranchPoint
+type(::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
 
 function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
@@ -353,53 +310,61 @@ function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
     println(io, prefix, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
 end
 ####################################################################################################
-"""
-$(TYPEDEF)
+for (op, opt) in ((:Hopf, AbstractSimpleBranchPoint),
+                  (:NeimarkSacker, AbstractSimpleBranchPointForMaps)
+                )
+    @eval begin
+        """
+        $(TYPEDEF)
 
-## Fields
+        ## Fields
 
-$(TYPEDFIELDS)
+        $(TYPEDFIELDS)
 
-# Associated methods
+        # Associated methods
 
-## Predictor
+        ## Predictor
 
-You can call `predictor(bp::Hopf, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
-"""
-mutable struct Hopf{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPoint
-    "Hopf point"
-    x0::Tv
+        You can call `predictor(bp, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
+        """
+        mutable struct $op{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: $opt
+            "Bifurcation point"
+            x0::Tv
 
-    "Tangent of the curve at the bifurcation point."
-    τ::Tτ
+            "Tangent of the curve at the bifurcation point."
+            τ::Tτ
 
-    "Parameter value at the Hopf point"
-    p::T
+            "Parameter value at the bifurcation point"
+            p::T
 
-    "Frequency at the Hopf point"
-    ω::Tω
+            "Frequency at the bifurcation point"
+            ω::Tω
 
-    "Parameters used by the vector field."
-    params::Tpar
+            "Parameters used by the vector field."
+            params::Tpar
 
-    "Parameter axis used to compute the branch on which this Hopf point was detected."
-    lens::Tlens
+            "Parameter axis used to compute the branch on which this bifurcation point was detected."
+            lens::Tlens
 
-    "Right eigenvector"
-    ζ::Tevr
+            "Right eigenvector"
+            ζ::Tevr
 
-    "Left eigenvector"
-    ζ★::Tevl
+            "Left eigenvector"
+            ζ★::Tevl
 
-    "Normal form coefficient ex: (a = 0., b = 1 + 1im)"
-    nf::Tnf
+            "Normal form coefficient ex: (a = 0., b = 1 + 1im)"
+            nf::Tnf
 
-    "Type of Hopf bifurcation"
-    type::Symbol
+            "Type bifurcation"
+            type::Symbol
+        end
+    end
 end
 
-type(bp::Hopf) = :Hopf
-Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nb.b3) < 0 ? :SuperCritical : :SubCritical)
+type(::Hopf) = :Hopf
+type(::NeimarkSacker) = :NeimarkSacker
+
+Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::Hopf)
     plens = get_lens_symbol(bp.lens)
@@ -413,54 +378,6 @@ function Base.show(io::IO, bp::Hopf)
         println(io,"└─ b = ", bp.nf.b)
     end
 end
-####################################################################################################
-# type for Neimark-Sacker bifurcation (of Maps)
-"""
-$(TYPEDEF)
-
-## Fields
-
-$(TYPEDFIELDS)
-
-# Associated methods
-
-## Predictor
-
-You can call `predictor(bp::NeimarkSacker, ds)` on such bifurcation point `bp` to get the guess for the periodic orbit.
-"""
-mutable struct NeimarkSacker{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: AbstractSimpleBranchPointForMaps
-    "Neimark-Sacker point"
-    x0::Tv
-
-    "Tangent of the curve at the bifurcation point."
-    τ::Tτ
-
-    "Parameter value at the Neimark-Sacker point"
-    p::T
-
-    "Frequency at the Neimark-Sacker point"
-    ω::Tω
-
-    "Parameters used by the vector field."
-    params::Tpar
-
-    "Parameter axis used to compute the branch on which this Neimark-Sacker point was detected."
-    lens::Tlens
-
-    "Right eigenvector"
-    ζ::Tevr
-
-    "Left eigenvector"
-    ζ★::Tevl
-
-    "Normal form coefficient ex: (a = 0., b = 1 + 1im)"
-    nf::Tnf
-
-    "Type of Hopf bifurcation"
-    type::Symbol
-end
-
-type(bp::NeimarkSacker) = :NeimarkSacker
 
 function Base.show(io::IO, bp::NeimarkSacker)
     printstyled(io, bp.type, " - ", type(bp), color=:cyan, bold = true)

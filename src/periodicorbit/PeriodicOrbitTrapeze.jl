@@ -49,20 +49,20 @@ $(TYPEDEF)
 
 This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
-The scheme is as follows. We first consider a partition of ``[0,1]`` given by ``0<s_0<\\cdots<s_m=1`` and one looks for `T = x[end]` such that
+The scheme is as follows. We first consider a partition of ``[0, 1]`` given by ``0 < s_0 < \\cdots < s_m = 1`` and one looks for `T = x[end]` such that
 
- ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i=1,\\cdots,m-1``
+ ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i = 1, \\cdots, m-1``
 
 with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
 
-where ``h_1 = s_i-s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
+where ``h_1 = s_i - s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
 
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
-## Constructors
+# Constructors
 
 The structure can be created by calling `PeriodicOrbitTrapProblem(;kwargs...)`. For example, you can declare such a problem without vector field by doing
 
@@ -835,7 +835,7 @@ function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace,
     M, N = size(trap)
     # sparse matrix to hold the jacobian
     J =  trap(Val(:JacFullSparse), orbitguess, getparams(trap.prob_vf))
-    indx = get_blocks(J, N, M)
+    indx = _get_blocks_from_sparse_matrix(J, N, M)
     return (FullSparseInplace(), J, indx)
 end
 
@@ -879,7 +879,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  trap(Val(:JacCyclicSparse), orbitguess, getparams(trap.prob_vf))
-            _indx = get_blocks(_J, N, M-1)
+            _indx = _get_blocks_from_sparse_matrix(_J, N, M-1)
             # inplace modification of the jacobian _J
             Aγ = AγOperatorSparseInplace(Jc = _J,  Jcfact = LA.lu(_J), prob = trap, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()
@@ -992,7 +992,7 @@ function continuation_potrap(trap::PeriodicOrbitTrapProblem,
             lspo = PeriodicOrbitTrapBLS()
         elseif jacobianPO == BorderedSparseInplace()
             _J =  trap(Val(:JacCyclicSparse), orbitguess, getparams(trap))
-            _indx = get_blocks(_J, N, M-1)
+            _indx = _get_blocks_from_sparse_matrix(_J, N, M-1)
             # inplace modification of the jacobian _J
             Aγ = AγOperatorSparseInplace(;Jc = _J,  Jcfact = LA.lu(_J), prob = trap, indx = _indx)
             lspo = PeriodicOrbitTrapBLS()

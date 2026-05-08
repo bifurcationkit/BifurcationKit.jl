@@ -188,7 +188,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingMinimallyAugmented
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
 end
 
-function (pdls::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
+function (::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = PDMALinearSolver((Jpd.x).u,
                  (Jpd.x).p,
@@ -263,7 +263,6 @@ function update!(𝐏𝐛::PDMAProblem, iter, state)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     𝐏𝐝 = get_formulation(𝐏𝐛)
-    𝒯 = eltype(𝐏𝐝)
     success = converged(state)
     if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update

@@ -48,7 +48,7 @@ function testBranch(br)
     for bp in br.specialpoint
         if bp.type!=:endpoint
             id = bp.idx
-            if isempty(br.eig) == false && bp.type ∈ [:fold, :hopf, :bp, :nd, :none, :ns, :pd, :bt, :cusp, :gh, :zh, :hh]
+            if isempty(br.eig) == false && bp.type ∈ (:fold, :hopf, :bp, :nd, :none, :ns, :pd, :bt, :cusp, :gh, :zh, :hh)
                 # test that the states marked as bifurcation points are always after true bifurcation points
                 @test abs(br[id].n_unstable - br[id-1].n_unstable) > 0
             end
@@ -83,15 +83,19 @@ testBranch(br0)
 # plot(br0, plotspecialpoints=true)
 ####################################################################################################
 # continuous events
-opts = ContinuationPar(opts0; save_sol_every_step = 1, detect_bifurcation = 0, detect_event = 2)
+opts = ContinuationPar(opts0; detect_bifurcation = 0, detect_event = 2)
 br = continuation(prob, PALC(), opts)
 
 # arguments for continuation
 args = (BK.re_make(prob; record_from_solution = (x,p; k...) -> x[1]), PALC(), opts)
 kwargs = (plot = false, verbosity = 0, linear_algo = MatrixBLS(),)
 
-br = continuation(args...; kwargs...,
+br = continuation(args[1:end-1]..., ContinuationPar(opts; max_steps = 10); kwargs...,
     verbosity = 3, # test printing
+    event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
+
+br = continuation(args...; kwargs...,
+    verbosity = 0, # test printing
     event = BK.ContinuousEvent(1, (iter, state) -> getp(state)+2),)
 @test length(br.specialpoint) == 4
 @test br.specialpoint[1].type == :userC

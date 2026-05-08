@@ -137,13 +137,9 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTMinimallyAugmentedFormula
 
     p1, p2 = p
 
-    # parameter axis
-    lens = getlens(𝐁𝐓)
     # update parameter
     par0 = set(par, getlens(𝐁𝐓.prob_vf), p1)
     par0 = set(par0, 𝐁𝐓.lens2, p2)
-
-    # par0 = set(par, lens, p)
 
     # we define the following jacobian. It is used at least 3 times below. This avoids doing 3 times the (possibly) costly building of J(x, p)
     J_at_xp = jacobian(𝐁𝐓.prob_vf, x, par0)
@@ -156,7 +152,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTMinimallyAugmentedFormula
     end
 
     # normalization
-    n = T(1)
+    n = one(T)
 
     # we solve Jv + a σ1 = 0 with <b, v> = n
     # the solution is v = -σ1 J\a with σ1 = -n/<b, J\a>
@@ -230,7 +226,7 @@ function btMALinearSolver(x, p::Vector{T}, 𝐁𝐓::BTMinimallyAugmentedFormula
     return dX, dsig, true, sum(it) + sum(itv1) + sum(itw1) + sum(itv2) + sum(itw2)
 end
 
-function (btls::BTLinearSolverMinAug)(Jbt, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
+function (::BTLinearSolverMinAug)(Jbt, du::BorderedArray{vectype, T}; debugArray = nothing, kwargs...) where {vectype, T}
     # kwargs is used by AbstractLinearSolver
     out =  btMALinearSolver((Jbt.x).u,
                  (Jbt.x).p,

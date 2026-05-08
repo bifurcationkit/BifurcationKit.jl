@@ -10,7 +10,7 @@ function get_adjoint_basis(L★, λs::AbstractVector, eigsolver::AbstractEigenSo
     # This is a horrible hack to get the type of the left eigenvectors
     ζ★s = Vector{typeof(geteigenvector(eigsolver, ev★, 1))}()
 
-    for (idvp, λ) in enumerate(λs)
+    for (idvp, λ) in pairs(λs)
         I = argmin(abs.(λ★ .- λ))
         abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
         verbose && println("──▶ VP[$idvp] paired with VP★[$I]")
@@ -48,7 +48,7 @@ Bi-orthogonalise the two sets of vectors.
 # Optional argument
 - `_dot = VectorInterface.inner` specify your own dot product.
 """
-function biorthogonalise(ζs, ζ★s, verbose; _dot = VI.inner)
+function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use the projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
@@ -175,6 +175,8 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     return get_normal_formNd(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf..., ζs, ζs_ad, bls_block)
 end
 
+@inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
+
 """
 $(TYPEDSIGNATURES)
 
@@ -194,22 +196,22 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     tol_fold = 1e-3,
                     scaleζ = LA.norm,
 
-                    ζ = nothing,
-                    ζ_ad = nothing,
+                    ζ::Tevecs = nothing,
+                    ζ_ad::Tevecs_ad = nothing,
 
                     autodiff::Bool = true,
                     detailed::Bool = true,
 
                     bls = MatrixBLS(),
-                    ) where {𝒯eigvec}
+                    ) where {𝒯eigvec, Tevecs, Tevecs_ad}
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     plens = get_lens_symbol(lens)
     if bifpt.type ∉ (:bp, :fold)
         error("The provided index does not refer to a Branch Point with 1d kernel. The type of the bifurcation is $(bifpt.type). The bifurcation point is $bifpt.")
     end
-    if ~(abs(bifpt.δ[1]) <= 1)
-        error("We only provide normal form computation for simple bifurcation points e.g. when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(abs(bifpt.δ[1])).")
+    if ~(kernel_dimension(bifpt) <= 1)
+        error("We only provide normal form computation for simple bifurcation points e.g. when the kernel of the jacobian is 1d. Here, the dimension of the kernel is $(kernel_dimension(bifpt)).")
     end
 
     verbose && println("━"^53*"\n┌─ Normal form computation for 1d kernel")
@@ -220,12 +222,13 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, bifpt.x)
     p = bifpt.param
+    𝒯 = VI.scalartype(x0)
+    δ = getdelta(prob)
 
     # parameter for vector field
     parbif = set(getparams(br), lens, p)
 
     L = jacobian(prob, x0, parbif)
-    ls = options.linsolver
 
     # "zero" eigenvalue at bifurcation point, it must be real
     λ = real(br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -235,7 +238,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
     # corresponding eigenvector, it must be real
-    if isnothing(ζ) # do we have a basis for the kernel?
+    if Tevecs == Nothing # do we have a basis for the kernel?
         if ~haseigenvector(br)
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             nev_required = max(nev, bifpt.ind_ev + 2)
@@ -244,15 +247,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
             if ~(_λ[bifpt.ind_ev] ≈ λ)
                 error("We did not find the correct eigenvalue $λ. We found $(_λ)")
             end
-            ζ = real(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev))
+            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)))
         else
-            ζ = real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
         end
     end
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
-    if isnothing(ζ_ad)
+    if Tevecs_ad == Nothing
         if is_symmetric(prob)
             λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
             ζ★ = _copy(ζ)
@@ -265,26 +268,22 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         ζ★ = _copy(ζ_ad)
     end
 
-    ζ★ = real(ζ★)
-    λ★ = real(λ★)
+    ζ★ = convert(𝒯eigvec, real(ζ★))
+
     if ~(abs(VI.inner(ζ, ζ★)) > 1e-10)
         error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
     ζ★ ./= VI.inner(ζ, ζ★)
+    ζ★ = convert(𝒯eigvec, real(ζ★))
 
     # differentials and projector on Range(L), there are real valued
     R2(dx1, dx2)      = d2F(prob, x0, parbif, dx1, dx2)
     R3(dx1, dx2, dx3) = d3F(prob, x0, parbif, dx1, dx2, dx3)
-    E(x) = x .- VI.inner(x, ζ★) .* ζ
-    # bordered linear solver
-    𝒯 = VI.scalartype(x0)
-    mybls(z) = bls(L, ζ★, ζ, zero(𝒯), z, zero(𝒯))
 
     verbose && println("┌── Normal form:   a01⋅δ$plens + a02⋅δ$(plens)²/2 + b11⋅x⋅δ$plens + b20⋅x²/2 + b30⋅x³/6")
 
     # we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
-    δ = getdelta(prob)
     if autodiff
         R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
         R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
@@ -299,12 +298,12 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── a01   = ", a01)
 
     # coefficient of p, Golub. Schaeffer Vol 1 page 33, eq 3.22 (b)
-    Ψ01, _, cv, it  = mybls(-E(R01))
+    Ψ01, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-R01, ζ, ζ★), zero(𝒯))
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
 
     # coefficient of x*p
     if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
+        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p) # TODO: this line makes it type unstable
     else
         R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
                dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
@@ -329,7 +328,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─── b20/2 = ", b20/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ), Golub. Schaeffer Vol 1 page 33, eq 3.22 (a)
-    Ψ20, _, cv, it  = mybls(-E(b2v))
+    Ψ20, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-b2v, ζ, ζ★), zero(𝒯))
     ~cv && @debug "[Normal form Ψ20] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .+ 3 .* R2(ζ, Ψ20)
     b30 = VI.inner(b3v, ζ★)
@@ -395,7 +394,7 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     # This leads to the two cases below.
     nf = bp.nf
     τ = bp.τ
-    (;a01, b11, b20, b30, Ψ01) = nf
+    (; b11, b20, Ψ01) = nf
     pnew = bp.p + ds
     # we solve b11 * ds + b20 * amp / 2 = 0
     amp = -2ds * b11 / b20 * ampfactor
@@ -456,7 +455,7 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
                     verbose = false, 
                     ampfactor = one(𝒯)) where 𝒯
     nf = bp.nf
-    (;a01, b11, b20, b30) = nf
+    (; b11, b30) = nf
 
     # we need to find the type, supercritical or subcritical
     dsfactor = b11 * b30 < 0 ? 𝒯(1) : 𝒯(-1)
@@ -495,7 +494,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
                     ampfactor = one(𝒯)) where {𝒯}
     nf = bp.nf
     τ = bp.τ
-    (;a01, a02, b11, b20, b30, Ψ01) = nf
+    (;a01, a02, b11, b20, b30) = nf
     pnew = bp.p + ds
 
     ads = abs(ds)
@@ -525,6 +524,14 @@ function _predictor(bp::AbstractSimpleBranchPoint,
             δp = pnew - bp.p)
 end
 ####################################################################################################
+Base.@kwdef struct NdBPNormalForm{T}
+    a01::Array{T, 1}
+    a02::Array{T, 1}
+    b11::Array{T, 2}
+    b20::Array{T, 3}
+    b30::Array{T, 4}
+end
+
 function (bp::NdBranchPoint)(::Val{:reducedForm}, x::AbstractVector, p::𝒯) where 𝒯
     # dimension of the kernel
     N = length(bp.ζ)
@@ -562,7 +569,7 @@ end
 
 function (bp::NdBranchPoint)(x::AbstractVector, δp::Real)
     out = bp.x0 .+ x[begin] .* bp.ζ[begin]
-    for ii in eachindex(x)[2:end]
+    for ii in eachindex(x)[2:end] # TODO start at 2 or begin+1 ??
         out .+= x[ii] .* bp.ζ[ii]
     end
     return out
@@ -574,8 +581,6 @@ $(TYPEDSIGNATURES)
 Print the normal form `bp` with a nice string.
 """
 function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
-    superDigits = [c for c in "⁰ ²³⁴⁵⁶⁷⁸⁹"]
-
     nf = bp.nf
     N = length(nf.a01)
     out = ["" for _ in 1:N]
@@ -634,36 +639,44 @@ function _get_string(bp::NdBranchPoint, plens = :p; tol = 1e-6, digits = 4)
     return out
 end
 
+function E_nd(x, ζs, ζ★s)
+    out = _copy(x)
+    for ii in eachindex(ζs)
+        out .= out .- VI.inner(x, ζ★s[ii]) .* ζs[ii]
+    end
+    return out
+end
+
 function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
                             id_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            nev = length(eigenvalsfrombif(br, ind_bif)),
-                            verbose = false,
+                            nev::Int = length(eigenvalsfrombif(br, id_bif)),
+                            verbose::Bool = false,
                             lens = getlens(br),
                             tol_fold = 1e-3,
 
-                            ζs = nothing,
-                            ζs_ad = nothing,
+                            ζs::Tevecs = nothing,
+                            ζs_ad::Tevecs_ad = nothing,
 
                             bls_block = MatrixBLS(),
 
                             scaleζ = LA.norm,
                             autodiff = false
-                            ) where {𝒯eigvec}
+                            ) where {𝒯eigvec, Tevecs, Tevecs_ad}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
 
     # kernel dimension:
-    N = abs(bifpt.δ[1])
+    N::Int = kernel_dimension(bifpt)
 
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(2N, nev)
     verbose && println("━"^53*"\n──▶ Normal form Computation for a $N-d kernel")
     verbose && println("──▶ analyse bifurcation at p = ", bifpt.param)
 
-    options = br.contparams.newton_options
+    options = getcontparams(br).newton_options
     ls = options.linsolver
 
     # bifurcation point
@@ -687,7 +700,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     λs = rightEv[indev-N+1:indev]
     verbose && println("──▶ smallest eigenvalues at bifurcation = ", real.(λs))
     # and corresponding eigenvectors
-    if isnothing(ζs) # do we have a basis for the kernel?
+    if Tevecs == Nothing # do we have a basis for the kernel?
         if haseigenvector(br) == false # are the eigenvector saved in the branch?
             @info "No eigenvector recorded, computing them on the fly..."
             # we recompute the eigen-elements if there were not saved during the computation of the branch
@@ -696,9 +709,9 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
                 @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
             end
-            ζs = [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev]
+            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev])
         else
-            ζs = [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev]
+            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev])
         end
     end
 
@@ -706,13 +719,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
     # only adjust ζ★s
     for ζ in ζs; ζ ./= scaleζ(ζ); end
+
     L★ = if is_symmetric(prob_vf)
         L
         else
             has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
         end
 
-    if ~isnothing(ζs_ad) # left eigenvectors are provided by the user
+    if Tevecs_ad != Nothing # left eigenvectors are provided by the user
         λ★s = copy(λs)
         ζ★s = _copy.(ζs_ad)
     else
@@ -723,8 +737,8 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
             ζ★s, λ★s = get_adjoint_basis(L★, conj.(λs), options.eigsolver; nev, verbose)
         end
     end
-    ζ★s = real.(ζ★s); λ★s = real.(λ★s)
-    ζs = real.(ζs); λs = real.(λs)
+    ζ★s::Vector{𝒯eigvec} = real.(ζ★s); λ★s = real.(λ★s) # to enforce type stable code
+    ζs::Vector{𝒯eigvec}  = real.(ζs);   λs = real.(λs)
     verbose && println("──▶ VP  = ", λs, "\n──▶ VP★ = ", λ★s)
 
     ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
@@ -740,13 +754,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # bls(z) = (ls(L, z)[1], 0, true,1)
     bls(z) = solve_bls_block(bls_block, L, as, bs, cs, z, zeros(𝒯, 2))
     # projector on Range(L)
-    function E(x)
-        out = _copy(x)
-        for ii in 1:N
-            out .= out .- VI.inner(x, ζ★s[ii]) .* ζs[ii]
-        end
-        return out
-    end
 
     # eigenvector eltype
     𝒯vec = VI.scalartype(ζs[1])
@@ -765,7 +772,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
     end
    
-    for ii in 1:N
+    for ii in eachindex(ζ★s)
         ∂gᵢ∂p[ii] = VI.inner(R01, ζ★s[ii])
     end
     verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gᵢ∂p, "\n")
@@ -773,7 +780,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # coefficients of x*p and p^2
     ∂²gᵢ∂xⱼ∂pₖ = zeros(𝒯vec, N, N)
     ∂²gᵢ∂p² = zeros(𝒯vec, N)
-    for jj in 1:N
+    for jj in eachindex(ζs)
         if autodiff
             R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
         else
@@ -781,7 +788,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                    dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
         end
 
-        Ψ01, _, cv, it  = bls(-E(R01))
+        Ψ01, _, cv, it  = bls(-E_nd(R01, ζs, ζ★s))
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
         tmp = R11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
@@ -827,17 +834,17 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
         if jj==kk==ll || jj==kk || jj<kk<ll
             b3v = R3(ζs[jj], ζs[kk], ζs[ll])
 
-            b2 = E(R2(ζs[ll], ζs[kk]))
+            b2 = E_nd(R2(ζs[ll], ζs[kk]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[jj], wst)
 
-            b2 = E(R2(ζs[ll], ζs[jj]))
+            b2 = E_nd(R2(ζs[ll], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[kk], wst)
 
-            b2 = E(R2(ζs[kk], ζs[jj]))
+            b2 = E_nd(R2(ζs[kk], ζs[jj]), ζs, ζ★s)
             wst, _, flag, it  = bls(b2)
             ~flag && @debug "[Normal Form Nd (wst)] linear solver did not converge"
             b3v .-= R2(ζs[ll], wst)
@@ -866,12 +873,19 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     end
 
     bp_type = max(norminf(∂gᵢ∂p), norminf(∂²gᵢ∂p²), norminf(∂²gᵢ∂xⱼ∂pₖ)) < tol_fold ? :NonQuadraticParameter :  Symbol("$N-d")   
-    return NdBranchPoint(x0, τ, p, parbif, lens, ζs, ζ★s, (a01 = ∂gᵢ∂p,
-                                                           a02 = ∂²gᵢ∂p²,
-                                                           b11 = ∂²gᵢ∂xⱼ∂pₖ,
-                                                           b20 = ∂²gᵢ∂xⱼ∂xₖ,
-                                                           b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
-                        bp_type)
+    return NdBranchPoint(x0,
+                         τ,
+                         p,
+                         parbif,
+                         lens,
+                         ζs,
+                         ζ★s,
+                         NdBPNormalForm{𝒯vec}(;a01 = ∂gᵢ∂p,
+                                    a02 = ∂²gᵢ∂p²,
+                                    b11 = ∂²gᵢ∂xⱼ∂pₖ,
+                                    b20 = ∂²gᵢ∂xⱼ∂xₖ,
+                                    b30 = ∂³gᵢ∂xⱼ∂xₖk∂xₗ ), 
+                         bp_type)
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
@@ -1095,7 +1109,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("The provided index does not refer to a Hopf Point")
     end
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
-
     options = br.contparams.newton_options
 
     # bifurcation point
@@ -1147,7 +1160,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     else
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
-        (; v, w, itv, itw) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v
         ζ★ = w
         λ★ = conj(λ)
@@ -1198,7 +1211,7 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `p` new parameter value
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
-function predictor(hp::Hopf, ds; verbose = false, ampfactor = 1)
+function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     # get the element type
     𝒯 = VI.scalartype(hp.x0)
 
@@ -1322,7 +1335,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     return setproperties(pt; nf, type)
 end
 
-function predictor(pd::PeriodDoubling, δp; verbose = false, ampfactor = 1 )
+function predictor(pd::PeriodDoubling, δp; verbose::Bool = false, ampfactor = 1 )
     # the normal form is f(x) = x*(c*x^2 + ∂p - 1)
     # we find f²(x) = (∂p - 1)^2*x + (c*(∂p - 1)^3 + (∂p - 1)*c)*x^3
     #               = (1-2∂p)x - 2cx^3 + h.o.t.
@@ -1444,7 +1457,7 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     br::AbstractBranchResult,
                     ind_ns::Int;
-                    nev = length(eigenvalsfrombif(br, id_bif)),
+                    nev::Int = length(eigenvalsfrombif(br, ind_ns)),
                     verbose::Bool = false,
                     lens = getlens(br),
                     Teigvec::Type = _getvectortype(br),
@@ -1537,7 +1550,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     if abs(LA.dot(ζ, ζ★)) <= 1e-10
-        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+        error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero")
     end
     ζ★ ./= LA.dot(ζ, ζ★)
 

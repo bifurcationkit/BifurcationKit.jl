@@ -1,4 +1,6 @@
-# This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behavior which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
+"""
+This function is very important for the computation of Floquet multipliers: it checks that the eigensolvers compute the eigenvalues with largest modulus instead of their default behavior which is with largest real part. If this option is not properly set, bifurcations of periodic orbits will be wrong.
+"""
 function _check_floquet_options(eigls::AbstractEigenSolver)
     if eigls isa DefaultEig
         return @set eigls.which = abs
@@ -30,7 +32,7 @@ The "Quick and Dirty" (QaD) method computes Floquet multipliers through sequenti
 
 Despite precision limitations, the method is sufficient for bifurcation detection in most cases.
 
-## Fields
+# Internal fields
 
 - `eigsolver::AbstractEigenSolver`: eigensolver used to compute the eigenvalues of the monodromy matrix.
 - `matrix_free::Bool`: whether to use a matrix-free linear operator (automatic when `eigsolver` is not a direct solver).
@@ -77,7 +79,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     σ = logvals[I]
     vp0 = minimum(abs, σ)
     if (wrap isa WrapPOSh) && vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
+        @debug "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
@@ -148,7 +150,7 @@ function MonodromyQaD(sh::ShootingProblem, J::AbstractMatrix, x, p)
     end
     tmp = similar(mono)
     r = N
-    for ii = 1:M-1
+    for _ = 1:M-1
         # mono .= J[r+1:r+N, r+1:r+N] * mono
         @views LA.mul!(tmp, J[r+1:r+N, r+1:r+N], mono)
         mono .= tmp
@@ -406,7 +408,7 @@ FloquetGEV(eigls::AbstractEigenSolver, ntot::Int, n::Int; array_zeros = zeros)
 - `eigls`: Eigensolver to use.
 - `ntot`: Total dimension of the generalized eigenvalue problem.
 - `n`: State space dimension.
-- `array_zeros`: Function to allocate zero arrays (defaults to `zeros`).
+- `array_zeros`: Function to allocate zero arrays: defaults to `zeros` but `spzeros` can be passed for sparse matrices.
 
 ## Example
 
@@ -483,7 +485,7 @@ end
     μ = @. Complex((1 + vals))
     vp0 = minimum(abs ∘ log, μ)
     if vp0 > 1e-8
-        @warn "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
+        @debug "The precision on the Floquet multipliers is $vp0. Either decrease `tol_stability` in the option `ContinuationPar` or use a different method than `FloquetGEV`."
     end
     Ind = sortperm(log.(μ); by = real, rev = true)
     nev2 = min(nev, length(Ind))

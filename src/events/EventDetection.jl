@@ -248,7 +248,7 @@ EventSpecialPoint(it::ContIterable, state::ContState, Utype::Symbol, status::Sym
 
 # I put the callback in first argument even if it is in iter in order to allow for dispatch
 # function to tell the event type based on the coordinates of the zero
-function get_event_type(event::AbstractEvent, 
+function get_event_type(::AbstractEvent, 
                         iter::AbstractContinuationIterable,
                         state,
                         verbosity,
@@ -374,14 +374,14 @@ function get_event_type(event::SetOfEvents,
     # find the active events
     event_index_C = Int32[]
     event_index_D = Int32[]
-    for (ind, eve) in enumerate(event.eventC)
+    for (ind, eve) in pairs(event.eventC)
         if is_event_crossed(eve, iter, state, ind)
             push!(event_index_C, ind)
         end
     end
 
     nC = length(event.eventC)
-    for (ind, eve) in enumerate(event.eventD)
+    for (ind, eve) in pairs(event.eventD)
         if is_event_crossed(eve, iter, state, nC + ind)
             push!(event_index_D, ind)
         end

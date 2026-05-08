@@ -1,4 +1,4 @@
-using FastGaussQuadrature: gausslegendre
+import FastGaussQuadrature
 
 """
     cache = MeshCollocationCache(Ntst::Int, m::Int, Ty = Float64)
@@ -9,16 +9,16 @@ Structure to hold the cache for the collocation method. More precisely, it start
 
 On each mesh interval [τⱼ, τⱼ₊₁] mapped to [-1, 1], a Legendre polynomial of degree m is formed. 
 
-
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor
 
     MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
 
-- `Ntst` number of time steps
-- `m` degree of the collocation polynomials
-- `Ty` type of the time variable
+- `Ntst` number of time steps.
+- `m` degree of the collocation polynomials.
+- `Ty` type of the time variable.
 """
 struct MeshCollocationCache{𝒯}
     "Coarse mesh size."
@@ -31,11 +31,11 @@ struct MeshCollocationCache{𝒯}
     lagrange_∂::Matrix{𝒯}
     "Gauss nodes."
     gauss_nodes::Vector{𝒯}
-    "Gauss weights."
+    "Gauss weights. Useful to compute integrals."
     gauss_weight::Vector{𝒯}
-    "Values of the coarse mesh, call τj. This can be adapted."
+    "Values of the coarse mesh, named τj. This can be adapted."
     τs::Vector{𝒯}
-    "Values of collocation points, call σj. These are fixed."
+    "Values of collocation points, named σj. These are fixed."
     σs::Vector{𝒯}
     "Full mesh containing both the coarse mesh and the collocation points."
     full_mesh::Vector{𝒯}
@@ -51,17 +51,25 @@ function MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
     return cache
 end
 
-@inline Base.eltype(::MeshCollocationCache{𝒯}) where 𝒯 = 𝒯
+@inline Base.eltype(::MeshCollocationCache{𝒯}) where {𝒯} = 𝒯
 @inline Base.size(cache::MeshCollocationCache) = (cache.degree, cache.Ntst)
 @inline get_Ls(cache::MeshCollocationCache) = (cache.lagrange_vals, cache.lagrange_∂)
 @inline getmesh(cache::MeshCollocationCache) = cache.τs
 @inline get_mesh_coll(cache::MeshCollocationCache) = cache.σs
+@inline get_full_mesh(cache::MeshCollocationCache) = cache.full_mesh
+@inline get_gauss_nodes(cache::MeshCollocationCache) = cache.gauss_nodes
+@inline get_gauss_weight(cache::MeshCollocationCache) = cache.gauss_weight
 get_max_time_step(cache::MeshCollocationCache) = maximum(diff(getmesh(cache)))
-_τj(σ, τⱼ₊₁, τⱼ) = τⱼ + (1 + σ)/2 * (τⱼ₊₁ - τⱼ) # for σ ∈ [-1,1], τj ∈ [τⱼ, τs[j+1]]
+@inline _τj(σ, τⱼ₊₁, τⱼ) = τⱼ + (1 + σ)/2 * (τⱼ₊₁ - τⱼ) # for σ ∈ [-1, 1], τj ∈ [τⱼ, τs[j+1]]
 @inline τj(σ, τs, j) = _τj(σ, τs[j+1], τs[j])
-# get the sigma corresponding to τ in the interval (τs[j], τs[j+1])
+"Get the `σ` corresponding to `τ` in the interval (τs[j], τs[j+1])"
 @inline σj(τ, τs, j) = (2*τ - τs[j] - τs[j + 1])/(τs[j + 1] - τs[j]) # for τ ∈ [τs[j], τs[j+1]], σj ∈ [-1, 1]
 
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate Lagrange polynomial at `x`.
+"""
 function lagrange(i::Int, x, z)
     nz = length(z)
     l = one(z[1])
@@ -77,26 +85,30 @@ end
 dlagrange(i, x, z) = ForwardDiff.derivative(x -> lagrange(i, x, z), x)
 
 # should accept a range, ie σs = LinRange(-1, 1, m + 1)
-function compute_legendre_matrices(σs::AbstractVector{𝒯}) where 𝒯
+function compute_legendre_matrices(σs::AbstractVector{𝒯}) where {𝒯}
     m = length(σs) - 1
-    zs, ws = gausslegendre(m)
+    zg, wg = FastGaussQuadrature.gausslegendre(m)
+    @assert length(zg) == m
     L  = zeros(𝒯, m + 1, m)
     ∂L = zeros(𝒯, m + 1, m)
     for j in 1:m+1
-        for i in 1:m
-             L[j, i] =  lagrange(j, zs[i], σs)
-            ∂L[j, i] = dlagrange(j, zs[i], σs)
+        for (i,z) in pairs(zg)
+             L[j, i] =  lagrange(j, z, σs)
+            ∂L[j, i] = dlagrange(j, z, σs)
         end
     end
-    return (;L, ∂L, zg = zs, wg = ws)
+    return (;L, ∂L, zg, wg)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Return all the times at which the problem is evaluated.
+Return the times at which the problem is evaluated. 
+
+!!! danger "This is a bit tricky"
+    In order to remove the obvious continuity conditions at the coarse mesh border, we form the mesh by evaluating `_τj(σs[l], τs[j+1], τs[j])` for `l=2:m+1`. The only point not present is then `t=0` which is added to the list.
 """
-@views function get_times(cache::MeshCollocationCache{𝒯}) where 𝒯
+function get_times(cache::MeshCollocationCache{𝒯}) where {𝒯}
     m, Ntst = size(cache)
     tsvec = zeros(𝒯, m * Ntst + 1)
     τs = cache.τs
@@ -118,7 +130,7 @@ function update_mesh!(cache::MeshCollocationCache, τs)
 end
 ####################################################################################################
 """
-cache to remove allocations from PeriodicOrbitOCollProblem
+Cache to remove allocations from PeriodicOrbitOCollProblem
 """
 struct POCollCache{𝒯}
     gj::DiffCache{Matrix{𝒯},  Vector{𝒯}}
@@ -140,8 +152,8 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     gj  = DiffCache(zeros(𝒯, n, m))
     gi  = DiffCache(zeros(𝒯, n, m))
     ∂gj = DiffCache(zeros(𝒯, n, m))
-    uj  = DiffCache(zeros(𝒯, n, m+1))
-    vj  = DiffCache(zeros(𝒯, n, m+1))
+    uj  = DiffCache(zeros(𝒯, n, m + 1))
+    vj  = DiffCache(zeros(𝒯, n, m + 1))
     tmp = DiffCache(zeros(𝒯, n))
     ∇phase = zeros(𝒯, n * (1 + m * Ntst))
     In = Array(LA.I(save_mem ? 1 : n))
@@ -158,33 +170,34 @@ const _pocoll_jacobian_types = (AutoDiffDense(),
 """
 $(TYPEDEF)
 
-This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
+This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [online](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 
-Here are some useful methods you can apply to `pb`
+Here are some useful methods you can apply to `coll::PeriodicOrbitOCollProblem`:
 
-- `length(pb)` gives the total number of unknowns
-- `size(pb)` returns the triplet `(N, m, Ntst)`
-- `getmesh(pb)` returns the mesh `0 = τ₀ < ... < τₙₜₛₜ₊₁ = 1`. This is useful because this mesh is born to vary during automatic mesh adaptation
-- `get_mesh_coll(pb)` returns the (static) mesh `0 = σ₀ < ... < σₘ₊₁ = 1`
-- `get_times(pb)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
-- `generate_solution(pb, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
-- `POSolution(pb, x)` return a function interpolating the solution `x` using a piecewise polynomials function
+- `length(coll)` gives the total number of unknowns.
+- `size(coll)` returns the triplet `(N, m, Ntst)`.
+- `getmesh(coll)` returns the mesh `0 = τ₁ < ... < τₙₜₛₜ₊₁ = 1`. This is useful because this mesh is bound to vary during automatic mesh adaptation.
+- `get_mesh_coll(coll)` returns the (static) mesh `-1 = σ₁ < ... < σₘ₊₁ = 1`.
+- `get_times(coll)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
+- `generate_solution(coll, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
+- `POSolution(coll, x)` return a function interpolating the solution `x` using a piecewise polynomials function.
+- `getperiod(coll po, p)` return the period of the periodic orbit `po`.
 
 # Orbit guess
-You can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
+You can evaluate the residual of the functional (and other things) by calling `coll(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
 
 Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
 
 # Jacobian
 
-Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to $_pocoll_jacobian_types. This is used to
-  select a way of inverting the jacobian dG of the functional G.
+Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_pocoll_jacobian_types`.\n\nThis is used to
+  select a way of inverting the jacobian dG of the functional G. See website for more information.
 
 # Constructors
 - `PeriodicOrbitOCollProblem(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
@@ -192,8 +205,9 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
 
-- `residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
-- `residual!(pb, out, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `residual(coll, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `residual!(coll, out, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `jacobian(coll, orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
 """
 @with_kw_noshow struct PeriodicOrbitOCollProblem{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractPODifferentialDiscretization
     "Bifurcation problem."
@@ -219,7 +233,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
     "Update the section every `update_section_every_step` step during continuation."
     update_section_every_step::UInt = 1
 
-    "Describes the type of jacobian used in Newton/PALC/etc iterations."
+    "Describes the type of jacobian used in Newton/PALC/etc iterations. See below for more information."
     jacobian::Tjac = DenseAnalytical()
 
     "Cache for collocation. See docs of `MeshCollocationCache`."
@@ -237,8 +251,6 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 
     "Parameter for mesh adaptation, control new mesh step size. More precisely, we set max(hᵢ) / min(hᵢ) ≤ K if hᵢ denotes the time steps."
     K::Float64 = 100
-
-    @assert jacobian in _pocoll_jacobian_types "This jacobian is not defined. Please chose another one in $_pocoll_jacobian_types."
 end
 
 # trivial constructor
@@ -261,7 +273,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function change the parameters `Ntst, m` for the collocation problem `pb` and return a new problem.
+This function changes the parameters `Ntst, m` for the collocation functional `coll` and return a new problem.
 """
 function set_collocation_size(coll::PeriodicOrbitOCollProblem, Ntst, m)
     𝒯 = eltype(coll)
@@ -276,6 +288,8 @@ end
 @inline get_mesh_size(coll::PeriodicOrbitOCollProblem) = coll.mesh_cache.Ntst
 
 """
+$(TYPEDSIGNATURES)
+
 The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProblem`
 """
 @inline Base.size(coll::PeriodicOrbitOCollProblem) = (coll.N, size(coll.mesh_cache)...)
@@ -286,8 +300,9 @@ The method `size` returns (n, m, Ntst) when applied to a `PeriodicOrbitOCollProb
 end
 
 @inline Base.eltype(::PeriodicOrbitOCollProblem{𝒯p, 𝒯j, 𝒯}) where {𝒯p, 𝒯j, 𝒯} = 𝒯
+
 """
-    L, ∂L = get_Ls(coll)
+    L, ∂L = get_Ls(coll::PeriodicOrbitOCollProblem)
 
 Return the collocation matrices for evaluation and derivation.
 """
@@ -302,15 +317,23 @@ getperiod(coll::PeriodicOrbitOCollProblem, x::POSolutionAndState, par = nothing)
 
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
-# array of size Ntst ⋅ (m+1) ⋅ n
-get_time_slices(coll::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[begin:end-1], size(coll)...)
+"""
+$(TYPEDSIGNATURES)
+
+The method returns an array of size N x (m * Ntst + 1)
+"""
+get_time_slices(coll::PeriodicOrbitOCollProblem, x) = @views get_time_slices(x[begin:end-1], size(coll)...) # array of size Ntst ⋅ (m+1) ⋅ n
 get_time_slices(coll::PeriodicOrbitOCollProblem, x::POSolutionAndState) = get_time_slices(coll, x.sol)
 get_times(coll::PeriodicOrbitOCollProblem) = get_times(coll.mesh_cache)
+@inline get_gauss_nodes(coll::PeriodicOrbitOCollProblem) = get_gauss_nodes(coll.mesh_cache)
+@inline get_gauss_weight(coll::PeriodicOrbitOCollProblem) = get_gauss_weight(coll.mesh_cache)
+
 """
-Returns the vector of size m+1,  0 = τ₁ < τ₂ < ... < τₘ < τₘ₊₁ = 1
+Returns the vector of size Ntst + 1,  `0 = τ₁ < ... < τₙₜₛₜ₊₁ = 1`
 """
 getmesh(coll::PeriodicOrbitOCollProblem) = getmesh(coll.mesh_cache)
 get_mesh_coll(coll::PeriodicOrbitOCollProblem) = get_mesh_coll(coll.mesh_cache)
+get_full_mesh(coll::PeriodicOrbitOCollProblem) = get_full_mesh(coll.mesh_cache)
 get_max_time_step(coll::PeriodicOrbitOCollProblem) = get_max_time_step(coll.mesh_cache)
 update_mesh!(coll::PeriodicOrbitOCollProblem, mesh) = update_mesh!(coll.mesh_cache, mesh)
 @inline isinplace(coll::PeriodicOrbitOCollProblem) = isinplace(coll.prob_vf)
@@ -325,7 +348,7 @@ function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     println(io, "├─ type               : Vector{", eltype(coll), "}")
     println(io, "├─ time slices (Ntst) : ", Ntst)
     println(io, "├─ degree      (m)    : ", m)
-    println(io, "├─ dimension   (N)    : ", coll.N)
+    println(io, "├─ dimension   (N)    : ", N)
     println(io, "├─ update section     : ", coll.update_section_every_step)
     println(io, "├─ jacobian           : ", coll.jacobian)
     println(io, "├─ mesh adaptation    : ", meshadapt(coll))
@@ -338,7 +361,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t * period)` for t ∈ [0,1] and the `period`. Used also in `generate_ci_problem`.
+This function generates an initial guess for the solution of the problem `coll` based on the orbit `t -> orbit(t * period)` for t ∈ [0, 1] and the `period`. Used also in `generate_ci_problem`.
 """
 function generate_solution(coll::PeriodicOrbitOCollProblem{𝒯p, 𝒯j, 𝒯}, orbit, period) where {𝒯p, 𝒯j, 𝒯}
     n, _m, Ntst = size(coll)
@@ -401,7 +424,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     
     # find best period candidate
     if optimal_period
-        _times = LinRange(period * 0.8, period * 1.2, 5Ntst)
+        _times = LinRange(period * 0.8, period * 1.2, 5 * Ntst)
         period = _times[argmin(norm(sol_ode(t + t0) - sol_ode(t0)) for t in _times)]
     end
     ci = copy(generate_solution(coll, t -> sol_ode(t0 + t), period))
@@ -420,7 +443,7 @@ $(TYPEDSIGNATURES)
 
 [INTERNAL] Implementation of ∫_0^T < u(t), v(t) > dt.
 
-```∫(pb, uc, vc, T = 1)```
+```∫(coll, uc, vc, T = 1)```
 
 # Arguments
 - uj  n x (m + 1)
@@ -435,8 +458,8 @@ $(TYPEDSIGNATURES)
 
     n, m, Ntst = size(coll)
     L, ∂L = get_Ls(coll.mesh_cache)
-    ω = coll.mesh_cache.gauss_weight
-    mesh = coll.mesh_cache.τs
+    ω = get_gauss_weight(coll)
+    mesh = getmesh(coll)
 
     guj = zeros(𝒯y, n, m)
     uj  = zeros(𝒯y, n, m+1)
@@ -459,7 +482,7 @@ end
 function ∫(coll::PeriodicOrbitOCollProblem,
             u::AbstractVector,
             v::AbstractVector,
-            period = one(eltype(uc)))
+            period = one(eltype(u)))
     uc = get_time_slices(coll, u)
     vc = get_time_slices(coll, v)
     return ∫(coll, uc, vc, period)
@@ -480,7 +503,6 @@ function phase_condition(coll::PeriodicOrbitOCollProblem,
                         Ls,
                         period)
     𝒯 = eltype(uc)
-    n, m, Ntst = size(coll)
 
     puj = get_tmp(coll.cache.gj, uc) # zeros(𝒯, n, m)
     uj  = get_tmp(coll.cache.uj, uc)  #zeros(𝒯, n, m+1)
@@ -506,7 +528,7 @@ end
     𝒯 = eltype(uc)
     phase = zero(𝒯)
     n, m, Ntst = size(coll)
-    ω = coll.mesh_cache.gauss_weight
+    ω = get_gauss_weight(coll)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
@@ -536,13 +558,12 @@ end
                                     compute_phase::Val{CP} = Val(true)) where {𝒯, CP}
     # out is of size (n, m⋅Ntst + 1)
     n, ntimes = size(u)
-    m = coll.mesh_cache.degree
-    Ntst = coll.mesh_cache.Ntst
-    ω = coll.mesh_cache.gauss_weight
+    _n, m, Ntst = size(coll) # _n should equal n but let's not check it
+    ω = get_gauss_weight(coll)
     # we want slices at fixed times, hence pj[:, j] is the fastest
     # temporaries to reduce allocations
-    pj  = get_tmp(coll.cache.gj, u)  #zeros(𝒯, n, m)
-    ∂pj = get_tmp(coll.cache.∂gj, u) #zeros(𝒯, n, m)
+    pj  = get_tmp(coll.cache.gj, u)  # zeros(𝒯, n, m)
+    ∂pj = get_tmp(coll.cache.∂gj, u) # zeros(𝒯, n, m)
     tmp = get_tmp(coll.cache.tmp, u)
     mesh = getmesh(coll)
     # range for locating time slices
@@ -556,7 +577,7 @@ end
         for l in Base.OneTo(m)
             _POO_coll_scheme!(coll, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
-        if CP === true
+        if CP === true # statically knownm, should be removed by compiler
             @inbounds for l in Base.OneTo(m)
                 phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
@@ -940,7 +961,7 @@ end
 ####
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::FullSparseInplace, orbitguess, pars; k...)
     _J = analytical_jacobian_sparse(coll, orbitguess, pars)
-    indx = get_blocks(coll, _J)
+    indx = _get_blocks_from_sparse_matrix(coll, _J)
     return (FullSparseInplace(), _J, indx)
 end
 
@@ -1053,7 +1074,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar,
                     linear_algo::AbstractBorderedLinearSolver;
-                    δ = convert(eltype(orbitguess), 1e-8),
+                    δ = convert(VI.scalartype(orbitguess), 1e-8),
                     eigsolver = FloquetColl(),
                     record_from_solution = nothing,
                     plot_solution = nothing,
@@ -1149,26 +1170,24 @@ end
 end
 ####################################################################################################
 # mesh adaptation method
-@views function (sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0)
-    n, m, Ntst = size(sol.pb)
-    xc = get_time_slices(sol.pb, sol.x)
+(sol::POSolution{ <: PeriodicOrbitOCollProblem})(t0) = __interpolate_posolution(sol.pb, t0, sol.x, getperiod(sol.pb, sol.x, nothing))
 
-    T = getperiod(sol.pb, sol.x, nothing)
-    t = mod(t0, T) / T
-
-    mesh = getmesh(sol.pb)
+@views function __interpolate_posolution(coll::PeriodicOrbitOCollProblem, t0, x, period)
+    n, m, Ntst = size(coll)
+    xc = get_time_slices(coll, x)
+    t = mod(t0, period) / period
+    mesh = getmesh(coll)
     index_t = searchsortedfirst(mesh, t) - 1
     if index_t <= 0
-        return sol.x[1:n]
+        return x[1:n]
     elseif index_t > Ntst
         return xc[:, end]
     end
     @assert mesh[index_t] <= t <= mesh[index_t+1] "Please open an issue on the website of BifurcationKit.jl"
     σ = σj(t, mesh, index_t)
-    # @assert -1 <= σ <= 1 "Strange value of $σ"
-    σs = get_mesh_coll(sol.pb)
-    out = zeros(typeof(t), sol.pb.N)
-    rg = (1:m+1) .+ (index_t-1) * m
+    σs = get_mesh_coll(coll)
+    out = zeros(typeof(t), n)
+    rg = (1:m+1) .+ (index_t - 1) * m
     for l in 1:m+1
         out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
     end

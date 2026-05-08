@@ -9,7 +9,7 @@ abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 
 # The following function returns the n-th eigenvectors computed by an eigen solver. 
 # This function is necessary given the different return types each eigensolver has
-geteigenvector(eigsolve::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
+geteigenvector(::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
 
 getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
@@ -22,10 +22,11 @@ $(TYPEDEF)
 
 The struct `DefaultEig` is used to  provide the `eigen` method to `BifurcationKit`.
 
-## Fields
+# Internal fields
+
 $(TYPEDFIELDS)
 
-## Constructors
+# Constructors
 Just pass the above fields like `DefaultEig(; which = abs)`
 """
 @with_kw struct DefaultEig{T} <: AbstractDirectEigenSolver
@@ -55,7 +56,7 @@ $(TYPEDEF)
 
 Create an eigen solver based on [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl).
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor
@@ -118,10 +119,10 @@ $(TYPEDEF)
 
 Create an eigen solver based on `KrylovKit.jl`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
-## Constructors
+# Constructors
 Just pass the above fields like `EigKrylovKit(;dim=2)`
 """
 @with_kw struct EigKrylovKit{T, vectype} <: AbstractMFEigenSolver
@@ -173,14 +174,14 @@ function (eig::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
     return vals, vec, info.converged > 0, info.numops
 end
 
-geteigenvector(eigsolve::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
+geteigenvector(::EigKrylovKit{T, vectype}, vecs, n::Union{Int, AbstractVector{Int64}}) where {T, vectype} = vecs[n]
 ####################################################################################################
 # Solvers for ArnoldiMethod
 ####################################################################################################
 """
 $(TYPEDEF)
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 More information is available at [ArnoldiMethod.jl](https://github.com/haampie/ArnoldiMethod.jl). For example, you can pass the parameters `tol, mindim, maxdim, restarts`.
@@ -268,7 +269,7 @@ $(TYPEDEF)
 
 Create an eigensolver based on Shift-Invert strategy. Basically, one computes the eigen-elements of (J - σ⋅I)⁻¹.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -297,7 +298,7 @@ $(TYPEDEF)
 
 Create an eigensolver for DAE, Basically a GEV with mass matrix.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """

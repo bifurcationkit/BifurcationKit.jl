@@ -3,6 +3,7 @@
 
 The predictor is designed [Uecker2014] to avoid spurious branch switching and pass singular points especially in PDE where branch point density can be quite high. It is called `pmcont` in `pde2path`.
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)
@@ -78,8 +79,11 @@ function getpredictor!(state::AbstractContinuationState,
     return nothing
 end
 
-function corrector!(_state::AbstractContinuationState, it::AbstractContinuationIterable,
-        algo::Multiple, linear_algo = MatrixFreeBLS(); kwargs...)
+function corrector!(_state::AbstractContinuationState,
+                    it::AbstractContinuationIterable,
+                    algo::Multiple,
+                    linear_algo = MatrixFreeBLS(); 
+                    kwargs...)
     verbose = it.verbosity
     # we create a copy of the continuation cache
     state = copy(_state)

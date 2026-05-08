@@ -218,7 +218,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimally
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (pdls::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
+function (::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kwargs...) where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = NSMALinearSolver((Jns.x).u,
                 (Jns.x).p[1],

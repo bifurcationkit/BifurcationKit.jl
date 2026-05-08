@@ -95,7 +95,7 @@ $(TYPEDEF)
 
 Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl, ...)`
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct POSolutionAndState{T1, T2, T3, T4}
@@ -110,13 +110,14 @@ struct POSolutionAndState{T1, T2, T3, T4}
 end
 @inline _getsolution(x) = x
 @inline _getsolution(pb::POSolutionAndState) = pb.sol
+minus(x::POSolutionAndState, y::POSolutionAndState) = minus(_getsolution(x), _getsolution(y))
 ####################################################################################################
 """
 $(TYPEDEF)
 
 This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 @with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
@@ -168,21 +169,28 @@ jacobian(prob::AbstractWrapperPeriodicOrbitProblem, x, p) = _jacobian_po(prob, p
 get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
 get_wrap_po(pb::AbstractWrapperPeriodicOrbitProblem) = pb
 
-########
-_generate_jacobian(probPO::AbstractPeriodicOrbitDiscretization, J::Union{AutoDiffDense, FiniteDifferences, AutoDiffMF, MatrixFree, FullLU, FullMatrixFree, FullSparse, DenseAnalytical}, o, pars; k...) = J
-_generate_jacobian(probPO::AbstractPeriodicOrbitDiscretization, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+_generate_jacobian(::AbstractPeriodicOrbitDiscretization, J::Union{AutoDiffDense,
+                                                                FiniteDifferences,
+                                                                AutoDiffMF,
+                                                                MatrixFree,
+                                                                FullLU,
+                                                                FullMatrixFree,
+                                                                FullSparse,
+                                                                DenseAnalytical}, o, pars; k...) = J
 
-function _generate_jacobian(probPO::AbstractPOShootingDiscretization, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
-    _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
+_generate_jacobian(::AbstractPeriodicOrbitDiscretization, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(VI.scalartype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+
+function _generate_jacobian(disc::AbstractPOShootingDiscretization, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
+    _J = disc(Val(:JacobianMatrix), orbitguess, pars)
     return (AutoDiffDenseAnalytical(), _J)
 end
 ########
-function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffDense, x, p)
-    ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffDense, x, p)
+    ForwardDiff.jacobian(z -> residual(wrap_po, z, p), x)
 end
 
-function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::FiniteDifferences, x, p)
-    return finite_differences(z -> residual(probPO, z, p), x)
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::FiniteDifferences, x, p)
+    return finite_differences(z -> residual(wrap_po, z, p), x)
 end
 
 function _jacobian_po(wrap::AbstractWrapperPOShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
@@ -191,17 +199,17 @@ function _jacobian_po(wrap::AbstractWrapperPOShootingProblem, J::Tuple{AutoDiffD
     return J[2]
 end
 
-function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
     δ = J[2]
-    return dx -> (residual(probPO, x .+ δ .* dx, p) .- 
-                  residual(probPO, x .- δ .* dx, p)) ./ (2δ)
+    return dx -> (residual(wrap_po, x .+ δ .* dx, p) .- 
+                  residual(wrap_po, x .- δ .* dx, p)) ./ (2δ)
 end
 
-function _jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffMF, x, p)
-    return dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffMF, x, p)
+    return dx -> ForwardDiff.derivative(z -> residual(wrap_po, x .+ z .* dx, p), 0)
 end
 
-_jacobian_po(probPO::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(get_discretization(probPO), x, p, dx)
+_jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(get_discretization(wrap_po), x, p, dx)
 
 
 """
@@ -326,9 +334,9 @@ function continuation(disc::AbstractPeriodicOrbitDiscretization,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar;
-                    linear_algo = nothing,
-                    kwargs...)
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
+                    linear_algo::Ty = nothing,
+                    kwargs...) where {Ty}
+    _linear_algo = (Ty == Nothing) ?  MatrixBLS() : linear_algo
     return continuation(disc, orbitguess, alg, _contParams, _linear_algo; kwargs...)
 end
 ####################################################################################################
@@ -376,11 +384,11 @@ function continuation(br::AbstractBranchResult,
 
     detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
     hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
-    return _po_from_hopf(bif_prob, hopfpt, _contParams, disc; verbose, alg = getalg(br), kwargs...)
+    return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 
-function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
-                      hopfpt::Hopf,
+function _continuation(hopfpt::Hopf,
+                      bif_prob::AbstractBifurcationProblem,
                       _contParams::ContinuationPar,
                       disc::AbstractPeriodicOrbitDiscretization;
                       verbose = false,
@@ -389,8 +397,6 @@ function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
                       ampfactor = 1,
                       usedeflation = false,
                       kwargs...)
-    par_hopf = hopfpt.params
-
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
     𝒯 = typeof(ds)
@@ -480,10 +486,94 @@ function _po_from_hopf(bif_prob::AbstractBifurcationProblem,
         _contParams;
         kwargs...
     )
-
     return Branch(branch, hopfpt)
 end
+####################################################################################################
+# branch switching from bifurcations of equilibria from curve of Hopf bifurcations
+"""
+$(TYPEDSIGNATURES)
 
+Branch switching from the curve to Hopf bifurcation points to the curve of periodic orbits emanating from it.
+
+# Arguments
+- `br_hopf` curve of kind `HopfCont` that is a curve of Hopf bifurcation points.
+- `ind_pt::Int` index of Hopf points from `br_hopf`.
+- `disc` discretization for computing periodic orbits.
+
+# Keyword arguments
+- `lens` parameter axis to be used for the continuation
+- `autodiff_nf` whether to use automatic differentiation for the computation of the normal form.
+"""
+function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
+                      ind_pt::Int,
+                      options_cont::ContinuationPar,
+                      disc::AbstractPeriodicOrbitDiscretization;
+                      lens = getlens(br_hopf),
+                      autodiff_nf = true,
+                      nev::Int = length(eigenvals(br_hopf, ind_pt)),
+                      kwargs...) where {Tprob <: HopfMAProblem}
+    verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
+    # extract the problem, formulations and vector field
+    _prob = getprob(br_hopf)
+    𝐇 = get_formulation(_prob)
+    vector_field = 𝐇.prob_vf
+    if ~(𝐇 isa HopfMinimallyAugmentedFormulation)
+        error("[PO branching from Hopf curve] You need to provide a curve of Hopf points.\nThe underlying problem is not a `HopfProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐇))")
+    end
+    # we get the Hopf point
+    bifpt = br_hopf.sol[ind_pt]
+    ω = get_frequency(bifpt.x, 𝐇)
+    λ = Complex(0, ω)
+    x0 = getvec(bifpt.x, 𝐇)
+    params = getparams(br_hopf, ind_pt)
+    L = jacobian(vector_field, x0, params)
+
+    # newton parameters
+    optionsN = br_hopf.contparams.newton_options
+
+    # TODO! Use Minimally Augmented system for this instead of re-computing all eigenvalues
+    # compute the right eigenvector
+    verbose && @info "Recomputing eigenvector on the fly"
+    _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+    _ind = argmin(abs.(_λ .- λ))
+    verbose && @info "The eigenvalue is $(_λ[_ind])"
+    abs(_λ[_ind] - λ) > 10br_hopf.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
+    ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
+    ζ ./= LA.norm(ζ)
+
+    # left eigen-elements
+    _Jt = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
+    ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+
+    # check that λ★ ≈ conj(λ)
+    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\nYou can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
+
+    # normalise left eigenvector
+    ζ★ ./= VI.inner(ζ, ζ★)
+    @assert VI.inner(ζ, ζ★) ≈ 1
+
+    hopfpt = Hopf(x0, nothing, _get(params, lens),
+                ω,
+                params, lens,
+                ζ, ζ★,
+                HopfNormalForm(a = missing, 
+                               b = missing,
+                               Ψ110 = missing,
+                               Ψ001 = missing,
+                               Ψ200 = missing
+                        ),
+                Symbol("?")
+                )
+
+    # we compute the Hopf normal form
+    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L, autodiff = autodiff_nf)
+    @debug "[PO from Hopf curve]" nf params nf.nf.b/br_hopf[ind_pt].l1
+    if ~(nf.nf.b ≈ br_hopf[ind_pt].l1)
+        @warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")
+    end
+    bifprob = re_make(vector_field; lens, params)
+    return _continuation(nf, bifprob, options_cont, disc; verbose, kwargs...)
+end
 ####################################################################################################
 # Branch switching from bifurcations of periodic orbits
 """
@@ -581,7 +671,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
-    wrap = getprob(br)
 
     branch = continuation( pbnew, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten by the following

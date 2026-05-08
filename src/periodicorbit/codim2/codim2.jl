@@ -211,7 +211,7 @@ end
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
-                      probPO::AbstractPeriodicOrbitDiscretization;
+                      disc::AbstractPeriodicOrbitDiscretization;
                       detect_codim2_bifurcation::Int = 0,
                       autodiff = true,
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
@@ -220,7 +220,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     nf = get_normal_form(getprob(br), br, ind_bif; detailed = Val(true), autodiff)
     _contParams = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
     @reset _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
-    return _continuation(nf, br, _contParams, probPO; kwargs...)
+    return _continuation(nf, br, _contParams, disc; kwargs...)
 end
 
 function _continuation(gh::Bautin, 
@@ -230,7 +230,7 @@ function _continuation(gh::Bautin,
                         alg = br.alg,
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev = _contParams.nev,
+                        nev::Int = _contParams.nev,
                         detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
