@@ -166,7 +166,7 @@ function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCon
     return contres
 end
 ####################################################################################################
-# the following resolve method ambiguity
+# the following resolves method ambiguity
 for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialProblem)
     @eval begin
         function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
@@ -319,10 +319,10 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
             probPO::AbstractPeriodicOrbitDiscretization;
             whichns::Int = 1,
-            alg = br.alg,
+            alg = getalg(br),
             linear_algo = nothing,
             δp = nothing, ampfactor::Real = 1,
-            nev = _contParams.nev,
+            nev::Int = _contParams.nev,
             detect_codim2_bifurcation::Int = 0,
             Teigvec = _getvectortype(br),
             scaleζ = norm,

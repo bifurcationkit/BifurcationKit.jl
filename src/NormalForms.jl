@@ -1214,9 +1214,9 @@ This function provides prediction for the periodic orbits branching off the Hopf
 function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     # get the element type
     𝒯 = VI.scalartype(hp.x0)
-
     # get the normal form
     nf = hp.nf
+    amp::𝒯 = ω::𝒯 = pnew::𝒯 = 0
     if ~ismissing(nf.a) && ~ismissing(nf.b)
         (;a, b) = nf
 
@@ -1227,13 +1227,13 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         # we need to find the type, supercritical or subcritical
         dsfactor = real(a) * real(b) < 0 ? 1 : -1
         dsnew::𝒯 = abs(ds) * dsfactor
-        pnew::𝒯 = hp.p + dsnew
+        pnew = hp.p + dsnew
 
         # we solve a * ds + b * amp^2 = 0
-        amp::𝒯 = ampfactor * sqrt(-dsnew * real(a) / real(b))
+        amp = ampfactor * sqrt(-dsnew * real(a) / real(b))
 
         # correction to Hopf Frequency
-        ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+        ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
         Ψ001 = nf.Ψ001
         Ψ110 = nf.Ψ110
         Ψ200 = nf.Ψ200
@@ -1241,18 +1241,24 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         amp = ampfactor
         ω = hp.ω
         pnew = hp.p + ds
-        Ψ001 = 0
-        Ψ110 = 0
-        Ψ200 = 0
+        Ψ001 = zero(hp.ζ)
+        Ψ110 = zero(hp.ζ)
+        Ψ200 = zero(hp.ζ)
         dsfactor = 1
     end
     A(t) = amp * cis(t)
 
-    return (orbit = t -> hp.x0 .+ 
+    orbit = let Ψ001=Ψ001, Ψ110=Ψ110, Ψ200=Ψ200
+        t -> hp.x0 .+ 
                     2 .* real.(hp.ζ .* A(t)) .+
                     ds .* Ψ001 .+
                     abs2(A(t)) .* real.(Ψ110) .+
-                    2 .* real.(A(t)^2 .* Ψ200) ,
+                    2 .* real.(A(t)^2 .* Ψ200)
+    end
+
+    return (
+            orbit = orbit ,
+            Ψ001 = Ψ001,
             amp = 2amp,
             ω = ω,
             period = abs(2pi/ω),

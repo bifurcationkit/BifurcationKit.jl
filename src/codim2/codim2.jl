@@ -2,6 +2,8 @@ abstract type AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractMinimallyAugmentedFormulation_Fold_PD{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractMinimallyAugmentedFormulation_Hopf_NS{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end
+abstract type AbstractMASolution end
+
 
 getsolver(eig::AbstractCodim2EigenSolver) = eig.eigsolver
 getparams(ma::AbstractMinimallyAugmentedFormulation) = getparams(ma.prob_vf)
@@ -138,15 +140,15 @@ update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, iter, state) = update!(
 
 @inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
 
-struct MASolution{T1, T2}
-    x::T1
-    p1::T2
+struct MASolution{𝒯1, 𝒯2} <: AbstractMASolution
+    x::𝒯1
+    p1::𝒯2
 end
 
-struct MASolutionFreq{T1, T2}
-    x::T1
-    p1::T2
-    ω::T2
+struct MASolutionFreq{𝒯1, 𝒯2} <: AbstractMASolution
+    x::𝒯1
+    p1::𝒯2
+    ω::𝒯2
 end
 
 save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_formulation(𝐏𝐛), x, p)
@@ -155,7 +157,7 @@ getvec(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS)
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
-    # TODO!! is it a copy or what?
+    # TODO!! is it a copy or else?
     x_ma = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p2)
     if 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation_Hopf_NS
         return MASolutionFreq(x_ma, p1, get_frequency(x, 𝐌𝐚))

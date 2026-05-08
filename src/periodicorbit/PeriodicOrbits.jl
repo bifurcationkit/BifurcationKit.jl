@@ -120,11 +120,11 @@ This struct allows to have a unified interface for periodic orbits methods to re
 # Internal fields
 $(TYPEDFIELDS)
 """
-@with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
+@with_kw_noshow struct SolPeriodicOrbit{𝒯s, 𝒯u}
     "Time mesh."
-    t::Ts
+    t::𝒯s
     "Solution discretized on time mesh."
-    u::Tu
+    u::𝒯u
 end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
