@@ -18,9 +18,9 @@ struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
     options::To
 end
 
-@inline get_mesh_size(Π::PoincaréMap{ <: WrapPOSh}) = get_mesh_size(get_discretization(Π.probpo)) - 1
+@inline get_mesh_size(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}) = get_mesh_size(get_discretization(Π.probpo)) - 1
 
-@views function get_time_slices(Π::PoincaréMap{ <: WrapPOSh}, x::AbstractVector)
+@views function get_time_slices(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x::AbstractVector)
     M = get_mesh_size(Π)
     if M == 0
         return x
@@ -39,7 +39,7 @@ $(TYPEDSIGNATURES)
 
 Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
-function PoincareMap(wrap::WrapPOSh, po, par, optn)
+function PoincareMap(wrap::PeriodicOrbitFunctionalSh, po, par, optn)
     sh = get_discretization(wrap)
     Π = PoincaréMap(wrap, po, deepcopy(sh.section), optn)
     poc = get_time_slices(sh, po)
@@ -53,7 +53,7 @@ $(TYPEDSIGNATURES)
 
 Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
-function PoincareMap(wrap::WrapPOColl, po, par, optn)
+function PoincareMap(wrap::PeriodicOrbitFunctionalColl, po, par, optn)
     coll = get_discretization(wrap)
     N, m, Ntst = size(coll)
     Σ = SectionSS(rand(N), rand(N))
@@ -63,7 +63,7 @@ function PoincareMap(wrap::WrapPOColl, po, par, optn)
     return PoincaréMap(wrap, po, Σ, optn)
 end
 
-function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
+function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, par, x₁)
     sh = get_discretization(Π.probpo)
 
     M = get_mesh_size(Π)
@@ -107,7 +107,7 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     out
 end
 
-function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
+function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
     @assert (Π.po isa AbstractVector) "The case of a general AbstractArray for the state space is not handled yet."
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
@@ -129,7 +129,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, solΠ, par)
     sh = get_discretization(Π.probpo)
     # we get the return time
     T⁰ = getperiod(sh, Π.po)
@@ -147,7 +147,7 @@ function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
     return (u = xᵣ, t = tᵣ)
 end
 
-@views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
+@views function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, u, par, x₁)
     # collocation problem
     coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
@@ -162,7 +162,7 @@ end
     return vcat(vec(resultc), Π.Σ(u[end-N:end-1], T))
 end
 
-function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
+function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
     # we construct the initial guess
@@ -177,7 +177,7 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
     coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
     T⁰ = getperiod(coll, Π.po)
@@ -186,7 +186,7 @@ function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end
 
-function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
+function d1F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h)
     @assert length(x) == length(h)
     sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
@@ -205,7 +205,7 @@ $(TYPEDSIGNATURES)
 
 Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
-function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
+function jacobian(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
     sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
@@ -228,7 +228,7 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     return Mono
 end
 
-function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
+function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
     sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
@@ -259,7 +259,7 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     return (u = y, t = ∂2t)
 end
 
-function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
+function d3F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂, h₃)
     @assert length(x) == length(h₁) == length(h₂) == length(h₃)
     sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal

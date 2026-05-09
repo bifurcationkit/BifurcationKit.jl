@@ -78,7 +78,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     # floquet exponents
     σ = logvals[I]
     vp0 = minimum(abs, σ)
-    if (wrap isa WrapPOSh) && vp0 > 1e-8
+    if (wrap isa PeriodicOrbitFunctionalSh) && vp0 > 1e-8
         @debug "The precision on the Floquet multipliers is $vp0.\nEither decrease `tol_stability` in the option ContinuationPar or use a different method than `FloquetQaD`."
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
@@ -162,7 +162,7 @@ end
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
 @views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, 
-                                powrap::WrapPOSh{ <: ShootingProblem}, 
+                                powrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem}, 
                                 x::AbstractVector, 
                                 par, 
                                 ζ::AbstractVector)
@@ -252,7 +252,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOSh{ <: PoincareShootingProblem}, x_bar::AbstractVector, p, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalSh{ <: PoincareShootingProblem}, x_bar::AbstractVector, p, ζ::AbstractVector)
     # get the shooting problem
     psh = get_discretization(powrap)
 
@@ -315,7 +315,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the Trapezoid functional
 # at position x from the Floquet eigenvector ζ
-function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::AbstractVector, par, ζ::AbstractVector)
+function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalTrap, u0::AbstractVector, par, ζ::AbstractVector)
     # get the Trapezoid problem
     disc = get_discretization(powrap)
 

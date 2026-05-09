@@ -151,9 +151,9 @@ get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.
 get_wrap_po(𝐌𝐚::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 
-__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = WrapPOColl(prob, args...)
-__wrap_po(prob::ShootingProblem, args...) = WrapPOSh(prob, args...)
-__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = WrapPOTrap(prob, args...)
+__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = PeriodicOrbitFunctionalColl(prob, args...)
+__wrap_po(prob::ShootingProblem, args...) = PeriodicOrbitFunctionalSh(prob, args...)
+__wrap_po(prob::PeriodicOrbitTrapProblem, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 ####################################################################################################
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation
@@ -397,7 +397,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     nspointguess = BorderedArray(_copy(orbitguess), [_get(newparams, lens1), ωₙₛ])
     
     # get the approximate null vectors
-    if pbwrap isa WrapPOColl
+    if pbwrap isa PeriodicOrbitFunctionalColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
         J = Complex.(copy(jac))
@@ -527,7 +527,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     nspointguess = BorderedArray(_copy(orbitguess), [_get(newparams, lens1), 0.21])
 
     # get the approximate null vectors
-    if pbwrap isa WrapPOColl
+    if pbwrap isa PeriodicOrbitFunctionalColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
         J = Complex.(copy(_get_matrix(jac)))

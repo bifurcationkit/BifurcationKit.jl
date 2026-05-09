@@ -33,8 +33,8 @@ _set_params_in_po(pb::AbstractPOShootingDiscretization, pars) = (@set pb.par = p
 get_periodic_orbit(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
 get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 
-@inline getdelta(prob::WrapPOSh) = getdelta(get_discretization(prob).flow)
-@inline has_hessian(::WrapPOSh) = true
+@inline getdelta(prob::PeriodicOrbitFunctionalSh) = getdelta(get_discretization(prob).flow)
+@inline has_hessian(::PeriodicOrbitFunctionalSh) = true
 
 Base.size(pb::AbstractPOFiniteDifferencesDiscretization) = (pb.M, pb.N)
 on_gpu(pb::AbstractPOFiniteDifferencesDiscretization) = pb.ongpu
@@ -88,12 +88,12 @@ end
 POSolution(prob::AbstractPeriodicOrbitDiscretization, x) = POSolution(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
-save_solution(::WrapPOSh, x, p) = x
+save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
 """
 $(TYPEDEF)
 
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl, ...)`
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -129,7 +129,7 @@ end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
 ####################################################################################################
-function update!(wrap::Union{WrapPOSh, WrapPOTrap}, iter, state)
+function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)
     success = converged(state)
     bisection = in_bisection(state)
@@ -161,7 +161,7 @@ const DocStringJacobianPOSh = """
     6. For `FiniteDifferencesMF()`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 """
 ##########################
-@inline is_symmetric(prob::WrapPOSh) = false
+@inline is_symmetric(prob::PeriodicOrbitFunctionalSh) = false
 jacobian(prob::AbstractWrapperPeriodicOrbitProblem, x, p) = _jacobian_po(prob, prob.jacobian, x, p)
 
 ########
@@ -237,7 +237,7 @@ function newton(disc::AbstractPOShootingDiscretization,
                 δ = getdelta(disc),
                 kwargs...)
     jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc); δ)
-    probw = WrapPOSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
     return solve(probw, Newton(), options; kwargs...)
 end
 
@@ -264,7 +264,7 @@ function newton(disc::AbstractPOShootingDiscretization,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc))
-    probw = WrapPOSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
     return solve(probw, defOp, options; kwargs...)
 end
 
@@ -304,7 +304,7 @@ function continuation(discPO::AbstractPOShootingDiscretization,
 
     _plotsol   = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
-    wrap = WrapPOSh(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
+    wrap = PeriodicOrbitFunctionalSh(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
 
     br = continuation(
         wrap, alg,
@@ -607,7 +607,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       usedeflation = false,
                       linear_algo = nothing,
                       detailed::Val{detailed_type} = Val(true),
-                      prm::Val{prm_type} = Val(getprob(br) isa WrapPOColl ? false : true),
+                      prm::Val{prm_type} = Val(getprob(br) isa PeriodicOrbitFunctionalColl ? false : true),
                       use_normal_form = true,
                       autodiff_nf = true,
                       kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem, detailed_type, prm_type}

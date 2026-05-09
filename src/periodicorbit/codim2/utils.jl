@@ -62,7 +62,7 @@ function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation,
     return __update_codim1_po!(𝐌𝐚, iter, state)
 end
 
-function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
+function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: PeriodicOrbitFunctionalColl},
                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
                 state)
     coll = get_discretization(𝐌𝐚.prob_vf)

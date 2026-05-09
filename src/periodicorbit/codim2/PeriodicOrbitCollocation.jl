@@ -1,11 +1,11 @@
-@inline has_adjoint_MF(::WrapPOColl) = false
-@inline has_hessian(::WrapPOColl) = true
+@inline has_adjoint_MF(::PeriodicOrbitFunctionalColl) = false
+@inline has_hessian(::PeriodicOrbitFunctionalColl) = true
 
-function d2F(wrapcoll::WrapPOColl, x, p, dx1, dx2)
+function d2F(wrapcoll::PeriodicOrbitFunctionalColl, x, p, dx1, dx2)
     d2PO(z -> residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
 end
 
-function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalColl, x, par)
     N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
@@ -14,7 +14,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     return J[begin:end-1, begin:end-1]
 end
 
-function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalColl, x, par, ω)
     N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
@@ -28,7 +28,7 @@ for (fname, cdt, err_msg) in (
                     (:pd_point, (:pd,), "This should be a PD point")
                     ) 
     @eval begin
-        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
             bptype = br.specialpoint[index].type
             if ~(bptype in $cdt)
                 error($err_msg)
@@ -45,7 +45,7 @@ for (fname, cdt, err_msg) in (
     end
 end
 
-function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bptype = br.specialpoint[index].type
     if bptype != :ns 
         error("This should be a NS point")
@@ -67,7 +67,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     detect_codim2_bifurcation::Int = 0,
                     update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
@@ -106,7 +106,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
@@ -166,7 +166,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     prm = false,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = br.specialpoint[ind_bif].type
 
@@ -237,14 +237,14 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     prm = false,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
     nspointguess = ns_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(getprob(br).prob)
+    coll = deepcopy(get_discretization(getprob(br)))
     N, m, Ntst = size(coll)
 
     # get the NS eigenvectors
@@ -277,19 +277,19 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
 end
 
 # dispatch to compute Floquet exponent when the jacobian is a Matrix
-@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_col(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)
 end
 
-@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-1, begin:end-1], n, m, Ntst, nev)
 end
 
-@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)

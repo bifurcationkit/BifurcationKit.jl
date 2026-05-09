@@ -140,7 +140,7 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point.
 """
 function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugmentedFormulation, par,
-                            duu, dup, duω) where 𝒯
+                              duu, dup, duω) where 𝒯
     # N = length(du) - 2
     # The Jacobian J of the vector field is expressed at (x, p)
     # the jacobian expression Jhopf of the hopf problem is

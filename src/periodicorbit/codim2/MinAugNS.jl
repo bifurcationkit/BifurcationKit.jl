@@ -79,7 +79,7 @@ function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerMinimallyAugmentedForm
 end
 
 function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐍𝐒.prob_vf
 
     # parameter axis
@@ -116,7 +116,7 @@ end
 function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
     𝐍𝐒 = get_formulation(pdpb)
 
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐍𝐒.prob_vf
 
     x = @view X[begin:end-2]
@@ -172,7 +172,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimally
     #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
     ########################## Extraction of function names ########################################
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐍𝐒.prob_vf
     (; JNS★, dₚF, σₚ, ϵ2, ϵ3, v, w, par0, σω, itv, itw) = _get_bordered_terms(𝐍𝐒, x, p, ω, par)
 
@@ -341,7 +341,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         kind = NSCont(),
                         usehessian = false,
                         plot_solution = BifurcationKit.plot_solution(prob),
-                        prm::Bool = prob isa WrapPOSh,
+                        prm::Bool = prob isa PeriodicOrbitFunctionalSh,
                         kwargs...) where {𝒯b, vectype}
     @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
     @assert lens1 == getlens(prob)

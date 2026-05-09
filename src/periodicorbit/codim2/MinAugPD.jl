@@ -88,7 +88,7 @@ function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingMinimallyAugmentedFor
 end
 
 function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, x, p::𝒯, par) where 𝒯
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐏𝐝.prob_vf
 
     # update parameter
@@ -159,7 +159,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingMinimallyAugmented
     #            σx = -< w, d2F(x,p)[v, x2]>
     # where (w, σ2) is solution of J'w + b σ2 = 0 with <a, w> = n
     ########################## Extraction of function names ########################################
-    # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
+    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐏𝐝.prob_vf
 
     (; dₚF, σₚ, ϵₜ, ϵₓ, v, w, par0, itv, itw) = _get_bordered_terms(𝐏𝐝, x, p, par)
@@ -318,7 +318,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
                 jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
-                prm::Bool = prob isa WrapPOSh,
+                prm::Bool = prob isa PeriodicOrbitFunctionalSh,
                 usehessian = false,
                 kind = PDCont(),
                 kwargs...) where {𝒯, vectype}

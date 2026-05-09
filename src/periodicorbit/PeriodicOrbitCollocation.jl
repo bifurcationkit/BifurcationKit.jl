@@ -940,12 +940,12 @@ end
 
 ##########################
 # problem wrappers
-@inline is_symmetric(wrap::WrapPOColl) = is_symmetric(get_discretization(wrap))
-@inline getdelta(wrap::WrapPOColl) = getdelta(get_discretization(wrap))
-@inline has_adjoint(::WrapPOColl) = false # it is in problems.jl
+@inline is_symmetric(wrap::PeriodicOrbitFunctionalColl) = is_symmetric(get_discretization(wrap))
+@inline getdelta(wrap::PeriodicOrbitFunctionalColl) = getdelta(get_discretization(wrap))
+@inline has_adjoint(::PeriodicOrbitFunctionalColl) = false # it is in problems.jl
 
 # for recording the solution in a branch
-function save_solution(wrap::WrapPOColl, x, pars)
+function save_solution(wrap::PeriodicOrbitFunctionalColl, x, pars)
     coll = get_discretization(wrap)
     if meshadapt(coll) # mildly type unstable but Union{T1, T2} handles it
         return POSolutionAndState(copy(get_times(coll)), 
@@ -971,24 +971,24 @@ function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::DenseAnalyticalI
 end
 ####
 
-function _jacobian_po(wrap::WrapPOColl, J::Tuple{DenseAnalyticalInplace, Tj}, x, p) where {Tj}
+function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{DenseAnalyticalInplace, Tj}, x, p) where {Tj}
     _Jcoll_matrix = J[2]
     coll = get_discretization(wrap)
     analytical_jacobian!(_Jcoll_matrix, coll, x, p)
     return _Jcoll_matrix
 end
 
-function _jacobian_po(wrap::WrapPOColl, ::DenseAnalytical, x, p)
+function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, ::DenseAnalytical, x, p)
     coll = get_discretization(wrap)
     return analytical_jacobian(coll, x, p)
 end
 
-function _jacobian_po(wrap::WrapPOColl, ::FullSparse, x, p)
+function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, ::FullSparse, x, p)
     coll = get_discretization(wrap)
     return analytical_jacobian_sparse(coll, x, p)
 end
 
-function _jacobian_po(wrap::WrapPOColl, J::Tuple{FullSparseInplace, Tj, Tind}, x, p) where {Tj, Tind}
+function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{FullSparseInplace, Tj, Tind}, x, p) where {Tj, Tind}
     _J = J[2]
     indx = J[3]
     coll = get_discretization(wrap)
@@ -1013,7 +1013,7 @@ function _newton_pocoll(coll::PeriodicOrbitOCollProblem,
         @reset options.linsolver = COPLS(coll)
     end
 
-    prob = WrapPOColl(coll, jac, orbitguess, getparams(coll), getlens(coll), nothing, nothing)
+    prob = PeriodicOrbitFunctionalColl(coll, jac, orbitguess, getparams(coll), getlens(coll), nothing, nothing)
 
     if isnothing(defOp)
         return solve(prob, Newton(), options; kwargs...)
@@ -1118,7 +1118,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     _plotsol = modify_po_plot(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); plot_solution)
 
     record_po = RecordForPeriodicOrbits(record_from_solution, BifurcationKit.record_from_solution(coll.prob_vf))
-    wrap_coll = WrapPOColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, record_po)
+    wrap_coll = PeriodicOrbitFunctionalColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, record_po)
 
     br = continuation(wrap_coll, alg,
                       contParams;
@@ -1336,7 +1336,7 @@ function update_po_coll!(coll::PeriodicOrbitOCollProblem, po, params, iter, stat
     return true
 end
 
-function update!(wrap::WrapPOColl, iter, state)
+function update!(wrap::PeriodicOrbitFunctionalColl, iter, state)
     coll = get_discretization(wrap)
     return update_po_coll!(coll, getx(state), setparam(iter, getp(state)), iter, state)
 end

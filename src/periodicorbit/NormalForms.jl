@@ -91,7 +91,7 @@ function branch_normal_form(pbwrap,
     return BranchPointPO(bifpt.x, period, real.(ζs), ζ★, nf, disc, true)
 end
 
-function branch_normal_form(pbwrap::WrapPOSh,
+function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                             br,
                             ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -172,7 +172,7 @@ function _get_spectral_basis_prm_bp(dΠ, verbose)
     return (;ev, ev★)
 end
 
-function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
+function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
                                     bp0::BranchPoint,
                                     (ζ₁, ζs, ζₚₒ),
                                     optn::NewtonPar,
@@ -216,7 +216,7 @@ function branch_point_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, nothing, sh, true)
 end
 
-function branch_normal_form(pbwrap::WrapPOColl,
+function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                             br,
                             ind_bif::Int,
                             ::Type{𝒯eigvec} = _getvectortype(br);
@@ -250,7 +250,7 @@ function branch_normal_form(pbwrap::WrapPOColl,
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 
-function _get_spectral_basis_iooss_bp(pbwrap::WrapPOColl,
+function _get_spectral_basis_iooss_bp(pbwrap::PeriodicOrbitFunctionalColl,
                                       bp0::BranchPoint;
                                         )
     coll = get_discretization(pbwrap)
@@ -325,7 +325,7 @@ function _get_spectral_basis_iooss_bp(pbwrap::WrapPOColl,
     return (;v₁, v₀, coll, period, p₀, p₁, u₀ₛ, Fu₀ₛ, Fu₀)
 end
 
-function branch_normal_form_prm(pbwrap::WrapPOColl,
+function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                 bp0::BranchPoint,
                                 optn::NewtonPar;
                                 nev::Int = 3,
@@ -380,7 +380,7 @@ function branch_normal_form_prm(pbwrap::WrapPOColl,
     return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, nothing, coll, true)
 end
 
-function branch_normal_form_iooss(pbwrap::WrapPOColl,
+function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                                     bp0::BranchPoint;
                                     nev::Int = 3,
                                     δ = getdelta(pbwrap),
@@ -435,7 +435,7 @@ function period_doubling_normal_form(pbwrap,
     return PeriodDoublingPO(bifpt.x, period, real.(ζs), ζ★, nf, pb, true)
 end
 
-function period_doubling_normal_form(pbwrap::WrapPOSh,
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                                 br,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -475,7 +475,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh,
     return period_doubling_normal_form(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose, nev, kwargs_nf...)
 end
 
-function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProblem },
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 ::NewtonPar;
@@ -489,7 +489,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: PoincareShootingProble
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd0, psh, true)
 end
 
-function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
@@ -544,7 +544,7 @@ function period_doubling_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd, sh, true)
 end
 
-function period_doubling_normal_form(pbwrap::WrapPOColl,
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -807,7 +807,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     return PeriodDoublingPO(pd.x0, T, v₁, v₁★, newpd, coll, false)
 end
 
-function period_doubling_normal_form_prm(pbwrap::WrapPOColl,
+function period_doubling_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                     pd0::PeriodDoubling,
                                     optn::NewtonPar;
                                     nev::Int = 3,
@@ -906,7 +906,7 @@ function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
     return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
 end
 
-function neimark_sacker_normal_form(pbwrap::WrapPOColl,
+function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -949,7 +949,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOColl,
     neimark_sacker_normal_form_iooss(pbwrap, ns0; verbose, nev, kwargs_nf...)
 end
 
-function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
+function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                     ns0::NeimarkSacker,
                                     optn::NewtonPar;
                                     nev::Int = 3,
@@ -1004,7 +1004,7 @@ function neimark_sacker_normal_form_prm(pbwrap::WrapPOColl,
     return NeimarkSackerPO(ns0.x0, T, ns0.p, ns0.ω, ev, ev★, ns, coll, true)
 end
 
-function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
+function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                                         ns::NeimarkSacker;
                                         nev::Int = 3,
                                         verbose = false,
@@ -1206,7 +1206,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::WrapPOColl,
     return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, ns_new, coll, false)
 end
 
-function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
+function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -1242,7 +1242,7 @@ function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
     return neimark_sacker_normal_form(pbwrap, ns0, (1, 1), optn; verbose, nev, kwargs_nf...)
 end
 
-function neimark_sacker_normal_form(pbwrap::WrapPOSh{ <: ShootingProblem },
+function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
                                 ns0::NeimarkSacker,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;

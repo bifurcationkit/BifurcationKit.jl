@@ -349,7 +349,7 @@ end
 
 residual(trap::PeriodicOrbitTrapProblem, u::AbstractVector, par) = residual!(trap, similar(u), u, par)
 jvp(trap::PeriodicOrbitTrapProblem, u::AbstractVector, par, du) = jvp!(trap, similar(du), u, par, du)
-jvp(wrap::WrapPOTrap, u, par, du) = jvp(get_discretization(wrap), u, par, du)
+jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = jvp(get_discretization(wrap), u, par, du)
 
 ####################################################################################################
 # Matrix free expression of matrices related to the Jacobian Matrix of the PO functional
@@ -820,10 +820,10 @@ end
 
 ##########################
 # problem wrappers
-@inline save_solution(::WrapPOTrap, x, p) = x
-get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(get_discretization(prob), u, p)
-is_symmetric(::WrapPOTrap) = false
-has_adjoint(::WrapPOTrap) = false
+@inline save_solution(::PeriodicOrbitFunctionalTrap, x, p) = x
+get_periodic_orbit(prob::PeriodicOrbitFunctionalTrap, u::AbstractVector, p) = get_periodic_orbit(get_discretization(prob), u, p)
+is_symmetric(::PeriodicOrbitFunctionalTrap) = false
+has_adjoint(::PeriodicOrbitFunctionalTrap) = false
 ##########################
 function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::Dense, orbitguess, pars; k...)
     _J =  trap(Val(:JacFullSparse), orbitguess, pars) |> Array
@@ -838,22 +838,22 @@ function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace,
     return (FullSparseInplace(), J, indx)
 end
 
-function _jacobian_po(wrap::WrapPOTrap, J::Tuple{Dense, Tj}, x, p) where {Tj}
+function _jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::Tuple{Dense, Tj}, x, p) where {Tj}
     _J = J[2]
     trap = get_discretization(wrap)
     trap(Val(:JacFullSparseInplace), _J, x, p)
 end
 
-function _jacobian_po(wrap::WrapPOTrap, J::Tuple{FullSparseInplace, Tj, Ti}, x, p) where {Tj, Ti}
+function _jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::Tuple{FullSparseInplace, Tj, Ti}, x, p) where {Tj, Ti}
     _J = J[2]
     _indx = J[3]
     trap = get_discretization(wrap)
     trap(Val(:JacFullSparseInplace), _J, x, p, _indx)
 end
 
-_jacobian_po(wrap::WrapPOTrap, J::FullLU, x, p) = wrap.disc(Val(:JacFullSparse), x, p)
+_jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::FullLU, x, p) = wrap.disc(Val(:JacFullSparse), x, p)
 POTrapJacobianBordered
-_jacobian_po(::WrapPOTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
+_jacobian_po(::PeriodicOrbitFunctionalTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
 # newton wrappers
 function _newton_trap(trap::PeriodicOrbitTrapProblem,
@@ -869,7 +869,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
-        wrap_prob = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
         new_options = options # to prevent from duplicated code
     else # bordered linear solvers
         if jacobianPO === BorderedLU()
@@ -890,7 +890,7 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
         end
 
         jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        wrap_prob = WrapPOTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
         new_options = @set options.linsolver = lspo
     end
 
@@ -980,7 +980,7 @@ function continuation_potrap(trap::PeriodicOrbitTrapProblem,
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
-        probwp = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
+        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
         kwargs_continuation = (kwargs...,
                                 kind = PeriodicOrbitCont(),
                                 linear_algo,)
@@ -1004,7 +1004,7 @@ function continuation_potrap(trap::PeriodicOrbitTrapProblem,
 
         # we define a specific jacobian for this case
         jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        probwp = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
+        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
         # we change the linear solver
         contParams = @set contParams.newton_options.linsolver = lspo
         # we have to change the Bordered linearsolver to cope with our lspo

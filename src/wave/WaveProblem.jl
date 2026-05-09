@@ -45,6 +45,7 @@ $(TYPEDFIELDS)
     @assert jacobian in (MatrixFree(), AutoDiffMF(), FullLU(), FiniteDifferences(), AutoDiff()) "This jacobian is not defined. Please chose another one."
 end
 getparams(tw::TWModel) = getparams(tw.prob_vf)
+@inline getdelta(tw::TWModel) = getdelta(tw.prob_vf)
 
 function TWModel(prob, ∂::Tuple, u₀; DAE = 0, jacobian = AutoDiff())
     # ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)

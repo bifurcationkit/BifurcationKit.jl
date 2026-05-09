@@ -243,9 +243,9 @@ for (op, at) in (
                 (:NSMAProblem,   AbstractMABifurcationProblem),
                 (:BTMAProblem,   AbstractMABifurcationProblem),
 
-                (:WrapPOTrap, AbstractWrapperPOFiniteDifferencesProblem),
-                (:WrapPOSh,   AbstractWrapperPOShootingProblem),
-                (:WrapPOColl, AbstractWrapperPODifferentialProblem),
+                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem),
+                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem),
+                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem),
 
                 (:WrapTW, AbstractWaveProblem),
            )
@@ -337,11 +337,11 @@ for (op, at) in (
             getparams(prob::$op{Tprob, Tjac, Tu0, Missing}) where {Tprob, Tjac, Tu0} = getparams(get_formulation(prob))
         end
     else
-        @eval begin #WrapPOTrap, WrapPOSh, WrapPOColl, WrapTW
+        @eval begin #PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
             """
             $(TYPEDEF)
 
-            Problem wrap of a functional. It is not meant to be used directly albeit perhaps by advanced users.
+            Problem wrap of a functional based on a discretization. It is not meant to be used directly albeit perhaps by advanced users.
 
             $(TYPEDFIELDS)
             """
@@ -539,7 +539,7 @@ struct UserPassedFunction end
 user_passed_function(f) = UserPassedFunction()
 user_passed_function(::Nothing) = NoUserPassedFunction()
 ########
-for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
+for op in (:PeriodicOrbitFunctionalTrap, :PeriodicOrbitFunctionalSh, :PeriodicOrbitFunctionalColl, :WrapTW)
     @eval begin
         function Base.show(io::IO, wrap::$op)
             printstyled(io, "Problem wrap of\n", bold = true)
