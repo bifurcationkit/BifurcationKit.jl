@@ -382,7 +382,7 @@ for (op, at) in (
                          issymmetric::Bool = false,
                          record_from_solution = record_sol_default,
                          plot_solution = plot_default,
-                         delta = convert(eltype(u0), 1e-8),
+                         delta = convert(VI.scalartype(u0), sqrt(eps(VI.scalartype(u0)))),
                          save_solution = save_solution_default,
                          inplace = false,
                          update! = update_default,
@@ -642,7 +642,7 @@ for op in (
         struct $op{T1, T2}
             "User passed record function for the vector field as a kwargs say for periodic orbits computation from a Hopf bifurcation point."
             user_record_from_solution::T1
-            "Initial (upper most) record solution, ussually associated with a BifurcationProblem."
+            "Initial (upper most) record solution, usually associated with a BifurcationProblem."
             vf_record_from_solution::T2
         end
         (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)

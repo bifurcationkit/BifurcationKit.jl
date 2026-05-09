@@ -1,4 +1,10 @@
-function compute_eigenvalues(eig::FoldEig, iter::ContIterable{FoldPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+function compute_eigenvalues(eig::FoldEig,
+                            iter::ContIterable{FoldPeriodicOrbitCont},
+                            state,
+                            u0,
+                            par,
+                            nev = iter.contparams.nev; 
+                            k...)
     z = state.z
     x = getvec(z.u) # fold point
     p1 = getp(z.u)  # first parameter
@@ -11,12 +17,20 @@ function compute_eigenvalues(eig::FoldEig, iter::ContIterable{FoldPeriodicOrbitC
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end
 ####################################################################################################
-function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO::Union{PDMAProblem, NSMAProblem, FoldMAProblem}, pars, lens; kwargs...)
+function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, 
+                    probPO::Union{PDMAProblem, NSMAProblem, FoldMAProblem}, 
+                    pars, 
+                    lens; 
+                    kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
 
-function modify_po_plot(::BK_Makie, probPO::Union{PDMAProblem, NSMAProblem, FoldMAProblem}, pars, lens; kwargs...)
+function modify_po_plot(::BK_Makie, 
+                        probPO::Union{PDMAProblem, NSMAProblem, FoldMAProblem},
+                        pars,
+                        lens; 
+                        kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, getvec(x, probPO.prob), (prob = probPO, p = p); k...)
 end
@@ -25,7 +39,9 @@ __get_discretization(pb::AbstractWrapperPeriodicOrbitProblem) = get_discretizati
 __get_discretization(𝐌𝐚::AbstractMinimallyAugmentedFormulation) = __get_discretization(𝐌𝐚.prob_vf)
 __get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
 
-function __update_codim1_po!(𝐌𝐚, iter, state)
+function __update_codim1_po!(𝐌𝐚, 
+                            iter, 
+                            state)
     # we extract the AbstractPeriodicOrbitDiscretization
     disc_po = __get_discretization(𝐌𝐚)
     # we first check that the continuation step was successful

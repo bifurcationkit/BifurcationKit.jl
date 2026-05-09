@@ -294,7 +294,7 @@ end
 function finalise_solution(iter::ContIterable{NSPeriodicOrbitCont}, 
                            state::AbstractContinuationState, 
                            contres)
-    isbt = isnothing(contres) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
+    isbt = (contres === Nothing) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
     fin_user = iter.finalise_solution(getsolution(state),
                                   state.τ,
                                   state.step,
@@ -308,7 +308,7 @@ function record_from_solution(iter::ContIterable{NSPeriodicOrbitCont, <: NSMAPro
                               state::AbstractContinuationState)
     𝐏𝐛 = getprob(iter)
     𝐍𝐒 = get_formulation(𝐏𝐛)
-    probwrap = 𝐍𝐒.prob_vf
+    vf = 𝐍𝐒.prob_vf
     lens1, lens2 = get_lenses(𝐏𝐛)
     lenses = get_lens_symbol(lens1, lens2)
     u = getx(state)
@@ -321,7 +321,7 @@ function record_from_solution(iter::ContIterable{NSPeriodicOrbitCont, <: NSMAPro
                 R₂ = 𝐍𝐒.R2,
                 R₃ = 𝐍𝐒.R3,
                 R₄ = 𝐍𝐒.R4,
-                _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
+                _namedrecordfromsol(__user_record_solution_periodic_orbit(vf, user_passed_pofunction(vf.recordFromSolution), iter, state))...
                 )
 end
 
@@ -367,12 +367,13 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # Jacobian for the NS problem
     record_ns = RecordForNS(record_from_solution, BifurcationKit.record_from_solution(prob))
+    plot_ns = PlotForFold(plot_solution, BifurcationKit.plot_solution(prob))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, par, lens2, plot_solution, record_ns)
+        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, par, lens2, plot_ns, record_ns)
         opt_ns_cont = deepcopy(options_cont)
     else
-        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_solution, record_ns)
+        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_ns, record_ns)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
 
@@ -388,9 +389,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
     # change the plot and record functions
-    _kwargs = (;plot_solution = plot_solution)
-    _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
-    prob_ns = re_make(prob_ns, plot_solution = _plotsol)
+    # _kwargs = (;plot_solution = plot_solution)
+    # _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
+    # prob_ns = re_make(prob_ns, plot_solution = _plotsol)
 
     # define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
@@ -407,7 +408,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     event,
                     normC,
                     )
-    _correct_event_labels(br_ns_po)
+    # _correct_event_labels(br_ns_po)
 end
 
 function test_for_ns_ch(iter, state)

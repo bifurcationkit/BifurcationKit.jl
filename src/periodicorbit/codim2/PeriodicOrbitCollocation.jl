@@ -76,7 +76,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     # arguments
     args = (br, ind_bif, lens2, _options_cont)
     kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)
-    if biftype in (:bp, :fold)
+    if biftype in (:bp, :fold) # TODO this is strongly type unstable
         return continuation_coll_fold(args...; kw...)
     elseif biftype == :pd
         return continuation_coll_pd(args...; kw...)

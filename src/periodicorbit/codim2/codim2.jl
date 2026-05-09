@@ -178,11 +178,11 @@ for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialP
     @eval begin
         function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
             prob_po = pbwrap.prob
-            𝐏𝐛 = get_formulation(getprob(iter))
+            𝐌𝐚 = get_formulation(getprob(iter))
             u = getx(state)
             p = getp(state)
 
-            po = getvec(u, 𝐏𝐛)
+            po = getvec(u, 𝐌𝐚)
             period = getperiod(prob_po, po, nothing)
             return (;period)
         end
@@ -190,10 +190,10 @@ for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialP
 end
 
 function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
-    𝐏𝐛 = get_formulation(getprob(iter))
+    𝐌𝐚 = get_formulation(getprob(iter))
     u = getx(state)
     p = getp(state)
-    po = getvec(u, 𝐏𝐛)
+    po = getvec(u, 𝐌𝐚)
     return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = p); iter, state)
 end
 
@@ -201,17 +201,17 @@ end
 # we pass the full parameters updated at the bifurcation point
 function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
     probma = getprob(iter)
-    𝐏𝐛 = get_formulation(probma)
+    𝐌𝐚 = get_formulation(probma)
     lens1, lens2 = get_lenses(probma)
     u = getx(state)
 
     p2 = getp(state)
-    p1 = get_parameter(u, 𝐏𝐛)
+    p1 = get_parameter(u, 𝐌𝐚)
     par = getparams(probma)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
-    po = getvec(u, 𝐏𝐛)
+    po = getvec(u, 𝐌𝐚)
     return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = newpar); iter, state)
 end
 ####################################################################################################
