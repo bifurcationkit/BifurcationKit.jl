@@ -232,23 +232,23 @@ plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
 # create specific problems where pretty much is available
-for (op, at) in (
-                (:BifurcationProblem, AbstractBifurcationProblem),
-                (:ODEBifProblem, AbstractBifurcationProblem),
-                (:DAEBifProblem, AbstractBifurcationProblem),
-                (:PDEBifProblem, AbstractBifurcationProblem),
+for (op, at, kd) in (
+                (:BifurcationProblem, AbstractBifurcationProblem, nothing),
+                (:ODEBifProblem, AbstractBifurcationProblem, nothing),
+                (:DAEBifProblem, AbstractBifurcationProblem, nothing),
+                (:PDEBifProblem, AbstractBifurcationProblem, nothing),
 
-                (:FoldMAProblem, AbstractMABifurcationProblem),
-                (:HopfMAProblem, AbstractMABifurcationProblem),
-                (:PDMAProblem,   AbstractMABifurcationProblem),
-                (:NSMAProblem,   AbstractMABifurcationProblem),
-                (:BTMAProblem,   AbstractMABifurcationProblem),
+                (:FoldMAProblem, AbstractMABifurcationProblem, nothing),
+                (:HopfMAProblem, AbstractMABifurcationProblem, nothing),
+                (:PDMAProblem,   AbstractMABifurcationProblem, nothing),
+                (:NSMAProblem,   AbstractMABifurcationProblem, nothing),
+                (:BTMAProblem,   AbstractMABifurcationProblem, nothing),
 
-                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem),
-                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem),
-                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem),
+                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem, PeriodicOrbitCont()),
+                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem, PeriodicOrbitCont()),
+                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem, PeriodicOrbitCont()),
 
-                (:WrapTW, AbstractWaveProblem),
+                (:WrapTW, AbstractWaveProblem, TravellingWaveCont()),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin
@@ -256,8 +256,6 @@ for (op, at) in (
             $(TYPEDEF)
 
             Structure to hold a bifurcation problem. $($(_dict_doc_string_prob[op]))
-
-            
 
             # Methods
 

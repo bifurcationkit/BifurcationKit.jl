@@ -14,6 +14,8 @@ abstract type AbstractPoincareShootingDiscretization <: AbstractPOShootingDiscre
 @inline get_mesh_size(pb::AbstractPeriodicOrbitDiscretization) = pb.M
 isinplace(::AbstractPOShootingDiscretization) = false
 
+get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
+
 """
 $(TYPEDSIGNATURES)
 
@@ -625,7 +627,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
-    pbnew = pred.prob # modified problem
+    new_disc = get_discretization(pred.prob) # modified discretization
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
@@ -645,14 +647,14 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
 
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact)
-    _contParams = _update_cont_params(_contParams, pbnew, orbitguess)
-    pbnew = _set_params_in_po(pbnew, setparam(br, newp))
+    _contParams = _update_cont_params(_contParams, new_disc, orbitguess)
+    new_disc = _set_params_in_po(new_disc, setparam(br, newp))
 
     if usedeflation
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newton_options
         # find point on the first branch
-        sol0 = newton(pbnew, pred.po, optn; kwargs...)
+        sol0 = newton(new_disc, pred.po, optn; kwargs...)
         if converged(sol0) == false
             error("The first guess did not converge")
         end
@@ -660,7 +662,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         # find the bifurcated branch using deflation
         deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(VI.scalartype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
-        solbif = newton(pbnew, orbitguess, deflationOp,
+        solbif = newton(new_disc, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         if converged(solbif) == false
             error("Deflated newton did not converge")
@@ -668,15 +670,15 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         orbitguess .= solbif.u
     end
 
-    residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
+    # this should not be
+    residual(new_disc, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
-    branch = continuation( pbnew, orbitguess, alg, _contParams;
+    branch = continuation( new_disc, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten by the following
         linear_algo = _linear_algo,
         kind = br.kind,
         record_from_solution = record_from_solution(getprob(br)),
-        # plot_solution = wrap.plotSolution,
     )
 
     return Branch(branch, nf)

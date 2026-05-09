@@ -22,14 +22,13 @@ module BifurcationKit
 
     include("Accessors.jl")
     include("jacobianTypes.jl")
+    include("ContKind.jl")
     include("Problems.jl")
 
     # we put this here to be used in LinearBorderSolver and Continuation
     abstract type AbstractContinuationAlgorithm end
     abstract type AbstractContinuationIterable{kind} end
     abstract type AbstractContinuationState{Tv} end
-
-    include("ContKind.jl")
 
     include("BorderedArrays.jl")
     include("LinearSolver.jl")
