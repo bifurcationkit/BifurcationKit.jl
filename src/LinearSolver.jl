@@ -17,10 +17,8 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     sol2, flag2, it2 = ls(J, rhs2; kwargs...)
     return sol1, sol2, flag1 & flag2, (it1, it2)
 end
-
 ####################################################################################################
-# The two following functions are used for the Continuation of Hopf points and the computation of Floquet multipliers
-
+# The two following methods are used for the continuation of Hopf points and the computation of Floquet multipliers
 """
 This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
 """
@@ -43,7 +41,7 @@ function _axpy(J, a₀, a₁)
 end
 
 """
-This function implements the operator a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+This function implements the operator (a₀ * I + a₁ * J)⋅v and ensures that we don't perform unnecessary computations like 0*I + 1*J.
 """
 function _axpy_op(J, v::AbstractArray, a₀, a₁)
     if a₀ == 0

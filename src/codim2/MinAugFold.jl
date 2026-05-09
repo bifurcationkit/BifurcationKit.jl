@@ -461,7 +461,7 @@ function continuation_fold(prob,
                 br::AbstractBranchResult, ind_fold::Int,
                 lens2::AllOpticTypes,
                 options_cont::ContinuationPar = br.contparams ;
-                alg = br.alg,
+                alg = getalg(br),
                 normC = norm,
                 nev = br.contparams.nev,
                 start_with_eigen = false,

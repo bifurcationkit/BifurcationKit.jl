@@ -287,7 +287,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     printstyled(io, get_lens_symbol(br), color=:cyan, bold = true)
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
     print(io, prefix * "├─ Algo: ")
-    printstyled(io, _shortname(br.alg), "\n", color=:cyan, bold = true)
+    printstyled(io, _shortname(getalg(br)), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
         println(io, prefix * "└─ Special points:\n")
         for ii in eachindex(br.specialpoint)

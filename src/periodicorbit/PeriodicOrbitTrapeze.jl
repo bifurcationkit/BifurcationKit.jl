@@ -873,11 +873,11 @@ function _newton_trap(trap::PeriodicOrbitTrapProblem,
         wrap_prob = WrapPOTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
         new_options = options # to prevent from duplicated code
     else # bordered linear solvers
-        if jacobianPO == BorderedLU()
+        if jacobianPO === BorderedLU()
             Aγ = AγOperatorLU(N = N, Jc = LA.lu(SPA.spdiagm( 0 => ones(N * (M - 1)) )), prob = trap)
             # linear solver
             lspo = PeriodicOrbitTrapBLS()
-        elseif jacobianPO == BorderedSparseInplace()
+        elseif jacobianPO === BorderedSparseInplace()
             _J =  trap(Val(:JacCyclicSparse), orbitguess, getparams(trap.prob_vf))
             _indx = _get_blocks_from_sparse_matrix(_J, N, M-1)
             # inplace modification of the jacobian _J

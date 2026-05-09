@@ -78,11 +78,11 @@ function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingMinimallyAugmentedFor
     𝒯 = eltype(𝐏𝐝)
 
     # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
+    v, σ1, cv, itv = test_ma(𝐏𝐝, JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for N did not converge."
  
     # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
+    w, σ2, cv, itw = test_ma(𝐏𝐝, JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Nᵗ did not converge."
     return (; v, itv, w, itw)
 end
@@ -180,7 +180,7 @@ function PDMALinearSolver(x, p::𝒯, 𝐏𝐝::PeriodDoublingMinimallyAugmented
         dX, dsig, flag, it = 𝐏𝐝.linbdsolver(_Jpo, dₚF, vcat(σₓ, σₜ), σₚ, rhsu, rhsp)
         ~flag && @debug "Linear solver for J did not converge."
     else
-        error("WIP. Please select another jacobian method like `AutoDiff()` or `FiniteDifferences()`. You can also pass the option usehessian = false.")
+        error("WIP. Please select another jacobian method like `AutoDiff()` or `FiniteDifferences()`. You can also pass the option `usehessian = false`.")
     end
 
     return dX, dsig, true, sum(it) + sum(itv) + sum(itw)
@@ -408,12 +408,12 @@ function test_for_pd_gpd_cp(iter, state)
     JPD★ = has_adjoint(𝐏𝐝) ? jacobian_adjoint(pbwrap, x, newpar) : transpose(JPD)
 
     # compute new b
-    ζ, _, cv, it = pdtest(JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯))
+    ζ, _, cv, it = test_ma(𝐏𝐝, JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "Linear solver for Pd did not converge."
     ζ ./= norm(ζ)
 
     # compute new a
-    ζ★, _, cv, it = pdtest(JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
+    ζ★, _, cv, it = test_ma(𝐏𝐝, JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
     ~cv && @debug "Linear solver for Pdᵗ did not converge."
     ζ★ ./= norm(ζ★)
     𝐏𝐝.R2 = LA.dot(ζ★, ζ)

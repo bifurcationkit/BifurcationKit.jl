@@ -113,7 +113,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulatio
     return (;JNS, JNS★, dₚF, σₚ, δ, ϵ2, ϵ3, v, w, par0, dJvdp, itv, itw, σω)
 end
 ###################################################################################################
-function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
+function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
     𝐍𝐒 = get_formulation(pdpb)
 
     # get the PO functional, ie a WrapPOSh, WrapPOTrap, WrapPOColl
@@ -129,8 +129,8 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     cw = conj(w)
     vr = real(v); vi = imag(v)
-    u1r = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr,0), par0, ω, cw, true)
-    u1i = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi,0), par0, ω, cw, true)
+    u1r = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vr, 0), par0, ω, cw, true)
+    u1i = apply_jacobian_neimark_sacker(POWrap, x .+ ϵ2 .* vcat(vi, 0), par0, ω, cw, true)
     u2 = apply(JNS★, cw)
     σxv2r = @. -(u1r - u2) / ϵ2 # careful, this is a complex vector
     σxv2i = @. -(u1i - u2) / ϵ2
@@ -203,7 +203,7 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimally
         σxx2 = LA.dot(vcat(σx, σt), x2)
 
     else
-        error("WIP. Please select another jacobian method like :autodiff or :finiteDifferences. You can also pass the option usehessian = false.")
+        error("WIP. Please select another jacobian method like `AutoDiff()` or `FiniteDifferences()`. You can also pass the option `usehessian = false`.")
     end
 
     # We need to be careful here because the dot produces conjugates. 

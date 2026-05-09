@@ -226,15 +226,15 @@ function branch_normal_form(pbwrap::WrapPOColl,
                             detailed::Val{detailed_type} = Val(true),
                             kwargs_nf...) where {𝒯eigvec, prm_type, detailed_type}
     @debug "BP-PO normal form for Collocation: use prm by default"
-    prm = true
     # first, get the bifurcation point parameters
     verbose && println("━"^53*"\n──▶ Branch point normal form computation")
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
-    
+
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
+        coll = get_discretization(pbwrap)
         update_mesh!(coll, bifpt.x._mesh)
         bifpt = @set bifpt.x = bifpt.x.sol
     end

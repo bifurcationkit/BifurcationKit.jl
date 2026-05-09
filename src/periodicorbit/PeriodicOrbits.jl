@@ -354,7 +354,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 
 # Optional arguments
 
-- `alg = br.alg` continuation algorithm
+- `alg = getalg(br)` continuation algorithm
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.

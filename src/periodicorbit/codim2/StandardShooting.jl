@@ -209,7 +209,7 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
@@ -271,7 +271,7 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}

@@ -54,7 +54,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `options_cont`: continuation parameters for the new branch
 
 # Optional arguments
-- `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
+- `alg = getalg(br)` continuation algorithm to be used, default value: `getalg(br)`
 - `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations. See also `use_normal_form` below.
 - `use_normal_form = true`. If `use_normal_form = true`, the normal form is computed as well as its predictor and a guess is automatically formed. If `use_normal_form = false`, the parameter value `p = p₀ + δp` and the guess `x = x₀ + ampfactor .* e` (where `e` is a vector of the kernel) are used as initial guess. This is useful in case automatic branch switching does not work.
@@ -216,7 +216,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `options_cont` options for the call to [`continuation`](@ref)
 
 # Optional arguments
-- `alg = br.alg` continuation algorithm to be used, default value: `br.alg`
+- `alg = getalg(br)` continuation algorithm to be used, default value: `getalg(br)`
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
