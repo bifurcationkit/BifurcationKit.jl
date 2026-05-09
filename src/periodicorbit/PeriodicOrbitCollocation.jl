@@ -933,7 +933,7 @@ function re_make(coll::PeriodicOrbitOCollProblem,
     updatesection!(new_coll, ϕ0, nothing)
 
     # append period at the end of the initial guess
-    orbitguess = generate_solution(new_coll, t -> orbit(2pi*t/period), period)
+    orbitguess = generate_solution(new_coll, t -> orbit(2pi * t / period), period)
 
     return new_coll, orbitguess
 end

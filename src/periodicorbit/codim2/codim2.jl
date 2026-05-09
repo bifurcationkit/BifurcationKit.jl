@@ -2,6 +2,13 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
+function get_periodic_orbit(br::AbstractResult{ <: TwoParamPeriodicOrbitCont}, ind::Int)
+    𝐌𝐚 = get_formulation(getprob(br))
+    wrappo = get_wrap_po(𝐌𝐚)
+    disc = get_discretization(wrappo)
+    return get_periodic_orbit(disc, get_solution(br.sol[ind].x), setparam(br, br.sol[ind].p))
+end
+
 for (op, at) in (
            (:NeimarkSackerMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Hopf_NS),
            (:PeriodDoublingMinimallyAugmentedFormulation, AbstractMinimallyAugmentedFormulation_Fold_PD)
@@ -226,8 +233,8 @@ end
 function _continuation(gh::Bautin, 
                         br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitDiscretization;
-                        alg = br.alg,
+                        discPO::AbstractPeriodicOrbitDiscretization;
+                        alg = getalg(br),
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
                         nev::Int = _contParams.nev,
@@ -246,7 +253,7 @@ function _continuation(gh::Bautin,
     pred  = predictor(gh, Val(:FoldPeriodicOrbitCont), ds; verbose, ampfactor = 𝒯(ampfactor))
     pred0 = predictor(gh, Val(:FoldPeriodicOrbitCont),  0; verbose, ampfactor = 𝒯(ampfactor))
 
-    M = get_mesh_size(probPO)
+    M = get_mesh_size(discPO)
     ϕ = 0
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
@@ -259,25 +266,25 @@ function _continuation(gh::Bautin,
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
 
     # build the variable to hold the functional for computing PO based on finite differences
-    probPO, orbitguess = re_make(probPO, prob_vf, gh, gh.ζ, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+    discPO, orbitguess = re_make(discPO, prob_vf, gh, gh.ζ, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     verbose && printstyled(color = :green, "━"^61*
             "\n┌─ Start branching from Bautin bif. point to folds of periodic orbits.",
             "\n├─── Bautin params = ", pred0.params,
             "\n├─── new params  p = ", pred.params, ", p - p0 = ", pred.params - pred0.params,
             "\n├─── period      T = ", 2pi / pred.ω, " (from T = $(2pi / pred0.ω))",
-            "\n├─ Method = \n", probPO, "\n")
+            "\n├─ Method = \n", discPO, "\n")
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
     end
 
-    # change the user provided functions by passing probPO in its parameters
+    # change the user provided functions by passing discPO in its parameters
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
-    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); plot_solution)
+    _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
 
-    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
+    jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
+    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
@@ -317,7 +324,7 @@ end
 
 function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
-            probPO::AbstractPeriodicOrbitDiscretization;
+            discPO::AbstractPeriodicOrbitDiscretization;
             whichns::Int = 1,
             alg = getalg(br),
             linear_algo = nothing,
@@ -345,11 +352,12 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     period  = whichns == 1 ? pred.T1  : pred.T2
     period0 = whichns == 1 ? pred0.T1 : pred0.T2
 
-    M = get_mesh_size(probPO)
+    M = get_mesh_size(discPO)
     ϕ = 0
     orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
+    # TODO improve the following
     lens1, lens2 = hh.lens
     _params = whichns == 1 ? pred.params1 : pred.params2
     newparams = set(hh.params, lens1, _params[1])
@@ -361,14 +369,14 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     ~(lens1 == getlens(prob_vf)) && error("Please open an issue on the website of BifurcationKit")
 
     # build the variable to hold the functional for computing PO based on finite differences
-    probPO, orbitguess = re_make(probPO, prob_vf, hh, hh.ζ.q1, orbitguess_a, period; orbit = _orbit)
+    discPO, orbitguess = re_make(discPO, prob_vf, hh, hh.ζ.q1, orbitguess_a, period; orbit = _orbit)
 
     verbose && printstyled(color = :green, "━"^61*
         "\n┌─ Start branching from Hopf-Hopf bif. point to curve of Neimark-Sacker bifurcations of periodic orbits.",
         "\n├─── Hopf-Hopf params = ", pred0.params1,
         "\n├─── new params     p = ", _params, ", p - p0 = ", _params - pred0.params1,
         "\n├─── period         T = ", period, " (from T = $(period0))",
-        "\n└─ Method = \n", probPO, "\n")
+        "\n└─ Method = \n", discPO, "\n")
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
@@ -379,10 +387,10 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     # this is to remove this part from the arguments passed to continuation
     _kwargs = (;plot_solution = plot_solution)
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
-    _plotsol = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
+    _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); _kwargs...)
 
-    jac = _generate_jacobian(probPO, probPO.jacobian, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, record_po)
+    jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
+    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
 
     options = _contParams.newton_options
 
@@ -400,7 +408,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
         J[:, end] .= rand(nj)
         J[end, end] = 0
         # enforce NS boundary condition
-        N, m, Ntst = size(probPO)
+        N, m, Ntst = size(discPO)
         J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1
@@ -437,12 +445,12 @@ end
 
 function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        probPO::AbstractPeriodicOrbitDiscretization;
+                        discPO::AbstractPeriodicOrbitDiscretization;
                         whichns::Int = 1,
-                        alg = br.alg,
+                        alg = getalg(br),
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev = _contParams.nev,
+                        nev::Int = _contParams.nev,
                         detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
@@ -464,7 +472,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     period = pred.T
     period0 = pred0.T
 
-    M = get_mesh_size(probPO)
+    M = get_mesh_size(discPO)
     ϕ = 0
     orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
@@ -480,10 +488,10 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
 
     # build the variable to hold the functional for computing PO based on finite differences
     vp = zh.ζ[2]
-    probPO, orbitguess = re_make(probPO, prob_vf, zh, vp, orbitguess_a, period; orbit = _orbit)
+    discPO, orbitguess = re_make(discPO, prob_vf, zh, vp, orbitguess_a, period; orbit = _orbit)
 
-    # @show size(orbitguess) size(probPO) length(probPO)
-    # xtt = getPeriodicOrbit(probPO,orbitguess,0)
+    # @show size(orbitguess) size(discPO) length(discPO)
+    # xtt = getPeriodicOrbit(discPO,orbitguess,0)
     # plot(xtt.t, xtt.u') |> display
     # return
 
@@ -492,7 +500,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     "\n├─── Zero-Hopf params = ", pred0.params,
     "\n├─── new params     p = ", _params, ", p - p0 = ", _params - pred0.params,
     "\n├─── period         T = ", period, " (from T = $(period0))",
-    "\n└─ Method = \n", probPO, "\n")
+    "\n└─ Method = \n", discPO, "\n")
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
@@ -500,13 +508,13 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
 
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
-    # change the user provided functions by passing probPO in its parameters
-    # _finsol = modify_po_2params_finalise(probPO, kwargs, NeimarkSackerProblemMinimallyAugmented(probPO))
-    _recordsol = modify_po_record(probPO, kwargs, getparams(probPO), getlens(probPO))
-    _plotsol = modify_po_plot(probPO, kwargs)
+    # change the user provided functions by passing discPO in its parameters
+    # _finsol = modify_po_2params_finalise(discPO, kwargs, NeimarkSackerProblemMinimallyAugmented(discPO))
+    _recordsol = modify_po_record(discPO, kwargs, getparams(discPO), getlens(discPO))
+    _plotsol = modify_po_plot(discPO, kwargs)
 
-    jac = generate_jacobian(probPO, orbitguess, getparams(probPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    jac = generate_jacobian(discPO, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
+    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
@@ -530,7 +538,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         J[:, end] .= rand(nj)
         J[end, end] = 0
         # enforce NS boundary condition
-        N, m, Ntst = size(probPO)
+        N, m, Ntst = size(discPO)
         J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1

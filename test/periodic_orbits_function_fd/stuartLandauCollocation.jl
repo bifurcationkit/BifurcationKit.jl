@@ -2,6 +2,7 @@
 using Test
 using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
+using Core.Compiler: return_type # for type stability testing
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################
@@ -323,6 +324,18 @@ let
     _indx = BifurcationKit.get_blocks(prob_col, Jco2);
     @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
     @test norminf(Jco - Jco2) < 1e-14
+end
+####################################################################################################
+let 
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
+    _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
+    _hp = BK.get_normal_form(br, 1; detailed = Val(true))
+    pred = BK.predictor(_hp, 0.1)
+    # @code_warntype (pred.orbit)(0.1)
+    # TODO: this does not seem type stable
+    @test isconcretetype(return_type( (pred.orbit), typeof((0.1)))) == false
+    BK._continuation(_hp, br.prob, _cont_po,
+                    PeriodicOrbitOCollProblem(20, 5; jacobian = BK.DenseAnalytical()))
 end
 ####################################################################################################
 # test Hopf aBS

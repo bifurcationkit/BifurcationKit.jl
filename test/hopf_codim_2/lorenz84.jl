@@ -402,6 +402,7 @@ for disc in (
             # callback_newton =  BK.cbMaxNormAndΔp(1e1, 0.025),
             )
     @test fold_po.kind == BifurcationKit.FoldPeriodicOrbitCont()
+    get_periodic_orbit(fold_po, 2)
 end 
 ####################################################################################################
 # branching HH to NS of periodic orbits
@@ -440,9 +441,9 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
 
-_br_po = BK.continuation_from_hopf_point(hp_codim2_1, 20, 
+_br_po = BK.continuation_from_hopf_point(hp_codim2_1, 5, 
         ContinuationPar(opts_br; detect_bifurcation = 2, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
-        PeriodicOrbitOCollProblem(20, 5); 
+        PeriodicOrbitOCollProblem(20, 5);
         # verbosity = 3,
         # autodiff = false, 
         lens = getlens(br)

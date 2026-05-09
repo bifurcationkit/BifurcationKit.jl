@@ -524,7 +524,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     bifpt = br_hopf.sol[ind_pt]
     ω = get_frequency(bifpt.x, 𝐇)
     λ = Complex(0, ω)
-    x0 = getvec(bifpt.x, 𝐇)
+    x0 = get_solution(bifpt.x)
     params = getparams(br_hopf, ind_pt)
     L = jacobian(vector_field, x0, params)
 

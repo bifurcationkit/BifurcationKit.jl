@@ -1248,6 +1248,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     end
     A(t) = amp * cis(t)
 
+    # make the predictor type-stable
     orbit = let Ψ001=Ψ001, Ψ110=Ψ110, Ψ200=Ψ200
         t -> hp.x0 .+ 
                     2 .* real.(hp.ζ .* A(t)) .+
@@ -1261,7 +1262,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
             Ψ001 = Ψ001,
             amp = 2amp,
             ω = ω,
-            period = abs(2pi/ω),
+            period = abs(2pi / ω),
             p = pnew,
             dsfactor = dsfactor)
 end
@@ -1319,7 +1320,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     verbose && println("──▶ a  = ", a)
 
     # coefficient of x^3
-    # b = <ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
+    # b = < ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
     # (I - L)⋅h20 = B(ζ,ζ)
     h2v = R2(ζ, ζ)
     h20, cv, it = ls(L, h2v; a₀ = -1) # h20 = (L - I) \ h2v

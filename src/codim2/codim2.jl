@@ -153,7 +153,9 @@ end
 
 save_solution(𝐏𝐛::AbstractMABifurcationProblem, x, p) = save_solution(get_formulation(𝐏𝐛), x, p)
 get_frequency(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = sol.ω
-getvec(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_Hopf_NS) = sol.x
+@inline getvec(sol::AbstractMASolution, 𝐌𝐚::AbstractMinimallyAugmentedFormulation_Fold_PD) = getvec(sol.x, 𝐌𝐚)
+@inline getvec(sol::AbstractMASolution, 𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS) = getvec(sol.x, 𝐌𝐚)
+@inline get_solution(sol::AbstractMASolution) = sol.x
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
