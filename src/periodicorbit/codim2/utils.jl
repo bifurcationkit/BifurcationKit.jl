@@ -65,7 +65,7 @@ end
 function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: WrapPOColl},
                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
                 state)
-    coll = 𝐌𝐚.prob_vf.prob
+    coll = get_discretization(𝐌𝐚.prob_vf)
     # state vector at bifurcation point
     Z = getsolution(state)
     po = getvec(Z.u, 𝐌𝐚)

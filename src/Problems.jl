@@ -219,8 +219,8 @@ end
 
 const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
-    :ODEBifProblem => "Specific to Ordinary Differential Equations (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
-    :PDEBifProblem => "Specific to Partial Differential Equations (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :ODEBifProblem => "Specific to Ordinary Differential Equations  (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :PDEBifProblem => "Specific to Partial Differential Equations   (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
     :DAEBifProblem => "Specific to Differential Algebraic Equations (DAE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
 )
 
@@ -345,8 +345,8 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at
-                prob::Tprob
+            struct $op{Tdisc, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at
+                disc::Tdisc
                 jacobian::Tjac
                 u0::Tu0
                 params::Tp
@@ -355,13 +355,14 @@ for (op, at) in (
                 recordFromSolution::Trecord
             end
 
-            _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
+            _getvectortype(::$op{Tdisc, Tjac, Tu0}) where {Tdisc, Tjac, Tu0} = Tu0
             # dummy constructor
-            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
-            @inline get_discretization(pb::$op) = pb.prob
+            $op(disc, lens = getlens(disc)) = $op(disc, nothing, nothing, nothing, lens, nothing, nothing)
+            @inline get_discretization(pb::$op) = pb.disc
             @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
             residual(pb::$op, x, p) = residual(get_discretization(pb), x, p)
             residual!(pb::$op, o, x, p) = residual!(get_discretization(pb), o, x, p)
+            @inline getdelta(pb::$op) = getdelta(get_discretization(pb))
         end
     end
 

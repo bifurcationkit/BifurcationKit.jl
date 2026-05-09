@@ -167,7 +167,7 @@ end
                                 par, 
                                 ζ::AbstractVector)
     # get the shooting problem
-    sh = powrap.prob
+    sh = get_discretization(powrap)
 
     # period of the cycle
     T = getperiod(sh, x)
@@ -254,7 +254,7 @@ end
 # at position x from the Floquet eigenvector ζ
 @views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOSh{ <: PoincareShootingProblem}, x_bar::AbstractVector, p, ζ::AbstractVector)
     # get the shooting problem
-    psh = powrap.prob
+    psh = get_discretization(powrap)
 
     #  ζ is of size (N-1)
     M = get_mesh_size(psh)
@@ -282,31 +282,31 @@ end
 # PeriodicOrbitTrapProblem
 
 # Matrix-Free version of the monodromy operator
-@views function MonodromyQaD_matrix_free(poPb::PeriodicOrbitTrapProblem, u0, par, du::AbstractVector)
+@views function MonodromyQaD_matrix_free(trap::PeriodicOrbitTrapProblem, u0, par, du::AbstractVector)
     # extraction of various constants
-    M, N = size(poPb)
+    M, N = size(trap)
 
     # period of the cycle
-    T = getperiod(poPb, u0)
+    T = getperiod(trap, u0)
 
     # time step
-    h =  T * get_time_step(poPb, 1)
+    h =  T * get_time_step(trap, 1)
     Typeh = typeof(h)
 
     out = copy(du)
 
     u0c = get_time_slices(u0, N, M)
 
-    out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
-    # res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, 1])) \ out
-    res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+    out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, M-1], par), out)
+    # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, 1])) \ out
+    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
     out .= res
 
     for ii in 2:M-1
-        h =  T * get_time_step(poPb, ii)
-        out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
-        # res = (I - h/2 * jacobian(poPb.prob_vf, u0c[:, ii])) \ out
-        res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+        h =  T * get_time_step(trap, ii)
+        out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, ii-1], par), out)
+        # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, ii])) \ out
+        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
         out .= res
     end
 
@@ -317,34 +317,34 @@ end
 # at position x from the Floquet eigenvector ζ
 function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::AbstractVector, par, ζ::AbstractVector)
     # get the Trapezoid problem
-    poPb = powrap.prob
+    disc = get_discretization(powrap)
 
     # extraction of various constants
-    M, N = size(poPb)
+    M, N = size(disc)
 
     # period of the cycle
-    T = getperiod(poPb, u0)
+    T = getperiod(disc, u0)
 
     # time step
-    h =  T * get_time_step(poPb, 1)
+    h =  T * get_time_step(disc, 1)
     Typeh = typeof(h)
 
     out = copy(ζ)
 
     u0c = get_time_slices(u0, N, M)
 
-    @views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, M-1], par), out)
-    # res = (I - h/2 * poPb.J(u0c[:, 1])) \ out
-    @views res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+    @views out .= out .+ h/2 .* apply(jacobian(disc.prob_vf, u0c[:, M-1], par), out)
+    # res = (I - h/2 * disc.J(u0c[:, 1])) \ out
+    @views res, _ = disc.linsolver(jacobian(disc.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
     out .= res
     out_a = [copy(out)]
     # push!(out_a, copy(out))
 
     for ii in 2:M
-        h =  T * get_time_step(poPb, ii)
-        @views out .= out .+ h/2 .* apply(jacobian(poPb.prob_vf, u0c[:, ii-1], par), out)
-        # res = (I - h/2 * poPb.J(u0c[:, ii])) \ out
-        @views res, _ = poPb.linsolver(jacobian(poPb.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+        h =  T * get_time_step(disc, ii)
+        @views out .= out .+ h/2 .* apply(jacobian(disc.prob_vf, u0c[:, ii-1], par), out)
+        # res = (I - h/2 * disc.J(u0c[:, ii])) \ out
+        @views res, _ = disc.linsolver(jacobian(disc.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
         out .= res
         push!(out_a, copy(out))
     end
@@ -354,26 +354,26 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::WrapPOTrap, u0::Ab
 end
 
 # Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
-function MonodromyQaD(poPb::PeriodicOrbitTrapProblem, J, u0, par)
+function MonodromyQaD(trap::PeriodicOrbitTrapProblem, J, u0, par)
     # extraction of various constants
-    M, N = size(poPb)
+    M, N = size(trap)
 
     # period of the cycle
-    T = getperiod(poPb, u0)
+    T = getperiod(trap, u0)
 
     # time step
-    h =  T * get_time_step(poPb, 1)
+    h =  T * get_time_step(trap, 1)
 
     u0c = get_time_slices(u0, N, M)
 
-    @views mono = Array(LA.I - h/2 * (jacobian(poPb.prob_vf, u0c[:, 1], par))) \ Array(LA.I + h/2 * jacobian(poPb.prob_vf, u0c[:, M-1], par))
+    @views mono = Array(LA.I - h/2 * (jacobian(trap.prob_vf, u0c[:, 1], par))) \ Array(LA.I + h/2 * jacobian(trap.prob_vf, u0c[:, M-1], par))
     temp = similar(mono)
 
     for ii in 2:M-1
-        # for some reason, the next line is faster than doing (I - h/2 * (poPb.J(u0c[:, ii]))) \ ...
+        # for some reason, the next line is faster than doing (I - h/2 * (trap.J(u0c[:, ii]))) \ ...
         # also I - h/2 .* J seems to hurt (a little) the performances
-        h =  T * get_time_step(poPb, ii)
-        @views temp = Array(LA.I - h/2 * (jacobian(poPb.prob_vf, u0c[:, ii], par))) \ Array(LA.I + h/2 * jacobian(poPb.prob_vf, u0c[:, ii-1], par))
+        h =  T * get_time_step(trap, ii)
+        @views temp = Array(LA.I - h/2 * (jacobian(trap.prob_vf, u0c[:, ii], par))) \ Array(LA.I + h/2 * jacobian(trap.prob_vf, u0c[:, ii-1], par))
         mono .= temp * mono
     end
     return mono
@@ -437,9 +437,9 @@ geteigenvector(fl::FloquetGEV, vecs, n::Union{Int, AbstractVector{Int64}}) = get
 
 function compute_eigenvalues(eig::FloquetGEV, iter::ContIterable{Tkind}, state, u0, par, nev = iter.contparams.nev; k...) where {Tkind <: AbstractContinuationKind}
     wrappo = getprob(iter)
-    po_prob = wrappo.prob
+    disc = get_discretization(wrappo)
     J = jacobian(wrappo, u0, par)
-    eig(po_prob, J, nev; k...)
+    eig(disc, J, nev; k...)
 end
 
 @views function (fl::FloquetGEV)(coll::PeriodicOrbitOCollProblem, _J::AbstractMatrix, nev; k...)
@@ -546,7 +546,7 @@ FloquetColl(eigls::FloquetColl) = eigls
 
 function compute_eigenvalues(eig::FloquetColl, iter::ContIterable{Tkind}, state, u0, par, nev = iter.contparams.nev; k...) where {Tkind <: AbstractContinuationKind}
     wrapcoll = get_wrap_po(iter)
-    coll = wrapcoll.prob
+    coll = get_discretization(wrapcoll)
     J = jacobian(wrapcoll, u0, par)
     eig(coll, J, nev; k...)
 end

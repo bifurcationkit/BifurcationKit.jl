@@ -370,7 +370,7 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
     For ODE problems, it is more efficient to pass the option `start_with_eigen = true`
 """
 function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
-                probvf = br.prob.prob.prob_vf,
+                probvf = getprob(br).prob.prob_vf,
                 normN = norm,
                 options = br.contparams.newton_options,
                 nev = br.contparams.nev,
@@ -381,7 +381,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
                 bdlinsolver_adjoint::AbstractBorderedLinearSolver = bdlinsolver,
                 kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
-    prob_ma = br.prob.prob
+    prob_ma = getprob(br).prob
 
     btpointguess = bt_point(br, ind_bt)
 

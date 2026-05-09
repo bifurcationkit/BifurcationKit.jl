@@ -95,6 +95,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     # TODO!! This is only finite differences
+    # we can probably use R01 and R11
     dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
@@ -119,6 +120,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
 
     cw = conj(w)
     vr = real(v); vi = imag(v)
+    # TODO: this is R20
     u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
     u1i = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vi, par0, cw, true)
     u2 = apply(JAd_at_xp,  cw)
@@ -565,7 +567,8 @@ function continuation_hopf(prob,
         # we use a minimally augmented formulation to set the initial vectors
         # we start with a vector similar to an eigenvector, we must ensure that
         # it is complex valued
-        ζ = VI.scale(_copy(getu0(br.prob)), one(Complex{VI.scalartype(getu0(br.prob))}))
+        _u0 = getu0(getprob(br))
+        ζ = VI.scale(_copy(_u0), one(Complex{VI.scalartype(_u0)}))
         a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
         b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
@@ -582,7 +585,7 @@ function continuation_hopf(prob,
         ζ   = VI.scale(v,  1 / normC(v))
     end
 
-    return continuation_hopf(br.prob, alg,
+    return continuation_hopf(getprob(br), alg,
                     hopfpointguess, parbif,
                     getlens(br), lens2,
                     ζ, ζad,

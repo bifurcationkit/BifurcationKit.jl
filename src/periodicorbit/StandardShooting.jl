@@ -80,7 +80,7 @@ end
 @inline issimple(sh::ShootingProblem) = get_mesh_size(sh) == 1
 @inline isparallel(sh::ShootingProblem) = sh.parallel
 @inline getlens(sh::ShootingProblem) = sh.lens
-@inline getdelta(sh::ShootingProblem) = getdelta(sh.flow)
+@inline getdelta(sh::AbstractPOShootingDiscretization) = getdelta(sh.flow)
 getparams(sh::ShootingProblem) = sh.par
 setparam(sh::ShootingProblem, p) = set(getparams(sh), getlens(sh), p)
 

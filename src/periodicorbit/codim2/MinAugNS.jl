@@ -431,13 +431,13 @@ function test_for_ns_ch(iter, state)
     newton_options = 𝐍𝐒.newton_options
     # test if we jumped to PD branch
     pdjump = abs(abs(ω) - pi) < 100newton_options.tol
-    if ~pdjump && pbwrap.prob isa ShootingProblem
+    if ~pdjump && get_discretization(pbwrap) isa ShootingProblem
         ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(newton_options, verbose = false,))
         prob_ns.l1 = ns.nf.nf.b
         prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
         #############
     end
-    if ~pdjump && pbwrap.prob isa PeriodicOrbitOCollProblem
+    if ~pdjump && get_discretization(pbwrap) isa PeriodicOrbitOCollProblem
         if 𝐍𝐒.prm
             ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = true))
         else

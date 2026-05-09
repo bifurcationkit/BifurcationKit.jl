@@ -406,7 +406,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     u0 = sol_ode(t0)
     @assert u0 isa AbstractVector
     N = length(u0)
-    𝒯 = VI.scalartype(u0)
+    𝒯 = eltype(u0)
 
     n, m, Ntst = size(pb)
     n_unknowns = N * (1 + m * Ntst)
@@ -420,7 +420,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             ϕ  = zeros(𝒯, n_unknowns),
                             xπ = zeros(𝒯, n_unknowns),
                             ∂ϕ = zeros(𝒯, N, Ntst * m),
-                            cache = POCollCache(VI.scalartype(pb), Ntst, N, m, cache_In))
+                            cache = POCollCache(eltype(pb), Ntst, N, m, cache_In))
     
     # find best period candidate
     if optimal_period

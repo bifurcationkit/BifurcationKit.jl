@@ -21,8 +21,8 @@ module BifurcationKit
     Reexport.@reexport using ArnoldiMethod: LM, LR, LI, SR, SI
 
     include("Accessors.jl")
-    include("Problems.jl")
     include("jacobianTypes.jl")
+    include("Problems.jl")
 
     # we put this here to be used in LinearBorderSolver and Continuation
     abstract type AbstractContinuationAlgorithm end

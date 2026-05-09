@@ -2,11 +2,11 @@
 @inline has_hessian(::WrapPOColl) = true
 
 function d2F(wrapcoll::WrapPOColl, x, p, dx1, dx2)
-    d2PO(z -> residual(wrapcoll.prob, z, p), x, dx1, dx2)
+    d2PO(z -> residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
 end
 
 function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
-    N, m, Ntst = size(pbwrap.prob)
+    N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
     # put the PD boundary condition
@@ -15,7 +15,7 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
-    N, m, Ntst = size(pbwrap.prob)
+    N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
     J = Complex.(Jac)
@@ -36,8 +36,8 @@ for (fname, cdt, err_msg) in (
             specialpoint = br.specialpoint[index]
             if specialpoint.x isa POSolutionAndState
                 # the solution is mesh adapted, we need to restore the mesh.
-                pbwrap = deepcopy(br.prob)
-                update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+                pbwrap = deepcopy(getprob(br))
+                update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
                 specialpoint = @set specialpoint.x = specialpoint.x.sol
             end
             return BorderedArray(_copy(specialpoint.x), specialpoint.param)
@@ -54,8 +54,8 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
     if specialpoint.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+        pbwrap = deepcopy(getprob(br))
+        update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
         specialpoint = @set specialpoint.x = specialpoint.x.sol
     end
     return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
@@ -116,15 +116,15 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     end
 
     # wrap of collocation functional
-    pbwrap = deepcopy(br.prob)
+    pbwrap = deepcopy(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        if br.prob.prob.meshadapt
-            update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        if getprob(br).prob.meshadapt
+            update_mesh!(get_discretization(pbwrap), bifpt.x._mesh )
         end
-        updatesection!(pbwrap.prob, bifpt.x.ϕ, nothing)
+        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, nothing)
         bifpt = @set bifpt.x = bifpt.x.sol
     end
 
@@ -132,7 +132,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     # updatesection!(coll, ϕ, nothing)
 
     # this updates the section
-    coll = deepcopy(pbwrap.prob)
+    coll = deepcopy(get_discretization(pbwrap))
 
     options_foldpo = options_cont
 
@@ -176,18 +176,18 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     pdpointguess = pd_point(br, ind_bif)
 
     # wrap of collocation functional
-    pbwrap = deepcopy(br.prob)
+    pbwrap = deepcopy(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        update_mesh!(pbwrap.prob, bifpt.x._mesh)
-        updatesection!(pbwrap.prob, bifpt.x.ϕ, par)
+        update_mesh!(get_discretization(pbwrap), bifpt.x._mesh)
+        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, par)
         pdpointguess.u .= bifpt.x.sol
     end
 
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(pbwrap.prob)
+    coll = deepcopy(get_discretization(pbwrap))
     N, m, Ntst = size(coll)
 
     # get the PD eigenvectors
@@ -244,12 +244,12 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     nspointguess = ns_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(br.prob.prob)
+    coll = deepcopy(getprob(br).prob)
     N, m, Ntst = size(coll)
 
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
-    jac = jacobian(br.prob, nspointguess.u, par)
+    jac = jacobian(getprob(br), nspointguess.u, par)
     J = Complex.(copy(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace

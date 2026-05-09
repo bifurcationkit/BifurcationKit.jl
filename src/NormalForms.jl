@@ -1487,7 +1487,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
-    L = jacobian(br.prob, convert(Teigvec, bifpt.x), parbif)
+    L = jacobian(getprob(br), convert(Teigvec, bifpt.x), parbif)
 
     # right eigenvector
     if haseigenvector(br) == false

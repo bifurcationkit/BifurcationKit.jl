@@ -824,7 +824,6 @@ end
 get_periodic_orbit(prob::WrapPOTrap, u::AbstractVector, p) = get_periodic_orbit(get_discretization(prob), u, p)
 is_symmetric(::WrapPOTrap) = false
 has_adjoint(::WrapPOTrap) = false
-@inline getdelta(pb::WrapPOTrap) = getdelta(pb.prob) # METTRE EN COMMUN?
 ##########################
 function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::Dense, orbitguess, pars; k...)
     _J =  trap(Val(:JacFullSparse), orbitguess, pars) |> Array
@@ -852,7 +851,7 @@ function _jacobian_po(wrap::WrapPOTrap, J::Tuple{FullSparseInplace, Tj, Ti}, x, 
     trap(Val(:JacFullSparseInplace), _J, x, p, _indx)
 end
 
-_jacobian_po(wrap::WrapPOTrap, J::FullLU, x, p) = wrap.prob(Val(:JacFullSparse), x, p)
+_jacobian_po(wrap::WrapPOTrap, J::FullLU, x, p) = wrap.disc(Val(:JacFullSparse), x, p)
 POTrapJacobianBordered
 _jacobian_po(::WrapPOTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################

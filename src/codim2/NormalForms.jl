@@ -484,7 +484,7 @@ $(TYPEDSIGNATURES)
 Compute the Bogdanov-Takens normal form.
 
 # Arguments
-- `prob` bifurcation problem, typically `br.prob`
+- `prob` bifurcation problem, typically `getprob(br)`
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br`
 - `options` options for the Newton solver

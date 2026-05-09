@@ -96,7 +96,7 @@ optn = NewtonPar(verbose = false, tol = 1e-9,  max_iterations = 20)
 # deflationOp = BK.DeflationOperator(2, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zeros(3)])
 outpo = newton(_pb, initpo, optn; normN = norminf)
 @test BK.converged(outpo)
-@test outpo.prob.prob.jacobian isa BK.AutoDiffDense
+@test BK.get_discretization(outpo.prob).jacobian isa BK.AutoDiffDense
 
 BK.getperiod(_pb, outpo.u, par_hopf)
 BK.get_periodic_orbit(_pb, outpo.u, par_hopf)
@@ -106,8 +106,8 @@ br_pok2 = continuation(_pb, outpo.u, PALC(tangent = Bordered()),
     opts_po_cont;
     # verbosity = 0, plot = false,
     normC = norminf)
-@test br_pok2.prob isa BK.WrapPOSh
-@test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
+@test BK.getprob(br_pok2) isa BK.WrapPOSh
+@test BK.get_discretization(BK.getprob(br_pok2)).jacobian isa BK.AutoDiffDense
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 _sol = BK.get_po_solution(_pb, outpo.u, BK.getparams(_pb))
 _sol(0.1)
@@ -147,14 +147,14 @@ end
 _probsh = ShootingProblem(1, prob, ODE.KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r))
 br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0, autodiff_nf = false)
 
-@test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
-@test br_pok2.prob isa BK.WrapPOSh
+@test BK.get_discretization(BK.getprob(br_pok2)).jacobian isa BK.AutoDiffDense
+@test BK.getprob(br_pok2) isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # idem with deflation
 br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, usedeflation = true)
-@test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
-@test br_pok2.prob isa BK.WrapPOSh
+@test BK.get_discretization(BK.getprob(br_pok2)).jacobian isa BK.AutoDiffDense
+@test BK.getprob(br_pok2) isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # test matrix-free computation of floquet coefficients
@@ -162,14 +162,14 @@ eil = EigKrylovKit(dim = 2, x₀=rand(2))
 opts_po_contMF = @set opts_po_cont.newton_options.eigsolver = eil
 opts_po_contMF = @set opts_po_cont.detect_bifurcation = 0
 br_pok2 = continuation(br,1, opts_po_contMF, _probsh; normC = norminf)
-@test br_pok2.prob.prob.jacobian isa BK.AutoDiffDense
-@test br_pok2.prob isa BK.WrapPOSh
+@test BK.get_discretization(BK.getprob(br_pok2)).jacobian isa BK.AutoDiffDense
+@test BK.getprob(br_pok2) isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 
 # case with 2 sections
 br_pok2_s2 = continuation(br, 1, (@set opts_po_cont.newton_options.verbose = false), ShootingProblem(2, prob, ODE.KenCarp4();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r)); normC = norminf)
-@test br_pok2_s2.prob.prob.jacobian isa BK.AutoDiffDense
-@test br_pok2_s2.prob isa BK.WrapPOSh
+@test BK.get_discretization(BK.getprob(br_pok2_s2)).jacobian isa BK.AutoDiffDense
+@test BK.getprob(br_pok2_s2) isa BK.WrapPOSh
 @test br_pok2_s2.period[1] ≈ 2pi rtol = 1e-7
 ####################################################################################################
 # test shooting interface M > 1
@@ -258,9 +258,9 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.015, ds= 0.01, p_max = 4
 br_pok2 = continuation(probPsh, outpo.u, PALC(),
     opts_po_cont; normC = norminf)
 # plot(br_pok2)
-BK.setparam(br_pok2.prob, 1.)
-BK.getperiod(br_pok2.prob.prob, br_pok2.sol[1].x, br_pok2.sol[1].p)
-BK.get_time_slices(br_pok2.prob.prob, br_pok2.sol[1].x)
+BK.setparam(BK.getprob(br_pok2), 1.)
+BK.getperiod(BK.get_discretization(BK.getprob(br_pok2)), br_pok2.sol[1].x, br_pok2.sol[1].p)
+BK.get_time_slices(BK.get_discretization(BK.getprob(br_pok2)), br_pok2.sol[1].x)
 BK.get_periodic_orbit(br_pok2, 1)
 ####################################################################################################
 @info "Multiple Poincaré Shooting"
@@ -299,7 +299,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.025, ds= -0.01, p_max =
 br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
         opts_po_cont; verbosity = 0,
         plot = false, normC = norminf)
-@test br_pok2.prob isa BK.WrapPOSh
+@test BK.getprob(br_pok2) isa BK.WrapPOSh
 @test br_pok2.period[1] ≈ 2pi rtol = 1e-7
 ####################################################################################################
 # @info "Multiple Poincaré Shooting 2"
@@ -343,14 +343,14 @@ br_pok2 = continuation(probPsh, outpo.u, PALC(tangent = Bordered()),
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
 br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), PoincareShootingProblem(2, prob, ODE.KenCarp4(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
-@test br_psh.prob isa BK.WrapPOSh
+@test BK.getprob(br_psh) isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test Iterative Floquet eigen solver
 @reset opts_po_cont.newton_options.eigsolver.dim = 20
 @reset opts_po_cont.newton_options.eigsolver.x₀ = rand(2)
 br_sh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, save_sol_every_step = 1), ShootingProblem(2, prob, ODE.KenCarp4(); abstol=1e-10, reltol=1e-9, lens = @optic _.r); normC = norminf)
-@test br_psh.prob isa BK.WrapPOSh
+@test BK.getprob(br_psh) isa BK.WrapPOSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 
 # test MonodromyQaD
@@ -381,6 +381,6 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
             verbosity = 0)
 
     # test different versions of newton
-    newton(br_ssh.prob.prob, br_ssh.sol[1].x, br_ssh.contparams.newton_options)
+    newton(BK.get_discretization(BK.getprob(br_ssh)), br_ssh.sol[1].x, br_ssh.contparams.newton_options)
 end
 end

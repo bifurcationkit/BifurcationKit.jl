@@ -49,7 +49,8 @@ getparams(tw::TWModel) = getparams(tw.prob_vf)
 function TWModel(prob, ∂::Tuple, u₀; DAE = 0, jacobian = AutoDiff())
     # ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
     ∂u₀ = Tuple( LA.mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
-    return TWModel(prob_vf = prob, ∂ = ∂,
+    return TWModel(prob_vf = prob, 
+        ∂ = ∂,
         u₀ = u₀,
         ∂u₀ = ∂u₀,
         # u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀),
@@ -189,7 +190,7 @@ jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 @inline getdelta(::WrapTW) = 1e-8
-dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(tw.prob .+ t .* dx1, p), 0)
+dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(get_discretization(tw) .+ t .* dx1, p), 0)
 d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0)
 @inline update!(::WrapTW, args...; k...) = update_default(args...; k...)
@@ -197,8 +198,8 @@ d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ 
 _generate_jacobian(probPO::TWModel, J::Union{MatrixFree, AutoDiffMF, FullLU, FiniteDifferences, AutoDiff}, o, pars; k...) = J
 
 _jacobian_tw(prob::WrapTW, ::AutoDiff, x, p) = ForwardDiff.jacobian(z -> residual(prob, z, p), x)
-_jacobian_tw(prob::WrapTW, ::FullLU, x, p) = prob.prob(Val(:JacFullSparse), x, p)
-_jacobian_tw(prob::WrapTW, ::MatrixFree, x, p) = (dx ->  prob.prob(x, p, dx))
+_jacobian_tw(prob::WrapTW, ::FullLU, x, p) = get_discretization(prob)(Val(:JacFullSparse), x, p)
+_jacobian_tw(prob::WrapTW, ::MatrixFree, x, p) = (dx ->  get_discretization(prob)(x, p, dx))
 
 function _jacobian_tw(prob::WrapTW, ::AutoDiffMF, x, p)
     return dx -> ForwardDiff.derivative(z -> residual(prob, x .+ z .* dx, p), 0)
@@ -225,7 +226,7 @@ function record_from_solution(iter::ContIterable{TravellingWaveCont},
     if probTW.recordFromSolution isa Nothing
         return (s = getx(state)[end],)
     else
-        return probTW.recordFromSolution(getx(state), (prob = probTW.prob, p = getp(state)); iter, state)
+        return probTW.recordFromSolution(getx(state), (prob = get_discretization(probTW), p = getp(state)); iter, state)
     end
 end
 

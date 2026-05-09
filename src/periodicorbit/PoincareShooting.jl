@@ -188,7 +188,7 @@ Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré se
 function projection(psh::PoincareShootingProblem, x::AbstractVector)
     # create initial guess. We have to pass it through the projection R
     M = get_mesh_size(psh)
-    orbitguess_bar = Vector{VI.scalartype(x)}(undef, 0)
+    orbitguess_bar = Vector{eltype(x)}(undef, 0)
     @assert M == length(psh.section.normals)
     for ii=1:M
         push!(orbitguess_bar, R(psh, x[ii], ii))
@@ -205,7 +205,7 @@ function projection(psh::PoincareShootingProblem, x::AbstractMatrix)
     # create initial guess. We have to pass it through the projection R
     M = get_mesh_size(psh)
     m, n = size(x)
-    orbitguess_bar = Matrix{VI.scalartype(x)}(undef, m, n-1)
+    orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
     @assert M == length(psh.section.normals)
     for ii=1:M
         orbitguess_bar[ii, :] .= @views R(psh, x[ii, :], ii)

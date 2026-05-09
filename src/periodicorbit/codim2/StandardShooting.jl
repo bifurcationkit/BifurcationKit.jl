@@ -1,10 +1,10 @@
 function d2F(wrapsh::WrapPOSh, x, p, dx1, dx2)
-    d2PO(z -> residual(wrapsh.prob, z, p), x, dx1, dx2)
+    d2PO(z -> residual(get_discretization(wrapsh), z, p), x, dx1, dx2)
 end
 
 # if the jacobian is matrix based, use transpose
 @inline has_adjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
-@inline has_jvp(wrap::WrapPOSh) = has_jvp(wrap.prob)
+@inline has_jvp(wrap::WrapPOSh) = has_jvp(get_discretization(wrap))
 
 # this function is necessary for pdtest to work in PDMinimallyAugmented problem
 function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj}
@@ -22,7 +22,7 @@ jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem
 
 # same as above but matrix based
 function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = get_mesh_size(pbwrap.prob)
+    M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
@@ -33,7 +33,7 @@ end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
 function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
-    sh = pbwrap.prob
+    sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
@@ -75,7 +75,7 @@ end
 
 # matrix free adjoint linear operator associated to the monodromy whose zeros are used to detect PD/NS points
 function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
-    sh = pbwrap.prob
+    sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
@@ -121,7 +121,7 @@ function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} },
 end
 
 function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = get_mesh_size(pbwrap.prob)
+    M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
@@ -180,7 +180,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
 
     pbwrap = getprob(br)
-    sh = pbwrap.prob
+    sh = get_discretization(pbwrap)
 
     options_foldpo = options_cont
 
@@ -220,8 +220,8 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         pdpointguess = pd_point(br, ind_bif)
 
         # copy the problem for not mutating the one passed by the user
-        pbwrap = br.prob
-        sh = deepcopy(pbwrap.prob)
+        pbwrap = getprob(br)
+        sh = deepcopy(get_discretization(pbwrap))
 
         # get the parameters
         par_pd = setparam(br, pdpointguess.p)
@@ -245,7 +245,7 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         p = copy(q)
 
         # perform continuation
-        continuation_pd(br.prob, alg,
+        continuation_pd(getprob(br), alg,
             pdpointguess, setparam(br, pdpointguess.p),
             getlens(br), lens2,
             # ζs, ζs_ad,
@@ -283,8 +283,8 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     nspointguess = ns_point(br, ind_bif)
 
     # copy the problem for not mutating the one passed by the user
-    pbwrap = br.prob
-    sh = deepcopy(br.prob.prob)
+    pbwrap = getprob(br)
+    sh = deepcopy(get_discretization(pbwrap))
 
     M = get_mesh_size(sh)
     N = div(length(bifpt.x) - 1, M)
@@ -306,12 +306,12 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     # ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # # compute the full eigenvector
     # floquetsolver = br.contparams.newton_options.eigsolver
-    # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
+    # ζ_a = floquetsolver(Val(:ExtractEigenVector), getprob(br), bifpt.x, setparam(br, bifpt.param), real.(ζ))
     # ζs = reduce(vcat, ζ_a)
     # ζs_ad = copy(ζs)
 
     # perform continuation
-    continuation_ns(br.prob, alg,
+    continuation_ns(getprob(br), alg,
         nspointguess, setparam(br, nspointguess.p[1]),
         getlens(br), lens2,
         p, q,

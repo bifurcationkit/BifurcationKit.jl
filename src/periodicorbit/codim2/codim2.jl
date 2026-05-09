@@ -177,7 +177,7 @@ end
 for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialProblem)
     @eval begin
         function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
-            prob_po = pbwrap.prob
+            prob_po = get_discretization(pbwrap)
             𝐌𝐚 = get_formulation(getprob(iter))
             u = getx(state)
             p = getp(state)
@@ -194,7 +194,7 @@ function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDi
     u = getx(state)
     p = getp(state)
     po = getvec(u, 𝐌𝐚)
-    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = p); iter, state)
+    return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = p); iter, state)
 end
 
 # shooting functional
@@ -212,7 +212,7 @@ function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, ite
     newpar = set(newpar, lens2, p2)
 
     po = getvec(u, 𝐌𝐚)
-    return pbwrap.recordFromSolution(po, (prob = pbwrap.prob, p = newpar); iter, state)
+    return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = newpar); iter, state)
 end
 ####################################################################################################
 function continuation(br::AbstractResult{Tkind, Tprob},

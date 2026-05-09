@@ -60,7 +60,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `use_normal_form = true`. If `use_normal_form = true`, the normal form is computed as well as its predictor and a guess is automatically formed. If `use_normal_form = false`, the parameter value `p = p₀ + δp` and the guess `x = x₀ + ampfactor .* e` (where `e` is a vector of the kernel) are used as initial guess. This is useful in case automatic branch switching does not work.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - `scaleζ = norm` pass a norm to normalize vectors during normal form computation
-- `plot_solution` change plot solution method in the problem `br.prob`
+- `plot_solution` change plot solution method in the problem `getprob(br)`
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
 - `verbosedeflation` print deflated newton iterations
 - `max_iter_deflation` number of newton steps in deflated newton
@@ -94,7 +94,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       max_iter_deflation::Int = min(50, 15options_cont.newton_options.max_iterations),
                       perturb = identity,
 
-                      plot_solution = plot_solution(br.prob),
+                      plot_solution = plot_solution(getprob(br)),
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
                       kwargs...) where {Tprob, 𝒯eigvec}
@@ -136,7 +136,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
     Ty = typeof(ds)
 
     # compute the normal form of the bifurcation point
-    bp = get_normal_form1d(br.prob, br, ind_bif, Teigvec; 
+    bp = get_normal_form1d(getprob(br), br, ind_bif, Teigvec; 
                             nev,
                             verbose,
                             scaleζ,
@@ -173,7 +173,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
         verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
         optn = options_cont.newton_options
         # find the bifurcated branch using nonlinear deflation
-        solbif = newton(br.prob, 
+        solbif = newton(getprob(br), 
                         convert(Teigvec, pred.x0), 
                         pred.x1, 
                         setparam(br, pred.p), 
@@ -246,7 +246,7 @@ function multicontinuation(br::AbstractBranchResult,
 
                             verbosedeflation::Bool = false,
 
-                            plot_solution = plot_solution(br.prob),
+                            plot_solution = plot_solution(getprob(br)),
                             kwargs...) where {𝒯eigvec}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -274,7 +274,7 @@ function multicontinuation(br::AbstractBranchResult,
                            δp = nothing,
                            ampfactor = 1,
                            perturb = identity,
-                           plot_solution = plot_solution(br.prob),
+                           plot_solution = plot_solution(getprob(br)),
                            kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
@@ -412,7 +412,7 @@ function multicontinuation(br::AbstractBranchResult,
     dscont = abs(options_cont.ds)
     par = bpnf.params
     x0 = convert(𝒯eigvec, bpnf.x0)
-    prob = re_make(br.prob; plot_solution)
+    prob = re_make(getprob(br); plot_solution)
 
     # compute the different branches
     function _continue(_sol, _dp, _ds)
