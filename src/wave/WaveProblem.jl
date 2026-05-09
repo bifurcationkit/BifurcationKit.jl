@@ -65,7 +65,7 @@ TWModel(prob, ∂, u₀; kw...) = TWModel(prob, (∂,), u₀; kw...)
 
 function Base.show(io::IO, tw::TWModel)
     println(io, "┌─ Travelling wave functional")
-    println(io, "├─ type          : Vector{", eltype(tw.u₀), "}")
+    println(io, "├─ type          : Vector{", VI.scalartype(tw.u₀), "}")
     println(io, "├─ # constraints : ", tw.nc)
     println(io, "├─ lens          : ", get_lens_symbol(getlens(tw.prob_vf)))
     println(io, "├─ jacobian      : ", tw.jacobian)

@@ -778,7 +778,7 @@ end
 end
 
 # this function is called whenever the jacobian of G has to be updated
-function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(eltype(u0), 1e-9))
+function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.scalartype(u0), 1e-9))
     T = _extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE vcat!!

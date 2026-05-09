@@ -292,7 +292,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 end
 
 # out of place version
-(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, pars)
+(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(VI.scalartype(x), length(x), length(x)), x, pars)
 
 function residual!(pb::ShootingProblem, out, x, p)
     _copyto!(out, pb(x, p))

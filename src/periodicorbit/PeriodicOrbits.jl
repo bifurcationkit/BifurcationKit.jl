@@ -658,7 +658,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         end
 
         # find the bifurcated branch using deflation
-        deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
+        deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(VI.scalartype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
         solbif = newton(pbnew, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)

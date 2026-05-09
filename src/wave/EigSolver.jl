@@ -72,7 +72,7 @@ function (l::GEigArpack)(J, nev; kwargs...)
             error("The v0 argument must be provided in EigArpack for the matrix-free case")
         end
         N = length(l.kwargs[:v0])
-        T = eltype(l.kwargs[:v0])
+        T = VI.scalartype(l.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
         λ, ϕ, ncv, = Arpack.eigs(Jmap, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
     end

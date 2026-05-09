@@ -406,7 +406,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
     u0 = sol_ode(t0)
     @assert u0 isa AbstractVector
     N = length(u0)
-    𝒯 = eltype(u0)
+    𝒯 = VI.scalartype(u0)
 
     n, m, Ntst = size(pb)
     n_unknowns = N * (1 + m * Ntst)
@@ -420,7 +420,7 @@ function generate_ci_problem(pb::PeriodicOrbitOCollProblem,
                             ϕ  = zeros(𝒯, n_unknowns),
                             xπ = zeros(𝒯, n_unknowns),
                             ∂ϕ = zeros(𝒯, N, Ntst * m),
-                            cache = POCollCache(eltype(pb), Ntst, N, m, cache_In))
+                            cache = POCollCache(VI.scalartype(pb), Ntst, N, m, cache_In))
     
     # find best period candidate
     if optimal_period
@@ -452,8 +452,8 @@ $(TYPEDSIGNATURES)
 @views function ∫(coll::PeriodicOrbitOCollProblem, 
                     uc::AbstractMatrix, 
                     vc::AbstractMatrix,
-                    period = one(eltype(uc)))
-    𝒯y = promote_type(eltype(uc), eltype(vc)) 
+                    period = one(VI.scalartype(uc)))
+    𝒯y = promote_type(VI.scalartype(uc), VI.scalartype(vc)) 
     phase = zero(𝒯y)
 
     n, m, Ntst = size(coll)
@@ -482,7 +482,7 @@ end
 function ∫(coll::PeriodicOrbitOCollProblem,
             u::AbstractVector,
             v::AbstractVector,
-            period = one(eltype(u)))
+            period = one(VI.scalartype(u)))
     uc = get_time_slices(coll, u)
     vc = get_time_slices(coll, v)
     return ∫(coll, uc, vc, period)
@@ -502,7 +502,7 @@ function phase_condition(coll::PeriodicOrbitOCollProblem,
                         uc,
                         Ls,
                         period)
-    𝒯 = eltype(uc)
+    𝒯 = VI.scalartype(uc)
 
     puj = get_tmp(coll.cache.gj, uc) # zeros(𝒯, n, m)
     uj  = get_tmp(coll.cache.uj, uc)  #zeros(𝒯, n, m+1)
@@ -525,7 +525,7 @@ end
                                     (L, ∂L),
                                     (pu, _, pϕ, _),
                                     period)
-    𝒯 = eltype(uc)
+    𝒯 = VI.scalartype(uc)
     phase = zero(𝒯)
     n, m, Ntst = size(coll)
     ω = get_gauss_weight(coll)
@@ -708,7 +708,7 @@ end
 function analytical_jacobian(coll::PeriodicOrbitOCollProblem, 
                             u::AbstractArray, 
                             pars; 
-                            𝒯 = eltype(u), 
+                            𝒯 = VI.scalartype(u), 
                             k...)
     if coll.jacobian isa AbstractJacobianSparseMatrix
         return analytical_jacobian_sparse( 
@@ -737,7 +737,7 @@ end
 function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector,
                                 pars;
-                                𝒯 = eltype(u),
+                                𝒯 = VI.scalartype(u),
                                 array_zeros = zeros,
                                 kwargs...) 
     n, m, Ntst = size(coll)

@@ -102,7 +102,7 @@ function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
-function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(eltype(x), 1e-9), kwargs...)
+function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
     sol1 = _flow(x .+ δ .* dx, pars, tm, pb, alg; kwargs...).u
     sol2 = _flow(x           , pars, tm, pb, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
@@ -129,7 +129,7 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else

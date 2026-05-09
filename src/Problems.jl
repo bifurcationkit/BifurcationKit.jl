@@ -152,13 +152,13 @@ dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx) #vpj change name!!
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx) # 🚧🚧 TODO call it jvp ! 🚧🚧
 
 function dF(pb::BifFunction{Tf, TFinp, Nothing}, x, p, dx) where {Tf, TFinp}
-    ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(eltype(dx)))
+    ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(VI.scalartype(dx)))
 end
 #####
 d2F(pb::BifFunction, x, p, dx1, dx2) = pb.d2F(x, p, dx1, dx2)
 
 function d2F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
-    ForwardDiff.derivative(t -> dF(pb, x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
+    ForwardDiff.derivative(t -> dF(pb, x .+ t .* dx2, p, dx1), zero(VI.scalartype(dx1)))
 end
 
 function d2Fc(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
@@ -172,9 +172,11 @@ end
 #####
 d3F(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3F(x, p, dx1, dx2, dx3)
 
-function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc,Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc}
-    ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
+function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc}
+    ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(VI.scalartype(dx1)))
 end
+#####
+
 #####
 
 
@@ -398,7 +400,7 @@ for (op, at) in (
                 end
                 Foop = if inplace || _isinplace(_F)
                     # promote_type useful for R01 and R11
-                    (x, p) -> _F(similar(x, promote_type(eltype(x), typeof(_get(p, new_lens)))), x, p)
+                    (x, p) -> _F(similar(x, promote_type(VI.scalartype(x), typeof(_get(p, new_lens)))), x, p)
                 else
                     _F
                 end
@@ -416,7 +418,7 @@ for (op, at) in (
                 end
 
                 # type unstable but simplifies the types a lot
-                jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
+                jet = isempty(kwargs_jet) ? nothing : Jet(;δ = delta, kwargs_jet...)
                 vf = BifFunction(Foop,
                                 Finp,
                                 jvp,

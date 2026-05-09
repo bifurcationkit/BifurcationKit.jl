@@ -42,7 +42,7 @@ function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, p
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
-    out = similar(dx, promote_type(eltype(dx), 𝒯))
+    out = similar(dx, promote_type(VI.scalartype(dx), 𝒯))
     outc = reshape(out, N, M)
 
     # jacobian of the flow
@@ -84,7 +84,7 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
-    out = similar(dx, promote_type(eltype(dx), 𝒯))
+    out = similar(dx, promote_type(VI.scalartype(dx), 𝒯))
     outc = reshape(out, N, M)
 
     # jacobian of the flow

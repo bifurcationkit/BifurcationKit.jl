@@ -114,7 +114,7 @@ Compute a jacobian by Finite Differences. Use the centered formula (f(x+δ) - f(
 function finite_differences(F, x::AbstractVector; δ = 1e-9)
     N = length(x)
     Nf = length(F(x))
-    J = zeros(eltype(x), Nf, N)
+    J = zeros(VI.scalartype(x), Nf, N)
     x1 = copy(x)
     @inbounds for i in eachindex(x)
         x1[i] += δ
