@@ -419,7 +419,7 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         a = rand(length(ζ))
         b = ζad
         b = rand(length(ζ))
-        𝒯 = eltype(a)
+        𝒯 = VI.scalartype(a)
         x0, parbif = get_bif_point_codim2(br, ind_bt)
         L = jacobian(prob_ma.prob_vf, x0, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯))

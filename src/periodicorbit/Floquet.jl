@@ -222,7 +222,7 @@ end
 # matrix based formulation of monodromy operator, not suitable for large systems
 # it is based on a matrix expression of the Jacobian of the shooting functional. We thus
 # just extract the blocks needed to compute the monodromy
-function MonodromyQaD(sh::PoincareShootingProblem, J, x, p)
+function MonodromyQaD(sh::PoincareShootingProblem, J::AbstractMatrix, x, p)
     T = eltype(J)
 
     M = get_mesh_size(sh)

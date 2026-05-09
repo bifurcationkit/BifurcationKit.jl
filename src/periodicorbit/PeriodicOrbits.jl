@@ -234,7 +234,7 @@ function newton(disc::AbstractPOShootingDiscretization,
                 orbitguess,
                 options::NewtonPar;
                 lens::OpticType = nothing,
-                δ = convert(eltype(orbitguess), 1e-8),
+                δ = getdelta(disc),
                 kwargs...)
     jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc); δ)
     probw = WrapPOSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)

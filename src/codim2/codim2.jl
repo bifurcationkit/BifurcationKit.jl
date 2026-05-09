@@ -57,7 +57,7 @@ for (op, at) in (
         linbdsolver::Sbd
         "linear bordered solver for the jacobian adjoint."
         linbdsolverAdjoint::Sbda
-        "whether to use the hessian of prob_vf."
+        "whether to use the hessian of `prob_vf`."
         usehessian::Bool
         "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I."
         massmatrix::Tmass
@@ -83,7 +83,7 @@ for (op, at) in (
                     linbdsolver = MatrixBLS();
                     linsolve_adjoint = linsolve,
                     usehessian = true,
-                    massmatrix = LinearAlgebra.I,
+                    massmatrix = LA.I,
                     linbdsolve_adjoint = linbdsolver,
                     _norm = norm,
                     update_minaug_every_step = 0)

@@ -80,6 +80,7 @@ end
 @inline issimple(sh::ShootingProblem) = get_mesh_size(sh) == 1
 @inline isparallel(sh::ShootingProblem) = sh.parallel
 @inline getlens(sh::ShootingProblem) = sh.lens
+@inline getdelta(sh::ShootingProblem) = getdelta(sh.flow)
 getparams(sh::ShootingProblem) = sh.par
 setparam(sh::ShootingProblem, p) = set(getparams(sh), getlens(sh), p)
 
@@ -191,7 +192,11 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 end
 
 # jacobian of the shooting functional
-@views function jvp(sh::ShootingProblem, x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
+@views function jvp(sh::ShootingProblem,
+                    x::AbstractVector,
+                    pars,
+                    dx::AbstractVector; 
+                    δ = getdelta(sh))
     # period of the cycle
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)

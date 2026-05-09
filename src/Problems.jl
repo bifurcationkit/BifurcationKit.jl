@@ -264,6 +264,7 @@ for (op, at) in (
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
+            - `getdelta(prob)`
 
             # Constructors
             - `$($op)(F, u0, params, lens)` all derivatives are computed using ForwardDiff.

@@ -474,21 +474,21 @@ cylic_potrap_sparse(trap::PeriodicOrbitTrapProblem, orbitguess0, par) = block_to
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using a Sparse representation.
 """
-function (pb::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9))
+function (trap::PeriodicOrbitTrapProblem)(::Val{:JacFullSparse}, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
     # extraction of various constants
-    M, N = size(pb)
-    T = _extract_period_fdtrap(pb, u0)
-    AγBlock = jacobian_potrap_block(pb, u0, par; γ)
+    M, N = size(trap)
+    T = _extract_period_fdtrap(trap, u0)
+    AγBlock = jacobian_potrap_block(trap, u0, par; γ)
 
     # we now set up the last line / column
-    @views ∂TGpo = (residual(pb, vcat(u0[begin:end-1], T + δ), par) .- residual(pb, u0, par)) ./ δ
+    @views ∂TGpo = (residual(trap, vcat(u0[begin:end-1], T + δ), par) .- residual(trap, u0, par)) ./ δ
 
     # this is "bad" for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
     @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
     Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, eachindex(pb.ϕ)] .= pb.ϕ
+    Aγ[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
     return Aγ
 end
@@ -496,7 +496,7 @@ end
 """
 This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
-@views function (trap::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1, δ = convert(eltype(u0), 1e-9)) where Tj
+@views function (trap::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
         M, N = size(trap)
         T = _extract_period_fdtrap(trap, u0)
 
@@ -547,7 +547,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         return J0
 end
 
-@views function (trap::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = convert(eltype(u0), 1e-9), updateborder::Bool = true)
+@views function (trap::PeriodicOrbitTrapProblem)(::Val{:JacFullSparseInplace}, J0, u0::AbstractVector, par, indx; γ = 1, δ = getdelta(trap), updateborder::Bool = true)
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
 
