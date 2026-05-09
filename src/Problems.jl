@@ -59,6 +59,9 @@ function _isinplace(f)
     return m == 3
 end
 
+_getprecision(::Type{T}) where T = sqrt(eps(T))
+_getprecision(x) = _getprecision(VI.scalartype(x))
+
 """
 $(TYPEDEF)
 
@@ -383,7 +386,7 @@ for (op, at) in (
                          issymmetric::Bool = false,
                          record_from_solution = record_sol_default,
                          plot_solution = plot_default,
-                         delta = convert(VI.scalartype(u0), sqrt(eps(VI.scalartype(u0)))),
+                         delta = _getprecision(u0),
                          save_solution = save_solution_default,
                          inplace = false,
                          update! = update_default,
