@@ -41,8 +41,8 @@ end
 
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
 # the ind is used to specify which part of the event is tested
-function is_event_crossed(eve::AbstractContinuousEvent, iter, state, ind = :)
-    if state.eventValue[1] isa Real
+function is_event_crossed(eve::AbstractEvent, iter, state, ind = :)
+    if state.eventValue[1] isa Number
         return test_event(eve, state.eventValue[1], state.eventValue[2])
     else
         for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
@@ -57,19 +57,6 @@ end
 # general condition for detecting a discrete event
 test_event(::AbstractDiscreteEvent, x, y) = x != y
 isonevent(::AbstractDiscreteEvent, x) = false
-
-function is_event_crossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
-    if state.eventValue[1] isa Integer
-        return test_event(eve, state.eventValue[1], state.eventValue[2])
-    else
-        for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-            if test_event(eve, u[1], u[2])
-                return true
-            end
-        end
-        return false
-    end
-end
 ####################################################################################################
 # for AbstractContinuousEvent and AbstractDiscreteEvent
 # return type when calling eve.fct(iter, state)
