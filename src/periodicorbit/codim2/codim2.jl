@@ -240,7 +240,7 @@ function _continuation(gh::Bautin,
                         nev::Int = _contParams.nev,
                         detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
-                        scaleζ = norm,
+                        normC = norm,
                         Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         record_from_solution = nothing,
@@ -294,26 +294,24 @@ function _continuation(gh::Bautin,
     # create fold point guess
     foldpointguess = BorderedArray(orbitguess, _get(newparams, lens1))
     
+    # TODO this does not work for matrix free or Shooting?
     # get the approximate null vectors
-    jacpo = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-    ls = DefaultLS()
+    L = jacobian(pbwrap, orbitguess, getparams(pbwrap))
+    L★ = transpose(L)
     nj = length(orbitguess)
-    p = rand(nj); q = rand(nj)
-    rhs = zero(orbitguess); #rhs[end] = 1
-    q, = bdlinsolver(jacpo,  p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
-    p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
+    a = randn(nj); b = randn(nj)
+    rhs = VI.zerovector(a); #rhs[end] = 1
+    newb, = bdlinsolver(L,  a, b, zero(𝒯), rhs, one(𝒯)) 
+    newa, = bdlinsolver(L★, b, a, zero(𝒯), rhs, one(𝒯))
 
-    q, = bdlinsolver(jacpo,  p, q, 0, rhs, 1); q ./= norm(q) #≈ ker(J)
-    p, = bdlinsolver(jacpo', q, p, 0, rhs, 1); p ./= norm(p)
+    ζad = newa; VI.scale!(ζad, 1 / normC(ζad))
+    ζ   = newb; VI.scale!(ζ,   1 / normC(ζ))
+    VI.scale!(ζad, 1 / VI.inner(ζ, ζad))
 
-    ~(sum(isnan, q) == 0) && error("Please report this error to the website.")
-
-    # perform continuation
     branch = continuation_fold(pbwrap, alg,
         foldpointguess, getparams(pbwrap),
         lens1, lens2,
-        # p, q,
-        q, p,
+        ζ, ζad,
         contParams;
         kind = FoldPeriodicOrbitCont(),
         kwargs...,

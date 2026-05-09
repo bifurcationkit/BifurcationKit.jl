@@ -137,7 +137,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     options_foldpo = options_cont
 
     # perform continuation
-    br_fold_po = continuation_fold(br.prob,
+    br_fold_po = continuation_fold(getprob(br),
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen,

@@ -633,14 +633,16 @@ for op in (
         """
         $(TYPEDEF)
 
-        Structure to hold the record functions for chained bifurcation problems.
+        [Internal] Structure to hold the record functions for chained bifurcation problems.
 
-        ## Fields
+        ## Internal fields
 
         $(TYPEDFIELDS)
         """
         struct $op{T1, T2}
+            "User passed record function for the vector field as a kwargs say for periodic orbits computation from a Hopf bifurcation point."
             user_record_from_solution::T1
+            "Initial (upper most) record solution, ussually associated with a BifurcationProblem."
             vf_record_from_solution::T2
         end
         (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)

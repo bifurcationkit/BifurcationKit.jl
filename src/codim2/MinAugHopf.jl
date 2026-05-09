@@ -14,6 +14,8 @@ function hopf_point(br::AbstractBranchResult, index::Int)
 end
 ###################################################################################################
 # this function encodes the functional
+hopf_ma_test(𝐇, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = 𝐇.linbdsolver(J, a, b, J22, _zero, n; shift = Complex{𝒯}(0, -ω))
+
 function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
     # Hopf bifurcation point
@@ -34,7 +36,8 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
-    _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    J = jacobian(𝐇.prob_vf, x, par)
+    _, σ1, cv, = hopf_ma_test(𝐇, J, a, b, zero(𝒯), 𝐇.zero, one(𝒯), ω)
     ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end

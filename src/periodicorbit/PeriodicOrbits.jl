@@ -489,7 +489,6 @@ function _continuation(hopfpt::Hopf,
     return Branch(branch, hopfpt)
 end
 ####################################################################################################
-# branch switching from bifurcations of equilibria from curve of Hopf bifurcations
 """
 $(TYPEDSIGNATURES)
 

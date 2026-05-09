@@ -31,8 +31,6 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
     end
 end
 ####################################################################################################
-pdtest(JacPD, v, w, J22, _zero, n, lsbd = MatrixBLS()) = lsbd(JacPD, v, w, J22, _zero, n)
-
 # this function encodes the functional
 function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Period-Doubling bifurcation point
@@ -55,7 +53,7 @@ function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, par
     # update parameter
     par = set(params, getlens(𝐏𝐝), p)
     J = jacobian_period_doubling(𝐏𝐝.prob_vf, x, par)
-    _, σ, cv, = pdtest(J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
+    _, σ, cv, = test_ma(𝐏𝐝, J, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
     ~cv && @debug "[PD residual] Linear solver for J+I did not converge."
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end

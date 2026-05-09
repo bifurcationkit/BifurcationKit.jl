@@ -167,6 +167,8 @@ function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     return MASolution(x_ma, p1)
 end
 ################################################################################
+test_ma(::AbstractMinimallyAugmentedFormulation_Fold_PD ,Jac, v, w, J22, _zero, n, lsbd) = lsbd(Jac, v, w, J22, _zero, n)
+################################################################################
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
 ################################################################################
@@ -250,7 +252,7 @@ end
 
 function Base.show(io::IO, 𝐏𝐛::AbstractMABifurcationProblem; prefix = "")
     color = :cyan; bold = true
-    print(io, prefix * "┌─ Problem for bif. points continuation with uType ")
+    print(io, prefix * "┌─ MA Problem for bif. points continuation with uType ")
     printstyled(io, _getvectortype(𝐏𝐛); color, bold)
     print(io, "\n" * prefix * "├─ Inplace:  ")
     printstyled(io, isinplace(𝐏𝐛); color, bold)
@@ -264,8 +266,8 @@ end
 
 function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob}; prefix = "") where {Tprob}
     color = :cyan; bold = true
-    print(io, prefix * "┌─ Minimally Augmented Problem continuation")
-    print(io, "\n" * prefix * "├─ update problem every step:  ", 𝐌𝐚.update_minaug_every_step)
+    print(io, prefix * "┌─ Minimally Augmented formulation")
+    print(io, "\n" * prefix * "├─ update formulation every step:  ", 𝐌𝐚.update_minaug_every_step)
     print(io, "\n" * prefix * "├─ use hessian:  ")
     printstyled(io, 𝐌𝐚.usehessian; color, bold)
     print(io, "\n" * prefix * "├─ linear solver:  ")

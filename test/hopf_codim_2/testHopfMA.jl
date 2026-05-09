@@ -107,31 +107,32 @@ let
     Jac_hopf_MA(u0, p, pb::BK.HopfMinimallyAugmentedFormulation) = (return (x = u0, params = p, pbma = pb))
 
     rhs = rand(length(hopfpt))
-    jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
-    sol_fd = jac_hopf_fd \ rhs
+    jac_hopf_fwdf = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
+    sol_fd = jac_hopf_fwdf \ rhs
     BK.get_frequency(rhs, 𝐇)
 
     # test against analytical jacobian
     𝐏𝐛 = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
     J_ana = BK.jacobian(𝐏𝐛, Bd2Vec(hopfpt), par_bru)
-    @test norminf(J_ana - jac_hopf_fd) ≈ 0 atol = 1e-3
+    @test norminf(J_ana[1:end-2,1:end-2] - jac_hopf_fwdf[1:end-2,1:end-2]) == 0
+    @test norminf(J_ana - jac_hopf_fwdf) ≈ 0 atol = 1e-3
 
     # create a linear solver
     hopfls = BK.HopfLinearSolverMinAug()
     sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, 𝐇), BorderedArray(rhs[1:end-2],rhs[end-1:end]))
 
     # we test the expression for σp
-    σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end, end-1])
+    σp_fd = Complex(jac_hopf_fwdf[end-1,end-1], jac_hopf_fwdf[end, end-1])
     σp_fd_ana = Complex(J_ana[end-1,end-1], J_ana[end, end-1])
     @test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
     # we test the expression for σω
-    σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end, end])
+    σω_fd = Complex(jac_hopf_fwdf[end-1,end], jac_hopf_fwdf[end, end])
     σω_fd_ana = Complex(J_ana[end-1,end], J_ana[end, end])
     @test σω_fd ≈ σω_fd_ana rtol = 1e-4
 
     # we test the expression for σx
-    σx_fd = jac_hopf_fd[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fd[end, 1:end-2]
+    σx_fd = jac_hopf_fwdf[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fwdf[end, 1:end-2]
     σx_fd_ana = J_ana[end-1, 1:end-2] + Complex(0,1) * J_ana[end, 1:end-2]
     @test σx_fd ≈ σx_fd_ana rtol = 1e-3
 

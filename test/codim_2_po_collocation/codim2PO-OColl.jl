@@ -141,6 +141,9 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
     end
 end
 ################################################################################
+# test of the implementation of the jacobian for the Fold case
+
+################################################################################
 # test of the implementation of the jacobian for the PD case
 
 pd_po_coll2 = continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
@@ -176,7 +179,7 @@ _solfd = _Jpdad \ vcat(_duu, 1)
 _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
 J_pd_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1), _param)
 @test norminf(_Jpdad - J_pd_mat) < 1e-7
-#########
+################################################################################
 # test of the implementation of the jacobian for the NS case
 ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         verbosity = 0, plot = false,

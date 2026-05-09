@@ -219,13 +219,12 @@ function detect_loop(br::ContResult, x, p::T; rtol = convert(T, 1e-3), verbose::
                     ", |δp| = ", abs(bp.param - p)::T,
                     " \n")
         if (norminf(minus(bp.x, x)) / norminf(_getsolution(x)) < rtol) && isapprox(bp.param, p; rtol)
-            out = true
             printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
-            break
+            return true
         end
     end
-    printstyled(color = :magenta, "    └─ Loop detected = $out\n")
-    return out
+    printstyled(color = :magenta, "    └─ Loop detected = false\n")
+    return false
 end
 detect_loop(br::ContResult, u; kwargs...) = detect_loop(br, u.x, u.param; kwargs...)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)

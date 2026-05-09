@@ -42,12 +42,11 @@ let
         BK.getparams(outfoldco, 1)
     end
 
-    # test of Jacobian expression
-    # manual handling
+    # test of jacobian expression
     indfold = 1
     foldpt = BK.fold_point(br, indfold)
     foldpb = BK.FoldMinimallyAugmentedFormulation(
-                    (@set prob.VF.d2F = nothing), # this is for debug array
+                    (@set prob.VF.d2F = nothing),
                     br.specialpoint[indfold].x,
                     br.specialpoint[indfold].x,
                     opts_br0.newton_options.linsolver)
@@ -77,7 +76,7 @@ let
     J_ana = BK.jacobian(𝐏𝐛, Bd2Vec(foldpt), par_chan)
     @assert J_ana isa Matrix
 
-    # test whether the Jacobian Matrix for the Fold problem is correct
+    # test that the jacobian Matrix for the Fold problem is correct
     @test norminf(J_ana[1:end-1, 1:end-1] - J_fold_fwdiff[1:end-1, 1:end-1]) == 0
     @test norminf(J_ana - J_fold_fwdiff) < 1e-5
 

@@ -32,7 +32,7 @@ function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where �
     # update parameter
     par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
-    _, σ, cv, = 𝐅.linbdsolver(J, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
+    _, σ, cv, = test_ma(𝐅, J, a, b, zero(𝒯), 𝐅.zero, one(𝒯), 𝐅.linbdsolver)
     ~cv && @debug "[Fold residual] Linear solver for J did not converge."
     return residual(𝐅.prob_vf, x, par), σ
 end
@@ -407,6 +407,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
             update_minaug_every_step)
 
     # jacobians for the Fold problem
+    # TODO change the name RecordForFold
     record_fold = RecordForFold(record_from_solution, BifurcationKit.record_from_solution(prob))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
@@ -471,7 +472,7 @@ function continuation_fold(prob,
                 kwargs...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / norm(ζ))
+    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
 
     p = bifpt.param
     parbif = setparam(br, p)

@@ -313,10 +313,10 @@ get_Ls(coll::PeriodicOrbitOCollProblem) = get_Ls(coll.mesh_cache)
 @inline setparam(coll::PeriodicOrbitOCollProblem, p) = setparam(coll.prob_vf, p)
 
 @inline getperiod(::PeriodicOrbitOCollProblem, x, par = nothing) = x[end]
-getperiod(coll::PeriodicOrbitOCollProblem, x::POSolutionAndState, par = nothing) = getperiod(coll, x.sol, par)
+@inline getperiod(coll::PeriodicOrbitOCollProblem, x::POSolutionAndState, par = nothing) = getperiod(coll, x.sol, par)
 
 # these functions extract the time slices components
-get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
+@inline get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
 """
 $(TYPEDSIGNATURES)
 
@@ -911,7 +911,7 @@ Function needed for automatic branch switching from a Hopf bifurcation point.
 """
 function re_make(coll::PeriodicOrbitOCollProblem,
                  prob_vf,
-                 hopfpt,
+                 ::AbstractBifurcationPoint,
                  ζr::AbstractVector,
                  orbitguess_a,
                  period; 

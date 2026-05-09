@@ -22,7 +22,7 @@ let
 
     prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ); J = Jbp)
     br = continuation(prob, PALC(), opts_br; normC = norminf)
-    BK.plot(br)
+    plot(br)
 
     @test br.specialpoint[1].interval[1] < 0
     @test br.specialpoint[1].interval[2] > 0
@@ -85,7 +85,7 @@ let
     BK._getfirstusertype(br2)
     @test length(br2) == 12
     get_normal_form(br2, 1)
-    BK.plot(br_noev, br2)
+    plot(br_noev, br2)
 
     br3 = continuation(br_noev, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
     @test isnothing(BK.multicontinuation(br_noev, 1))
@@ -97,7 +97,7 @@ let
         ContinuationPar(opts_br; p_min = -.2, p_max = .2, ds = 0.01, newton_options = NewtonPar(tol = 1e-12), max_steps = 15);
         normC = norminf)
 
-    BK.plot(bdiag)
+    plot(bdiag)
 
     # same from the non-trivial branch
     prob = BK.ODEBifProblem(Fbp, [-0.5, 0.], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 1.0, γ = 0), (@optic _.μ))
@@ -109,7 +109,7 @@ let
     @test nf.b20/2 ≈ -prob.params.x2   atol = 1e-6
     @test nf.b30/6 ≈  prob.params.x3   atol = 1e-10
     br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
-    BK.plot(br, br2)
+    plot(br, br2)
 end
 ####################################################################################################
 # Case of the pitchfork like
@@ -136,7 +136,7 @@ let
 
     # test automatic branch switching
     br2 = continuation(brp, 1, ContinuationPar(opts_br; max_steps = 19, dsmax = 0.01, ds = 0.001, detect_bifurcation = 2))
-    BK.plot(brp, br2)
+    plot(brp, br2)
 
     # test methods for aBS
     BK.from(br2) |> BK.type
@@ -152,7 +152,7 @@ let
     BK.getalg(bdiag)
     BK.get_solution(bdiag, 1)
     bdiag[1]
-    BK.plot(bdiag)
+    plot(bdiag)
 end
 ####################################################################################################
 # Automatic branch switching, degenerate case. The quadratic parameter makes it difficult for aBS 
@@ -290,7 +290,7 @@ let
     br_snd1 = BK.continuation(prob, PALC(),
         ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation=3); normC = norminf)
 
-    BK.plot(br_snd1)
+    plot(br_snd1)
 
     br_snd2 = BK.continuation(
         br_snd1, 1,
@@ -299,7 +299,7 @@ let
         #     (Base.display(contResult.eig[end].eigenvals) ;true)
         )
 
-    BK.plot(br_snd1, br_snd2)
+    plot(br_snd1, br_snd2)
 
     bdiag = bifurcationdiagram(prob, PALC(), 2,
         ContinuationPar(opts_br; p_min = -1.0, p_max = .3, ds = 0.001, dsmax = 0.005, n_inversion = 8, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
@@ -491,7 +491,7 @@ let
         @test sn_codim2.specialpoint[1].type == :bt
         @test sn_codim2.specialpoint[1].param ≈ 0 atol = 1e-6
         @test length(unique(sn_codim2.BT)) == length(sn_codim2)
-        BK.plot(sn_codim2)
+        plot(sn_codim2)
 
         hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
             detect_codim2_bifurcation = 2,
