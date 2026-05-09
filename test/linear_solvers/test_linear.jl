@@ -54,17 +54,17 @@ let
     _o = rand(ComplexF64, size(J0, 1))
     a₀ = rand(ComplexF64)
     a₁ = -1.432
-    BK._axpy(J0, 0, a₁)
-    BK._axpy(J0, 1, 1)
+    BK._axpy(J0, BK.VI.Zero(), a₁)
+    BK._axpy(J0, BK.VI.One(), BK.VI.One())
     out1 = BK._axpy_op(J0, dx, a₀, a₁)
     out2 = a₀ * dx + a₁ * J0 * dx
     @test out1 ≈ out2
     @test a₀ * I + a₁ * J0 ≈ BK._axpy(J0, a₀, a₁)
     BK._axpy_op!(_o, J0, dx, a₀, a₁)
-    BK._axpy_op!(_o, J0, dx, 0, 1)
-    BK._axpy_op!(_o, J0, dx, 0, a₁)
-    BK._axpy_op!(_o, J0, dx, 1, 1)
-    BK._axpy_op!(_o, J0, dx, 1, a₁)
+    BK._axpy_op!(_o, J0, dx, BK.VI.Zero(), BK.VI.One())
+    BK._axpy_op!(_o, J0, dx, BK.VI.Zero(), a₁)
+    BK._axpy_op!(_o, J0, dx, BK.VI.One(), BK.VI.One())
+    BK._axpy_op!(_o, J0, dx, BK.VI.One(), a₁)
 end
 ####################################################################################################
 # test of MatrixFreeBLSmap
@@ -513,16 +513,17 @@ let
     @test out[1] ≈ outkk[1] rtol = 1e-7
     outkk = ls(Jmf, x0)
     @test out[1] ≈ outkk[1]
-    outkk = ls(Jmf, x0; a₀ = 0., a₁ = 1.)
-    outkk = ls(Jmf, x0; a₀ = 0., a₁ = 1.5)
-    outkk = ls(Jmf, x0; a₀ = 1., a₁ = 1.)
-    outkk = ls(Jmf, x0; a₀ = 1., a₁ = 1.5)
+    outkk = ls(Jmf, x0; a₀ = BK.VI.Zero(), a₁ = BK.VI.One())
+    outkk = ls(Jmf, x0; a₀ = BK.VI.Zero(), a₁ = 1.5)
+    outkk = ls(Jmf, x0; a₀ = BK.VI.One(), a₁ = BK.VI.One())
+    outkk = ls(Jmf, x0; a₀ = BK.VI.One(), a₁ = 1.5)
     outkk = ls(Jmf, x0; a₀ = 0.5, a₁ = 1.5)
 
     # test preconditioner
     Pl = lu(J0*0.9)
-    ls = GMRESKrylovKit(rtol = 1e-9, dim = 100, Pl = Pl)
+    ls = GMRESKrylovKit(;rtol = 1e-9, dim = 100, Pl)
     outkk = ls(J0, x0)
+    @test outkk[2]
     @test out[1] ≈ outkk[1]
     outkk = ls(Jmf, x0)
     @test out[1] ≈ outkk[1]
@@ -531,10 +532,10 @@ let
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9)
     outit = ls(J0, x0)
     @test out[1] ≈ outit[1]
-    outkk = ls(J0, x0; a₀ = 0., a₁ = 1.)
-    outit = ls(J0, x0; a₀ = 0., a₁ = 1.5)
-    outit = ls(J0, x0; a₀ = 1., a₁ = 1.)
-    outit = ls(J0, x0; a₀ = 1., a₁ = 1.5)
+    outkk = ls(J0, x0; a₀ = BK.VI.Zero(), a₁ = BK.VI.One())
+    outit = ls(J0, x0; a₀ = BK.VI.Zero(), a₁ = 1.5)
+    outit = ls(J0, x0; a₀ = BK.VI.One(), a₁ = BK.VI.One())
+    outit = ls(J0, x0; a₀ = BK.VI.One(), a₁ = 1.5)
     outit = ls(J0, x0; a₀ = 0.5, a₁ = 1.5)
 
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9, ismutating = true)
