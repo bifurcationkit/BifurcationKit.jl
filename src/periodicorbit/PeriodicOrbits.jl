@@ -33,7 +33,6 @@ _set_params_in_po(pb::AbstractPOShootingDiscretization, pars) = (@set pb.par = p
 get_periodic_orbit(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
 get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 
-@inline getdelta(prob::PeriodicOrbitFunctionalSh) = getdelta(get_discretization(prob).flow)
 @inline has_hessian(::PeriodicOrbitFunctionalSh) = true
 
 Base.size(pb::AbstractPOFiniteDifferencesDiscretization) = (pb.M, pb.N)
@@ -288,7 +287,7 @@ function continuation(discPO::AbstractPOShootingDiscretization,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
                         linear_algo::AbstractBorderedLinearSolver;
-                        δ = convert(VI.scalartype(orbitguess), 1e-8),
+                        δ = convert(VI.scalartype(orbitguess), getdelta(discPO)),
                         eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
                         record_from_solution = nothing,
                         plot_solution = nothing,
@@ -589,6 +588,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `use_normal_form = true` if `false`, the predictor is based on the couple `δp, ampfactor`.
 
 ## For normal form
 - `detailed = false` whether to fully compute the normal form or a very simplified version.
@@ -633,7 +633,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n├─ Bifurcation type = ", bifpt.type,
             "\n├─── normal form    = ", use_normal_form ? "based on $(detailed_type ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
-            "\n├─── period at bif. = ", getperiod(getprob(br).prob, bifpt.x, setparam(br, bifpt.param)),
+            "\n├─── period at bif. = ", getperiod(getprob(br), bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, 
             "\n├─── p - p0         = ", newp - bifpt.param,
             "\n├─── amplitude p.o. = ", pred.ampfactor,

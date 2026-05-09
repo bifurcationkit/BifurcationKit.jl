@@ -170,7 +170,7 @@ const _pocoll_jacobian_types = (AutoDiffDense(),
 """
 $(TYPEDEF)
 
-This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits. More details (maths, notations, linear systems) can be found [online](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
+This composite type implements an orthogonal collocation (at Gauss points) method of piecewise polynomials to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [online](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitCollocation/).
 
 # Internal fields
 
@@ -344,7 +344,7 @@ update_mesh!(coll::PeriodicOrbitOCollProblem, mesh) = update_mesh!(coll.mesh_cac
 
 function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     N, m, Ntst = size(coll)
-    println(io, "┌─ Collocation functional for periodic orbits")
+    println(io, "┌─ Collocation method for periodic orbits (PO) / bvp")
     println(io, "├─ type               : Vector{", eltype(coll), "}")
     println(io, "├─ time slices (Ntst) : ", Ntst)
     println(io, "├─ degree      (m)    : ", m)
@@ -355,7 +355,7 @@ function Base.show(io::IO, coll::PeriodicOrbitOCollProblem)
     if meshadapt(coll)
         println(io, "├───── K              : ", coll.K)
     end
-    println(io, "└─ # unknowns (without phase condition) : ", coll.N * (1 + m * Ntst))
+    println(io, "└─ # unknowns (without phase condition for PO) : ", coll.N * (1 + m * Ntst))
 end
 
 """
@@ -823,7 +823,7 @@ end
                                         ρD = one(𝒯),
                                         ρF = one(𝒯),
                                         ρI = zero(𝒯),
-                                        δ = convert(𝒯, 1e-9), 
+                                        δ = convert(𝒯, getdelta(coll)), 
                                         updateborder = true) where {𝒯, TransposeBool}
     n, m, Ntst = size(coll)
     @assert size(indx, 1) == 1 + m * Ntst + 1
@@ -941,7 +941,6 @@ end
 ##########################
 # problem wrappers
 @inline is_symmetric(wrap::PeriodicOrbitFunctionalColl) = is_symmetric(get_discretization(wrap))
-@inline getdelta(wrap::PeriodicOrbitFunctionalColl) = getdelta(get_discretization(wrap))
 @inline has_adjoint(::PeriodicOrbitFunctionalColl) = false # it is in problems.jl
 
 # for recording the solution in a branch
@@ -1074,7 +1073,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar,
                     linear_algo::AbstractBorderedLinearSolver;
-                    δ = convert(VI.scalartype(orbitguess), 1e-8),
+                    δ = convert(VI.scalartype(orbitguess), getdelta(coll)),
                     eigsolver = FloquetColl(),
                     record_from_solution = nothing,
                     plot_solution = nothing,

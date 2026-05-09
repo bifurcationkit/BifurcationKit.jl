@@ -36,23 +36,23 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.; use_adapted_mesh = true)
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.)
+coll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.; use_adapted_mesh = true)
+coll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.)
 
-solpo = newton(probcoll, ci, NewtonPar(verbose = false))
+solpo = newton(coll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
-_sol = BK.get_periodic_orbit(probcoll, solpo.u, 1)
+_sol = BK.get_periodic_orbit(coll, solpo.u, 1)
 
 opts_po_cont = setproperties(opts_br, max_steps = 40, save_eigenvectors = true, tol_stability = 1e-8)
 @reset opts_po_cont.newton_options.verbose = false
-brpo_fold = continuation(probcoll, deepcopy(ci), PALC(), opts_po_cont;
+brpo_fold = continuation(coll, deepcopy(ci), PALC(), opts_po_cont;
     verbosity = 0, plot = false,
     argspo...
     )
 # pt = get_normal_form(brpo_fold, 1)
 
-prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
-brpo_pd = continuation(prob2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
+coll2 = @set coll.prob_vf = BK.re_make(prob, lens = @optic _.ϵ)
+brpo_pd = continuation(coll2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 0, plot = false,
     argspo...
     )
@@ -62,7 +62,7 @@ get_normal_form(brpo_pd, 1, prm = Val(true))
 get_normal_form(brpo_pd, 1, prm = Val(false))
 ################################################################################
 # codim 2 Fold
-opts_pocoll_fold = ContinuationPar(brpo_fold.contparams, detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
+opts_pocoll_fold = ContinuationPar(BK.getcontparams(brpo_fold), detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
 @reset opts_pocoll_fold.newton_options.tol = 1e-12
 
 for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false)
@@ -79,7 +79,7 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false)
 end
 
 # codim 2 PD
-opts_pocoll_pd = ContinuationPar(brpo_pd.contparams, detect_bifurcation = 3, max_steps = 20, p_min = -1., dsmax = 1e-2, ds = 1e-3)
+opts_pocoll_pd = ContinuationPar(BK.getcontparams(brpo_pd), detect_bifurcation = 3, max_steps = 20, p_min = -1., dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-12
 
 for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
@@ -115,7 +115,7 @@ get_normal_form(brpo_ns, 1; prm = Val(true))
 # compute NS normal form using Iooss method
 get_normal_form(brpo_ns, 1; prm = Val(false))
 
-opts_pocoll_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
+opts_pocoll_ns = ContinuationPar(BK.getcontparams(brpo_ns), detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
 for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
     opts_pocoll_ns2 = @set opts_pocoll_ns.detect_bifurcation = 2

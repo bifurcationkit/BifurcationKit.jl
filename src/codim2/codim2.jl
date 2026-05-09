@@ -174,7 +174,7 @@ residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, �
 ################################################################################
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> residual(𝐏𝐛, z, p), x)
 
-jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = 1e-8) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
+jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = getdelta(𝐏𝐛)) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (residual(𝐏𝐛, x .+ 1e-8 .* dx, p) .- residual(𝐏𝐛, x .- 1e-8 .* dx, p)) ./ (2e-8)
 

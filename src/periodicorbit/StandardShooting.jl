@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
+Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
@@ -90,7 +90,7 @@ _getindex(v::VI.MinimalVec, i) = v.vec[i]
 
 function Base.show(io::IO, sh::ShootingProblem)
     color = :cyan; bold = true
-    println(io, "┌─ Standard shooting functional for periodic orbits")
+    println(io, "┌─ Standard shooting method for periodic orbits (PO) / bvp")
     print(io, "├─ time slices    : ")
     printstyled(io, get_mesh_size(sh), "\n"; color, bold)
 
@@ -232,7 +232,7 @@ end
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), 1e-8))
+function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), getdelta(sh)))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)

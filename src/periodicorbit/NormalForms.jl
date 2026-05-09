@@ -329,7 +329,7 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                 bp0::BranchPoint,
                                 optn::NewtonPar;
                                 nev::Int = 3,
-                                δ = 1e-7,
+                                δ = getdelta(pbwrap),
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 autodiff = false,
@@ -496,7 +496,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
                                 nev::Int = 3,
                                 verbose = false,
                                 lens = getlens(pbwrap),
-                                δ = 1e-9,
+                                δ = getdelta(pbwrap),
                                 autodiff = false,
                                 kwargs_nf...)
     sh = get_discretization(pbwrap)
@@ -600,15 +600,16 @@ function period_doubling_normal_form_iooss(pbwrap,
     # identity matrix for collocation problem
     Icoll = I(coll, _getsolution(pd.x0), par)
 
-    F(u, p) = residual(coll.prob_vf, u, p)
-    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), get(par, lens))
-    dₚF(u, p) = (residual(coll.prob_vf, u, set(p, lens, p₀ + δ)) .- 
-                 residual(coll.prob_vf, u, set(p, lens, p₀ - δ))) ./ (2δ)
-    A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
-    F11(u, p, du) = (A(u, set(p, lens, p₀ + δ), du) .- 
-                     A(u, set(p, lens, p₀ - δ), du)) ./ (2δ)
-    B(u, p, du1, du2)      = d2F(coll.prob_vf, u, p, du1, du2)
-    C(u, p, du1, du2, du3) = d3F(coll.prob_vf, u, p, du1, du2, du3)
+    F(u, pars) = residual(coll.prob_vf, u, pars)
+    # TODO: use R01
+    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), p₀)
+    dₚF(u, pars) = (residual(coll.prob_vf, u, set(pars, lens, p₀ + δ)) .- 
+                    residual(coll.prob_vf, u, set(pars, lens, p₀ - δ))) ./ (2δ)
+    A(u, pars, du) = dF(coll.prob_vf, u, pars, du)#apply(jacobian(coll.prob_vf, u, pars), du)
+    R11(u, pars, du) = (A(u, set(pars, lens, p₀ + δ), du) .- 
+                        A(u, set(pars, lens, p₀ - δ), du)) ./ (2δ)
+    B(u, pars, du1, du2)      = d2F(coll.prob_vf, u, pars, du1, du2)
+    C(u, pars, du1, du2, du3) = d3F(coll.prob_vf, u, pars, du1, du2, du3)
 
     _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)  # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
@@ -665,7 +666,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     v₁★ₛ = get_time_slices(coll, vcat(v₁★, 1))
 
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1/2
-    @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
+    @assert ∫(v₁ₛ, v₁ₛ)  ≈ 1
 
     # if we just want the eigenvectors
     if ~detailed_type
@@ -785,11 +786,11 @@ function period_doubling_normal_form_iooss(pbwrap,
     h₀₁ₛ = get_time_slices(coll, h₀₁)
 
     # computation of c₁₁
-    #                   < w★, -B(t,h01,w) - F11*w + c11*w + a01*wdot > = 0
+    #                   < w★, -B(t,h01,w) - R11*w + c11*w + a01*wdot > = 0
     # hence:
-    #                   c11 = < w★, B(t,h01,w) + F11*w + c11*w - a01*wdot >
+    #                   c11 = < w★, B(t,h01,w) + R11*w + c11*w - a01*wdot >
     for i = 1:size(u₀ₛ, 2)
-        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ F11(u₀ₛ[:, i], par, v₁★ₛ[:, i])
+        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ R11(u₀ₛ[:, i], par, v₁★ₛ[:, i])
     end
 
     c₁₁ = ∫(v₁★ₛ, rhsₛ) - a₀₁ * ∫(v₁★ₛ, Aₛ)
@@ -811,7 +812,7 @@ function period_doubling_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                     pd0::PeriodDoubling,
                                     optn::NewtonPar;
                                     nev::Int = 3,
-                                    δ = 1e-7,
+                                    δ = getdelta(pbwrap),
                                     verbose = false,
                                     detailed::Val{detailed_type} = Val(true),
                                     lens = getlens(pbwrap),
@@ -953,7 +954,7 @@ function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                     ns0::NeimarkSacker,
                                     optn::NewtonPar;
                                     nev::Int = 3,
-                                    δ = 1e-7,
+                                    δ = getdelta(pbwrap),
                                     verbose = false,
                                     lens = getlens(pbwrap),
                                     kwargs_nf...)

@@ -30,7 +30,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
 end
 
 has_monodromy_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
-getdelta(fl::FlowDE) = fl.delta
+@inline getdelta(fl::FlowDE) = fl.delta
 ####################################################################################################
 # constructors
 """
@@ -129,7 +129,7 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -160,7 +160,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, pars, t
     _flow(x, pars, tm, fl.odeprob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
+function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -172,6 +172,6 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx,
     dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
+function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
     dflow_fdSerial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end

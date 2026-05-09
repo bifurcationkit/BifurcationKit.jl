@@ -162,7 +162,7 @@ residual(pb::TWModel, x::AbstractVector, pars) = residual!(pb, similar(x), x, pa
 end
 
 # build the sparse jacobian of the freezed problem
-function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 1e-9)
+function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = getdelta(pb))
     # number of constraints
     nc = nb_constraints(pb)
     # number of unknowns
@@ -190,7 +190,6 @@ jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
-@inline getdelta(::WrapTW) = 1e-8
 dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(get_discretization(tw) .+ t .* dx1, p), 0)
 d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0)
@@ -213,7 +212,7 @@ end
 function newton(tw::TWModel, 
                 orbitguess, 
                 optn::NewtonPar; 
-                δ = convert(VI.scalartype(orbitguess), 1e-8),
+                δ = convert(VI.scalartype(orbitguess), getdelta(tw)),
                 kwargs...)
     jacobianTW = tw.jacobian
     jac = _generate_jacobian(tw, jacobianTW, orbitguess, getparams(tw); δ)
@@ -237,7 +236,7 @@ function continuation(prob::TWModel,
                     contParams::ContinuationPar;
                     record_from_solution = nothing,
                     plot_solution = plot_solution(prob.prob_vf),
-                    δ = convert(VI.scalartype(orbitguess), 1e-8),
+                    δ = convert(VI.scalartype(orbitguess), getdelta(prob)),
                     kwargs...)
     jacobianTW = prob.jacobian
     @assert jacobianTW in (MatrixFree(), AutoDiffMF(), AutoDiff(), FullLU(), FiniteDifferences())

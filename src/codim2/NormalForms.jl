@@ -15,7 +15,7 @@ Compute the Cusp normal form.
 function cusp_normal_form(_prob,
                             br::AbstractBranchResult, ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            δ = 1e-8,
+                            δ = getdelta(_prob),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
@@ -136,7 +136,7 @@ Compute the Bogdanov-Takens normal form.
 """
 function bogdanov_takens_normal_form(𝐌𝐚, L,
                                     pt::BogdanovTakens;
-                                    δ = 1e-8,
+                                    δ = getdelta(𝐌𝐚),
                                     verbose = false,
                                     detailed::Val{detailed_type} = Val(true),
                                     autodiff = true,
@@ -504,7 +504,7 @@ Compute the Bogdanov-Takens normal form.
 function bogdanov_takens_normal_form(_prob,
                                     br::AbstractBranchResult, ind_bif::Int,
                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                    δ = 1e-8,
+                                    δ = getdelta(_prob),
                                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
                                     ζs = nothing,
@@ -633,7 +633,7 @@ end
 function bautin_normal_form(_prob::HopfMAProblem,
                             br::AbstractBranchResult, ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            δ = 1e-8,
+                            δ = getdelta(_prob),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
@@ -946,7 +946,7 @@ end
 function zero_hopf_normal_form(_prob,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                δ = 1e-8,
+                                δ = getdelta(_prob),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,
@@ -1298,7 +1298,7 @@ end
 function hopf_hopf_normal_form(_prob,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                δ = 1e-8,
+                                δ = getdelta(_prob),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,

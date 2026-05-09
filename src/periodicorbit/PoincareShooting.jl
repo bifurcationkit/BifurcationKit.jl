@@ -5,7 +5,7 @@
 
 $(TYPEDEF)
 
-This composite type implements the Poincaré Shooting method to locate periodic orbits by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
+This composite type implements the Poincaré Shooting method to locate periodic orbits / BVP by relying on Poincaré return maps. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -75,7 +75,7 @@ getparams(psh::PoincareShootingProblem) = psh.par
 setparam(psh::PoincareShootingProblem, p) = set(getparams(psh), getlens(psh), p)
 
 function Base.show(io::IO, psh::PoincareShootingProblem)
-    println(io, "┌─ Poincaré shooting functional for periodic orbits")
+    println(io, "┌─ Poincaré shooting method for periodic orbits (PO) / bvp")
     println(io, "├─ time slices     : ", get_mesh_size(psh))
     println(io, "├─ lens            : ", get_lens_symbol(psh.lens))
     println(io, "├─ jacobian        : ", psh.jacobian)

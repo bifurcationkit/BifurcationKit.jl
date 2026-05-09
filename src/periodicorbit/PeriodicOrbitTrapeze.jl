@@ -47,7 +47,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 """
 $(TYPEDEF)
 
-This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
+This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
 The scheme is as follows. We first consider a partition of ``[0, 1]`` given by ``0 < s_0 < \\cdots < s_m = 1`` and one looks for `T = x[end]` such that
 
@@ -129,12 +129,12 @@ $DocStrjacobianPOTrap
 end
 
 function Base.show(io::IO, trap::PeriodicOrbitTrapProblem)
-    println(io, "┌─ Trapezoid functional for periodic orbits")
+    println(io, "┌─ Trapezoid method for periodic orbits (PO) / bvp")
     println(io, "├─ time slices    : ", trap.M)
     println(io, "├─ dimension      : ", get_state_dim(trap))
     println(io, "├─ jacobian       : ", trap.jacobian)
     println(io, "├─ update section : ", trap.update_section_every_step)
-    println(io, "├─ # unknowns without phase condition : ", length(trap) - 1)
+    println(io, "├─ # unknowns without phase condition (for PO) : ", length(trap) - 1)
     println(io, "└─ inplace        : ", isinplace(trap))
 end
 
@@ -778,7 +778,7 @@ end
 end
 
 # this function is called whenever the jacobian of G has to be updated
-function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.scalartype(u0), 1e-9))
+function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.scalartype(u0), getdelta(J.Aγ.prob)))
     T = _extract_period_fdtrap(J.Aγ.prob, u0)
     # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
     # TODO REMOVE vcat!!

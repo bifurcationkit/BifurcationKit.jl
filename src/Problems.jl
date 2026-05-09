@@ -59,7 +59,8 @@ function _isinplace(f)
     return m == 3
 end
 
-_getprecision(::Type{T}) where T = sqrt(eps(T))
+# define the ϵ for finite differences
+_getprecision(::Type{T}) where {T} = sqrt(eps(T))
 _getprecision(x) = _getprecision(VI.scalartype(x))
 
 """
