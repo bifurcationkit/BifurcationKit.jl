@@ -586,7 +586,7 @@ function continuation(it::ContIterable)
     contRes = ContResult(it, state)
 
     # perform the continuation
-    return @time "CT" continuation!(it, state, contRes)
+    return continuation!(it, state, contRes)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
