@@ -45,6 +45,12 @@ abstract type AbstractWrapperPOFiniteDifferencesProblem <: AbstractWrapperPODiff
 ################################################################################
 abstract type AbstractWaveProblem <: AbstractBifurcationProblem end
 ################################################################################
+abstract type HasJetUserPassedTrait end
+struct TraitUserPassed <: HasJetUserPassedTrait end
+struct TraitNoUserPassed  <: HasJetUserPassedTrait end
+
+has_dpF(::Type{T}) where T = isbits(T) ? TraitUserPassed() : TraitNoUserPassed()
+################################################################################
 # const type to hold "all" types of optics. Note that we used to rely on `Setfield.jl` where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
@@ -180,9 +186,8 @@ end
 
 #####
 
-
-const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
+const _type_jet  = vcat(:T01!, vec([ Symbol("T", i, j)  for i=0:3, j=1:7 if i+i<7]))
+const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<7]))
 
 @eval begin
     """
@@ -204,18 +209,66 @@ const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     $(TYPEDFIELDS)
     """
-    @with_kw_noshow struct Jet{$(_type_jet...)}
-        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
+    @with_kw_noshow struct Jet{Tδ, TR01trait, $(_type_jet...)}
+        δ::Tδ
+        R01Trait::TR01trait
+        $(map(i -> :( $(_field_jet[i])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
     end
 end
 
 # getters for the jet
 for Rij in _field_jet
+    fname = Symbol(:has_, Rij)
+    fname_trait = Symbol(:has_, Rij, :_trait)
     @eval begin
-        $(Rij[1])(pb::Jet, args...; kwargs...) = pb.$(Rij[1])(args...; kwargs...)
-        @inline $(Rij[1])(pb::BifFunction, args...; kwargs...) = $(Rij[1])(pb.jet, args...; kwargs...)
-        @inline $(Rij[1])(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij[1])(pb.VF, args...; kwargs...)
+        $fname(::Nothing) = false
+        $fname_trait(::Nothing) = TraitNoUserPassed()
+
+        $fname(jet::Jet) = ~isnothing(jet.$(Rij))
+        $fname(pb::BifFunction) = $fname(pb.jet)
+        $fname_trait(pb::BifFunction) = $fname_trait(pb.jet)
+        
+        $fname(pb::AbstractAllJetBifProblem) = $fname(pb.VF)
+        $fname_trait(pb::AbstractAllJetBifProblem) = $fname_trait(pb.VF)
     end
+
+    if (Rij in (:R01, :R01!)) == false
+        @eval begin
+            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : TraitNoUserPassed()
+            $(Rij)(jet::Jet, args...; kwargs...) = jet.$(Rij)(args...; kwargs...)
+            @inline $(Rij)(::TraitUserPassed, pb::BifFunction, args...; kwargs...) = $(Rij)(pb.jet, args...; kwargs...)
+            @inline $(Rij)(::TraitUserPassed, pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)(TraitUserPassed(), pb.VF, args...; kwargs...)
+            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+        end
+    else
+
+        @eval begin
+            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : jet.R01Trait
+            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+        end
+    end
+end
+
+# c'est la merde. On veut soit autodiff, soit FD, soit user-passed. Si pas autodiff, on fait
+function R01!(::Union{TraitNoUserPassed, Nothing},
+                prob::AbstractAllJetBifProblem,
+                dpF,
+                x0,
+                par,
+                p::Number; δ = nothing)
+    _copyto!(dpF, ForwardDiff.derivative(z -> residual(prob, x0, set(par, getlens(prob), z)), p))
+end
+
+function R01!(::FiniteDifferences,
+                prob::AbstractAllJetBifProblem,
+                dFdp,
+                x,
+                par,
+                p::Number; δ = getdelta(prob))
+    # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
+    ϵ = getdelta(prob)
+    _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ)))
+    minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
 const _dict_doc_string_prob = Dict(
@@ -374,6 +427,7 @@ for (op, at, kd) in (
             Constructor for a bifurcation problem.
             
             ## Optional argument
+            - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x,par,p)`
             """
             function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
@@ -392,6 +446,7 @@ for (op, at, kd) in (
                          save_solution = save_solution_default,
                          inplace = false,
                          update! = update_default,
+                         R01 = AutoDiff(),
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
@@ -418,7 +473,12 @@ for (op, at, kd) in (
                 end
 
                 # type unstable but simplifies the types a lot
-                jet = isempty(kwargs_jet) ? nothing : Jet(;δ = delta, kwargs_jet...)
+                jet = if (isempty(kwargs_jet) && R01 === AutoDiff()) 
+                    nothing 
+                else
+                    R01Trait = R01 === FiniteDifferences() ? R01 : nothing
+                    Jet(;δ = delta, R01Trait, kwargs_jet...)
+                end
                 vf = BifFunction(Foop,
                                 Finp,
                                 jvp,
