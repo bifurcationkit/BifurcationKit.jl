@@ -244,11 +244,11 @@ for (op, at, kd) in (
                 (:NSMAProblem,   AbstractMABifurcationProblem, nothing),
                 (:BTMAProblem,   AbstractMABifurcationProblem, nothing),
 
-                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem, PeriodicOrbitCont()),
-                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem, PeriodicOrbitCont()),
-                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem, PeriodicOrbitCont()),
+                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem, :PeriodicOrbit),
+                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem, :PeriodicOrbit),
+                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem, :PeriodicOrbit),
 
-                (:WrapTW, AbstractWaveProblem, TravellingWaveCont()),
+                (:WrapTW, AbstractWaveProblem, :TravellingWave),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin
@@ -359,8 +359,8 @@ for (op, at, kd) in (
             $op(disc, lens = getlens(disc)) = $op(disc, nothing, nothing, nothing, lens, nothing, nothing)
             @inline get_discretization(pb::$op) = pb.disc
             @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
-            residual(pb::$op, x, p) = residual(get_discretization(pb), x, p)
-            residual!(pb::$op, o, x, p) = residual!(get_discretization(pb), o, x, p)
+            residual(pb::$op, x, p) = residual($kd(get_discretization(pb)), x, p)
+            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), $kd, o, x, p)
             @inline getdelta(pb::$op) = getdelta(get_discretization(pb))
         end
     end

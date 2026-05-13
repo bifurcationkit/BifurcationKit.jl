@@ -189,46 +189,46 @@ let
 
     # test guess using function
     # l_hopf, Th, orbitguess2s, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
-    hopf_nf = BK.hopf_normal_form(br.prob, br, ind_hopf; detailed = Val(false))
+    hopf_nf = BK.hopf_normal_form(BK.getprob(br), br, ind_hopf; detailed = Val(false))
     pred = BK.predictor(hopf_nf, 0.01)
 
     prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
             J = Jbru_sp)
 
-    poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
+    _trap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
 
-    jac_PO_fd = BK.finite_differences(x -> BK.residual(poTrap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
-    jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    jac_PO_fd = BK.finite_differences(x -> BK.po_residual(_trap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
+    jac_PO_sp = BK.po_jacobian_sparse(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
     # test jacobian expression for Periodic Orbit solve problem
     @test norm(jac_PO_fd - jac_PO_sp, Inf) < 1e-4
 
     # test various jacobians and methods
-    jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    jac_PO_sp =  BK.po_jacobian_block(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # newton to find Periodic orbit
-    _prob = BK.BifurcationProblem((x, p) -> BK.residual(poTrap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
+    _prob = BK.BifurcationProblem((x, p) -> BK.po_residual(_trap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  BK.po_jacobian_sparse(_trap, x, p))
     opt_po = NewtonPar(tol = 1e-8, max_iterations = 150)
     outpo_f = @time BK.solve(_prob, Newton(), opt_po)
     @test BK.converged(outpo_f)
 
-    outpo_f = newton((@set poTrap.jacobian = BK.FullLU()), orbitguess_f, opt_po)
+    outpo_f = newton((@set _trap.jacobian = BK.FullLU()), orbitguess_f, opt_po)
     BK.converged(outpo_f)
 
     # jacobian of the functional
-    Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    Jpo2 = BK.po_jacobian_block(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # calcul des exposants de Floquet
     floquetES = FloquetQaD(DefaultEig())
 
     # calcul des exposants de Floquet, extract full vector
-    pbwrap = BK.PeriodicOrbitFunctionalTrap(poTrap, :dense, orbitguess_f, par_bru, nothing, nothing, nothing)
+    pbwrap = BK.PeriodicOrbitFunctionalTrap(_trap, BK.AutoDiffDense(), orbitguess_f, par_bru, nothing, nothing, nothing)
     floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
     # continuation of periodic orbits using :BorderedLU linear algorithm
     opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, p_max = 2.3, max_steps = 3, newton_options = NewtonPar(verbose = false), detect_bifurcation = 1)
-    br_pok2 = continuation((@set poTrap.jacobian = BK.BorderedLU()), orbitguess_f, PALC(), opts_po_cont)
+    br_pok2 = continuation((@set _trap.jacobian = BK.BorderedLU()), orbitguess_f, PALC(), opts_po_cont)
 
     # test of simple calls to newton / continuation
     deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
@@ -237,13 +237,13 @@ let
     for linalgo in [BK.FullLU(), BK.BorderedLU(), BK.FullSparseInplace()]
         @show linalgo
         # with deflation
-        @time newton((@set poTrap.jacobian = linalgo),
+        @time newton((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), deflationOp, opt_po; normN = norminf)
         # classic Newton-Krylov
-        outpo_f = @time newton((@set poTrap.jacobian = linalgo),
+        outpo_f = @time newton((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), opt_po; normN = norminf)
         # continuation
-        br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
+        br_pok2 = @time continuation((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), PALC(),
                 opts_po_cont; normC = norminf)
     end
@@ -254,5 +254,5 @@ let
     ls = DefaultLS()
     opt_po = NewtonPar(tol = 1e-8, max_iterations = 10, linsolver = ls, eigsolver = eil)
     opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, p_max = 3.0, max_steps = 3, newton_options = (@set opt_po.verbose = false), nev = 2, tol_stability = 1e-8, detect_bifurcation = 2)
-    br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; normC = norminf)
+    br_pok2 = continuation(_trap, outpo_f.u, PALC(), opts_po_cont; normC = norminf)
 end

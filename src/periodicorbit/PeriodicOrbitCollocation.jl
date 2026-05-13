@@ -600,13 +600,13 @@ function po_residual!(coll::PeriodicOrbitOCollProblem,
     return phase
 end
 
-function residual(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
+function po_residual(coll::PeriodicOrbitOCollProblem, u::AbstractVector, pars)
     out = zero(u)
-    residual!(coll, out, u, pars)
+    po_residual!(coll, out, u, pars)
     out
 end
 
-function residual!(coll::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
+function po_residual!(coll::PeriodicOrbitOCollProblem, result, u::AbstractVector, pars)
     uc = get_time_slices(coll, u)
     T = getperiod(coll, u, nothing)
     resultc = get_time_slices(coll, result)
@@ -624,7 +624,7 @@ Compute the identity matrix associated with the collocation problem.
 function I(coll::PeriodicOrbitOCollProblem, u, par)
     T = getperiod(coll, u, par)
     N = get_state_dim(coll)
-    Icoll = analytical_jacobian(coll, u, par; ρD = 0, ρF = 0, ρI = -1/T)
+    Icoll = po_analytical_jacobian(coll, u, par; ρD = 0, ρF = 0, ρI = -1/T)
     Icoll[:, end] .= 0
     Icoll[end, :] .= 0
     Icoll[end-N:end-1, 1:N] .= 0
@@ -640,7 +640,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 ρD * D - T * (ρF * F + ρI * I)
 
 """
-@views function analytical_jacobian!(J,
+@views function po_analytical_jacobian!(J,
                                     coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector{𝒯},
                                     pars; 
@@ -705,20 +705,20 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
     return J
 end
 
-function analytical_jacobian(coll::PeriodicOrbitOCollProblem, 
+function po_analytical_jacobian(coll::PeriodicOrbitOCollProblem, 
                             u::AbstractArray, 
                             pars; 
                             𝒯 = VI.scalartype(u), 
                             k...)
     if coll.jacobian isa AbstractJacobianSparseMatrix
-        return analytical_jacobian_sparse( 
+        return po_analytical_jacobian_sparse( 
                         coll, 
                         u, 
                         pars;
                         𝒯, 
                         k...)
     else
-        return analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
+        return po_analytical_jacobian!(zeros(𝒯, length(coll)+1, length(coll)+1), 
                         coll, 
                         u, 
                         pars; 
@@ -726,15 +726,15 @@ function analytical_jacobian(coll::PeriodicOrbitOCollProblem,
     end
 end
 
-function analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
+function po_analytical_jacobian_sparse(coll::PeriodicOrbitOCollProblem,
                                     u::AbstractVector,
                                     pars; 
                                     k...)
-    jacBlock = jacobian_poocoll_block(coll, u, pars; array_zeros = SPA.spzeros, k...)
+    jacBlock = po_jacobian_block(coll, u, pars; array_zeros = SPA.spzeros, k...)
     block_to_sparse(jacBlock)
 end
 
-function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
+function po_jacobian_block(coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector,
                                 pars;
                                 𝒯 = VI.scalartype(u),
@@ -744,11 +744,11 @@ function jacobian_poocoll_block(coll::PeriodicOrbitOCollProblem,
     blocks = n * ones(Int64, 1 + m * Ntst + 1); blocks[end] = 1
     n_blocks = length(blocks)
     J = BA.BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
-    jacobian_poocoll_block!(J, coll, u, pars; kwargs...)
+    po_jacobian_block!(J, coll, u, pars; kwargs...)
     return J
 end
 
-@views function jacobian_poocoll_block!(J::BA.BlockArray,
+@views function po_jacobian_block!(J::BA.BlockArray,
                                 coll::PeriodicOrbitOCollProblem,
                                 u::AbstractVector{𝒯},
                                 pars;
@@ -959,13 +959,13 @@ end
 
 ####
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::FullSparseInplace, orbitguess, pars; k...)
-    _J = analytical_jacobian_sparse(coll, orbitguess, pars)
+    _J = po_analytical_jacobian_sparse(coll, orbitguess, pars)
     indx = _get_blocks_from_sparse_matrix(coll, _J)
     return (FullSparseInplace(), _J, indx)
 end
 
 function _generate_jacobian(coll::PeriodicOrbitOCollProblem, J::DenseAnalyticalInplace, orbitguess, pars; Jcoll_matrix = nothing, k...)
-    _Jcoll_matrix = isnothing(Jcoll_matrix) ? analytical_jacobian(coll, orbitguess, pars) : Jcoll_matrix
+    _Jcoll_matrix = isnothing(Jcoll_matrix) ? po_analytical_jacobian(coll, orbitguess, pars) : Jcoll_matrix
     return (DenseAnalyticalInplace(), _Jcoll_matrix)
 end
 ####
@@ -973,18 +973,18 @@ end
 function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{DenseAnalyticalInplace, Tj}, x, p) where {Tj}
     _Jcoll_matrix = J[2]
     coll = get_discretization(wrap)
-    analytical_jacobian!(_Jcoll_matrix, coll, x, p)
+    po_analytical_jacobian!(_Jcoll_matrix, coll, x, p)
     return _Jcoll_matrix
 end
 
 function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, ::DenseAnalytical, x, p)
     coll = get_discretization(wrap)
-    return analytical_jacobian(coll, x, p)
+    return po_analytical_jacobian(coll, x, p)
 end
 
 function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, ::FullSparse, x, p)
     coll = get_discretization(wrap)
-    return analytical_jacobian_sparse(coll, x, p)
+    return po_analytical_jacobian_sparse(coll, x, p)
 end
 
 function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{FullSparseInplace, Tj, Tind}, x, p) where {Tj, Tind}
@@ -1001,7 +1001,7 @@ const DocStringJacobianPOColl = """
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
 
-function _newton_pocoll(coll::PeriodicOrbitOCollProblem,
+function _newton_po_from_disc(coll::PeriodicOrbitOCollProblem,
                         orbitguess,
                         options::NewtonPar;
                         defOp::Union{Nothing, DeflationOperator} = nothing,
@@ -1037,23 +1037,23 @@ Similar to [`newton`](@ref) except that `prob` is a [`PeriodicOrbitOCollProblem`
 
 # Optional argument
 $DocStringJacobianPOColl
-"""
+""" # TODO: this is an abomination! coll is a discretization method, not a problem
 newton(coll::PeriodicOrbitOCollProblem,
             orbitguess,
             options::NewtonPar;
-            kwargs...) = _newton_pocoll(coll, orbitguess, options; defOp = nothing, kwargs...)
+            kwargs...) = _newton_po_from_disc(coll, orbitguess, options; defOp = nothing, kwargs...)
 
 """
     $(TYPEDSIGNATURES)
 
 This function is similar to `newton(::PeriodicOrbitOCollProblem, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
-"""
+"""# TODO: this is an abomination! coll is a discretization method, not a problem
 function newton(coll::PeriodicOrbitOCollProblem,
                 orbitguess,
                 defOp::DeflationOperator,
                 options::NewtonPar;
                 kwargs...)
-    _newton_pocoll(coll, orbitguess, options; defOp, kwargs...)
+    _newton_po_from_disc(coll, orbitguess, options; defOp, kwargs...)
 end
 
 """
@@ -1067,7 +1067,7 @@ Similar to [`continuation`](@ref) except that `prob` is a [`PeriodicOrbitOCollPr
 
 # Keywords arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
-"""
+""" # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 function continuation(coll::PeriodicOrbitOCollProblem,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
@@ -1082,7 +1082,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
 
     if linear_algo isa COPBLS
         Nbls = length(coll) + 2 # +1 for phase condition and +1 for PALC
-        _Jcoll = analytical_jacobian(coll, orbitguess, getparams(coll))
+        _Jcoll = po_analytical_jacobian(coll, orbitguess, getparams(coll))
         cache = COPCACHE(coll, Val(1))
         linear_algo = COPBLS(;
                         cache,

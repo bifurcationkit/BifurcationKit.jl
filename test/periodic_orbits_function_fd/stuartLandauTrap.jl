@@ -30,21 +30,21 @@ optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_
 br = continuation(prob, PALC(), optconteq)
 ####################################################################################################
 prob2 = BK.BifurcationProblem(Fsl, u0, par_hopf, (@optic _.r); J = (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)))# we put sparse to try the different linear solvers
-poTrap = PeriodicOrbitTrapProblem(
+_trap = PeriodicOrbitTrapProblem(
                         prob2,
                         [1., 0],
                         zeros(2),
                         100, 2; update_section_every_step = 1)
 
-show(poTrap)
-BK.isinplace(poTrap)
+show(_trap)
+BK.isinplace(_trap)
 try
-    BK.has_hessian(poTrap)
+    BK.has_hessian(_trap)
 catch
 end
 
 # guess for the periodic orbit
-orbitguess_f = reduce(vcat, [√(getparams(poTrap).r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, poTrap.M)])
+orbitguess_f = reduce(vcat, [√(getparams(_trap).r) .* [cos(θ), sin(θ)] for θ in LinRange(0, 2pi, _trap.M)])
 push!(orbitguess_f, 2pi)
 
 optn_po = NewtonPar(tol = 1e-9, verbose = false)
@@ -64,14 +64,14 @@ for (ind, jacobianPO) in enumerate((BK.Dense(),
                                     BK.BorderedMatrixFree()))
     _ls = ind > 6 ? lsit : lsdef
     # @info jacobianPO, ind, _ls
-    outpo_f = newton((@set poTrap.jacobian = jacobianPO),
+    outpo_f = newton((@set _trap.jacobian = jacobianPO),
         orbitguess_f, (@set optn_po.linsolver = _ls);
         normN = norminf)
     @test BK.converged(outpo_f)
 
     for eig in (FloquetQaD(optn_po.eigsolver),)
         br_po = continuation(
-            (@set poTrap.jacobian = jacobianPO), 
+            (@set _trap.jacobian = jacobianPO), 
             outpo_f.u,
             PALC(),
             (@set opts_po_cont.newton_options.linsolver = _ls);
@@ -94,17 +94,17 @@ for (ind, jacobianPO) in enumerate((BK.Dense(),
     end
 end
 
-@reset poTrap.jacobian = BK.Dense()
-outpo_f = newton(poTrap,
+@reset _trap.jacobian = BK.Dense()
+outpo_f = newton(_trap,
         orbitguess_f, (@set optn_po.linsolver = DefaultLS());
         normN = norminf)
 br_po = continuation(
-            poTrap, 
+            _trap, 
             outpo_f.u,
             PALC(bls =  BorderingBLS(solver = DefaultLS(), check_precision = false)),
             (@set opts_po_cont.newton_options.linsolver = DefaultLS());
             # verbosity = 2, plot = false,
-            # eigsolver = FloquetGEV(optn_po.eigsolver, length(poTrap), 2),
+            # eigsolver = FloquetGEV(optn_po.eigsolver, length(_trap), 2),
             normC = norminf)
 
     for k in 1:length(br_po)-1
@@ -116,12 +116,12 @@ br_po = continuation(
     end
 
 
-outpo_f = @time newton(poTrap, orbitguess_f, optn_po);
-outpo = reshape(outpo_f.u[1:end-1], 2, poTrap.M)
+outpo_f = @time newton(_trap, orbitguess_f, optn_po);
+outpo = reshape(outpo_f.u[1:end-1], 2, _trap.M)
 
 # computation of the Jacobian at out_pof
-_J1 = poTrap(Val(:JacFullSparse), outpo_f.u, par_hopf)
-_Jfd = ForwardDiff.jacobian(z-> BK.residual(poTrap, z, par_hopf), outpo_f.u)
+_J1 = BK.po_jacobian_sparse(_trap, outpo_f.u, par_hopf)
+_Jfd = ForwardDiff.jacobian(z-> BK.po_residual(_trap, z, par_hopf), outpo_f.u)
 
 # test of the jacobian against automatic differentiation
 @test norm(_Jfd - Array(_J1), Inf) < 1e-7

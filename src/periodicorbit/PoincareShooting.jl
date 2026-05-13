@@ -214,7 +214,7 @@ function projection(psh::PoincareShootingProblem, x::AbstractMatrix)
 end
 ####################################################################################################
 # Poincaré (multiple) shooting with hyperplanes parametrization
-function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = false)
+function po_residual(psh::PoincareShootingProblem, x_bar::AbstractVector, par; verbose = false)
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
@@ -257,12 +257,10 @@ function (psh::PoincareShootingProblem)(x_bar::AbstractVector, par; verbose = fa
     return out_bar
 end
 
-function residual!(pb::PoincareShootingProblem, out, x, p)
-    _copyto!(out, pb(x, p))
+function po_residual!(pb::PoincareShootingProblem, out, x, p)
+    _copyto!(out, po_residual(pb, x, p))
     out
 end
-
-residual(pb::PoincareShootingProblem, x, p) = pb(x, p)
 
 """
 This function computes the derivative of the Poincare return map Π(x) = ϕ(t(x),x) where t(x) is the return time of x to the section.
@@ -280,7 +278,7 @@ function diff_poincare_map(psh::PoincareShootingProblem, x, par, dx, ii::Int)
 end
 
 # jacobian of the shooting functional
-function jvp(psh::PoincareShootingProblem, x_bar::AbstractVector, par, dx_bar::AbstractVector)
+function po_jvp(psh::PoincareShootingProblem, x_bar::AbstractVector, par, dx_bar::AbstractVector)
     δ = psh.δ
     if δ > 0
         # mostly for debugging purposes
@@ -325,7 +323,7 @@ function jvp(psh::PoincareShootingProblem, x_bar::AbstractVector, par, dx_bar::A
 end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
-function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x_bar::AbstractVector, par)
+function po_jacobian!(psh::PoincareShootingProblem, J::AbstractMatrix, x_bar::AbstractVector, par)
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
     N = Nm1 + 1
@@ -376,7 +374,7 @@ function (psh::PoincareShootingProblem)(::Val{:JacobianMatrixInplace}, J::Abstra
 end
 
 # out of place version
-(psh::PoincareShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, par) = psh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, par)
+po_jacobian(psh::PoincareShootingProblem, x::AbstractVector, par) = po_jacobian!(psh, zeros(eltype(x), length(x), length(x)), x, par)
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
 function re_make(psh::PoincareShootingProblem, prob_vf, hopfpt, ζr, centers, period; k...)

@@ -135,7 +135,7 @@ end
 end
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
-@views function (sh::ShootingProblem)(x::AbstractVector, pars)
+@views function po_residual(sh::ShootingProblem, x::AbstractVector, pars)
     T = getperiod(sh, x)
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
@@ -169,7 +169,7 @@ end
 end
 
 # shooting functional for BorderedArray
-function (sh::ShootingProblem)(x::BorderedArray, pars)
+function po_residual(sh::ShootingProblem, x::BorderedArray, pars)
     # period of the cycle
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
@@ -192,7 +192,7 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 end
 
 # jacobian of the shooting functional
-@views function jvp(sh::ShootingProblem,
+@views function po_jvp(sh::ShootingProblem,
                     x::AbstractVector,
                     pars,
                     dx::AbstractVector; 
@@ -232,7 +232,7 @@ end
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), getdelta(sh)))
+function po_jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), getdelta(sh)))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -257,7 +257,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
 end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
-function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, pars)
+function po_jacobian!(sh::ShootingProblem, J::AbstractMatrix, x::AbstractVector, pars)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
@@ -292,13 +292,12 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 end
 
 # out of place version
-(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(VI.scalartype(x), length(x), length(x)), x, pars)
+po_jacobian(sh::ShootingProblem, x::AbstractVector, pars) = po_jacobian!(sh, zeros(VI.scalartype(x), length(x), length(x)), x, pars)
 
-function residual!(pb::ShootingProblem, out, x, p)
-    _copyto!(out, pb(x, p))
+function po_residual!(pb::ShootingProblem, out, x, p)
+    _copyto!(out, po_residual(pb, x, p))
     out
 end
-residual(pb::ShootingProblem, x, p) = pb(x, p)
 ####################################################################################################
 """
 $(TYPEDSIGNATURES)

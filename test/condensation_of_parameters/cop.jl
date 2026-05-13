@@ -173,7 +173,7 @@ coll = PeriodicOrbitOCollProblem(Ntst, m;
                                     xπ = rand(N*( 1 + m * Ntst)))
 _ci = generate_solution(coll, t->cos(t) .* ones(N), 2pi);
 #####################################################
-Jco = BK.analytical_jacobian(coll, _ci, par_sl);
+Jco = BK.po_analytical_jacobian(coll, _ci, par_sl);
 @test size(Jco, 1) == length(coll) + 1
 #####################################################
 _rhs = rand(size(Jco, 1))

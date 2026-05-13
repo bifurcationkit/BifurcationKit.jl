@@ -2,7 +2,7 @@
 @inline has_hessian(::PeriodicOrbitFunctionalColl) = true
 
 function d2F(wrapcoll::PeriodicOrbitFunctionalColl, x, p, dx1, dx2)
-    d2PO(z -> residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
+    d2PO(z -> po_residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
 end
 
 function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalColl, x, par)

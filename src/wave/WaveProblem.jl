@@ -112,7 +112,7 @@ end
 VFtw(pb::TWModel, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
 
 # vector field of the TW problem
-@views function residual!(pb::TWModel, out, x::AbstractVector, pars)
+@views function residual_tw!(pb::TWModel, out, x::AbstractVector, pars)
     # number of constraints
     nc = pb.nc
     # number of unknowns
@@ -133,7 +133,8 @@ VFtw(pb::TWModel, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, 
     return out
 end
 
-residual(pb::TWModel, x::AbstractVector, pars) = residual!(pb, similar(x), x, pars)
+residual!(pb::TravellingWave, out, x::AbstractVector, pars) = residual_tw!(get_discretization(pb), out, x, pars)
+residual(pb::TravellingWave, x::AbstractVector, pars) = residual_tw!(get_discretization(pb), similar(x), x, pars)
 
 # jacobian-free function
 @views function (pb::TWModel)(x::AbstractVector, pars, dx::AbstractVector)

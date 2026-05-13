@@ -57,44 +57,44 @@ let
     N = 3
     Mf = rand(N, N)
     prob1 = BK.BifurcationProblem((x,p) -> Mf * x.^2, zeros(1), nothing)
-    prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
-    size(prob_col)
-    length(prob_col)
-    BK.get_times(prob_col)
-    BK.get_max_time_step(prob_col)
-    BK.get_gauss_nodes(prob_col)
-    size(prob_col.mesh_cache)
-    BK.update_mesh!(prob_col, prob_col.mesh_cache.τs)
+    coll = BK.PeriodicOrbitOCollProblem(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
+    size(coll)
+    length(coll)
+    BK.get_times(coll)
+    BK.get_max_time_step(coll)
+    BK.get_gauss_nodes(coll)
+    size(coll.mesh_cache)
+    BK.update_mesh!(coll, coll.mesh_cache.τs)
     @test BK.lagrange(1, 1.0, 1:10) == 1
     @test BK.lagrange(1, 2.0, 1:10) == 0
 
     PeriodicOrbitOCollProblem(10, 2) |> BK.get_mesh_size
-    BK.get_Ls(prob_col)
-    show(prob_col)
+    BK.get_Ls(coll)
+    show(coll)
     
     _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
-    _ci = BK.generate_solution(prob_col, _orbit, 1.)
-    BK.get_periodic_orbit(prob_col, _ci, par_sl)
+    _ci = BK.generate_solution(coll, _orbit, 1.)
+    BK.get_periodic_orbit(coll, _ci, par_sl)
     @test BK.∂(sin, Val(2))(0.) == 0
-    BK.residual(prob_col, _ci, par_sl) #|> scatter
-    BK.get_time_slices(prob_col, _ci)
+    BK.po_residual(coll, _ci, par_sl) #|> scatter
+    BK.get_time_slices(coll, _ci)
 
     # interpolate solution
-    sol = BK.POSolution(prob_col, _ci)
+    sol = BK.POSolution(coll, _ci)
     sol(rand())
 end
 ####################################################################################################
 let
-    prob_col = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
-    _ci = BK.generate_solution(prob_col, t -> cos(t) .* ones(1000), 2pi)
-    BK.get_times(prob_col)
-    sol = BK.POSolution(prob_col, _ci)
+    coll = PeriodicOrbitOCollProblem(200, 5, prob_vf = probsl, N = 1000)
+    _ci = BK.generate_solution(coll, t -> cos(t) .* ones(1000), 2pi)
+    BK.get_times(coll)
+    sol = BK.POSolution(coll, _ci)
     @test sol(0.1) ≈ cos(0.1) .* ones(1000)
-    for (i,t) in pairs(BK.get_times(prob_col))
+    for (i,t) in pairs(BK.get_times(coll))
         @test sol(t)[1] ≈ cos(t)
     end
-    _time = BK.get_times(prob_col)
-    for t in BK.getmesh(prob_col)
+    _time = BK.get_times(coll)
+    for t in BK.getmesh(coll)
         @test t in _time
     end
 end
@@ -140,75 +140,75 @@ end
 let
     for Ntst in 2:10:100
         # @info "Ntst" Ntst
-        prob_col = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
+        coll = PeriodicOrbitOCollProblem(Ntst, 10, prob_vf = probsl, N = 1)
         # test non uniform mesh
-        BK.update_mesh!(prob_col, sort(vcat(0,rand(Ntst-1),1)))
+        BK.update_mesh!(coll, sort(vcat(0,rand(Ntst-1),1)))
         
-        _ci1 = BK.generate_solution(prob_col, t -> [1], 2pi)
-        _ci2 = BK.generate_solution(prob_col, t -> [t], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1 atol = 1e-10
-        # @info phaseCond(prob_col, _ci1, _ci2)/pi
+        _ci1 = BK.generate_solution(coll, t -> [1], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [t], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) ≈ 1 atol = 1e-10
+        # @info phaseCond(coll, _ci1, _ci2)/pi
         
-        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generate_solution(prob_col, t -> [sin(t)], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) ≈ 1/2 atol = 1e-5
-        # @info phaseCond(prob_col, _ci1, _ci2)/pi-1
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [sin(t)], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) ≈ 1/2 atol = 1e-5
+        # @info phaseCond(coll, _ci1, _ci2)/pi-1
         
-        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
-        # @info phaseCond(prob_col, _ci1, _ci2) / pi
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
+        # @info phaseCond(coll, _ci1, _ci2) / pi
         
-        _ci1 = BK.generate_solution(prob_col, t -> [cos(t)], 2pi)
-        _ci2 = BK.generate_solution(prob_col, t -> [t], 2pi)
-        @test phaseCond(prob_col, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
-        # @info phaseCond(prob_col, _ci1, _ci2) / pi
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [t], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
+        # @info phaseCond(coll, _ci1, _ci2) / pi
     end
 end
 
 let
-    prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
-    _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
-    _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 1)
-    @test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2)) ≈ 0.5
+    coll = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
+    _ci1 = BK.generate_solution(coll, t -> [cos(2pi*t)], 1)
+    _ci2 = BK.generate_solution(coll, t -> [cos(2pi*t)], 1)
+    @test BK.∫(coll, BK.get_time_slices(coll, _ci1), BK.get_time_slices(coll, _ci2)) ≈ 0.5
     
-    prob_col = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
-    _ci1 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
-    _ci2 = BK.generate_solution(prob_col, t -> [cos(2pi*t)], 3)
-    @test BK.∫(prob_col, BK.get_time_slices(prob_col, _ci1), BK.get_time_slices(prob_col, _ci2), 3) ≈ 3/2
-    @test BK.∫(prob_col, _ci1, _ci2, 3) ≈ 3/2 # test vector form
+    coll = PeriodicOrbitOCollProblem(22, 10, prob_vf = probsl, N = 1)
+    _ci1 = BK.generate_solution(coll, t -> [cos(2pi*t)], 3)
+    _ci2 = BK.generate_solution(coll, t -> [cos(2pi*t)], 3)
+    @test BK.∫(coll, BK.get_time_slices(coll, _ci1), BK.get_time_slices(coll, _ci2), 3) ≈ 3/2
+    @test BK.∫(coll, _ci1, _ci2, 3) ≈ 3/2 # test vector form
 end
 ####################################################################################################
 let
     Ntst = 50
     m = 4
     N = 2
-    prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; 
+    coll = BK.PeriodicOrbitOCollProblem(Ntst, m; 
     prob_vf = probsl,
     N = 2,
     ϕ = rand(N*( 1 + m * Ntst)),
     xπ = zeros(N*( 1 + m * Ntst)))
-    prob_col.ϕ[2] = 1 #phase condition
+    coll.ϕ[2] = 1 #phase condition
     
     _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
-    _ci = BK.generate_solution(prob_col, _orbit, 2pi)
-    BK.residual(prob_col, _ci, par_sl)
-    @test BK.residual(prob_col, _ci, par_sl)[1:end-1] |> norminf < 1e-7
+    _ci = BK.generate_solution(coll, _orbit, 2pi)
+    BK.po_residual(coll, _ci, par_sl)
+    @test BK.po_residual(coll, _ci, par_sl)[1:end-1] |> norminf < 1e-7
     
-    prob_coll_ip = @set prob_col.prob_vf = probsl_ip
+    colll_ip = @set coll.prob_vf = probsl_ip
     
-    @time BK.residual(prob_col, _ci, par_sl);
-    @time BK.residual(prob_coll_ip, _ci, par_sl);
+    @time BK.po_residual(coll, _ci, par_sl);
+    @time BK.po_residual(colll_ip, _ci, par_sl);
     
     # test precision of generated solution
-    _sol = BK.get_periodic_orbit(prob_col, _ci, nothing)
+    _sol = BK.get_periodic_orbit(coll, _ci, nothing)
     for (i, t) in pairs(_sol.t)
         @test _sol.u[:, i] ≈ _orbit(t)
     end
     
     args = (
         plot_solution = (x,p; k...) -> begin
-        outt = get_periodic_orbit(prob_col, x, p)
+        outt = get_periodic_orbit(coll, x, p)
         plot!(vec(outt.t), outt.u[1, :]; k...)
         end,
         finalise_solution = (z, tau, step, contResult; k...) -> begin
@@ -220,29 +220,29 @@ let
     @reset optcontpo.ds = -0.01
     @reset optcontpo.newton_options.verbose = false
 
-    prob_col2 = (@set prob_coll_ip.prob_vf.params = par_sl)
-    @reset prob_col2.jacobian = BK.AutoDiffDense()
-    sol_po = newton(prob_col2, _ci, optcontpo.newton_options);
+    coll2 = (@set colll_ip.prob_vf.params = par_sl)
+    @reset coll2.jacobian = BK.AutoDiffDense()
+    sol_po = newton(coll2, _ci, optcontpo.newton_options);
 
     # test solution
-    solc = BK.POSolution(prob_col2, sol_po.u)
+    solc = BK.POSolution(coll2, sol_po.u)
     # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
     let
-        mesh = BK.getmesh(prob_col2)
-        solpo = get_periodic_orbit(prob_col2, sol_po.u, nothing)
+        mesh = BK.getmesh(coll2)
+        solpo = get_periodic_orbit(coll2, sol_po.u, nothing)
         for (i, t) in pairs(solpo.t)
             @test solc(t) ≈ solpo.u[:, i]
         end
     end
 
     # 0.131970 seconds (32.51 k allocations: 309.737 MiB, 14.97% gc time)
-    @reset prob_col2.update_section_every_step = 1
-    br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
+    @reset coll2.update_section_every_step = 1
+    br_po = @time continuation(coll2, _ci, PALC(tangent = Bordered()), optcontpo;
             verbosity = 0, plot = false,
             args...,
             );
 
-    br_po = @time continuation(prob_col2, _ci, PALC(tangent = Bordered()), optcontpo;
+    br_po = @time continuation(coll2, _ci, PALC(tangent = Bordered()), optcontpo;
             verbosity = 0, plot = false,
             args...,
             linear_algo  = COPBLS(),
@@ -256,8 +256,8 @@ let
         @test isapprox(μ1_bk, μ1, atol = 1e-5 )
     end 
 
-    newton(prob_col2, _ci, NewtonPar())
-    newton(prob_col2, _ci, NewtonPar(linsolver = COPLS()))
+    newton(coll2, _ci, NewtonPar())
+    newton(coll2, _ci, NewtonPar(linsolver = COPLS()))
 
     Jw = @time (BK.jacobian(BK.getprob(br_po), br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
     J = (Jw) |> copy
@@ -273,12 +273,12 @@ let
     N = 4
     nullvf(x,p) = zero(x)
     prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
-    prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
     
-    _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-    BK.residual(prob_col,_ci, par_sl);
-    Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
-    D = @time BK.analytical_jacobian(prob_col, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    BK.po_residual(coll,_ci, par_sl);
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(coll, z, par_sl), _ci);
+    D = @time BK.po_analytical_jacobian(coll, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
     @test norminf(Jcofd - D) < 1e-14
     
     # same but with linear vector field
@@ -288,10 +288,10 @@ let
     _al = I(N) + 0.1 .* rand(N,N)
     idvf(x,p) = _al*x
     prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
-    prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-    _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-    Jcofd = ForwardDiff.jacobian(z -> BK.residual(prob_col, z, par_sl), _ci);
-    Jco = BK.analytical_jacobian(prob_col, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
+    coll = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(coll, z, par_sl), _ci);
+    Jco = BK.po_analytical_jacobian(coll, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
     @test norminf(Jcofd - Jco) < 1e-14
     
     # same but with Stuart-Landau vector field
@@ -299,30 +299,30 @@ let
     @assert N == 2 "must be the dimension of the SL"
     Ntst = 3
     m = 2
-    prob_col = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-    _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-    Jcofd = ForwardDiff.jacobian(z->BK.residual(prob_col, z, par_sl), _ci);
-    Jco = @time BK.analytical_jacobian(prob_col, _ci, par_sl);
-    Jco_bk = @time BK.jacobian_poocoll_block(prob_col, _ci, par_sl);
+    coll = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jcofd = ForwardDiff.jacobian(z->BK.po_residual(coll, z, par_sl), _ci);
+    Jco = @time BK.po_analytical_jacobian(coll, _ci, par_sl);
+    Jco_bk = @time BK.po_jacobian_block(coll, _ci, par_sl);
     @test norminf(Jcofd - Jco) < 1e-14
     @test norminf(Jcofd - Jco_bk) < 1e-14
     
-    BK.analytical_jacobian(prob_col, _ci, par_sl; _transpose = Val(true), ρF = 1);
+    BK.po_analytical_jacobian(coll, _ci, par_sl; _transpose = Val(true), ρF = 1);
     # test for the case of sparse arrays
     # jacobian using BlockArray
     _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
     prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
     prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
-    prob_col_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-    prob_col       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(prob_col_dense.ϕ), xπ = copy(prob_col_dense.xπ))
-    _ci = BK.generate_solution(prob_col, t->cos(t) .* ones(N), 2pi);
-    Jco_sp = BK.analytical_jacobian_sparse(prob_col, _ci, par_sl);
-    Jco = BK.analytical_jacobian(prob_col_dense, _ci, par_sl);
+    coll_dense = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll       = BK.PeriodicOrbitOCollProblem(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(coll_dense.ϕ), xπ = copy(coll_dense.xπ))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jco_sp = BK.po_analytical_jacobian_sparse(coll, _ci, par_sl);
+    Jco = BK.po_analytical_jacobian(coll_dense, _ci, par_sl);
     @test norminf(Jco - Array(Jco_sp)) < 1e-15
     Jco2 = copy(Jco) |> sparse;
     Jco2 .= 0
-    _indx = BifurcationKit.get_blocks(prob_col, Jco2);
-    @time BifurcationKit.jacobian_poocoll_sparse_indx!(prob_col, Jco2, _ci, par_sl, _indx);
+    _indx = BifurcationKit.get_blocks(coll, Jco2);
+    @time BifurcationKit.jacobian_poocoll_sparse_indx!(coll, Jco2, _ci, par_sl, _indx);
     @test norminf(Jco - Jco2) < 1e-14
 end
 ####################################################################################################

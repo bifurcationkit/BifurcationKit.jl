@@ -32,30 +32,30 @@ pbi = PeriodicOrbitTrapProblem(
 @test BK.isinplace(pb) == false
 # BK.POTrapFunctional(pb, res, orbitguess_f)
 # BK.POTrapFunctional(pbi, res, orbitguess_f)
-res = BK.residual(pb, orbitguess_f, par)
-resg = BK.residual(pbg, orbitguess_f, par)
-resi = BK.residual(pbi, orbitguess_f, par)
+res = BK.po_residual(pb, orbitguess_f, par)
+resg = BK.po_residual(pbg, orbitguess_f, par)
+resi = BK.po_residual(pbi, orbitguess_f, par)
 @test res == resi
 @test res == resg
 
-res = BK.jvp(pb, orbitguess_f, par, orbitguess_f)
-resg = BK.jvp(pbg, orbitguess_f, par, orbitguess_f)
-resi = BK.jvp(pbi, orbitguess_f, par, orbitguess_f)
+res = BK.po_jvp(pb, orbitguess_f, par, orbitguess_f)
+resg = BK.po_jvp(pbg, orbitguess_f, par, orbitguess_f)
+resi = BK.po_jvp(pbi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 @test res == resg
 
-BK.residual!(pbi, resi, orbitguess_f, par)
-BK.jvp!(pbi, resi, orbitguess_f, par, orbitguess_f)
+BK.po_residual!(pbi, resi, orbitguess_f, par)
+BK.po_jvp!(pbi, resi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 
 # @code_warntype BK.potrap_functional!(pbi, resi, orbitguess_f)
 
 # using BenchmarkTools
-# @btime BK.residual($pb, $orbitguess_f, $par);                    # 6.825 ms (62 allocations: 34.33 MiB)
-# @btime BK.residual($pbi, $orbitguess_f, $par);                   # 4.768 ms (2 allocations: 17.17 MiB)
+# @btime BK.po_residual($pb, $orbitguess_f, $par);                    # 6.825 ms (62 allocations: 34.33 MiB)
+# @btime BK.po_residual($pbi, $orbitguess_f, $par);                   # 4.768 ms (2 allocations: 17.17 MiB)
 # @btime BK.jvp($pb, $orbitguess_f, $par, $orbitguess_f);          # 8.427 ms (122 allocations: 51.50 MiB)
 # @btime BK.jvp($pbi, $orbitguess_f, $par, $orbitguess_f);         # 5.170 ms (2 allocations: 17.17 MiB)
-# @btime BK.residual!($pbi, $resi, $orbitguess_f, $par);           # 7.117 ms (0 allocations: 0 bytes)
+# @btime BK.po_residual!($pbi, $resi, $orbitguess_f, $par);           # 7.117 ms (0 allocations: 0 bytes)
 # @btime BK.jvp!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f); # 3.900 ms (0 allocations: 0 bytes)
 
 #
@@ -147,23 +147,23 @@ function _dfunctional(poPb, u0, p, du)
 
 end
 
-res = BK.residual(pb, orbitguess_f, par)
+res = BK.po_residual(pb, orbitguess_f, par)
 _res = _functional(pb, orbitguess_f, par)
 @test res ≈ _res
 
 _du = rand(length(orbitguess_f))
-res = BK.jvp(pb, orbitguess_f, par, _du)
+res = BK.po_jvp(pb, orbitguess_f, par, _du)
 _res = _dfunctional(pb, orbitguess_f, par, _du)
 @test res ≈ _res
 
 # with mass matrix
 pbmass = @set pb.massmatrix = spdiagm( 0 => rand(pb.N))
-res = BK.residual(pbmass, orbitguess_f, par)
+res = BK.po_residual(pbmass, orbitguess_f, par)
 _res = _functional(pbmass, orbitguess_f, par)
 @test res ≈ _res
 
 _du = rand(length(orbitguess_f))
-res = BK.jvp(pbmass, orbitguess_f, par, _du)
+res = BK.po_jvp(pbmass, orbitguess_f, par, _du)
 _res = _dfunctional(pbmass, orbitguess_f, par, _du)
 @test res ≈ _res
 ####################################################################################################
@@ -177,69 +177,69 @@ pbsp = PeriodicOrbitTrapProblem(
             10)
 orbitguess_f = rand(2n*10+1)
 dorbit = rand(2n*10+1)
-Jfd = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp,x, par), orbitguess_f) )
-Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+Jfd = sparse( ForwardDiff.jacobian(x -> BK.po_residual(pbsp,x, par), orbitguess_f) )
+Jan = BK.po_jacobian_sparse(pbsp, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
-pbsp(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp, Jan, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
 #test for :Dense
-pbsp(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp, Array(Jan), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
 # test for inplace
-Jan = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+Jan = BK.po_jacobian_sparse(pbsp, orbitguess_f, par)
 Jan2 = copy(Jan); _indx = BK._get_blocks_from_sparse_matrix(Jan2, pbsp.N, pbsp.M)
-pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
+BK.po_jacobian_sparse!(pbsp, Jan2, orbitguess_f, par, _indx)
 @test norm(Jan2 - Jan, Inf) < 1e-6
 
-Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+Jan = BK.jacobian_cyclic_sparse(pbsp, orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1),1:size(Jan,1)] - Jan, Inf) < 1e-6
 
 # we update the section
 BK.updatesection!(pbsp, rand(2n*10+1), par)
-Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp, x, par), orbitguess_f) )
-Jan2 = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.po_residual(pbsp, x, par), orbitguess_f) )
+Jan2 = BK.po_jacobian_sparse(pbsp, orbitguess_f, par)
 @test Jan2 != Jan
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
-pbsp(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp, Jan2, orbitguess_f, par)
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
-Jan = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+Jan = BK.jacobian_cyclic_sparse(pbsp, orbitguess_f, par)
 @test norm(Jfd2[1:size(Jan2,1),1:size(Jan2,1)] - Jan2, Inf) < 1e-6
 
 ##########################
 #### idem with mass matrix
 pbsp_mass = @set pbsp.massmatrix = massmatrix = spdiagm( 0 => rand(pbsp.N))
-Jfd = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp_mass, x, par), orbitguess_f) )
-Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jfd = sparse( ForwardDiff.jacobian(x -> BK.po_residual(pbsp_mass, x, par), orbitguess_f) )
+Jan = BK.po_jacobian_sparse(pbsp_mass, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
-pbsp_mass(Val(:JacFullSparseInplace), Jan, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp_mass, Jan, orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
 #test for :Dense
-pbsp_mass(Val(:JacFullSparseInplace), Array(Jan), orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp_mass, Array(Jan), orbitguess_f, par)
 @test norm(Jfd - Jan, Inf) < 1e-6
 
 # test for inplace
-Jan = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jan = BK.po_jacobian_sparse(pbsp_mass, orbitguess_f, par)
 Jan2 = copy(Jan); _indx = BK._get_blocks_from_sparse_matrix(Jan2, pbsp_mass.N, pbsp_mass.M)
-pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par, _indx)
+BK.po_jacobian_sparse!(pbsp_mass, Jan2, orbitguess_f, par, _indx)
 @test norm(Jan2 - Jan, Inf) < 1e-6
 
-Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
+Jan = BK.jacobian_cyclic_sparse(pbsp_mass, orbitguess_f, par)
 @test norm(Jfd[1:size(Jan,1), 1:size(Jan,1)] - Jan, Inf) < 1e-6
 
 # we update the section
 BK.updatesection!(pbsp_mass, rand(2n*10+1), par)
-Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.residual(pbsp_mass, x, par), orbitguess_f) )
-Jan2 = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jfd2 = sparse( ForwardDiff.jacobian(x -> BK.po_residual(pbsp_mass, x, par), orbitguess_f) )
+Jan2 = BK.po_jacobian_sparse(pbsp_mass, orbitguess_f, par)
 @test Jan2 != Jan
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
-pbsp_mass(Val(:JacFullSparseInplace), Jan2, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp_mass, Jan2, orbitguess_f, par)
 @test norm(Jfd2 - Jan2, Inf) < 1e-6
-Jan = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
+Jan = BK.jacobian_cyclic_sparse(pbsp_mass, orbitguess_f, par)
 @test norm(Jfd2[1:size(Jan2,1),1:size(Jan2,1)] - Jan2, Inf) < 1e-6
 
 ####################################################################################################
@@ -254,41 +254,41 @@ pbsp = PeriodicOrbitTrapProblem(
 
 sol0 = rand(2n)
 orbitguess_f = rand(2n*M+1)
-Jpo = pbsp(Val(:JacFullSparse), orbitguess_f, par)
+Jpo = BK.po_jacobian_sparse(pbsp, orbitguess_f, par)
 Jpo2 = copy(Jpo)
-pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the full matrix
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M)
-pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
+BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par, _indx)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the cyclic matrix
-Jpo = pbsp(Val(:JacCyclicSparse), orbitguess_f, par)
+Jpo = BK.jacobian_cyclic_sparse(pbsp, orbitguess_f, par)
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
-pbsp(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
+BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0
 
 ##########################
 #### idem with mass matrix
 pbsp_mass = @set pbsp.massmatrix = massmatrix = spdiagm( 0 => rand(pbsp.N))
-Jpo = pbsp_mass(Val(:JacFullSparse), orbitguess_f, par)
+Jpo = BK.po_jacobian_sparse(pbsp_mass, orbitguess_f, par)
 Jpo2 = copy(Jpo)
-pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par)
+BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the full matrix
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M)
-pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx)
+BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx)
 @test nnz(Jpo2 - Jpo) == 0
 
 # version with indices in the cyclic matrix
-Jpo = pbsp_mass(Val(:JacCyclicSparse), orbitguess_f, par)
+Jpo = BK.jacobian_cyclic_sparse(pbsp_mass, orbitguess_f, par)
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
-pbsp_mass(Val(:JacFullSparseInplace), Jpo2, orbitguess_f, par, _indx; updateborder = false)
+BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx; updateborder = false)
 @test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
 # test of the version with inhomogeneous time discretisation
@@ -313,6 +313,6 @@ BK.get_periodic_orbit(pbspti, orbitguess_f, par)
 
 @test pbspti.xπ ≈ pbsp.xπ
 @test pbspti.ϕ ≈ pbsp.ϕ
-BK.residual(pbspti, orbitguess_f, par)
-@test BK.residual(pbsp, orbitguess_f, par) ≈ BK.residual(pbspti, orbitguess_f, par)
+BK.po_residual(pbspti, orbitguess_f, par)
+@test BK.po_residual(pbsp, orbitguess_f, par) ≈ BK.po_residual(pbspti, orbitguess_f, par)
 end

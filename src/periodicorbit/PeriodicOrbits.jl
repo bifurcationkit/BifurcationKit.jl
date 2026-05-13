@@ -14,6 +14,8 @@ abstract type AbstractPoincareShootingDiscretization <: AbstractPOShootingDiscre
 @inline get_mesh_size(pb::AbstractPeriodicOrbitDiscretization) = pb.M
 isinplace(::AbstractPOShootingDiscretization) = false
 
+residual!(pb::PeriodicOrbit, out, x, pars) = po_residual!(get_discretization(pb), out, x, pars)
+residual(pb::PeriodicOrbit, x, pars) = po_residual!(get_discretization(pb), similar(x), x, pars)
 get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
 
 """
@@ -182,7 +184,7 @@ _generate_jacobian(::AbstractPeriodicOrbitDiscretization, J::Union{AutoDiffDense
 _generate_jacobian(::AbstractPeriodicOrbitDiscretization, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(VI.scalartype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
 
 function _generate_jacobian(disc::AbstractPOShootingDiscretization, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
-    _J = disc(Val(:JacobianMatrix), orbitguess, pars)
+    _J = po_jacobian(disc, orbitguess, pars)
     return (AutoDiffDenseAnalytical(), _J)
 end
 ########
@@ -196,7 +198,7 @@ end
 
 function _jacobian_po(wrap::AbstractWrapperPOShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
     sh = get_discretization(wrap)
-    sh(Val(:JacobianMatrixInplace), J[2], x, p)
+    po_jacobian!(sh, J[2], x, p)
     return J[2]
 end
 
@@ -210,7 +212,7 @@ function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffMF
     return dx -> ForwardDiff.derivative(z -> residual(wrap_po, x .+ z .* dx, p), 0)
 end
 
-_jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> jvp(get_discretization(wrap_po), x, p, dx)
+_jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> po_jvp(get_discretization(wrap_po), x, p, dx)
 
 
 """
@@ -230,7 +232,7 @@ Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@
 
 # Optional argument
 $DocStringJacobianPOSh
-"""
+""" # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 function newton(disc::AbstractPOShootingDiscretization,
                 orbitguess,
                 options::NewtonPar;
@@ -283,7 +285,7 @@ Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingPro
 # Optional arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 $DocStringJacobianPOSh
-"""
+""" # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 function continuation(discPO::AbstractPOShootingDiscretization,
                         orbitguess,
                         alg::AbstractContinuationAlgorithm,
@@ -654,6 +656,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newton_options
         # find point on the first branch
+        # TODO! This should not be! Call it po_from_disc_newton ?
         sol0 = newton(new_disc, pred.po, optn; kwargs...)
         if converged(sol0) == false
             error("The first guess did not converge")
@@ -671,7 +674,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     end
 
     # this should not be
-    residual(new_disc, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
+    po_residual(new_disc, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
     branch = continuation( new_disc, orbitguess, alg, _contParams;

@@ -644,7 +644,8 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     #########
     # compute v1★
-    J★ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    # TODO: extract from continuation_pd
+    J★ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
@@ -689,7 +690,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
-    Jψ = analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    Jψ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -LA.I(N)
     Jψ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
@@ -1040,7 +1041,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     # we use an extended linear system for this
      # J = D  -  T*A(t) + iθ/T
     θ = abs(ns.ω)
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯})
+    J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯})
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
@@ -1068,7 +1069,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     #########
     # compute ϕ1star
     # Jϕ = D  +  T * Aᵗ(t)
-    Jϕ = analytical_jacobian(coll, ns.x0, par; _transpose = Val(true), ρF = -1)
+    Jϕ = po_analytical_jacobian(coll, ns.x0, par; _transpose = Val(true), ρF = -1)
     Jϕ[end-N:end-1, 1:N] .= -LA.I(N)
     Jϕ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
@@ -1105,7 +1106,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     #########
     # compute v1star
     # J = D  +  T*Aᵗ(t) + iθ/T
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯}, _transpose = Val(true), ρF = -1)
+    J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯}, _transpose = Val(true), ρF = -1)
 
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
@@ -1138,7 +1139,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
     end
     rhs = vcat(vec(Bₛ), 0)
-    J = analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = Complex{𝒯})
+    J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = Complex{𝒯})
     # h₂₀ = J \ (rhs)
 
     h₂₀= J[begin:end-1,begin:end-1] \ rhs[begin:end-1];h₂₀ = vcat(vec(h₂₀), 0)
@@ -1162,7 +1163,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     border_ϕ1 = ForwardDiff.gradient(x -> ∫( reshape(x, size(ϕ₁★ₛ)), ϕ₁★ₛ),
                                                 zeros(𝒯, length(ϕ₁★ₛ))
                                     )
-    J = analytical_jacobian(coll, ns.x0, par;  𝒯 = Complex{𝒯})
+    J = po_analytical_jacobian(coll, ns.x0, par;  𝒯 = Complex{𝒯})
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
     # add borders

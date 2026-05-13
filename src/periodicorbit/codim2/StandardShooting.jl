@@ -1,5 +1,5 @@
 function d2F(wrapsh::PeriodicOrbitFunctionalSh, x, p, dx1, dx2)
-    d2PO(z -> residual(get_discretization(wrapsh), z, p), x, dx1, dx2)
+    d2PO(z -> po_residual(get_discretization(wrapsh), z, p), x, dx1, dx2)
 end
 
 # if the jacobian is matrix based, use transpose

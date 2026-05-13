@@ -151,7 +151,7 @@ function optionsCont(x,p,l; opt = optcont)
     end
 end
 
-diagram = bifurcationdiagram(br.prob, br, 2, optionsCont;
+diagram = bifurcationdiagram(BK.getprob(br), br, 2, optionsCont;
     plot = true, verbosity = 0,
     # usedeflation = true,
     # δp = 0.005,
