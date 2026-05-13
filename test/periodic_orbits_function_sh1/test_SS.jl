@@ -11,7 +11,7 @@ let
     p0 = 0
     BK.jvp(fl, x0, p0, 0, 0)
     BK.vjp(fl, x0, p0, 0, 0)
-    BK.vf(fl,x0, p0)
+    BK.vector_field(fl,x0, p0)
     BK.evolve(fl, x0, p0, 0)
     BK.evolve(fl, Val(:Full), x0, p0, 0)
     BK.evolve(fl, Val(:SerialTimeSol), x0, p0, 0)
@@ -36,23 +36,23 @@ let
     fl = BK.Flow(vf, flow, dflow); @reset fl.flowFull = flow
     BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
-    probSh = BK.ShootingProblem(M = M, flow = fl,
+    _sh = BK.ShootingProblem(M = M, flow = fl,
                 ds = LinRange(0, 1, M+1) |> diff,
                 section = section
                 )
 
-    probSh2 = BK.ShootingProblem(M = M, flow = fl,
+    _sh2 = BK.ShootingProblem(M = M, flow = fl,
             ds = LinRange(0, 1, M+1) |> diff,
             section = BK.SectionSS(ones(N), zeros(N))
             )
 
-    show(probSh)
+    show(_sh)
 
     poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     po = BorderedArray(poguess, 1.)
 
     # test section update
-    BK.updatesection!(probSh2, po, par)
+    BK.updatesection!(_sh2, po, par)
 
     dpoguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     dpo = BorderedArray(dpoguess, 2.)
@@ -61,20 +61,20 @@ let
     poguess = BK.VI.MinimalMVec([rand(N) for ii=1:M])
     pov = vcat(reduce(vcat, po.u.vec), po.p)
     dpov = vcat(reduce(vcat, dpo.u.vec), dpo.p)
-    resv = BK.residual(probSh, pov, par)
+    resv = BK.po_residual(_sh, pov, par)
 
-    dresv = BK.jvp(probSh, pov, par, dpov; δ)
-    resad = ForwardDiff.derivative(t -> BK.residual(probSh, pov .+ t .* dpov, par), 0.)
+    dresv = BK.po_jvp(_sh, pov, par, dpov; δ)
+    resad = ForwardDiff.derivative(t -> BK.po_residual(_sh, pov .+ t .* dpov, par), 0.)
     @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
     # use of BorderedArray structure
-     BK.residual(probSh2, po, par)
-    res = BK.residual(probSh, po, par)
+     BK.po_residual(_sh2, po, par)
+    res = BK.po_residual(_sh, po, par)
     @test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
     @test norm(res.p - resv[end], Inf) ≈ 0
 
-    BK.jvp(probSh2, po, par, dpo; δ)
-    dres = BK.jvp(probSh, po, par, dpo; δ)
+    BK.po_jvp(_sh2, po, par, dpo; δ)
+    dres = BK.po_jvp(_sh, po, par, dpo; δ)
     @test norm(dres.p - dresv[end], Inf) ≈ 0
     @test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0
 
@@ -87,11 +87,11 @@ let
 
     fl = BK.Flow(vf, flow, dflow)
 
-    probSh = BK.ShootingProblem(M = M, flow = fl,
+    _sh = BK.ShootingProblem(M = M, flow = fl,
                 ds = LinRange(0,1,M+1) |> diff ,
                 section = section)
 
-    probSh2 = BK.ShootingProblem(M = M, flow = fl,
+    _sh2 = BK.ShootingProblem(M = M, flow = fl,
                 ds = LinRange(0,1,M+1) |> diff ,
                 section = BK.SectionSS(ones(N), zeros(N))
                 )
@@ -105,19 +105,19 @@ let
     # use of AbstractArray structure
     pov = vcat(reduce(vcat, po.u.vec), po.p)
     dpov = vcat(reduce(vcat, dpo.u.vec), dpo.p)
-    resv = BK.residual(probSh, pov, par)
+    resv = BK.po_residual(_sh, pov, par)
 
-    dresv = BK.jvp(probSh, pov, par, dpov; δ = δ)
-    resad = ForwardDiff.derivative(t -> BK.residual(probSh, pov .+ t .* dpov, par), 0.)
+    dresv = BK.po_jvp(_sh, pov, par, dpov; δ = δ)
+    resad = ForwardDiff.derivative(t -> BK.po_residual(_sh, pov .+ t .* dpov, par), 0.)
     @test norm(resad[1:end-1] - dresv[1:end-1], Inf) < 1e-14
 
     # use of BorderedArray structure
-    res = BK.residual(probSh, po, par)
+    res = BK.po_residual(_sh, po, par)
     @test norm(reduce(vcat,res.u.vec) - resv[1:end-1] , Inf) ≈ 0
     @test norm(res.p - resv[end], Inf) ≈ 0
 
-    BK.jvp(probSh2, po, par, dpo; δ = δ)
-    dres = BK.jvp(probSh, po, par, dpo; δ = δ)
+    BK.po_jvp(_sh2, po, par, dpo; δ = δ)
+    dres = BK.po_jvp(_sh, po, par, dpo; δ = δ)
     @test norm(dres.p - dresv[end], Inf) ≈ 0
     @test norm(reduce(vcat,dres.u.vec) - dresv[1:end-1], Inf) ≈ 0
 end
@@ -187,8 +187,8 @@ let
     show(probPSh)
 
     # test functional and its differential
-    BK.residual(probPSh, ci, par)
-    BK.jvp(probPSh, ci, par, dci)
+    BK.po_residual(probPSh, ci, par)
+    BK.po_jvp(probPSh, ci, par, dci)
 
     # test the analytical of the differential of the return Map
     z0 = rand(2)
@@ -199,10 +199,10 @@ let
     display(_out1)
 
     # test the analytical version of the functional
-    _out0 = BK.jvp(probPSh, ci, par, dci)
+    _out0 = BK.po_jvp(probPSh, ci, par, dci)
     δ = 1e-6
-    _out2 = (BK.residual(probPSh, ci .+ δ .* dci, par) .- BK.residual(probPSh, ci, par)) ./ δ
-    _out1 = ForwardDiff.derivative(z -> BK.residual(probPSh, ci .+ z .* dci, par), 0)
+    _out2 = (BK.po_residual(probPSh, ci .+ δ .* dci, par) .- BK.po_residual(probPSh, ci, par)) ./ δ
+    _out1 = ForwardDiff.derivative(z -> BK.po_residual(probPSh, ci .+ z .* dci, par), 0)
     display(_out0)
     display(_out1)
     display(_out2)

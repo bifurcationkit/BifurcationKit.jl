@@ -1,36 +1,50 @@
+abstract type AbstractBoundaryValueDiscretization end
+abstract type AbstractPeriodicOrbitDiscretization <: AbstractBoundaryValueDiscretization end
+
+# Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
+abstract type AbstractPODifferentialDiscretization <: AbstractPeriodicOrbitDiscretization end
+# finite differences is a sub-case of Differential discretization
+abstract type AbstractPOFiniteDifferencesDiscretization <: AbstractPODifferentialDiscretization end
+
+# Periodic orbit computations by shooting method
+abstract type AbstractPOShootingDiscretization <: AbstractPeriodicOrbitDiscretization end
+abstract type AbstractPoincareShootingDiscretization <: AbstractPOShootingDiscretization end
+################################################################################
 # get the number of time slices
-@inline get_mesh_size(pb::AbstractPeriodicOrbitProblem) = pb.M
+@inline get_mesh_size(pb::AbstractPeriodicOrbitDiscretization) = pb.M
+isinplace(::AbstractPOShootingDiscretization) = false
+
+residual!(pb::PeriodicOrbit, out, x, pars) = po_residual!(get_discretization(pb), out, x, pars)
+residual(pb::PeriodicOrbit, x, pars) = po_residual!(get_discretization(pb), similar(x), x, pars)
+get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
 
 """
 $(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getperiod(::AbstractPeriodicOrbitProblem, x, par = nothing) = _extract_period(x)
-@inline getperiod(prob::WrapPOColl, u, p) = getperiod(prob.prob, u, p)
-@inline getperiod(prob::WrapPOSh, u, p) = getperiod(prob.prob, u, p)
+@inline getperiod(::AbstractPeriodicOrbitDiscretization, x, par = nothing) = _extract_period(x)
+@inline getperiod(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = getperiod(get_discretization(prob), u, p)
 
 @inline _extract_period(x::AbstractVector) = x[end]
 @inline _extract_period(x::BorderedArray)  = x.p
 
 # The next method only used just in the current file. Allows to set the parameters, like during aBS
-_set_params_in_po(pb::AbstractPODiffProblem, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
-_set_params_in_po(pb::AbstractShootingProblem, pars) = (@set pb.par = pars)
+_set_params_in_po(pb::AbstractPODifferentialDiscretization, pars) = (@set pb.prob_vf = re_make(pb.prob_vf; params = pars))
+_set_params_in_po(pb::AbstractPOShootingDiscretization, pars) = (@set pb.par = pars)
 
 # function to extract trajectories from branch
-get_periodic_orbit(prob::WrapPOColl, u, p) = get_periodic_orbit(prob.prob, u, p)
-get_periodic_orbit(prob::WrapPOSh, u, p) = get_periodic_orbit(prob.prob, u, p)
-get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(br.prob, br.sol[ind].x, setparam(br, br.sol[ind].p))
+get_periodic_orbit(prob::AbstractWrapperPeriodicOrbitProblem, u, p) = get_periodic_orbit(get_discretization(prob), u, p)
+get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 
-@inline getdelta(prob::WrapPOSh) = getdelta(prob.prob.flow)
-@inline has_hessian(::WrapPOSh) = true
+@inline has_hessian(::PeriodicOrbitFunctionalSh) = true
 
-Base.size(pb::AbstractPOFDProblem) = (pb.M, pb.N)
-on_gpu(pb::AbstractPOFDProblem) = pb.ongpu
-has_hessian(pb::AbstractPOFDProblem) = pb.d2F == nothing
-isinplace(pb::AbstractPOFDProblem) = isinplace(pb.prob_vf)
+Base.size(pb::AbstractPOFiniteDifferencesDiscretization) = (pb.M, pb.N)
+on_gpu(pb::AbstractPOFiniteDifferencesDiscretization) = pb.ongpu
+has_hessian(pb::AbstractPOFiniteDifferencesDiscretization) = pb.d2F == nothing
+isinplace(pb::AbstractPOFiniteDifferencesDiscretization) = isinplace(pb.prob_vf)
 
-function applyJ(pb, dest, x, p, dx)
+function applyJ(pb, dest, x, p, dx) #TODO REMOVE?
     if isinplace(pb)
         pb.prob_vf.VF.J(dest, x, p, dx)
     else
@@ -44,7 +58,7 @@ $(TYPEDSIGNATURES)
 
 This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`.
 """
-function generate_solution(pb::AbstractPeriodicOrbitProblem, orbit, period)
+function generate_solution(pb::AbstractPeriodicOrbitDiscretization, orbit, period)
     M = get_mesh_size(pb)
     orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
     # append period at the end of the initial guess
@@ -74,15 +88,15 @@ struct POSolution{Tpb, Tx, Tp}
     x::Tx
     pars::Tp
 end
-POSolution(prob::AbstractPeriodicOrbitProblem, x) = POSolution(prob, x, nothing)
+POSolution(prob::AbstractPeriodicOrbitDiscretization, x) = POSolution(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
-save_solution(::WrapPOSh, x, p) = x
+save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
 """
 $(TYPEDEF)
 
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::WrapPOColl,...)`
+Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -109,14 +123,29 @@ This struct allows to have a unified interface for periodic orbits methods to re
 # Internal fields
 $(TYPEDFIELDS)
 """
-@with_kw_noshow struct SolPeriodicOrbit{Ts, Tu}
+@with_kw_noshow struct SolPeriodicOrbit{𝒯s, 𝒯u}
     "Time mesh."
-    t::Ts
+    t::𝒯s
     "Solution discretized on time mesh."
-    u::Tu
+    u::𝒯u
 end
 Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
 Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
+####################################################################################################
+function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
+    prob = get_discretization(wrap)
+    success = converged(state)
+    bisection = in_bisection(state)
+    update_section_every_step = prob.update_section_every_step
+    step = state.step
+    z = getsolution(state)
+    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+        @debug "[Periodic orbit] update section"
+        # Trapezoid and Shooting need the parameters for section update:
+        updatesection!(prob, z.u, setparam(wrap, z.p))
+    end
+    return true
+end
 ####################################################################################################
 const _po_sh_jacobian_types = (AutoDiffMF(),
                                 MatrixFree(),
@@ -128,22 +157,22 @@ const _po_sh_jacobian_types = (AutoDiffMF(),
 const DocStringJacobianPOSh = """
 `jacobian` Specify the choice of the linear algorithm, which must belong to `$_po_sh_jacobian_types`. This is used to select a way of inverting the jacobian dG\n
     1. For `MatrixFree()`, matrix free jacobian, the jacobian is specified by the user in `prob`. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
-    2. For `AutoDiffMF()`, we use Automatic Differentiation (AD) to compute the (matrix-free) derivative of `x -> prob(x, p)` using a directional derivative. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
+    2. For `AutoDiffMF()`, we use Automatic Differentiation (AD) to compute the (matrix-free) derivative of `x -> prob(x, p)` using a directional derivative, also called JVP product. This is to be used with an iterative solver (e.g. GMRES) to solve the linear system
     3. For `AutodiffDense()`. Same as for `AutoDiffMF` but the jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one.
     4. For `FiniteDifferences()`, same as for `AutoDiffDense` but we use Finite Differences to compute the jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
     5. For `AutoDiffDenseAnalytical()`. Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
     6. For `FiniteDifferencesMF()`, use Finite Differences to compute the matrix-free jacobian of `x -> prob(x, p)` using the `δ = 1e-8` which can be passed as an argument.
 """
 ##########################
-@inline is_symmetric(prob::WrapPOSh) = false
-residual(prob::WrapPOSh, x, p) = prob.prob(x, p)
-jacobian(prob::AbstractWrapperPOProblem, x, p) = jacobian(prob.prob, prob.jacobian, x, p)
+@inline is_symmetric(prob::PeriodicOrbitFunctionalSh) = false
+jacobian(prob::AbstractWrapperPeriodicOrbitProblem, x, p) = _jacobian_po(prob, prob.jacobian, x, p)
 
+########
 # useful getters for FloquetColl
 get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
-get_wrap_po(pb::AbstractWrapperPOProblem) = pb
+get_wrap_po(pb::AbstractWrapperPeriodicOrbitProblem) = pb
 
-_generate_jacobian(::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense,
+_generate_jacobian(::AbstractPeriodicOrbitDiscretization, J::Union{AutoDiffDense,
                                                                 FiniteDifferences,
                                                                 AutoDiffMF,
                                                                 MatrixFree,
@@ -152,39 +181,39 @@ _generate_jacobian(::AbstractPeriodicOrbitProblem, J::Union{AutoDiffDense,
                                                                 FullSparse,
                                                                 DenseAnalytical}, o, pars; k...) = J
 
-_generate_jacobian(::AbstractPeriodicOrbitProblem, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(eltype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
+_generate_jacobian(::AbstractPeriodicOrbitDiscretization, ::FiniteDifferencesMF, orbitguess, pars; δ = convert(VI.scalartype(orbitguess), 1e-8)) = (FiniteDifferencesMF(), δ)
 
-function _generate_jacobian(probPO::AbstractShootingProblem, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
-    _J = probPO(Val(:JacobianMatrix), orbitguess, pars)
+function _generate_jacobian(disc::AbstractPOShootingDiscretization, ::AutoDiffDenseAnalytical, orbitguess, pars; k...)
+    _J = po_jacobian(disc, orbitguess, pars)
     return (AutoDiffDenseAnalytical(), _J)
 end
-
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffDense, x, p)
-    ForwardDiff.jacobian(z -> residual(probPO, z, p), x)
+########
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffDense, x, p)
+    ForwardDiff.jacobian(z -> residual(wrap_po, z, p), x)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::FiniteDifferences, x, p)
-    return finite_differences(z -> residual(probPO, z, p), x)
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::FiniteDifferences, x, p)
+    return finite_differences(z -> residual(wrap_po, z, p), x)
 end
 
-function jacobian(probPO::AbstractShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
-    probPO(Val(:JacobianMatrixInplace), J[2], x, p)
+function _jacobian_po(wrap::AbstractWrapperPOShootingProblem, J::Tuple{AutoDiffDenseAnalytical, Tj}, x, p) where {Tj}
+    sh = get_discretization(wrap)
+    po_jacobian!(sh, J[2], x, p)
     return J[2]
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, J::Tuple{FiniteDifferencesMF, Tj}, x, p) where {Tj}
     δ = J[2]
-    return dx -> (residual(probPO, x .+ δ .* dx, p) .- 
-                  residual(probPO, x .- δ .* dx, p)) ./ (2δ)
+    return dx -> (residual(wrap_po, x .+ δ .* dx, p) .- 
+                  residual(wrap_po, x .- δ .* dx, p)) ./ (2δ)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::AutoDiffMF, x, p)
-    return dx -> ForwardDiff.derivative(z -> residual(probPO, x .+ z .* dx, p), 0)
+function _jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::AutoDiffMF, x, p)
+    return dx -> ForwardDiff.derivative(z -> residual(wrap_po, x .+ z .* dx, p), 0)
 end
 
-function jacobian(probPO::AbstractPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p)
-    return dx -> jvp(probPO, x, p, dx)
-end
+_jacobian_po(wrap_po::AbstractWrapperPeriodicOrbitProblem, ::Union{MatrixFree, FullMatrixFree}, x, p) = dx -> po_jvp(get_discretization(wrap_po), x, p, dx)
+
 
 """
 $(TYPEDSIGNATURES)
@@ -196,22 +225,22 @@ Note that the linear solver has to be appropriately set up in `options`.
 
 Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
 
-- `prob` a problem of type `<: AbstractShootingProblem` encoding the shooting functional G.
+- `prob` a problem of type `<: AbstractPOShootingDiscretization` encoding the shooting functional G.
 - `orbitguess` a guess for the periodic orbit. See [`ShootingProblem`](@ref) and See [`PoincareShootingProblem`](@ref) for information regarding the shape of `orbitguess`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
 $DocStringJacobianPOSh
-"""
-function newton(prob::AbstractShootingProblem,
+""" # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
+function newton(disc::AbstractPOShootingDiscretization,
                 orbitguess,
                 options::NewtonPar;
                 lens::OpticType = nothing,
-                δ = convert(eltype(orbitguess), 1e-8),
+                δ = getdelta(disc),
                 kwargs...)
-    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
-    probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
+    jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc); δ)
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
     return solve(probw, Newton(), options; kwargs...)
 end
 
@@ -230,15 +259,15 @@ $DocStringJacobianPOSh
 # Output:
 - solution::NonLinearSolution, see [`NonLinearSolution`](@ref)
 """
-function newton(prob::AbstractShootingProblem,
+function newton(disc::AbstractPOShootingDiscretization,
                 orbitguess::vectype,
                 defOp::DeflationOperator{Tp, Tdot, T, vectype},
                 options::NewtonPar{T, S, E};
                 lens::OpticType = nothing,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
-    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob))
-    probw = WrapPOSh(prob, jac, orbitguess, getparams(prob), lens, nothing, nothing)
+    jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc))
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
     return solve(probw, defOp, options; kwargs...)
 end
 
@@ -256,43 +285,37 @@ Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingPro
 # Optional arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
 $DocStringJacobianPOSh
-"""
-function continuation(probPO::AbstractShootingProblem,
+""" # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
+function continuation(discPO::AbstractPOShootingDiscretization,
                         orbitguess,
                         alg::AbstractContinuationAlgorithm,
                         contParams::ContinuationPar,
                         linear_algo::AbstractBorderedLinearSolver;
-                        δ = convert(VI.scalartype(orbitguess), 1e-8),
+                        δ = convert(VI.scalartype(orbitguess), getdelta(discPO)),
                         eigsolver = FloquetQaD(contParams.newton_options.eigsolver),
                         record_from_solution = nothing,
                         plot_solution = nothing,
                         kwargs...)
-    if isnothing(getlens(probPO))
+    if isnothing(getlens(discPO))
         error("You need to provide a lens for your periodic orbit problem.")
     end
-    jacobianPO = probPO.jacobian
-    jac = _generate_jacobian(probPO, jacobianPO, orbitguess, getparams(probPO); δ)
-
+    jacobianPO = discPO.jacobian
+    jac = _generate_jacobian(discPO, jacobianPO, orbitguess, getparams(discPO); δ)
     if compute_eigenelements(contParams)
         contParams = @set contParams.newton_options.eigsolver = eigsolver
     end
 
-    # change the user provided functions by passing probPO in its parameters
-    _finsol = modify_po_finalise(probPO, kwargs, probPO.update_section_every_step)
-    # remove this part from the arguments passed to continuation
-    _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
-    _recordsol = modify_po_record(probPO, getparams(probPO), getlens(probPO); _kwargs...)
-    _plotsol   = modify_po_plot(probPO, getparams(probPO), getlens(probPO); _kwargs...)
-
-    probwp = WrapPOSh(probPO, jac, orbitguess, getparams(probPO), getlens(probPO), _plotsol, _recordsol)
+    _plotsol   = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
+    wrap = PeriodicOrbitFunctionalSh(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
 
     br = continuation(
-        probwp, alg,
+        wrap, alg,
         contParams;
         kwargs...,
         linear_algo,
         kind = PeriodicOrbitCont(),
-        finalise_solution = _finsol)
+        )
     return br
 end
 
@@ -303,21 +326,21 @@ This is the continuation routine for computing a periodic orbit.
 
 # Arguments
 
-Similar to [`continuation`](@ref) except that `prob::AbstractPeriodicOrbitProblem`.
+Similar to [`continuation`](@ref) except that `prob::AbstractPeriodicOrbitDiscretization`.
 
 # Optional argument
 - `linear_algo::AbstractBorderedLinearSolver`
 $DocStringJacobianPOSh
 
 """
-function continuation(prob::AbstractPeriodicOrbitProblem,
+function continuation(disc::AbstractPeriodicOrbitDiscretization,
                     orbitguess,
                     alg::AbstractContinuationAlgorithm,
                     _contParams::ContinuationPar;
-                    linear_algo = nothing,
-                    kwargs...)
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    return continuation(prob, orbitguess, alg, _contParams, _linear_algo; kwargs...)
+                    linear_algo::Ty = nothing,
+                    kwargs...) where {Ty}
+    _linear_algo = (Ty == Nothing) ?  MatrixBLS() : linear_algo
+    return continuation(disc, orbitguess, alg, _contParams, _linear_algo; kwargs...)
 end
 ####################################################################################################
 """
@@ -330,11 +353,11 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `br` branch result from a call to `continuation`
 - `ind_hopf` index of the bifurcation point in `br`
 - `contParams` parameters for the call to `continuation`
-- `probPO` problem used to specify the way toc compute the periodic orbit. It can be [`PeriodicOrbitTrapProblem`](@ref), [`PeriodicOrbitOCollProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
+- `disc` discretization used to specify the way toc compute the periodic orbit. It can be [`PeriodicOrbitTrapProblem`](@ref), [`PeriodicOrbitOCollProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
 
 # Optional arguments
 
-- `alg = br.alg` continuation algorithm
+- `alg = getalg(br)` continuation algorithm
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
@@ -351,8 +374,8 @@ A modified version of `prob` is passed to `plot_solution` and `finalise_solution
 function continuation(br::AbstractBranchResult, 
                       ind_bif::Int,
                       _contParams::ContinuationPar,
-                      pbPO::AbstractPeriodicOrbitProblem ;
-                      bif_prob = br.prob,
+                      disc::AbstractPeriodicOrbitDiscretization ;
+                      bif_prob = getprob(br),
                       detailed::Val{detailed_type} = Val(true),
                       use_normal_form = true,
                       autodiff_nf = true,
@@ -364,13 +387,13 @@ function continuation(br::AbstractBranchResult,
 
     detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
     hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
-    return _continuation(hopfpt, bif_prob, _contParams, pbPO; verbose, alg = getalg(br), kwargs...)
+    return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 
 function _continuation(hopfpt::Hopf,
                       bif_prob::AbstractBifurcationProblem,
                       _contParams::ContinuationPar,
-                      pbPO::AbstractPeriodicOrbitProblem;
+                      disc::AbstractPeriodicOrbitDiscretization;
                       verbose = false,
                       alg = PALC(),
                       δp = nothing,
@@ -397,7 +420,7 @@ function _continuation(hopfpt::Hopf,
             "\n├─── amplitude p.o. = ", pred.amp,
             "\n├─── period       T = ", pred.period,
             "\n├─── phase        ϕ = ", ϕ / pi, "⋅π",
-            "\n├─ Method = \n", pbPO, "\n")
+            "\n├─ Method = \n", disc, "\n")
 
     if pred.amp > 0.1
         @debug "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the Hopf point.\nYou can either decrease `ds` or `δp` (which is  how far from the bifurcation point you want the branch of periodic orbits to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
@@ -407,9 +430,9 @@ function _continuation(hopfpt::Hopf,
     bif_prob_rm = re_make(bif_prob; params = setparam(bif_prob, pred.p)) # TODO Not good: we cannot change lens
 
     # build the initial guess
-    M = get_mesh_size(pbPO)
+    M = get_mesh_size(disc)
     orbitguess_a = [pred.orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[1:M]] # GIVES RUNTIME DISPATCH
-    probPO, orbitguess = re_make(pbPO, bif_prob_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
+    probPO, orbitguess = re_make(disc, bif_prob_rm, hopfpt, ζr, orbitguess_a, abs(2pi/pred.ω); orbit = pred.orbit)
 
     if _contParams.newton_options.linsolver isa GMRESIterativeSolvers
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
@@ -427,7 +450,7 @@ function _continuation(hopfpt::Hopf,
         # this factor prevent shooting jacobian from being singular at fixed points
         if probPO isa PoincareShootingProblem
             Tfactor = 0
-        elseif probPO isa AbstractPOFDProblem
+        elseif probPO isa AbstractPOFiniteDifferencesDiscretization
             Tfactor = 100 / abs(2pi / pred.ω)
         else
             Tfactor = 0.001
@@ -466,11 +489,9 @@ function _continuation(hopfpt::Hopf,
         _contParams;
         kwargs...
     )
-
     return Branch(branch, hopfpt)
 end
 ####################################################################################################
-# branch switching from bifurcations of equilibria from curve of Hopf bifurcations
 """
 $(TYPEDSIGNATURES)
 
@@ -479,7 +500,7 @@ Branch switching from the curve to Hopf bifurcation points to the curve of perio
 # Arguments
 - `br_hopf` curve of kind `HopfCont` that is a curve of Hopf bifurcation points.
 - `ind_pt::Int` index of Hopf points from `br_hopf`.
-- `probPO` discretization for computing periodic orbits.
+- `disc` discretization for computing periodic orbits.
 
 # Keyword arguments
 - `lens` parameter axis to be used for the continuation
@@ -488,7 +509,7 @@ Branch switching from the curve to Hopf bifurcation points to the curve of perio
 function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                       ind_pt::Int,
                       options_cont::ContinuationPar,
-                      probPO::AbstractPeriodicOrbitProblem;
+                      disc::AbstractPeriodicOrbitDiscretization;
                       lens = getlens(br_hopf),
                       autodiff_nf = true,
                       nev::Int = length(eigenvals(br_hopf, ind_pt)),
@@ -496,16 +517,16 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     # extract the problem, formulations and vector field
     _prob = getprob(br_hopf)
-    prob_ma = _prob.prob
-    vector_field = prob_ma.prob_vf
-    if ~(prob_ma isa HopfProblemMinimallyAugmented)
-        error("[PO branching from Hopf curve] You need to provide a curve of Hopf points.\nThe underlying problem is not a `HopfProblemMinimallyAugmented`.\nWe found the type: $(typeof(prob_ma))")
+    𝐇 = get_formulation(_prob)
+    vector_field = 𝐇.prob_vf
+    if ~(𝐇 isa HopfMinimallyAugmentedFormulation)
+        error("[PO branching from Hopf curve] You need to provide a curve of Hopf points.\nThe underlying problem is not a `HopfProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐇))")
     end
     # we get the Hopf point
     bifpt = br_hopf.sol[ind_pt]
-    ω = (getp(bifpt.x, prob_ma)[2])
+    ω = get_frequency(bifpt.x, 𝐇)
     λ = Complex(0, ω)
-    x0 = getvec(bifpt.x, prob_ma)
+    x0 = get_solution(bifpt.x)
     params = getparams(br_hopf, ind_pt)
     L = jacobian(vector_field, x0, params)
 
@@ -547,20 +568,20 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                 )
 
     # we compute the Hopf normal form
-    nf = __hopf_normal_form(vector_field, hopfpt, prob_ma.linsolver ; verbose, L, autodiff = autodiff_nf)
+    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L, autodiff = autodiff_nf)
     @debug "[PO from Hopf curve]" nf params nf.nf.b/br_hopf[ind_pt].l1
     if ~(nf.nf.b ≈ br_hopf[ind_pt].l1)
-        warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")
+        @warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")
     end
     bifprob = re_make(vector_field; lens, params)
-    return _continuation(nf, bifprob, options_cont, probPO; verbose, kwargs...)
+    return _continuation(nf, bifprob, options_cont, disc; verbose, kwargs...)
 end
 ####################################################################################################
 # Branch switching from bifurcations of periodic orbits
 """
 $(TYPEDSIGNATURES)
 
-Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `br.prob`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
+Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
 # Arguments
 - `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
@@ -571,6 +592,7 @@ Branch switching at a bifurcation point on a branch of periodic orbits (PO) spec
 - `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `use_normal_form = true` if `false`, the predictor is based on the couple `δp, ampfactor`.
 
 ## For normal form
 - `detailed = false` whether to fully compute the normal form or a very simplified version.
@@ -589,11 +611,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       usedeflation = false,
                       linear_algo = nothing,
                       detailed::Val{detailed_type} = Val(true),
-                      prm::Val{prm_type} = Val(getprob(br) isa WrapPOColl ? false : true),
+                      prm::Val{prm_type} = Val(getprob(br) isa PeriodicOrbitFunctionalColl ? false : true),
                       use_normal_form = true,
                       autodiff_nf = true,
-                      kwargs...) where {Tprob <: AbstractWrapperPOProblem, detailed_type, prm_type}
-
+                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem, detailed_type, prm_type}
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
     if ~(bptype in (:pd, :bp, :nd))
@@ -608,7 +629,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
-    pbnew = pred.prob # modified problem
+    new_disc = get_discretization(pred.prob) # modified discretization
 
     verbose = get(kwargs, :verbosity, 0) > 0
     verbose && printstyled(color = :green, "━"^55*
@@ -616,34 +637,35 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
             "\n├─ Bifurcation type = ", bifpt.type,
             "\n├─── normal form    = ", use_normal_form ? "based on $(detailed_type ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
-            "\n├─── period at bif. = ", getperiod(br.prob.prob, bifpt.x, setparam(br, bifpt.param)),
+            "\n├─── period at bif. = ", getperiod(getprob(br), bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, 
             "\n├─── p - p0         = ", newp - bifpt.param,
             "\n├─── amplitude p.o. = ", pred.ampfactor,
             "\n")
 
     if pred.ampfactor > 0.1
-        @warn "The amplitude of the first periodic orbit on the bifurcated branch\nobtained by the predictor is not small, it is = $(pred.ampfactor).\nYou can either decrease `ds`, or specify how far `δp` from the\nbifurcation point you want the branch of periodic orbits to start."
+        @warn "The amplitude of the first periodic orbit on the bifurcated branch\nobtained by the predictor is not small, it is = $(pred.ampfactor).\nYou can either decrease the step size `ds` or specify the distance `δp`\nfrom the bifurcation point where the branch of periodic orbits originates.\nYou can also decrease `ampfactor`"
     end
 
     # a priori, the following do not overwrite the options in br
     # hence the results / parameters in br are kept intact)
-    _contParams = _update_cont_params(_contParams, pbnew, orbitguess)
-    pbnew = _set_params_in_po(pbnew, setparam(br, newp))
+    _contParams = _update_cont_params(_contParams, new_disc, orbitguess)
+    new_disc = _set_params_in_po(new_disc, setparam(br, newp))
 
     if usedeflation
         verbose && println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         optn = _contParams.newton_options
         # find point on the first branch
-        sol0 = newton(pbnew, pred.po, optn; kwargs...)
+        # TODO! This should not be! Call it po_from_disc_newton ?
+        sol0 = newton(new_disc, pred.po, optn; kwargs...)
         if converged(sol0) == false
             error("The first guess did not converge")
         end
 
         # find the bifurcated branch using deflation
-        deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(eltype(orbitguess)), [sol0.u]; autodiff = true)
+        deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(VI.scalartype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
-        solbif = newton(pbnew, orbitguess, deflationOp,
+        solbif = newton(new_disc, orbitguess, deflationOp,
             (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         if converged(solbif) == false
             error("Deflated newton did not converge")
@@ -651,16 +673,15 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         orbitguess .= solbif.u
     end
 
-    residual(pbnew, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
-
+    # this should not be
+    po_residual(new_disc, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
     _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
-    branch = continuation( pbnew, orbitguess, alg, _contParams;
+    branch = continuation( new_disc, orbitguess, alg, _contParams;
         kwargs..., # put this first to be overwritten by the following
         linear_algo = _linear_algo,
         kind = br.kind,
-        # record_from_solution = record_from_solution,
-        # plot_solution = wrap.plotSolution,
+        record_from_solution = record_from_solution(getprob(br)),
     )
 
     return Branch(branch, nf)

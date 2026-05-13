@@ -1214,9 +1214,9 @@ This function provides prediction for the periodic orbits branching off the Hopf
 function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     # get the element type
     𝒯 = VI.scalartype(hp.x0)
-
     # get the normal form
     nf = hp.nf
+    amp::𝒯 = ω::𝒯 = pnew::𝒯 = 0
     if ~ismissing(nf.a) && ~ismissing(nf.b)
         (;a, b) = nf
 
@@ -1227,13 +1227,13 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         # we need to find the type, supercritical or subcritical
         dsfactor = real(a) * real(b) < 0 ? 1 : -1
         dsnew::𝒯 = abs(ds) * dsfactor
-        pnew::𝒯 = hp.p + dsnew
+        pnew = hp.p + dsnew
 
         # we solve a * ds + b * amp^2 = 0
-        amp::𝒯 = ampfactor * sqrt(-dsnew * real(a) / real(b))
+        amp = ampfactor * sqrt(-dsnew * real(a) / real(b))
 
         # correction to Hopf Frequency
-        ω::𝒯 = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+        ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
         Ψ001 = nf.Ψ001
         Ψ110 = nf.Ψ110
         Ψ200 = nf.Ψ200
@@ -1241,21 +1241,28 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         amp = ampfactor
         ω = hp.ω
         pnew = hp.p + ds
-        Ψ001 = 0
-        Ψ110 = 0
-        Ψ200 = 0
+        Ψ001 = zero(hp.ζ)
+        Ψ110 = zero(hp.ζ)
+        Ψ200 = zero(hp.ζ)
         dsfactor = 1
     end
     A(t) = amp * cis(t)
 
-    return (orbit = t -> hp.x0 .+ 
+    # make the predictor type-stable
+    orbit = let Ψ001=Ψ001, Ψ110=Ψ110, Ψ200=Ψ200
+        t -> hp.x0 .+ 
                     2 .* real.(hp.ζ .* A(t)) .+
                     ds .* Ψ001 .+
                     abs2(A(t)) .* real.(Ψ110) .+
-                    2 .* real.(A(t)^2 .* Ψ200) ,
+                    2 .* real.(A(t)^2 .* Ψ200)
+    end
+
+    return (
+            orbit = orbit ,
+            Ψ001 = Ψ001,
             amp = 2amp,
             ω = ω,
-            period = abs(2pi/ω),
+            period = abs(2pi / ω),
             p = pnew,
             dsfactor = dsfactor)
 end
@@ -1313,7 +1320,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     verbose && println("──▶ a  = ", a)
 
     # coefficient of x^3
-    # b = <ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
+    # b = < ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
     # (I - L)⋅h20 = B(ζ,ζ)
     h2v = R2(ζ, ζ)
     h20, cv, it = ls(L, h2v; a₀ = -1) # h20 = (L - I) \ h2v
@@ -1480,7 +1487,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
-    L = jacobian(br.prob, convert(Teigvec, bifpt.x), parbif)
+    L = jacobian(getprob(br), convert(Teigvec, bifpt.x), parbif)
 
     # right eigenvector
     if haseigenvector(br) == false

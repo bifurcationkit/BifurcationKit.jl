@@ -66,19 +66,19 @@ end
 
 Jbru_ana(x, p) = ForwardDiff.jacobian(z->Fbru(z,p),x)
 
-n = 10
-par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
-sol0 = zeros(2n)
-prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); J = Jbru_ana)
-
-# test that the jacobian is well computed
-@test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
-opt_newton = NewtonPar(tol = 1e-11, verbose = false)
-opts_br0 = ContinuationPar(p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
-br = continuation(prob, PALC(), opts_br0)
-###################################################################################################
-# Hopf continuation with automatic procedure
 let
+    n = 10
+    par_bru = (α = 2., β = 5.45, D1 = 0.008, D2 = 0.004, l = 0.3)
+    sol0 = zeros(2n)
+    prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l); J = Jbru_ana)
+
+    # test that the jacobian is well computed
+    @test Jbru_sp(sol0, par_bru) - Jbru_ana(sol0, par_bru) |> sparse |> nnz == 0
+    opt_newton = NewtonPar(tol = 1e-11, verbose = false)
+    opts_br0 = ContinuationPar(p_max = 1.8, newton_options = opt_newton, detect_bifurcation = 3, nev = 16, n_inversion = 4)
+    br = continuation(prob, PALC(), opts_br0)
+    ###################################################################################################
+    # Hopf continuation with automatic procedure
     newton(br, 1; start_with_eigen = false)
     newton(br, 1; start_with_eigen = true)
     optconthopf = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds= 0.01, p_max = 6.8, p_min = 0., newton_options = opt_newton, max_steps = 5, detect_bifurcation = 2)
@@ -91,7 +91,7 @@ let
     ind_hopf = 1
     hopfpt = BK.hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
-    𝐇 = HopfProblemMinimallyAugmented(
+    𝐇 = BK.HopfMinimallyAugmentedFormulation(
                         (@set prob.VF.d2F = nothing),
                         conj.(br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
                         (br.eig[bifpt.idx].eigenvecs[:, bifpt.ind_ev]),
@@ -104,34 +104,35 @@ let
     # finite differences Jacobian
     Jac_hopf_fdMA(u0, p) = ForwardDiff.jacobian(u -> hopfpbVec(u, p), u0)
     # ``analytical'' jacobian
-    Jac_hopf_MA(u0, p, pb::HopfProblemMinimallyAugmented) = (return (x = u0, params = p, hopfpb = pb))
+    Jac_hopf_MA(u0, p, pb::BK.HopfMinimallyAugmentedFormulation) = (return (x = u0, params = p, pbma = pb))
 
     rhs = rand(length(hopfpt))
-    jac_hopf_fd = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
-    sol_fd = jac_hopf_fd \ rhs
+    jac_hopf_fwdf = Jac_hopf_fdMA(Bd2Vec(hopfpt), par_bru)
+    sol_fd = jac_hopf_fwdf \ rhs
     BK.get_frequency(rhs, 𝐇)
 
     # test against analytical jacobian
-    _hopf_ma_problem = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
-    J_ana = BK.jacobian(_hopf_ma_problem, Bd2Vec(hopfpt), par_bru)
-    @test norminf(J_ana - jac_hopf_fd) ≈ 0 atol = 1e-3
+    𝐏𝐛 = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+    J_ana = BK.jacobian(𝐏𝐛, Bd2Vec(hopfpt), par_bru)
+    @test norminf(J_ana[1:end-2,1:end-2] - jac_hopf_fwdf[1:end-2,1:end-2]) == 0
+    @test norminf(J_ana - jac_hopf_fwdf) ≈ 0 atol = 1e-3
 
     # create a linear solver
     hopfls = BK.HopfLinearSolverMinAug()
     sol_ma,  = hopfls(Jac_hopf_MA(hopfpt, par_bru, 𝐇), BorderedArray(rhs[1:end-2],rhs[end-1:end]))
 
     # we test the expression for σp
-    σp_fd = Complex(jac_hopf_fd[end-1,end-1], jac_hopf_fd[end, end-1])
+    σp_fd = Complex(jac_hopf_fwdf[end-1,end-1], jac_hopf_fwdf[end, end-1])
     σp_fd_ana = Complex(J_ana[end-1,end-1], J_ana[end, end-1])
     @test σp_fd ≈ σp_fd_ana rtol = 1e-4
 
     # we test the expression for σω
-    σω_fd = Complex(jac_hopf_fd[end-1,end], jac_hopf_fd[end, end])
+    σω_fd = Complex(jac_hopf_fwdf[end-1,end], jac_hopf_fwdf[end, end])
     σω_fd_ana = Complex(J_ana[end-1,end], J_ana[end, end])
     @test σω_fd ≈ σω_fd_ana rtol = 1e-4
 
     # we test the expression for σx
-    σx_fd = jac_hopf_fd[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fd[end, 1:end-2]
+    σx_fd = jac_hopf_fwdf[end-1, 1:end-2] + Complex(0,1) * jac_hopf_fwdf[end, 1:end-2]
     σx_fd_ana = J_ana[end-1, 1:end-2] + Complex(0,1) * J_ana[end, 1:end-2]
     @test σx_fd ≈ σx_fd_ana rtol = 1e-3
 
@@ -166,9 +167,9 @@ let
     br_hopf = continuation(br_d2f, ind_hopf, (@optic _.β), 
                 ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 6.5, max_steps = 3, newton_options = NewtonPar(verbose = false)), 
                 jacobian_ma = BK.MinAug())
-end
+
 ####################################################################################################
-let 
+
     ind_hopf = 1
     hopfpt = BK.hopf_point(br, ind_hopf)
 
@@ -188,46 +189,46 @@ let
 
     # test guess using function
     # l_hopf, Th, orbitguess2s, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 2.6; phase = 0.252)
-    hopf_nf = BK.hopf_normal_form(br.prob, br, ind_hopf; detailed = Val(false))
+    hopf_nf = BK.hopf_normal_form(BK.getprob(br), br, ind_hopf; detailed = Val(false))
     pred = BK.predictor(hopf_nf, 0.01)
 
     prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
             J = Jbru_sp)
 
-    poTrap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
+    _trap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
 
-    jac_PO_fd = BK.finite_differences(x -> BK.residual(poTrap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
-    jac_PO_sp = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    jac_PO_fd = BK.finite_differences(x -> BK.po_residual(_trap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
+    jac_PO_sp = BK.po_jacobian_sparse(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # test of the Jacobian for PeriodicOrbit via Finite differences VS the FD associated jacobian
     # test jacobian expression for Periodic Orbit solve problem
     @test norm(jac_PO_fd - jac_PO_sp, Inf) < 1e-4
 
     # test various jacobians and methods
-    jac_PO_sp =  poTrap(Val(:BlockDiagSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    jac_PO_sp =  BK.po_jacobian_block(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # newton to find Periodic orbit
-    _prob = BK.BifurcationProblem((x, p) -> BK.residual(poTrap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  poTrap(Val(:JacFullSparse),x,p))
+    _prob = BK.BifurcationProblem((x, p) -> BK.po_residual(_trap, x, p), copy(orbitguess_f), (@set par_bru.l = l_hopf + 0.01); J = (x, p) ->  BK.po_jacobian_sparse(_trap, x, p))
     opt_po = NewtonPar(tol = 1e-8, max_iterations = 150)
     outpo_f = @time BK.solve(_prob, Newton(), opt_po)
     @test BK.converged(outpo_f)
 
-    outpo_f = newton((@set poTrap.jacobian = BK.FullLU()), orbitguess_f, opt_po)
+    outpo_f = newton((@set _trap.jacobian = BK.FullLU()), orbitguess_f, opt_po)
     BK.converged(outpo_f)
 
     # jacobian of the functional
-    Jpo2 = poTrap(Val(:JacCyclicSparse), orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
+    Jpo2 = BK.po_jacobian_block(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))
 
     # calcul des exposants de Floquet
     floquetES = FloquetQaD(DefaultEig())
 
     # calcul des exposants de Floquet, extract full vector
-    pbwrap = BK.WrapPOTrap(poTrap, :dense, orbitguess_f, par_bru, nothing, nothing, nothing)
+    pbwrap = BK.PeriodicOrbitFunctionalTrap(_trap, BK.AutoDiffDense(), orbitguess_f, par_bru, nothing, nothing, nothing)
     floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
     # continuation of periodic orbits using :BorderedLU linear algorithm
     opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds= 0.001, p_max = 2.3, max_steps = 3, newton_options = NewtonPar(verbose = false), detect_bifurcation = 1)
-    br_pok2 = continuation((@set poTrap.jacobian = BK.BorderedLU()), orbitguess_f, PALC(), opts_po_cont)
+    br_pok2 = continuation((@set _trap.jacobian = BK.BorderedLU()), orbitguess_f, PALC(), opts_po_cont)
 
     # test of simple calls to newton / continuation
     deflationOp = DeflationOperator(2.0, (x,y) -> dot(x[1:end-1], y[1:end-1]), 1.0, [zero(orbitguess_f)])
@@ -236,13 +237,13 @@ let
     for linalgo in [BK.FullLU(), BK.BorderedLU(), BK.FullSparseInplace()]
         @show linalgo
         # with deflation
-        @time newton((@set poTrap.jacobian = linalgo),
+        @time newton((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), deflationOp, opt_po; normN = norminf)
         # classic Newton-Krylov
-        outpo_f = @time newton((@set poTrap.jacobian = linalgo),
+        outpo_f = @time newton((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), opt_po; normN = norminf)
         # continuation
-        br_pok2 = @time continuation((@set poTrap.jacobian = linalgo),
+        br_pok2 = @time continuation((@set _trap.jacobian = linalgo),
                 copy(orbitguess_f), PALC(),
                 opts_po_cont; normC = norminf)
     end
@@ -253,5 +254,5 @@ let
     ls = DefaultLS()
     opt_po = NewtonPar(tol = 1e-8, max_iterations = 10, linsolver = ls, eigsolver = eil)
     opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.03, ds= 0.01, p_max = 3.0, max_steps = 3, newton_options = (@set opt_po.verbose = false), nev = 2, tol_stability = 1e-8, detect_bifurcation = 2)
-    br_pok2 = continuation(poTrap, outpo_f.u, PALC(), opts_po_cont; normC = norminf)
+    br_pok2 = continuation(_trap, outpo_f.u, PALC(), opts_po_cont; normC = norminf)
 end

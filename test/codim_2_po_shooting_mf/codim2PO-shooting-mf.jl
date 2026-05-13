@@ -158,6 +158,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         bothside = false,
         callback_newton = BK.cbMaxNorm(1),
         bdlinsolver = MatrixFreeBLS(lspo),
+        update_minaug_every_step = 0,
         )
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
 

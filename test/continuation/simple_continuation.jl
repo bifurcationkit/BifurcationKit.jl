@@ -1,11 +1,10 @@
 #using Revise
+using Core.Compiler: return_type # for type stability testing
 using Plots
 using Test
 using ForwardDiff
 using BifurcationKit, LinearAlgebra, SparseArrays
 const BK = BifurcationKit
-
-# N = 1
 
 F0_simple(x, p) = p[1] .* x
 F_simple(x, p; k = 2) = @. p[1] * x + x^(k+1)/(k+1) + 0.01
@@ -91,11 +90,11 @@ let
     end
 end
 ####################################################################################################
+
+###############
 # test continuation interface
 let
-    N = 1
     opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
-    x0 = 0.01 * ones(N)
     prob = BK.BifurcationProblem(F_simple, zeros(10), -1.5, (@optic _); J = Jac_simple)
     iter = ContIterable(prob, PALC(), opts)
     state = iterate(iter)
@@ -110,6 +109,10 @@ let
     BK.in_bisection(nothing)
 end
 ###############
+let
+N = 1
+opts = ContinuationPar(dsmax = 0.051, dsmin = 1e-3, ds=0.001, max_steps = 140, p_min = -3., save_sol_every_step = 0, newton_options = NewtonPar(tol = 1e-8, verbose = false), save_eigenvectors = false, detect_bifurcation = 3)
+x0 = 0.01 * ones(N)
 # basic continuation, without saving much information
 let
     N = 1
@@ -186,16 +189,17 @@ let
     BK.get_solution(br0, 1)
 
     ###### Used to check type stability of the methods
+    @test isconcretetype(return_type(ContIterable, typeof((prob, PALC(), opts))))
     iter = ContIterable(prob, PALC(), opts) # type stable
     eltype(iter)
     length(iter)
 
-    # begin
-    #     state = iterate(iter)[1]
-    #     contRes = BK.ContResult(iter, state)
-    #     @code_warntype continuation!(iter, state, contRes)
-    # end
-    #####
+    begin # test type stability
+        state = iterate(iter)[1]
+        contRes = BK.ContResult(iter, state)
+        @test isconcretetype(return_type(continuation!, typeof((iter, state, contRes))))
+    end
+    ####
 
     opts = ContinuationPar(opts; detect_bifurcation = 3, save_eigenvectors = true)
     br1 = continuation(prob, PALC(), opts) #(4.50 k allocations: 306.656 KiB)
@@ -398,4 +402,19 @@ let
         callback_newton = BK.cbMaxNorm(1e6))
 
     plot(brdc)
+end
+
+lastindex(brdc)
+brdc[1]
+length(brdc)
+
+F2(u,p) = @. -u * (p + u * (2-5u)) * (p - .15 - u * (2+20u))
+prob2 = BK.BifurcationProblem(F2, [0.], 0.3, (@optic _))
+brdc = continuation(prob2,
+    BK.DefCont(deflation_operator = DeflationOperator(2, .001, [[0.], [0.05]]); max_branches = 6),
+    ContinuationPar(opts, dsmin = 1e-4, ds = -0.002, max_steps = 800, newton_options = NewtonPar(verbose = false, max_iterations = 15), plot_every_step = 40, detect_bifurcation = 3, p_min = -0.8);
+    plot=false, verbosity = 0,
+    callback_newton = BK.cbMaxNorm(1e6))
+
+plot(brdc)
 end

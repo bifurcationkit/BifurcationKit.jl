@@ -30,7 +30,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
 end
 
 has_monodromy_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
-getdelta(fl::FlowDE) = fl.delta
+@inline getdelta(fl::FlowDE) = fl.delta
 ####################################################################################################
 # constructors
 """
@@ -59,7 +59,7 @@ _apply_vector_field(prob::EnsembleProblem, o, x, p) = _apply_vector_field(prob.p
 @inline _isinplace(pb::ODEProblem) = isinplace_sciml(pb)
 @inline _isinplace(pb::EnsembleProblem) = isinplace_sciml(pb.prob)
 
-function vf(fl::FlowDE, x, pars)
+function vector_field(fl::FlowDE, x, pars)
     if _isinplace(fl.odeprob)
         out = similar(x)
         _apply_vector_field(fl.odeprob, out, x, pars)
@@ -102,7 +102,7 @@ function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
-function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(eltype(x), 1e-9), kwargs...)
+function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
     sol1 = _flow(x .+ δ .* dx, pars, tm, pb, alg; kwargs...).u
     sol2 = _flow(x           , pars, tm, pb, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
@@ -129,7 +129,7 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -160,7 +160,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, pars, t
     _flow(x, pars, tm, fl.odeprob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
+function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -172,6 +172,6 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx,
     dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
+function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
     dflow_fdSerial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end

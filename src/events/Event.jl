@@ -6,7 +6,7 @@ abstract type AbstractDiscreteEvent <: AbstractEvent end
 (eve::AbstractEvent)(iter, state) = eve.condition(iter, state)
 
 # initialize function, must return the same type as eve(iter, state)
-initialize(eve::AbstractEvent, T) = throw("Initialization method not implemented for event ", eve)
+initialize(eve::AbstractEvent, 𝒯) = throw("Initialization method not implemented for event ", eve)
 
 # finalise event
 finalise_event!(event_point, ::AbstractEvent, it, state, success) = event_point
@@ -41,8 +41,8 @@ end
 
 # Basically, we want to detect if some component of `eve(fct(iter, state))` is below ϵ
 # the ind is used to specify which part of the event is tested
-function is_event_crossed(eve::AbstractContinuousEvent, iter, state, ind = :)
-    if state.eventValue[1] isa Real
+function is_event_crossed(eve::AbstractEvent, iter, state, ind = :)
+    if state.eventValue[1] isa Number
         return test_event(eve, state.eventValue[1], state.eventValue[2])
     else
         for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
@@ -57,24 +57,11 @@ end
 # general condition for detecting a discrete event
 test_event(::AbstractDiscreteEvent, x, y) = x != y
 isonevent(::AbstractDiscreteEvent, x) = false
-
-function is_event_crossed(eve::AbstractDiscreteEvent, iter, state, ind = :)
-    if state.eventValue[1] isa Integer
-        return test_event(eve, state.eventValue[1], state.eventValue[2])
-    else
-        for u in zip(state.eventValue[1][ind], state.eventValue[2][ind])
-            if test_event(eve, u[1], u[2])
-                return true
-            end
-        end
-        return false
-    end
-end
 ####################################################################################################
 # for AbstractContinuousEvent and AbstractDiscreteEvent
 # return type when calling eve.fct(iter, state)
-initialize(eve::AbstractContinuousEvent, T) = ntuple(x -> T(1), eve.nb)
-initialize(eve::AbstractDiscreteEvent, T) = ntuple(x -> Int64(1), eve.nb)
+initialize(eve::AbstractContinuousEvent, 𝒯) = ntuple(x -> 𝒯(1), eve.nb)
+initialize(eve::AbstractDiscreteEvent, 𝒯) = ntuple(x -> Int64(1), eve.nb)
 
 @inline convert_to_tuple_eve(x::Tuple) = x
 @inline convert_to_tuple_eve(x::Real) = (x,)
@@ -226,7 +213,7 @@ function (eve::PairOfEvents)(iter, state)
     return outc..., outd...
 end
 
-initialize(eve::PairOfEvents, T) = initialize(eve.eventC, T)..., initialize(eve.eventD, T)...
+initialize(eve::PairOfEvents, 𝒯) = initialize(eve.eventC, 𝒯)..., initialize(eve.eventD, 𝒯)...
 
 function is_event_crossed(eve::PairOfEvents, iter, state, ind = :)
     nc = length(eve.eventC)
@@ -294,8 +281,8 @@ function (eve::SetOfEvents)(iter, state)
     return (outc..., outd...)
 end
 
-initialize(eve::SetOfEvents, T) = map(x -> initialize(x,T), eve.eventC)..., 
-                                  map(x -> initialize(x,T), eve.eventD)...
+initialize(eve::SetOfEvents, 𝒯) = map(x -> initialize(x, 𝒯), eve.eventC)..., 
+                                  map(x -> initialize(x, 𝒯), eve.eventD)...
 
 # is x actually an event, we just need to test the continuous events
 function isonevent(eves::SetOfEvents, eValues)

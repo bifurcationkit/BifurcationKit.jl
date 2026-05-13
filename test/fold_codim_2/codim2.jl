@@ -15,6 +15,7 @@ function COm(u, p)
     out
 end
 
+let
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
@@ -39,18 +40,16 @@ hpnf = get_normal_form(br, 5)
 hpnf = get_normal_form(br, 2)
 @test hpnf.nf.b |> real ≈ 4.332247e+00 rtol = 1e-2
 
-show(stdout, BK.FoldProblemMinimallyAugmented(prob))
-BK.HopfProblemMinimallyAugmented(prob)
-BK.PeriodDoublingProblemMinimallyAugmented(prob)
-BK.NeimarkSackerProblemMinimallyAugmented(prob)
+show(stdout, BK.FoldMinimallyAugmentedFormulation(prob))
+BK.HopfMinimallyAugmentedFormulation(prob)
+BK.PeriodDoublingMinimallyAugmentedFormulation(prob)
+BK.NeimarkSackerMinimallyAugmentedFormulation(prob)
 ####################################################################################################
 # different tests for the Fold point
 @reset opts_br.newton_options.verbose = false
 @reset opts_br.newton_options.max_iterations = 10
 
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
-# printstyled(color=:red, "--> guess for SN, p = ", br.specialpoint[2].param, ", psn = ", sn[1].p)
-    # plot(br);scatter!([sn.x.p], [sn.x.u[1]])
 @test BK.converged(sn) && sn.itlineartot == 6
 @test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
 @test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
@@ -76,9 +75,8 @@ for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.FiniteDifferences()
     @test ~isnothing(sn_br.eig)
 
     # we test the jacobian and problem update
-    par_sn = BK.setparam(br, BK.getp(sn_br.sol[end].x))
-    par_sn = BK.set(par_sn, BK.getlens(sn_br), sn_br.sol[end].p)
-    _J = BK.jacobian(prob, BK.getvec(sn_br.sol[end].x), par_sn)
+    par_sn = BK.getparams(sn_br, lastindex(sn_br))
+    _J = BK.jacobian(prob, sn_br.sol[end].x.x, par_sn)
     _eigvals, eigvec, = eigen(_J)
     ind = argmin(abs.(_eigvals))
     @test _eigvals[ind] ≈ 0 atol = 1e-10
@@ -93,14 +91,12 @@ end
 ####################################################################################################
 # different tests for the Hopf point
 hppt = get_normal_form(br, 2)
-@test hppt.nf.a ≈ 2.546719962189168 + 1.6474887797814664im
+@test hppt.nf.a ≈ 2.546719962189168  + 1.6474887797814664im
 @test hppt.nf.b ≈ 4.3536804635557855 + 15.441272421860365im
 
 @reset opts_br.newton_options.verbose = false
 
 hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true)
-# printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp[1].p)
-# plot(br);scatter!([hp[1].p[1]], [hp[1].u[1]])
 @test hp.converged && hp.itlineartot == 8
 
 hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = false, bdlinsolver = MatrixBLS())
@@ -126,10 +122,8 @@ hp = newton(br, 2;
     options = NewtonPar( opts_br.newton_options; max_iterations = 10),
     start_with_eigen = true,
     bdlinsolver = MatrixBLS())
-# printstyled(color=:red, "--> guess for HP, p = ", br.specialpoint[1].param, ", php = ", hp.p)
-# plot(br);scatter!([hp.p[1]], [hp.u[1]])
 
-hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10),start_with_eigen=true)
+hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10), start_with_eigen = true)
 
 for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.MinAugMatrixBased(), BK.MinAug())
     # @info "" eigen_start _jac
@@ -150,3 +144,4 @@ for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.MinAugMatrixBased()
 
     @test ~isnothing(hp_br.eig)
 end
+end #let

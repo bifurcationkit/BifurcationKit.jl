@@ -1,7 +1,7 @@
-using IterativeSolvers
+import IterativeSolvers
 import Krylov, LinearAlgebra
-import KrylovKit: linsolve, KrylovDefaults # prevent from loading residual
-norminf(x) = LinearAlgebra.norm(x, Inf)
+import KrylovKit: KrylovDefaults # prevent from loading residual
+norminf(x) = LA.norm(x, Inf)
 
 # c'est tres mauvais comme interface, on ne peut pas utiliser le dispatch. Il vaut ieux utiliser solve
 
@@ -17,22 +17,20 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     sol2, flag2, it2 = ls(J, rhs2; kwargs...)
     return sol1, sol2, flag1 & flag2, (it1, it2)
 end
-
 ####################################################################################################
-# The two following functions are used for the Continuation of Hopf points and the computation of Floquet multipliers
-
+# The two following methods are used for the continuation of Hopf points and the computation of Floquet multipliers
 """
-This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+[Internal] This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
 """
 function _axpy(J, a₀, a₁)
-    if a₀ == 0
-        if a₁ == 1
+    if a₀ === VI.Zero() # this is decided at compilation!
+        if a₁ === VI.One()
             return J
         else
             return a₁ .* J
         end
-    elseif a₀ == 1
-        if a₁ == 1
+    elseif a₀ === VI.One()
+        if a₁ === VI.One()
             return LA.I + J
         else
             return LA.I + a₁ .* J
@@ -43,17 +41,17 @@ function _axpy(J, a₀, a₁)
 end
 
 """
-This function implements the operator a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+[Internal] This function implements the operator (a₀ * I + a₁ * J)⋅v and ensures that we don't perform unnecessary computations like 0*I + 1*J.
 """
 function _axpy_op(J, v::AbstractArray, a₀, a₁)
-    if a₀ == 0
-        if a₁ == 1
+    if a₀ === VI.Zero()
+        if a₁ === VI.One()
             return apply(J, v)
         else
             return a₁ .* apply(J, v)
         end
-    elseif a₀ == 1
-        if a₁ == 1
+    elseif a₀ === VI.One()
+        if a₁ === VI.One()
             return v .+ apply(J, v)
         else
             return v .+ a₁ .* apply(J, v)
@@ -65,15 +63,15 @@ end
 
 function _axpy_op!(o, J, v::AbstractArray, a₀, a₁)
     apply!(o, J, v)
-    if a₀ == 0
-        if a₁ == 1
+    if a₀ === VI.Zero()
+        if a₁ === VI.One()
             return o
         else
             o .*= a₁
             return o
         end
-    elseif a₀ == 1
-        if a₁ == 1
+    elseif a₀ === VI.One()
+        if a₁ === VI.One()
             return o .+= v
         else
             return o .= v .+ a₁ .* o
@@ -100,14 +98,14 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
-function (l::DefaultLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
+function (l::DefaultLS)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...)
     return _axpy(J, a₀, a₁) \ rhs, true, 1
 end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # with multiple RHS. We can cache the factorization in this case
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
-function (l::DefaultLS)(J, rhs1, rhs2; a₀ = 0, a₁ = 1, kwargs...)
+function (l::DefaultLS)(J, rhs1, rhs2; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...)
     if l.useFactorization
         # factorize makes this type-unstable
         Jfact = LA.factorize(_axpy(J, a₀, a₁))
@@ -185,11 +183,11 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = 0, a₁ = 1,
+function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(),
                                                kwargs...) where {𝒯, 𝒯l, 𝒯r}
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
-        if ~((a₀ == 0) && (a₁ == 1))
+        if ~((a₀ === VI.Zero()) && (a₁ === VI.One()))
             error("Perturbed inplace linear problem not done yet!")
         end
         Jmap = J isa AbstractArray ? J : LinearMaps.LinearMap{𝒯}(J, l.N, l.N; ismutating = true)
@@ -253,9 +251,11 @@ end
 
 # this function is used to solve (a₀ * I + a₁ * J) * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...) where {𝒯, 𝒯l}
+function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) where {𝒯, 𝒯l}
     if 𝒯l === Nothing
-        res, info = KrylovKit.linsolve(J, rhs, a₀, a₁; 
+        res, info = KrylovKit.linsolve(J, rhs, 
+                            (a₀ === VI.Zero() ? 0 : a₀), 
+                            (a₁ === VI.One()  ? 1 : a₁); 
                             rtol = l.rtol,
                             verbosity = l.verbose,
                             krylovdim = l.dim,
@@ -272,7 +272,8 @@ function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = 0, a₁ = 1, kwargs...)
             # out = similar(dx)
             # ldiv!(out, l.Pl, Jdx)
             out = l.Pl \ Jdx
-            LA.axpby!(a₀, dx, a₁, out)
+            VI.add!(out, dx, a₀, a₁)
+            return out
         end
         res, info = KrylovKit.linsolve(_linmap, LA.ldiv!(similar(rhs), l.Pl, _copy(rhs));
                                 rtol = l.rtol,
@@ -331,7 +332,7 @@ function KrylovLS(args...;
     return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
 end
 
-function (l::KrylovLS)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
+function (l::KrylovLS)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) 
     J_map = v -> _axpy_op(J, v, a₀, a₁)
     Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     if l.KrylovAlg in (:cg, :car, :minres, :symmlq)
@@ -394,7 +395,7 @@ function KrylovLSInplace(args...;
     return KrylovLSInplace(workspace, KrylovAlg, kwargs, Pl, Pr, is_inplace)
 end
 
-function (l::KrylovLSInplace)(J, rhs; a₀ = 0, a₁ = 1, kwargs...) 
+function (l::KrylovLSInplace)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) 
     if l.is_inplace
         J_map = (o,v) -> _axpy_op!(o, J, v, a₀, a₁)
         Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = true)

@@ -19,9 +19,6 @@ CUDA.allowscalar(false)
 TY = Float64
 AF = CuArray{TY}
 ####################################################################################################
-using Metal
-AF = MtlArray{Float32}
-####################################################################################################
 using Plots
 # to simplify plotting of the solution
 plotsol(x; k...) = heatmap(reshape(Array(x), Nx, Ny)'; color=:viridis, k...)

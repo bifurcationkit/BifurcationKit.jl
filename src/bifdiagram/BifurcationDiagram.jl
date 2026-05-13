@@ -12,7 +12,7 @@ $(TYPEDFIELDS)
 - `hasbranch(diagram)`
 - `get_branch(diagram)` return the `AbstractBranch` stored inside the current node.
 - `from(diagram)` return the parent bifurcation point.
-- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`.
+- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. This is essentially the Ulam-Harris-Neveu labeling.
 """
 mutable struct BifDiagNode{Tγ, Tc}
     "current recursion level in the tree."

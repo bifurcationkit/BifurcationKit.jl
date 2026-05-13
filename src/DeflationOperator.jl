@@ -76,7 +76,7 @@ end
 
 # constructors
 DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, VI.inner, α, roots, _copy(roots[1]), autodiff, T(1e-8))
-DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(eltype(roots[1]), 1e-8))
+DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(VI.scalartype(roots[1]), 1e-8))
 DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, VI.inner, α, roots, v, autodiff, T(1e-8))
 
 # methods to deal with DeflationOperator
@@ -366,7 +366,7 @@ function newton(prob::AbstractBifurcationProblem,
                 x0::vectype,
                 x1::vectype, p0,
                 options::NewtonPar{T, L, E},
-                defOp::DeflationOperator = DeflationOperator(2, one(eltype(x0)), Vector{vectype}(), _copy(x0); autodiff = true),
+                defOp::DeflationOperator = DeflationOperator(2, one(VI.scalartype(x0)), Vector{vectype}(), _copy(x0); autodiff = true),
                 linsolver = DeflatedProblemCustomLS();
                 kwargs...) where {T, vectype, L, E}
     prob0 = re_make(prob, u0 = x0, params = p0)

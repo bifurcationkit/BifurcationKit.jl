@@ -40,7 +40,7 @@ $(TYPEDFIELDS)
 - `get_solp(br, k)` returns the parameter  value associated with k-th solution on the branch.
 - `getparams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
 - `getparams(br, ind)` Parameters passed to continuation and used in the equation `F(x, par) = 0` for the ind-th continuation step.
-- `setparam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `br.prob`.
+- `setparam(br, p0)` set the parameter value `p0` according to `::Lens` for the parameters of the problem `getprob(br)`.
 - `getlens(br)` get the lens used for the computation of the branch.
 - `eigenvals(br, ind)` give the eigenvalues at continuation step `ind`.
 - `eigenvalsfrombif(br, ind)` give the eigenvalues at bifurcation point index `ind`.
@@ -69,7 +69,7 @@ julia> br.param
 ```
 - `continuation(br, ind)` performs automatic branch switching (aBS) from ind-th bifurcation point. Typically branching from equilibrium to equilibrium, or periodic orbit to periodic orbit.
 - `continuation(br, ind, lens2)` performs two parameters `(getlens(br), lens2)` continuation of the  ind-th bifurcation point.
-- `continuation(br, ind, probPO::AbstractPeriodicOrbitProblem)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
+- `continuation(br, ind, probPO::AbstractPeriodicOrbitDiscretization)` performs aBS from ind-th bifurcation point (which must be a Hopf bifurcation point) to branch of periodic orbits.
 """
 @with_kw_noshow struct ContResult{Tkind <: AbstractContinuationKind,
                                     Tbr,
@@ -120,16 +120,20 @@ get_solution(br::ContResult, i) = br.sol[i]
 @inline getcontparams(br::ContResult) = br.contparams
 
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem of the branch.
 """
-getparams(br::AbstractBranchResult) = getparams(br.prob)
+getparams(br::AbstractBranchResult) = getparams(getprob(br))
 
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters corresponding to the ind-th step in the branch.
 """
 getparams(br::AbstractBranchResult, ind::Int) = setparam(br, get_solp(br, ind))
 
-getlens(br::AbstractBranchResult) = getlens(br.prob)
+getlens(br::AbstractBranchResult) = getlens(getprob(br))
 @inline getprob(br::AbstractBranchResult) = br.prob
 @inline type(br::AbstractBranchResult, ind) = type(br.specialpoint[ind])
 
@@ -160,9 +164,9 @@ getbls(br::AbstractBranchResult) = getbls(getalg(br))
 
 """
     setparam(br, p0)
-Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `br.prob`.
+Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `getprob(br)`.
 """
-setparam(br::AbstractBranchResult, p0) = setparam(br.prob, p0)
+setparam(br::AbstractBranchResult, p0) = setparam(getprob(br), p0)
 Base.lastindex(br::ContResult) = length(br)
 Base.firstindex(br::ContResult) = firstindex(br.branch)
 
@@ -283,7 +287,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     printstyled(io, get_lens_symbol(br), color=:cyan, bold = true)
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
     print(io, prefix * "├─ Algo: ")
-    printstyled(io, _shortname(br.alg), "\n", color=:cyan, bold = true)
+    printstyled(io, _shortname(getalg(br)), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
         println(io, prefix * "└─ Special points:\n")
         for ii in eachindex(br.specialpoint)

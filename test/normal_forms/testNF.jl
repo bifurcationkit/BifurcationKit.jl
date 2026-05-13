@@ -33,6 +33,8 @@ let
     @reset br.specialpoint[1].param = 0.
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζs = [1., 0], ζs_ad = [1., 1])
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζs = [1., 0], ζs_ad = [1., 1])
+    # TODO this is not type stable because detailed isa Val that must be passed
+    @test isconcretetype(return_type(BK.get_normal_form1d, typeof((prob, br, 1)))) == false
     # on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
     @test bp.nf.Ψ20 ≈ [0, 2prob.params.γ]
     # normal form
@@ -191,8 +193,8 @@ let
                                 b20 = rand(2,2,2),
                                 b30 = rand(2,2,2,2)),
                             :none)
-    vf.nf.b20[1,:,:] = Symmetric(vf.nf.b20[1,:,:])
-    vf.nf.b20[2,:,:] = Symmetric(vf.nf.b20[2,:,:])
+    vf.nf.b20[1,:,:] .= Symmetric(vf.nf.b20[1,:,:])
+    vf.nf.b20[2,:,:] .= Symmetric(vf.nf.b20[2,:,:])
     symmetrize3!(@view vf.nf.b30[1,:,:,:])
     symmetrize3!(@view vf.nf.b30[2,:,:,:])
     prob2d = BK.ODEBifProblem((x,p)->vf(Val(:reducedForm), x, p[1]), [0., 0], [-.1], 1)
@@ -324,7 +326,7 @@ function FbpD6(x, p)
              p.μ * x[3] + (p.a * x[1] * x[2] - p.b * x[3]^3 - p.c * (x[2]^2 + x[1]^2) * x[3])]
 end
 
-begin
+let
     probD6 = BK.ODEBifProblem(FbpD6, zeros(3), (μ = -0.2, a = 0.3, b = 1.5, c = 2.9), (@optic _.μ),)
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
     br = BK.continuation(probD6, PALC(), setproperties(opts_br; n_inversion = 6, ds = 0.001); normC = norminf)
@@ -375,15 +377,52 @@ end
 
 Fsl2(x, p) = Fsl2!(similar(x .* p.r), x, p, 0.)
 
+function JFsl2(u, p)
+    (; r, μ, ν, c3, c5) = p
+
+    u1 = u[1]
+    u2 = u[2]
+
+    a = u1^2 + u2^2
+
+    J11 = r - c3*(3u1^2 + u2^2) +
+          2*μ*u1*u2 -
+          c5*a*(5u1^2 + u2^2)
+
+    J12 = -ν -
+          2*c3*u1*u2 +
+          μ*(u1^2 + 3u2^2) -
+          4*c5*a*u1*u2
+
+    J21 = ν -
+          2*c3*u1*u2 -
+          μ*(3u1^2 + u2^2) -
+          4*c5*a*u1*u2
+
+    J22 = r -
+          c3*(u1^2 + 3u2^2) -
+          2*μ*u1*u2 -
+          c5*a*(u1^2 + 5u2^2)
+
+    return [
+        J11 J12
+        J21 J22
+    ]
+end
+
 let
     for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
         par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
         probsl2 = BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
         # detect hopf bifurcation
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3)
 
         br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
+
+        # test for type stable implementation
+        # @code_warntype BK.hopf_normal_form(BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1; detailed = Val(true))
+        @test isconcretetype(return_type(BK.hopf_normal_form, typeof((BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1))) )
 
         hp = BK.get_normal_form(br, 1; detailed = Val(false))
         hp = BK.get_normal_form(br, 1; autodiff, start_with_eigen = Val(false))
@@ -411,6 +450,7 @@ let
     Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
     par = (β1 = 0.0, β2 = -0.01, c = 3.)
     prob = BK.ODEBifProblem(Fcusp, [0.01], par, (@optic _.β1))
+    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
     br = continuation(prob, PALC(), opts_br;)
 
     sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
@@ -574,10 +614,12 @@ function Fzh!(f, u, p)
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
+
 let
     for _F in (Fzh!, Fzh)
         par_zh = (β1 = 0.1, β2 = -0.3, G200 = 1., G011 = 2., G300 = 3., G111 = 4., G110 = 5., G210 = -1., G021 = 7.)
         prob = BK.ODEBifProblem(_F, [0.05, 0.0, 0.0], par_zh, (@optic _.β1))
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
         br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.0091, max_steps = 70, detect_bifurcation=3, n_inversion = 2), verbosity = 0)
 
         _cparams = br.contparams
@@ -627,6 +669,7 @@ let
     for _F in (Fhh!, Fhh)
         par_hh = (β1 = 0.1, β2 = -0.1, ω1 = 0.1, ω2 = 0.3, G2100 = 1., G1011 = 2., G3100 = 3., G2111 = 4., G1022 = 5., G1110 = 6., G0021 = 7., G2210 = 8., G1121 = 9., G0032 = 10. )
         prob = BK.ODEBifProblem(_F, zeros(4), par_hh, (@optic _.β1))
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
         br = continuation(prob, PALC(), setproperties(opts_br, ds = -0.001, dsmax = 0.005, max_steps = 30, detect_bifurcation = 3, n_inversion = 2))
         _cparams = br.contparams
         opts2 = @set _cparams.newton_options.verbose = false

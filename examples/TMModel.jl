@@ -20,9 +20,9 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 z0 = [0.238616, 0.982747, 0.367876 ]
 
 prob = ODEBifProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
+opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, max_steps = 100)
 
 br = @time continuation(prob, PALC(), opts_br; normC = norminf)
-opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, max_steps = 100)
 
 plot(br, plotfold = false)
 ####################################################################################################
@@ -36,6 +36,13 @@ plot(br_hopf)
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
+function recordPO(x, p; k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+    return (max = maximum(xtt[1,:]),
+            min = minimum(xtt[1,:]),
+            period = getperiod(p.prob, x, p.p))
+end
+
 # arguments for periodic orbits
 function plotSolution(x, p; k...)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -45,12 +52,7 @@ function plotSolution(x, p; k...)
     plot!(br; subplot = 1, putspecialptlegend = false)
 end
 
-args_po = (	record_from_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-        return (max = maximum(xtt[1,:]),
-                min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, p.p))
-    end,
+args_po = (	record_from_solution = recordPO,
     plot_solution = plotSolution,
     normC = norminf
     )
@@ -99,7 +101,7 @@ br_posh = @time continuation(
     args_po...,
     )
 
-plot(br_posh, br, markersize=3)
+plot(br_posh, br, markersize = 3)
 ####################################################################################################
 # idem with Poincaré shooting
 opts_po_cont = ContinuationPar(opts_br, dsmax = 0.02, ds= 0.0001, max_steps = 50, newton_options = NewtonPar(tol = 1e-9, max_iterations=15), tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 5)
@@ -117,20 +119,4 @@ br_popsh = @time continuation(
     callback_newton = BK.cbMaxNorm(1e0),
     normC = norminf)
 
-plot(br, br_popsh, markersize=3)
-####################################################################################################
-# periodic orbit from curve of Hopf bifurcations
-br_po_coll = @time BK.continuation_from_hopf_point(
-    br_hopf, 2,
-    # arguments for continuation
-    ContinuationPar(opts_po_cont; max_steps = 15, ds = 0.001),
-    PeriodicOrbitOCollProblem(20, 4; jacobian = BK.DenseAnalyticalInplace());
-    # lens = BK.getlens(prob),
-    # verbosity = 2,
-    δp = 1e-3,
-    # plot = true,
-    args_po...,
-    autodiff_nf = false
-    )
-
-plot(br_po_coll)
+plot(br, br_popsh, markersize = 3)

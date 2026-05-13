@@ -1,12 +1,12 @@
-@inline has_adjoint_MF(::WrapPOColl) = false
-@inline has_hessian(::WrapPOColl) = true
+@inline has_adjoint_MF(::PeriodicOrbitFunctionalColl) = false
+@inline has_hessian(::PeriodicOrbitFunctionalColl) = true
 
-function d2F(wrapcoll::WrapPOColl, x, p, dx1, dx2)
-    d2PO(z -> residual(wrapcoll.prob, z, p), x, dx1, dx2)
+function d2F(wrapcoll::PeriodicOrbitFunctionalColl, x, p, dx1, dx2)
+    d2PO(z -> po_residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
 end
 
-function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
-    N, m, Ntst = size(pbwrap.prob)
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalColl, x, par)
+    N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
     # put the PD boundary condition
@@ -14,8 +14,8 @@ function jacobian_period_doubling(pbwrap::WrapPOColl, x, par)
     return J[begin:end-1, begin:end-1]
 end
 
-function jacobian_neimark_sacker(pbwrap::WrapPOColl, x, par, ω)
-    N, m, Ntst = size(pbwrap.prob)
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalColl, x, par, ω)
+    N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
     J = Complex.(Jac)
@@ -28,7 +28,7 @@ for (fname, cdt, err_msg) in (
                     (:pd_point, (:pd,), "This should be a PD point")
                     ) 
     @eval begin
-        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
             bptype = br.specialpoint[index].type
             if ~(bptype in $cdt)
                 error($err_msg)
@@ -36,8 +36,8 @@ for (fname, cdt, err_msg) in (
             specialpoint = br.specialpoint[index]
             if specialpoint.x isa POSolutionAndState
                 # the solution is mesh adapted, we need to restore the mesh.
-                pbwrap = deepcopy(br.prob)
-                update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+                pbwrap = deepcopy(getprob(br))
+                update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
                 specialpoint = @set specialpoint.x = specialpoint.x.sol
             end
             return BorderedArray(_copy(specialpoint.x), specialpoint.param)
@@ -45,7 +45,7 @@ for (fname, cdt, err_msg) in (
     end
 end
 
-function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bptype = br.specialpoint[index].type
     if bptype != :ns 
         error("This should be a NS point")
@@ -54,8 +54,8 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
     if specialpoint.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(br.prob)
-        update_mesh!(pbwrap.prob, specialpoint.x._mesh )
+        pbwrap = deepcopy(getprob(br))
+        update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
         specialpoint = @set specialpoint.x = specialpoint.x.sol
     end
     return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
@@ -67,7 +67,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     detect_codim2_bifurcation::Int = 0,
                     update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
@@ -76,7 +76,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     # arguments
     args = (br, ind_bif, lens2, _options_cont)
     kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)
-    if biftype in (:bp, :fold)
+    if biftype in (:bp, :fold) # TODO this is strongly type unstable
         return continuation_coll_fold(args...; kw...)
     elseif biftype == :pd
         return continuation_coll_pd(args...; kw...)
@@ -103,10 +103,10 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
@@ -116,15 +116,15 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     end
 
     # wrap of collocation functional
-    pbwrap = deepcopy(br.prob)
+    pbwrap = deepcopy(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        if br.prob.prob.meshadapt
-            update_mesh!(pbwrap.prob, bifpt.x._mesh )
+        if getprob(br).prob.meshadapt
+            update_mesh!(get_discretization(pbwrap), bifpt.x._mesh )
         end
-        updatesection!(pbwrap.prob, bifpt.x.ϕ, nothing)
+        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, nothing)
         bifpt = @set bifpt.x = bifpt.x.sol
     end
 
@@ -132,19 +132,17 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     # updatesection!(coll, ϕ, nothing)
 
     # this updates the section
-    coll = deepcopy(pbwrap.prob)
-    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOColl(coll)), lens2), kwargs, coll.update_section_every_step)
+    coll = deepcopy(get_discretization(pbwrap))
 
     options_foldpo = options_cont
 
     # perform continuation
-    br_fold_po = continuation_fold(br.prob,
+    br_fold_po = continuation_fold(getprob(br),
         br, ind_bif, lens2,
         options_foldpo;
         start_with_eigen,
         bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
-        finalise_solution = _finsol,
         kwargs...
         )
 end
@@ -164,11 +162,11 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     prm = false,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = br.specialpoint[ind_bif].type
 
@@ -178,18 +176,18 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     pdpointguess = pd_point(br, ind_bif)
 
     # wrap of collocation functional
-    pbwrap = deepcopy(br.prob)
+    pbwrap = deepcopy(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        update_mesh!(pbwrap.prob, bifpt.x._mesh)
-        updatesection!(pbwrap.prob, bifpt.x.ϕ, par)
+        update_mesh!(get_discretization(pbwrap), bifpt.x._mesh)
+        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, par)
         pdpointguess.u .= bifpt.x.sol
     end
 
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(pbwrap.prob)
+    coll = deepcopy(get_discretization(pbwrap))
     N, m, Ntst = size(coll)
 
     # get the PD eigenvectors
@@ -235,23 +233,23 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
                     prm = false,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOColl}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
     nspointguess = ns_point(br, ind_bif)
 
     # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(br.prob.prob)
+    coll = deepcopy(get_discretization(getprob(br)))
     N, m, Ntst = size(coll)
 
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
-    jac = jacobian(br.prob, nspointguess.u, par)
+    jac = jacobian(getprob(br), nspointguess.u, par)
     J = Complex.(copy(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace
@@ -266,7 +264,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
     # perform continuation
-    continuation_ns(br.prob, alg,
+    continuation_ns(getprob(br), alg,
         nspointguess, setparam(br, nspointguess.p[1]),
         getlens(br), lens2,
         p, q,
@@ -279,19 +277,19 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
 end
 
 # dispatch to compute Floquet exponent when the jacobian is a Matrix
-@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_col(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)
 end
 
-@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::FoldEig{ <: PDMAProblem{ <: PeriodDoublingMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-1, begin:end-1], n, m, Ntst, nev)
 end
 
-@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerProblemMinimallyAugmented{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: WrapPOColl}
+@views function (eig::HopfEig{ <: NSMAProblem{ <: NeimarkSackerMinimallyAugmentedFormulation{Tprob}, MinAugMatrixBased}})(Jma::AbstractMatrix, nev; k...) where {Tprob <: PeriodicOrbitFunctionalColl}
     coll = eig.prob.prob.prob_vf.prob
     n, m, Ntst = size(coll)
     eigenelts = _eig_floquet_coll(Jma[begin:end-2, begin:end-2], n, m, Ntst, nev)

@@ -90,8 +90,8 @@ function Base.empty!(alg::PALC)
     alg
 end
 
-function update(alg::PALC, contParams::ContinuationPar, linear_algo)
-    if isnothing(linear_algo)
+function update(alg::PALC, contParams::ContinuationPar, linear_algo::Tla) where {Tla}
+    if Tla == Nothing
         if isnothing(alg.bls.solver)
             bls = alg.bls
             return @set alg.bls = update_bls(bls, contParams.newton_options.linsolver)
@@ -318,12 +318,13 @@ _shortname(::PALC{Polynomial}) = "PALC [Polynomial]"
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"
-    Polynomial(n, k, zeros(eltype(v0), k, n+1), pred,
+    𝒯 = VI.scalartype(v0)
+    Polynomial(n, k, zeros(𝒯, k, n+1), pred,
         DataStructures.CircularBuffer{typeof(v0)}(k),  # solutions
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # parameters
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # arclengths
+        DataStructures.CircularBuffer{𝒯}(k),  # parameters
+        DataStructures.CircularBuffer{𝒯}(k),  # arclengths
         Vector{typeof(v0)}(undef, n+1), # coeffsSol
-        Vector{eltype(v0)}(undef, n+1), # coeffsPar
+        Vector{𝒯}(undef, n+1), # coeffsPar
         true)
 end
 Polynomial(n, k, v0) = Polynomial(Secant(), n, k, v0)
