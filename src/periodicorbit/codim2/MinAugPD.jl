@@ -313,7 +313,9 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _kwargs = (record_from_solution = record_from_solution, plot_solution = plot_solution)
 
     # Jacobian for the PD problem
-    if jacobian_ma == AutoDiff()
+    record_pd = RecordForPD(record_from_solution, BifurcationKit.record_from_solution(prob))
+    # plot_pd = PlotForFold(plot_solution, BifurcationKit.plot_solution(prob))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
         prob_pd = PDMAProblem(𝐏𝐝, AutoDiff(), pdpointguess, par, lens2, plot_solution, prob.recordFromSolution)
         opt_pd_cont = @set options_cont.newton_options.linsolver = DefaultLS()
