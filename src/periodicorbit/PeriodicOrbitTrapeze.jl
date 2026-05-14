@@ -870,7 +870,7 @@ function _newton_po_from_disc(trap::PeriodicOrbitTrapProblem,
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
-        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, nothing, nothing)
         new_options = options # to prevent from duplicated code
     else # bordered linear solvers
         if jacobianPO === BorderedLU()
@@ -891,7 +891,7 @@ function _newton_po_from_disc(trap::PeriodicOrbitTrapProblem,
         end
 
         jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jacPO, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), nothing, nothing)
+        wrap_prob = PeriodicOrbitFunctionalTrap(trap, jacPO, orbitguess, nothing, nothing)
         new_options = @set options.linsolver = lspo
     end
 
@@ -981,7 +981,7 @@ function continuation_po(trap::PeriodicOrbitTrapProblem,
 
     if jacobianPO in (Dense(), AutoDiffDense(), FullLU(), FullMatrixFree(), FullSparseInplace(), AutoDiffMF())
         jac = _generate_jacobian(trap, trap.jacobian, orbitguess, getparams(trap))
-        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
+        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, _plotsol, record_po)
         kwargs_continuation = (kwargs...,
                                 kind = PeriodicOrbitCont(),
                                 linear_algo,)
@@ -1005,7 +1005,7 @@ function continuation_po(trap::PeriodicOrbitTrapProblem,
 
         # we define a specific jacobian for this case
         jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
-        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, getparams(trap.prob_vf), getlens(trap.prob_vf), _plotsol, record_po)
+        probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, _plotsol, record_po)
         # we change the linear solver
         contParams = @set contParams.newton_options.linsolver = lspo
         # we have to change the Bordered linearsolver to cope with our lspo

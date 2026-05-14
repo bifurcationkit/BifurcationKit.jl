@@ -391,26 +391,31 @@ for (op, at, kd) in (
         end
     else
         @eval begin #PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
+        # we could have defined a single type PeriodicOrbitFunctional and dispatch on
+        # PeriodicOrbitFunctional{Tprob} but that would complicate a bit the methods
             """
             $(TYPEDEF)
 
             Problem wrap of a functional based on a discretization. It is not meant to be used directly albeit perhaps by advanced users.
 
+            !!! danger "Parameters et optic"
+                The discretization must implement `getparams` and `getlens`.
+
             $(TYPEDFIELDS)
             """
-            struct $op{Tdisc, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at
+            struct $op{Tdisc, Tjac, Tu0, Tplot, Trecord} <: $at
                 disc::Tdisc
                 jacobian::Tjac
                 u0::Tu0
-                params::Tp
-                lens::Tl
                 plotSolution::Tplot
                 recordFromSolution::Trecord
             end
 
             _getvectortype(::$op{Tdisc, Tjac, Tu0}) where {Tdisc, Tjac, Tu0} = Tu0
             # dummy constructor
-            $op(disc, lens = getlens(disc)) = $op(disc, nothing, nothing, nothing, lens, nothing, nothing)
+            $op(disc, lens = getlens(disc)) = $op(disc, nothing, nothing, nothing, nothing)
+            @inline getparams(pb::$op) = getparams(get_discretization(pb))
+            @inline getlens(pb::$op) = getlens(get_discretization(pb))
             @inline get_discretization(pb::$op) = pb.disc
             @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
             residual(pb::$op, x, p) = residual($kd(get_discretization(pb)), x, p)

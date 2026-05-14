@@ -1012,7 +1012,7 @@ function _newton_po_from_disc(coll::PeriodicOrbitOCollProblem,
         @reset options.linsolver = COPLS(coll)
     end
 
-    prob = PeriodicOrbitFunctionalColl(coll, jac, orbitguess, getparams(coll), getlens(coll), nothing, nothing)
+    prob = PeriodicOrbitFunctionalColl(coll, jac, orbitguess, nothing, nothing)
 
     if isnothing(defOp)
         return solve(prob, Newton(), options; kwargs...)
@@ -1117,7 +1117,7 @@ function continuation(coll::PeriodicOrbitOCollProblem,
     _plotsol = modify_po_plot(coll, getparams(coll.prob_vf), getlens(coll.prob_vf); plot_solution)
 
     record_po = RecordForPeriodicOrbits(record_from_solution, BifurcationKit.record_from_solution(coll.prob_vf))
-    wrap_coll = PeriodicOrbitFunctionalColl(coll, jacPO, orbitguess, getparams(coll), getlens(coll), _plotsol, record_po)
+    wrap_coll = PeriodicOrbitFunctionalColl(coll, jacPO, orbitguess, _plotsol, record_po)
 
     br = continuation(wrap_coll, alg,
                       contParams;

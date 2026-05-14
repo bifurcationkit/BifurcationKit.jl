@@ -254,7 +254,7 @@ function newton(disc::AbstractPOShootingDiscretization,
                 δ = getdelta(disc),
                 kwargs...)
     jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc); δ)
-    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, nothing, nothing)
     return solve(probw, Newton(), options; kwargs...)
 end
 
@@ -281,7 +281,7 @@ function newton(disc::AbstractPOShootingDiscretization,
                 kwargs...,
             ) where {T, Tp, Tdot, vectype, S, E}
     jac = _generate_jacobian(disc, disc.jacobian, orbitguess, getparams(disc))
-    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, getparams(disc), lens, nothing, nothing)
+    probw = PeriodicOrbitFunctionalSh(disc, jac, orbitguess, nothing, nothing)
     return solve(probw, defOp, options; kwargs...)
 end
 
@@ -321,7 +321,7 @@ function continuation(discPO::AbstractPOShootingDiscretization,
 
     _plotsol   = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
-    wrap = PeriodicOrbitFunctionalSh(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
+    wrap = PeriodicOrbitFunctionalSh(discPO, jac, orbitguess, _plotsol, record_po)
 
     br = continuation(
         wrap, alg,
