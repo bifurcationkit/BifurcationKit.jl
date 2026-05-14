@@ -224,7 +224,7 @@ function newton(tw::TWModel,
                 kwargs...)
     jacobianTW = tw.jacobian
     jac = _generate_jacobian(tw, jacobianTW, orbitguess, getparams(tw); δ)
-    wrap = WrapTW(tw, jac, orbitguess, getparams(tw.prob_vf), getlens(tw.prob_vf), BifurcationKit.record_from_solution(tw.prob_vf), plot_solution(tw.prob_vf))
+    wrap = WrapTW(tw, jac, orbitguess, BifurcationKit.record_from_solution(tw.prob_vf), plot_solution(tw.prob_vf))
     return solve(wrap, Newton(), optn; kwargs...,)
 end
 ################################################################################
@@ -258,7 +258,7 @@ function continuation(prob::TWModel,
     # update record function
     # this is to remove this part from the arguments passed to continuation
     jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
-    probwp = WrapTW(prob, jac, orbitguess, getparams(prob.prob_vf), getlens(prob.prob_vf), plot_solution, record_from_solution)
+    probwp = WrapTW(prob, jac, orbitguess, plot_solution, record_from_solution)
 
     # call continuation
     branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
