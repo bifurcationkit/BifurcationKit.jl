@@ -241,7 +241,6 @@ for Rij in _field_jet
             @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
         end
     else
-
         @eval begin
             $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : jet.R01Trait
             @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
@@ -249,7 +248,6 @@ for Rij in _field_jet
     end
 end
 
-# c'est la merde. On veut soit autodiff, soit FD, soit user-passed. Si pas autodiff, on fait
 function R01!(::Union{TraitNoUserPassed, Nothing},
                 prob::AbstractAllJetBifProblem,
                 dpF,
@@ -264,10 +262,14 @@ function R01!(::FiniteDifferences,
                 dFdp,
                 x,
                 par,
-                p::Number; δ = getdelta(prob))
+                p::Number, res_f = nothing; δ = getdelta(prob))
     # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
     ϵ = getdelta(prob)
+    𝒯 = VI.scalartype(x)
     _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ)))
+    if isnothing(res_f)
+        res_f = residual(prob, x, set(par, getlens(prob), p))
+    end
     minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
@@ -556,7 +558,7 @@ function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_ja
         end
     end
 end
-
+####################################################################################################
 """
 $(SIGNATURES)
 
@@ -576,22 +578,23 @@ function re_make(prob::AbstractBifurcationProblem;
                 Jᵗ = missing,
                 d2F = missing,
                 d3F = missing)
-    prob2 = setproperties(prob; u0, params, lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
+    new_prob = setproperties(prob; u0, params, lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
     if ~ismissing(J)
-        @reset prob2.VF.J = J
+        @reset new_prob.VF.J = J
     end
     if ~ismissing(Jᵗ)
-        @reset prob2.VF.Jᵗ = Jᵗ
+        @reset new_prob.VF.Jᵗ = Jᵗ
     end
     if ~ismissing(d2F)
-        @reset prob2.VF.d2F = d2F
+        @reset new_prob.VF.d2F = d2F
     end
     if ~ismissing(d3F)
-        @reset prob2.VF.d3F = d3F
+        @reset new_prob.VF.d3F = d3F
     end
-    return prob2
+    return new_prob
 end
 ########
+####################################################################################################
 # simple trait for dispatching on user passed functions
 struct NoUserPassedFunction end
 struct UserPassedFunction end

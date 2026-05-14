@@ -1,7 +1,7 @@
 """
 $(TYPEDSIGNATURES)
 
-For an initial guess from the index of a Fold bifurcation point located in `ContResult.specialpoint`, returns a point which can can refined using `newtonFold`.
+For an initial guess from the index of a Fold bifurcation point located in `ContResult.specialpoint`, returns a point which can can refined using `newton_fold`.
 """
 function fold_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type
@@ -198,7 +198,7 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 # Simplified call
 Simplified call to refine an initial guess for a Fold point. More precisely, the call is as follows
 
-    newtonFold(br::AbstractBranchResult, ind_fold::Int; options = br.contparams.newton_options, kwargs...)
+    newton_fold(br::AbstractBranchResult, ind_fold::Int; options = br.contparams.newton_options, kwargs...)
 
 The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 

@@ -96,7 +96,6 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
 
 @test hp_codim2_test.specialpoint[2].param ≈ +0.02627393 rtol = 1e-5
 @test hp_codim2_test.specialpoint[3].param ≈ -0.02627430 atol = 1e-8
-
 @test hp_codim2_test.eig[1].eigenvecs != nothing
 ####################################################################################################
 """
@@ -277,13 +276,15 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
 # plot(hp_codim2_1)
 # plot(sn_codim2, hp_codim2_1)
 ####################################################################################################
-sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
+sn_codim2 = @time continuation(br, 5, (@optic _.T), ContinuationPar(opts_br, p_max = 3.2, p_min = -0.1, detect_bifurcation = 1, dsmin=1e-5, ds = -0.001, dsmax = 0.015, n_inversion = 10, save_sol_every_step = 1, max_steps = 30, max_bisection_steps = 55) ; verbosity = 0,
     normC = norminf,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
+
+@test map(x->x.type, sn_codim2.specialpoint) ==  [:bt, :zh, :zh, :bt, :endpoint]
 
 hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
     verbosity = 0,
@@ -296,14 +297,11 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
 
+@test map(x->x.type, hp_codim2_1.specialpoint) ==  [:endpoint, :bt, :gh, :hh, :endpoint]
 @test hp_codim2_1.alg.tangent isa Bordered
 @test ~(hp_codim2_1.alg.bls isa MatrixBLS)
 @test hp_codim2_1.prob.prob.linbdsolver isa MatrixBLS
-
 @test hp_codim2_1.specialpoint |> length == 5
-@test hp_codim2_1.specialpoint[2].type == :bt
-@test hp_codim2_1.specialpoint[3].type == :gh
-@test hp_codim2_1.specialpoint[4].type == :hh
 
 get_normal_form(hp_codim2_1, 2)
 
@@ -311,16 +309,15 @@ get_normal_form(hp_codim2_1, 2)
 # plot!(hp_codim2_1, vars=(:X,:U))
 
 get_normal_form(hp_codim2_1, 2; nev = 4, verbose = true)
-
 nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
 
-@test nf.nf.ω ≈ 0.6903636672622595 atol = 1e-5
-@test nf.nf.l2 ≈ 0.15555332623343107 atol = 1e-3
-@test nf.nf.G32 ≈ 1.8694569030805148 - 49.456355483784634im    atol = 1e-3
-@test nf.nf.γ₁₀₁ ≈ 0.41675854806948004 - 0.3691568377673768im  atol = 1e-3
-@test nf.nf.γ₁₁₀ ≈ 0.03210697158629905 + 0.34913987438180344im atol = 1e-3
-@test nf.nf.γ₂₀₁ ≈ 6.5060917177185535 - 1.276445931785017im    atol = 1e-3
-@test nf.nf.γ₂₁₀ ≈ -2.005158175714135 - 1.8446801200912402im   atol = 1e-3
+@test nf.nf.ω    ≈ 0.6903636672622595  atol = 1e-5
+@test nf.nf.l2   ≈ 0.15555332623343107 atol = 1e-3
+@test nf.nf.G32  ≈ 1.8694569030805148  - 49.456355483784634im    atol = 1e-3
+@test nf.nf.γ₁₀₁ ≈ 0.41675854806948004 - 0.3691568377673768im    atol = 1e-3
+@test nf.nf.γ₁₁₀ ≈ 0.03210697158629905 + 0.34913987438180344im   atol = 1e-3
+@test nf.nf.γ₂₀₁ ≈ 6.5060917177185535  - 1.276445931785017im     atol = 1e-3
+@test nf.nf.γ₂₁₀ ≈ -2.005158175714135  - 1.8446801200912402im    atol = 1e-3
 _pred = BK.predictor(nf, Val(:FoldPeriodicOrbitCont), 0.1)
 _pred.orbit(0.1)
 
@@ -349,7 +346,7 @@ zh = get_normal_form(sn_codim2, 2, detailed = Val(true))
 _pred = BK.predictor(zh, Val(:NS), 0.1)
 _pred.orbit(0.1)
 
-hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, max_steps = 100) ;
+hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = 0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, max_steps = 100) ;
     plot = false, verbosity = 0,
     normC = norminf,
     # δp = 0.001,
@@ -358,10 +355,11 @@ hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = -0.001, ds
     bothside = false,
     )
 @test hp_from_zh.kind isa BK.HopfCont
-@test length(hp_from_zh.γ.specialpoint) == 5
+@test length(hp_from_zh.γ.specialpoint) == 4
+@test map(x -> x.type, hp_from_zh.specialpoint) ==  [:gh, :zh, :hh, :endpoint]
 
 # curve of Hopf points from HH
-hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, max_steps = 120) ;
+hp_from_hh = continuation(hp_from_zh, 3, ContinuationPar(opts_br, ds = 0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 1, max_steps = 120) ;
     plot = false, verbosity = 0,
     normC = norminf,
     # jacobian_ma = :min_aug,
@@ -370,13 +368,16 @@ hp_from_hh = continuation(hp_from_zh, 4, ContinuationPar(opts_br, ds = 0.001, ds
     update_minaug_every_step = 1,
     bothside = false,
     )
-@test hp_from_zh.kind isa BK.HopfCont
+@test hp_from_hh.kind isa BK.HopfCont
 
+# begin
 # plot(sn_codim2,vars=(:X, :U),)
-#     plot!(sn_from_bt, vars=(:X, :U),)
+#     # plot!(sn_from_bt, vars=(:X, :U), branchlabel = "SNfromBT")
 #     plot!(hp_codim2_1, vars=(:X, :U), branchlabel = "Hopf")
 #     plot!(hp_from_zh, vars=(:X, :U), branchlabel = "Hopf-ZH")
-#     plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf-HH")
+#     # plot!(hp_from_hh, vars=(:X, :U), branchlabel = "Hopf-HH")
+#     ylims!(-0.7,0.75); xlims!(0.95,1.3)
+# end
 
 # test getters for branches
 BK.getlens(hp_from_hh)

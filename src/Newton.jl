@@ -63,7 +63,7 @@ end
 @inline converged(sol::NonLinearSolution) = sol.converged
 
 ####################################################################################################
-function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
+function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar;
                     normN = norm,
                     callback = cb_default,
                     kwargs...)
@@ -71,7 +71,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
     (;tol, max_iterations, verbose) = options
 
     x = _copy(x0)
-    fx = residual(prob, x, p0)
+    fx = residual(prob, x, params0)
 
     res = normN(fx)
     residuals = [res]
@@ -88,7 +88,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
     compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
     while (step < max_iterations) && (res > tol) && compute
-        J = jacobian(prob, x, p0)
+        J = jacobian(prob, x, params0)
         u, cv, itlinear = options.linsolver(J, fx)
         ~cv && @debug "Linear solver for J did not converge."
         itlineartot += sum(itlinear)
@@ -97,7 +97,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
         minus!!(x, u) # we use this form instead of just `x .= x .- u` to deal
         # with out-of-place functionals
 
-        fx = residual(prob, x, p0)
+        fx = residual(prob, x, params0)
         res = normN(fx)
 
         push!(residuals, res)
@@ -105,10 +105,10 @@ function _newton(prob::AbstractBifurcationProblem, x0, p0, options::NewtonPar;
 
         verbose && print_nonlinear_step(step, res, itlinear)
 
-        compute = callback((;x, fx, J, residual=res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
+        compute = callback((;x, fx, J, residual = res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
     ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
-    flag = (residuals[end] < tol) & callback((;x, fx, residual=res, step, options, x0, residuals); fromNewton = true, kwargs...)
+    flag = (residuals[end] < tol) & callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
     verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
     return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end

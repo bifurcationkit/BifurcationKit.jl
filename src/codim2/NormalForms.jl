@@ -1286,7 +1286,7 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
     function NS(θ)
         @. x + 2ϵ * real(q1 * cis(θ)) + 2ϵ^2 * real(h020 * cis(2θ))
     end
-    
+    #TODO: type unstable
     return (orbit = t -> NS(t),
             hasNS = hasNS,
             params = (@. real(par0 + (β1 * v10 + β2 * v01) * ϵ^2)),

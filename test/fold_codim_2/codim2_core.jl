@@ -3,7 +3,7 @@ using Test
 let
     lens1 = @optic _.a
     lens2 = @optic _.b
-    prob = BifurcationProblem((x,p)->x, rand(2), (a=1., b=2., c=3.),lens1)
+    prob = BifurcationProblem((x,p)->x, rand(2), (a=1., b=2., c=3.), lens1)
     𝐌𝐚 = BK.FoldMinimallyAugmentedFormulation(prob)
     𝐏𝐛 = BK.FoldMAProblem(𝐌𝐚, lens2)
     @test lens1 == getlens(prob)

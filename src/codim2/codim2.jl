@@ -377,14 +377,14 @@ where the parameters are as above except that you have to pass the branch `br` f
     It is recommended that you use the option `start_with_eigen = true`
 """
 function continuation(br::AbstractBranchResult,
-            ind_bif,
-            lens2::AllOpticTypes,
-            options_cont::ContinuationPar = br.contparams ;
-            prob = getprob(br),
-            start_with_eigen = false,
-            detect_codim2_bifurcation = 2,
-            update_minaug_every_step = 1,
-            kwargs...)
+                        ind_bif,
+                        lens2::AllOpticTypes,
+                        options_cont::ContinuationPar = br.contparams ;
+                        prob = getprob(br),
+                        start_with_eigen = false,
+                        detect_codim2_bifurcation = 2,
+                        update_minaug_every_step = 1,
+                        kwargs...)
     if isempty(br.specialpoint)
         error("The branch does not contain bifurcation points")
     end
@@ -438,7 +438,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     end
 
     # functional
-    prob_ma = getprob(br).prob
+    prob_ma = get_formulation(getprob(br))
     prob_vf = prob_ma.prob_vf
 
     # continuation parameters
