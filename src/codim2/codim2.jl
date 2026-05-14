@@ -126,6 +126,12 @@ for (op, at) in (
     end
 end
 
+function re_make(𝐌𝐚::AbstractMinimallyAugmentedFormulation;
+                    params = getparams(𝐌𝐚))
+    new_prob = re_make(𝐌𝐚.prob_vf; params)
+    return (@set 𝐌𝐚.prob_vf = new_prob)
+end
+
 update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, iter, state) = update!(𝐌𝐚.prob_vf, iter, state)
 
 @inline getvec(x, ::AbstractMinimallyAugmentedFormulation_Fold_PD) = get_vec_bls(x)

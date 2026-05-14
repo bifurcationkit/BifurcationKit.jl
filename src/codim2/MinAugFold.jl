@@ -218,7 +218,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
                 kwargs...)
 
     𝐅 = FoldMinimallyAugmentedFormulation(
-        prob,
+        re_make(prob; params = par),
         _copy(eigenvec),
         _copy(eigenvec_ad),
         options.linsolver,
@@ -226,7 +226,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian)
 
-    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
 
     # options for the Newton Solver
     opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
@@ -395,7 +395,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     options_newton = options_cont.newton_options
 
     𝐅 = FoldMinimallyAugmentedFormulation(
-            prob,
+            re_make(prob; params = par),
             _copy(eigenvec_ad), # carefull a =  left null vector
             _copy(eigenvec),    # carefull b = right null vector
             options_newton.linsolver,
@@ -411,10 +411,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     record_fold = RecordForFold(record_from_solution, BifurcationKit.record_from_solution(prob))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, par, lens2, prob.plotSolution, record_fold)
+        prob_fold = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, lens2, prob.plotSolution, record_fold)
         opt_fold_cont = deepcopy(options_cont)
     else
-        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, par, lens2, prob.plotSolution, record_fold)
+        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, lens2, prob.plotSolution, record_fold)
         opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 

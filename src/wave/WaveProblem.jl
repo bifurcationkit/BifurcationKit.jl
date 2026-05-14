@@ -44,7 +44,8 @@ $(TYPEDFIELDS)
     @assert 0 < nc
     @assert jacobian in (MatrixFree(), AutoDiffMF(), FullLU(), FiniteDifferences(), AutoDiff()) "This jacobian is not defined. Please chose another one."
 end
-getparams(tw::TWModel) = getparams(tw.prob_vf)
+@inline getparams(tw::TWModel) = getparams(tw.prob_vf)
+@inline getlens(tw::TWModel) = getlens(tw.prob_vf)
 @inline getdelta(tw::TWModel) = getdelta(tw.prob_vf)
 
 function TWModel(prob, ∂::Tuple, u₀; DAE = 0, jacobian = AutoDiff())
@@ -62,6 +63,12 @@ end
 
 # constructor
 TWModel(prob, ∂, u₀; kw...) = TWModel(prob, (∂,), u₀; kw...)
+
+function re_make(tw::TWModel;
+                params = getparams(tw))
+    new_prob = re_make(tw.prob_vf; params)
+    return (@set tw.prob_vf = new_prob)
+end
 
 @inline nb_constraints(pb::TWModel) = pb.nc
 

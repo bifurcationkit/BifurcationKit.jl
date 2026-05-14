@@ -374,21 +374,20 @@ for (op, at, kd) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob, Tjac}
+            struct $op{Tprob, Tjac, Tu0, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob, Tjac}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
-                params::Tp
-                lens::Tl
+                lens::Tl # Cannot be removed, it is distinct from getlens(disc)
                 plotSolution::Tplot
                 recordFromSolution::Trecord
             end
 
             _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
             isinplace(pb::$op) = isinplace(get_formulation(pb))
+            @inline getparams(prob::$op) = getparams(get_formulation(prob))
             # dummy constructor
-            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, missing, lens, nothing, nothing)
-            getparams(prob::$op{Tprob, Tjac, Tu0, Missing}) where {Tprob, Tjac, Tu0} = getparams(get_formulation(prob))
+            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, lens, nothing, nothing)
         end
     else
         @eval begin #PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
@@ -593,7 +592,23 @@ function re_make(prob::AbstractBifurcationProblem;
     end
     return new_prob
 end
-########
+
+function re_make(prob::AbstractMABifurcationProblem;
+                u0 = prob.u0,
+                params = getparams(prob),
+                plot_solution = plot_solution(prob)
+                )
+    disc = re_make(get_formulation(prob); params)
+    new_prob = setproperties(prob; prob = disc, u0, plotSolution = plot_solution)
+end
+
+function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitProblem};
+                u0 = prob.u0,
+                params = getparams(prob)
+                )
+    disc = re_make(get_discretization(prob); params)
+    new_prob = setproperties(prob; disc, u0)
+end
 ####################################################################################################
 # simple trait for dispatching on user passed functions
 struct NoUserPassedFunction end

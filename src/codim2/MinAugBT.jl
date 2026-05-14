@@ -289,7 +289,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
     @assert jacobian_ma in (AutoDiff(), FiniteDifferences(), MinAug())
 
     𝐁𝐓 = BTMinimallyAugmentedFormulation(
-        prob,
+        re_make(prob; params = par),
         _copy(eigenvec_ad), # a close to right null vector
         _copy(eigenvec),    # b close to left null vector
         options.linsolver,
@@ -320,7 +320,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
             J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else
-        prob_bt = BTMAProblem(𝐁𝐓, jacobian_ma, btpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+        prob_bt = BTMAProblem(𝐁𝐓, jacobian_ma, btpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
         # options for the Newton Solver
         optn_bt = @set options.linsolver = BTLinearSolverMinAug()
     end

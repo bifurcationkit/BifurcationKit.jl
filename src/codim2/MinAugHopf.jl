@@ -265,7 +265,7 @@ function newton_hopf(prob,
     # we first need to update d2F and d3F for them to accept complex arguments
 
     hopfproblem = HopfMinimallyAugmentedFormulation(
-        prob,
+        re_make(prob; params = par),
         _copy(eigenvec_ad), # this is pb.a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is pb.b ≈ null space of  J - iω I
         options.linsolver,
@@ -273,7 +273,7 @@ function newton_hopf(prob,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian = usehessian)
 
-    prob_h = HopfMAProblem(hopfproblem, nothing, hopfpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_h = HopfMAProblem(hopfproblem, nothing, hopfpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
 
     # options for the Newton Solver
     opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
@@ -450,7 +450,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     threshBT = 100options_newton.tol
 
     𝐇 = HopfMinimallyAugmentedFormulation(
-        prob_vf,
+        re_make(prob_vf; params = par),
         _copy(eigenvec_ad), # this is a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is b ≈ null space of  J - iω I
         options_newton.linsolver,
@@ -468,10 +468,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     record_hopf = RecordForHopf(record_from_solution, BifurcationKit.record_from_solution(prob_vf))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, jacobian_ma, hopfpointguess, par, lens2, prob_vf.plotSolution, record_hopf)
+        prob_hopf = HopfMAProblem(𝐇, jacobian_ma, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
         opt_hopf_cont = deepcopy(options_cont)
     else
-        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, record_hopf)
+        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = HopfLinearSolverMinAug()
     end
 

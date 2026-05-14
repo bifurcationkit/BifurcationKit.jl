@@ -69,7 +69,7 @@ let
 
     # test against analytical jacobian, compare to ForwardDiff
     # The main error comes from the borders which are evaluated by finite differences in the functional
-    𝐏𝐛 = BK.FoldMAProblem(foldpb, BK.MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
+    𝐏𝐛 = BK.FoldMAProblem(BK.re_make(foldpb; params = par_chan), BK.MinAugMatrixBased(), Bd2Vec(foldpt), (@optic _.β), nothing, nothing)
     BK.has_adjoint(𝐏𝐛)
     BK.is_symmetric(𝐏𝐛)
     BK.residual!(𝐏𝐛, zero(Bd2Vec(foldpt)) ,Bd2Vec(foldpt), par_chan)
@@ -103,7 +103,7 @@ let
 
     # test the symmetric case
     @reset foldpb.prob_vf.VF.isSymmetric = true
-    𝐏𝐛 = BK.FoldMAProblem(foldpb, BK.MinAugMatrixBased(), Bd2Vec(foldpt), par_chan, (@optic _.β), nothing, nothing)
+    𝐏𝐛 = BK.FoldMAProblem(BK.re_make(foldpb; params = par_chan), BK.MinAugMatrixBased(), Bd2Vec(foldpt), (@optic _.β), nothing, nothing)
     rhs = rand(n+1)
     Jac_fold_fdMA(u0) = ForwardDiff.jacobian( u -> foldpbVec(u, par_chan), u0)
     J_fold_fwdiff = Jac_fold_fdMA(Bd2Vec(foldpt))

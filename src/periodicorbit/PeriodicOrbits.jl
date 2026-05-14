@@ -1,5 +1,6 @@
 abstract type AbstractBoundaryValueDiscretization end
 abstract type AbstractPeriodicOrbitDiscretization <: AbstractBoundaryValueDiscretization end
+# You must implement getparams(::AbstractPeriodicOrbitDiscretization)
 
 # Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
 abstract type AbstractPODifferentialDiscretization <: AbstractPeriodicOrbitDiscretization end
@@ -9,6 +10,19 @@ abstract type AbstractPOFiniteDifferencesDiscretization <: AbstractPODifferentia
 # Periodic orbit computations by shooting method
 abstract type AbstractPOShootingDiscretization <: AbstractPeriodicOrbitDiscretization end
 abstract type AbstractPoincareShootingDiscretization <: AbstractPOShootingDiscretization end
+################################################################################
+function re_make(prob::AbstractPODifferentialDiscretization;
+                params = getparams(prob)
+                )
+    @set prob.prob_vf = re_make(prob.prob_vf; params)
+end
+
+# ShootingProblem and PoincareShootingProblem store params directly in the corresponding struct
+function re_make(prob::AbstractPOShootingDiscretization;
+                params = getparams(prob)
+                )
+    @set prob.par = params
+end
 ################################################################################
 # get the number of time slices
 @inline get_mesh_size(pb::AbstractPeriodicOrbitDiscretization) = pb.M

@@ -329,7 +329,7 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     newton_options = options_cont.newton_options
 
     𝐏𝐝 = PeriodDoublingMinimallyAugmentedFormulation(
-            prob,
+            re_make(prob; params = par),
             _copy(eigenvec),
             _copy(eigenvec_ad),
             newton_options.linsolver,
@@ -350,10 +350,10 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     plot_pd = plot_solution
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-        prob_pd = PDMAProblem(𝐏𝐝, jacobian_ma, pdpointguess, par, lens2, plot_pd, record_pd)
+        prob_pd = PDMAProblem(𝐏𝐝, jacobian_ma, pdpointguess, lens2, plot_pd, record_pd)
         opt_pd_cont =  deepcopy(options_cont)
     else
-        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, par, lens2, plot_pd, record_pd)
+        prob_pd = PDMAProblem(𝐏𝐝, nothing, pdpointguess, lens2, plot_pd, record_pd)
         opt_pd_cont = @set options_cont.newton_options.linsolver = PDLinearSolverMinAug()
     end
 

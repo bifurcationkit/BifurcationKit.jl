@@ -112,7 +112,7 @@ let
     BK.get_frequency(rhs, 𝐇)
 
     # test against analytical jacobian
-    𝐏𝐛 = BK.HopfMAProblem(𝐇, BK. MinAugMatrixBased(), Bd2Vec(hopfpt), par_bru, (@optic _.β), prob.plotSolution, prob.recordFromSolution)
+    𝐏𝐛 = BK.HopfMAProblem(BK.re_make(𝐇, params = par_bru), BK. MinAugMatrixBased(), Bd2Vec(hopfpt), (@optic _.β), prob.plotSolution, prob.recordFromSolution)
     J_ana = BK.jacobian(𝐏𝐛, Bd2Vec(hopfpt), par_bru)
     @test norminf(J_ana[1:end-2,1:end-2] - jac_hopf_fwdf[1:end-2,1:end-2]) == 0
     @test norminf(J_ana - jac_hopf_fwdf) ≈ 0 atol = 1e-3

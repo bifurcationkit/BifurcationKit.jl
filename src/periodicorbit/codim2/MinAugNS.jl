@@ -350,7 +350,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     newton_options = options_cont.newton_options
 
     𝐍𝐒 = NeimarkSackerMinimallyAugmentedFormulation(
-            prob,
+            re_make(prob; params = par),
             _copy(eigenvec),
             _copy(eigenvec_ad),
             newton_options.linsolver,
@@ -371,10 +371,10 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     plot_ns = plot_solution
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
-        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, par, lens2, plot_ns, record_ns)
+        prob_ns = NSMAProblem(𝐍𝐒, jacobian_ma, nspointguess, lens2, plot_ns, record_ns)
         opt_ns_cont = deepcopy(options_cont)
     else
-        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, par, lens2, plot_ns, record_ns)
+        prob_ns = NSMAProblem(𝐍𝐒, nothing, nspointguess, lens2, plot_ns, record_ns)
         opt_ns_cont = @set options_cont.newton_options.linsolver = NSLinearSolverMinAug()
     end
 
