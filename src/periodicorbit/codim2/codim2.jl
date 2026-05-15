@@ -284,7 +284,7 @@ function _continuation(gh::Bautin,
     _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
 
     jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
+    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, record_po)
     # we have to change the bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
     _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
@@ -388,7 +388,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); _kwargs...)
 
     jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, record_po)
+    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, record_po)
 
     options = _contParams.newton_options
 
@@ -512,7 +512,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     _plotsol = modify_po_plot(discPO, kwargs)
 
     jac = generate_jacobian(discPO, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(discPO, jac, orbitguess, getparams(discPO), getlens(discPO), _plotsol, _recordsol)
+    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, _recordsol)
 
     # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
     options = _contParams.newton_options
