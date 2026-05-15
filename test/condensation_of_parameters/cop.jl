@@ -4,7 +4,7 @@ using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
 @views function condensation_of_parameters!(cop_cache::BK.COPCACHE{dim}, 
-                                            coll::PeriodicOrbitOCollProblem, 
+                                            coll::Collocation, 
                                             J, 
                                             In, 
                                             rhs0::Vector) where {dim}
@@ -166,7 +166,7 @@ N = 3
 _al = I + 10. .* rand(N, N)
 # prob_ana = BifurcationProblem((x,p)->x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> I(N))
 prob_ana = BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
-coll = PeriodicOrbitOCollProblem(Ntst, m; 
+coll = Collocation(Ntst, m; 
                                     prob_vf = prob_ana, 
                                     N,
                                     ϕ = rand(N*( 1 + m * Ntst)), 

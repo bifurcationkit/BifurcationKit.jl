@@ -72,7 +72,7 @@ opts_po_cont = ContinuationPar(opts_br, ds = 0.0001, dsmin = 1e-4, max_steps = 9
 
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
-    PeriodicOrbitOCollProblem(100, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
+    Collocation(100, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
     alg = PALC(tangent = Bordered()),
     # verbosity = 3, plot = true,
     args_po...,

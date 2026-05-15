@@ -87,7 +87,7 @@ end
 """
 $(TYPEDEF)
 
-Structure to encode the solution associated to a functional like `::PeriodicOrbitOCollProblem` or `::ShootingProblem`. In the particular case of `::PeriodicOrbitOCollProblem`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
+Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
 
     sol = BifurcationKit.POSolution(prob_coll, x)
     sol(t)
@@ -367,7 +367,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `br` branch result from a call to `continuation`
 - `ind_hopf` index of the bifurcation point in `br`
 - `contParams` parameters for the call to `continuation`
-- `disc` discretization used to specify the way toc compute the periodic orbit. It can be [`PeriodicOrbitTrapProblem`](@ref), [`PeriodicOrbitOCollProblem`](@ref), [`ShootingProblem`](@ref) or [`PoincareShootingProblem`](@ref) .
+- `disc` discretization used to specify the way toc compute the periodic orbit. It can be [`Trapeze`](@ref), [`Collocation`](@ref), [`Shooting`](@ref) or [`PoincareShooting`](@ref) .
 
 # Optional arguments
 

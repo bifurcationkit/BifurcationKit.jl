@@ -104,7 +104,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.03, ds= -0.0001, dsmin = 1e-4, p_max = 
 for meshadapt in (false, true)
     local br_po = continuation(
                 br, 2, opts_po_cont,
-                PeriodicOrbitOCollProblem(40, 4; meshadapt, K = 200);
+                Collocation(40, 4; meshadapt, K = 200);
                 alg = PALC(),
                 record_from_solution = recordPO,
                 plot_solution = plotPO,

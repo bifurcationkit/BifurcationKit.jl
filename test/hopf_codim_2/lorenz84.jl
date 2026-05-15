@@ -392,8 +392,8 @@ opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifu
 @reset opts_fold_po.newton_options.tol = 1e-8
 
 for disc in (
-                PeriodicOrbitOCollProblem(20, 3), 
-                ShootingProblem(9, prob_ode, ODE.Vern9(), parallel = false)
+                Collocation(20, 3), 
+                Shooting(9, prob_ode, ODE.Vern9(), parallel = false)
               )
     fold_po = continuation(hp_codim2_1, 3, opts_fold_po, disc;
             normC = norminf,
@@ -412,8 +412,8 @@ opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurc
 # @reset opts_ns_po.newton_options.verbose = true
 @reset opts_ns_po.newton_options.tol = 1e-12
 @reset opts_ns_po.newton_options.max_iterations = 10
-for disc in (PeriodicOrbitOCollProblem(20, 3, update_section_every_step = 1), 
-                ShootingProblem(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
+for disc in (Collocation(20, 3, update_section_every_step = 1), 
+                Shooting(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
         disc;
         usehessian = false,
@@ -444,7 +444,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
 
 _br_po = BK.continuation_from_hopf_point(hp_codim2_1, 5, 
         ContinuationPar(opts_br; detect_bifurcation = 2, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
-        PeriodicOrbitOCollProblem(20, 5);
+        Collocation(20, 5);
         # verbosity = 3,
         # autodiff = false, 
         lens = getlens(br)

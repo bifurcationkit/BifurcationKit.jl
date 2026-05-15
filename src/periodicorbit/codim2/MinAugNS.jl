@@ -438,7 +438,7 @@ function test_for_ns_ch(iter, state)
         prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
         #############
     end
-    if ~pdjump && get_discretization(pbwrap) isa PeriodicOrbitOCollProblem
+    if ~pdjump && get_discretization(pbwrap) isa Collocation
         if 𝐍𝐒.prm
             ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = true))
         else

@@ -90,8 +90,8 @@ br_po = @time continuation(
     br, 1,
     # arguments for continuation
     optcontpo,
-    PeriodicOrbitOCollProblem(30, 4, jacobian = BK.FullSparseInplace());
     # Trapeze(M = M, jacobian = BK.FullSparseInplace());
+    Collocation(30, 4, jacobian = BK.FullSparseInplace());
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess

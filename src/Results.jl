@@ -101,7 +101,7 @@ julia> br.param
     "Type of solutions computed in this branch."
     kind::Tkind = EquilibriumCont()
 
-    "Bifurcation problem used to compute the branch, useful for branch switching. For example, when computing periodic orbits, the functional `PeriodicOrbitTrapProblem`, `ShootingProblem`... will be saved here."
+    "Bifurcation problem used to compute the branch, useful for branch switching. For example, when computing periodic orbits, the functional `Trapeze`, `Shooting`... will be saved here."
     prob::Tprob = nothing
 
     "A vector holding the list of detected bifurcation points. See [`SpecialPoint`](@ref) for a list of special points."

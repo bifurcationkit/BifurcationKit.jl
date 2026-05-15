@@ -10,7 +10,7 @@ function _update_cont_params(contParams::ContinuationPar, pb::AbstractPOShooting
     return contParams
 end
 
-function _update_cont_params(cont_params::ContinuationPar, coll::PeriodicOrbitOCollProblem, orbitguess)
+function _update_cont_params(cont_params::ContinuationPar, coll::Collocation, orbitguess)
     if cont_params.newton_options.linsolver isa COPLS
         @reset cont_params.newton_options.linsolver = COPLS(COPCACHE(coll, Val(0)))
     end

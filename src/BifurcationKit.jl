@@ -177,7 +177,7 @@ module BifurcationKit
     export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
-    export PeriodicOrbitOCollProblem, COPBLS, COPLS
+    export Collocation, COPBLS, COPLS
 
     # Floquet multipliers computation
     export FloquetQaD, FloquetColl, FloquetGEV

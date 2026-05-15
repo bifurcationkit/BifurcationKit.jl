@@ -36,8 +36,8 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-coll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.; use_adapted_mesh = true)
-coll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), prob, sol, 2.)
+coll, ci = generate_ci_problem(Collocation(26, 3), prob, sol, 2.; use_adapted_mesh = true)
+coll, ci = generate_ci_problem(Collocation(26, 3), prob, sol, 2.)
 
 solpo = newton(coll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -103,7 +103,7 @@ end
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), Rodas5())
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(Collocation(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,

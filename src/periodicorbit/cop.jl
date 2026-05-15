@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 # Constructor
 
 ```
-COPCACHE(coll::PeriodicOrbitOCollProblem, Val(0))
+COPCACHE(coll::Collocation, Val(0))
 ```
 
 ## Reference(s)
@@ -35,7 +35,7 @@ struct COPCACHE{dim, 𝒯, Tp}
     "alpha values, buffer used in COP."
     α_values::Vector{𝒯}
 
-    function COPCACHE(coll::PeriodicOrbitOCollProblem, 
+    function COPCACHE(coll::Collocation, 
                         ::Val{dim0} = Val(0); 
                         𝒯 = eltype(coll)) where {dim0}
         if ~(dim0 isa Int64)
@@ -76,7 +76,7 @@ $TYPEDFIELDS
 # Constructors
 
 - `COPBLS()`
-- `COPBLS(coll::PeriodicOrbitOCollProblem; cache::COPCACHE, solver = nothing, J = nothing)`
+- `COPBLS(coll::Collocation; cache::COPCACHE, solver = nothing, J = nothing)`
 
 # Related
 
@@ -98,7 +98,7 @@ $TYPEDFIELDS
 # Constructors
 
 - `COPBLS()`
-- `COPBLS(coll::PeriodicOrbitOCollProblem; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
+- `COPBLS(coll::Collocation; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
 
 # Related
 
@@ -112,7 +112,7 @@ struct COPBLS{dim, 𝒯, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
     "Cache for the bordered jacobian matrix."
     J::Tj
 
-    function COPBLS(coll = PeriodicOrbitOCollProblem(2, 2; N = 0);
+    function COPBLS(coll = Collocation(2, 2; N = 0);
                     cache::COPCACHE{dim, 𝒯, Tp} = COPCACHE(coll, Val(1)), 
                     solver::Ts = nothing, 
                     J::Tj = nothing) where {dim, 𝒯, Tp, Ts, Tj}
@@ -121,9 +121,9 @@ struct COPBLS{dim, 𝒯, Tp, Ts, Tj} <: AbstractBorderedLinearSolver
 end
 @inline _getdim(cop::COPBLS{dim}) where {dim} = _getdim(cop.cache)
 
-COPLS(coll::PeriodicOrbitOCollProblem) = COPLS(COPCACHE(coll, Val(0)))
-COPBLS(coll::PeriodicOrbitOCollProblem) = COPBLS(; cache = COPCACHE(coll, Val(1)))
-COPLS() = COPLS(PeriodicOrbitOCollProblem(2, 2; N = 0))
+COPLS(coll::Collocation) = COPLS(COPCACHE(coll, Val(0)))
+COPBLS(coll::Collocation) = COPBLS(; cache = COPCACHE(coll, Val(1)))
+COPLS() = COPLS(Collocation(2, 2; N = 0))
 
 """
 $(TYPEDSIGNATURES)
@@ -131,7 +131,7 @@ $(TYPEDSIGNATURES)
 Solve the linear system associated with the collocation problem for computing periodic orbits. It returns the solution to the equation `J * sol = rhs0`. It can also solve a bordered version of the above problem and the border size `δn` is inferred at run time.
 
 ## Arguments
-- `coll::PeriodicOrbitOCollProblem` collocation problem
+- `coll::Collocation` collocation problem
 - `J::Matrix`
 - `rhs0::Vector`
 
@@ -139,7 +139,7 @@ Solve the linear system associated with the collocation problem for computing pe
 - `_DEBUG = false` use a debug mode in which the condensation of parameters is performed without an analytical formula.
 - `_USELU = false` use LU factorization instead of gaussian elimination and backward substitution to solve the linear problem.
 """
-@views function solve_cop(coll::PeriodicOrbitOCollProblem, 
+@views function solve_cop(coll::Collocation, 
                           J, 
                           rhs0, 
                           cop_cache::COPCACHE{dim}; 
@@ -213,7 +213,7 @@ Copy the matrix J into 𝑱.
 end
 
 function condensation_of_parameters2!(cop_cache::COPCACHE{dim}, 
-                                coll::PeriodicOrbitOCollProblem, 
+                                coll::Collocation, 
                                 J, 
                                 In, # identify
                                 rhs0) where {dim}
@@ -361,7 +361,7 @@ end
     return rhs_ext
 end
 
-@views function _solve_for_internal_variables(coll::PeriodicOrbitOCollProblem,
+@views function _solve_for_internal_variables(coll::Collocation,
                                          Jcond,
                                          rhs::Vector{𝒯}, 
                                          sol_ext, 

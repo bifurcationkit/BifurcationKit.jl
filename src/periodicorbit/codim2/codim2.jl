@@ -151,8 +151,8 @@ get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.
 get_wrap_po(𝐌𝐚::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 
-__wrap_po(prob::PeriodicOrbitOCollProblem, args...) = PeriodicOrbitFunctionalColl(prob, args...)
 __wrap_po(prob::ShootingProblem, args...) = PeriodicOrbitFunctionalSh(prob, args...)
+__wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 ####################################################################################################
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})

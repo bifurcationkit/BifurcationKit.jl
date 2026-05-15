@@ -101,7 +101,7 @@ fold_po_trap1 = continuation(deepcopy(brpo_fold), 2, (@optic _.ϵ), opts_potrap_
 
 BK.plot(fold_po_trap1)[1]
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 4;
+probcoll, ci = generate_ci_problem(Collocation(30, 4;
             jacobian = BK.DenseAnalyticalInplace(),
             # meshadapt = true,
             ),
@@ -229,7 +229,7 @@ sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,
 sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 4; 
+probcoll, ci = generate_ci_problem(Collocation(30, 4; 
                 # jacobian = BK.DenseAnalyticalInplace(),
                 update_section_every_step = 0), 
                 re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
@@ -293,7 +293,7 @@ sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,
 sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(Collocation(26, 3; update_section_every_step = 0), re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);

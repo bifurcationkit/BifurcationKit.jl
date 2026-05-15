@@ -64,7 +64,7 @@ opts_po_cont = ContinuationPar(opts_br, dsmax = 1., ds= 2e-2, dsmin = 1e-6, p_ma
 max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
 
 brpo = @time continuation(br, 2, opts_po_cont,
-    PeriodicOrbitOCollProblem(50, 3 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
+    Collocation(50, 3 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
     # verbosity = 0, plot = true,
     normC = norminf,
     alg = PALC(tangent = Bordered()),

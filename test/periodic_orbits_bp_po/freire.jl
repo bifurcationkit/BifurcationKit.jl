@@ -80,7 +80,7 @@ end
 begin
     br_po = continuation(br, 1, 
                 ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-                PeriodicOrbitOCollProblem(30,4; jacobian = BK.DenseAnalyticalInplace());
+                Collocation(30,4; jacobian = BK.DenseAnalyticalInplace());
                 δp = 0.001,
     )
     # plot(br, br_po)

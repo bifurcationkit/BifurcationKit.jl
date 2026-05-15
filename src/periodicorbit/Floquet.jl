@@ -22,7 +22,7 @@ end
 """
 $(TYPEDEF)
 
-Computes Floquet multipliers (eigenvalues of the monodromy matrix) for periodic orbit problems using the Shooting method or Finite Differences (Trapezoid method).
+Computes Floquet multipliers (eigenvalues of the monodromy matrix) for periodic orbit problems using the Shooting method or Finite Differences (Trapeze method).
 
 ## Method Description
 
@@ -442,7 +442,7 @@ function compute_eigenvalues(eig::FloquetGEV, iter::ContIterable{Tkind}, state, 
     eig(disc, J, nev; k...)
 end
 
-@views function (fl::FloquetGEV)(coll::PeriodicOrbitOCollProblem, _J::AbstractMatrix, nev; k...)
+@views function (fl::FloquetGEV)(coll::Collocation, _J::AbstractMatrix, nev; k...)
     n = get_state_dim(coll)
     J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
     # case of v(0)

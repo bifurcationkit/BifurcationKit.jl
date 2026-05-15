@@ -425,7 +425,7 @@ function test_for_pd_gpd_cp(iter, state)
         pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
         𝐏𝐝.GPD = pd.nf.nf.b3
     end
-    if get_discretization(pbwrap) isa PeriodicOrbitOCollProblem
+    if get_discretization(pbwrap) isa Collocation
         if 𝐏𝐝.prm
             pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
         else
