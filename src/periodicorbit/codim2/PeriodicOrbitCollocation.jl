@@ -94,7 +94,7 @@ $(SIGNATURES)
 Continuation of curve of fold bifurcations of periodic orbits computed using collocation method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits
 - `ind_bif` index of the fold point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
@@ -153,7 +153,7 @@ $(SIGNATURES)
 Continuation of curve of period-doubling bifurcations of periodic orbits computed using collocation method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits
 - `ind_bif` index of the PD point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
@@ -224,7 +224,7 @@ $(SIGNATURES)
 Continuation of curve of Neimark-Sacker bifurcations of periodic orbits computed using collocation method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits
 - `ind_bif` index of the NS point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)

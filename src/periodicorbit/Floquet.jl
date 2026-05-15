@@ -279,10 +279,10 @@ end
     return out_a
 end
 ####################################################################################################
-# PeriodicOrbitTrapProblem
+# Trapeze
 
 # Matrix-Free version of the monodromy operator
-@views function MonodromyQaD_matrix_free(trap::PeriodicOrbitTrapProblem, u0, par, du::AbstractVector)
+@views function MonodromyQaD_matrix_free(trap::Trapeze, u0, par, du::AbstractVector)
     # extraction of various constants
     M, N = size(trap)
 
@@ -313,10 +313,10 @@ end
     return out
 end
 
-# This function is used to reconstruct the spatio-temporal eigenvector of the Trapezoid functional
+# This function is used to reconstruct the spatio-temporal eigenvector of the Trapeze functional
 # at position x from the Floquet eigenvector ζ
 function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalTrap, u0::AbstractVector, par, ζ::AbstractVector)
-    # get the Trapezoid problem
+    # get the Trapeze problem
     disc = get_discretization(powrap)
 
     # extraction of various constants
@@ -354,7 +354,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunct
 end
 
 # Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
-function MonodromyQaD(trap::PeriodicOrbitTrapProblem, J, u0, par)
+function MonodromyQaD(trap::Trapeze, J, u0, par)
     # extraction of various constants
     M, N = size(trap)
 

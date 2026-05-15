@@ -42,10 +42,10 @@ sol = ODE.solve(prob, ODE.KenCarp4(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
 
 # test generation of initial guess from ODESolution
-generate_ci_problem(PeriodicOrbitTrapProblem(M = 10), prob_vf, sol, 1.)
 generate_ci_problem(PeriodicOrbitOCollProblem(10, 2), prob_vf, sol, 1.)
 generate_ci_problem(ShootingProblem(M=10), prob_vf, prob, sol, 1.)
 generate_ci_problem(PoincareShootingProblem(M=10), prob_vf, prob, sol, 1.)
+generate_ci_problem(Trapeze(M = 10), prob_vf, sol, 1.)
 ####################################################################################################
 section(x, T) = x[1] #* x[end]
 section(x, T, dx, dT) = dx[1] #* x[end]

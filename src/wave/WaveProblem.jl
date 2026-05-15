@@ -115,7 +115,7 @@ applyD(pb::TWModel, u) = applyD(pb, zero(u), 1, u)
     return out
 end
 
-# function (u, p) -> F(u, p) - s * D * u to be used with shooting or Trapezoid
+# function (u, p) -> F(u, p) - s * D * u to be used with shooting or Trapeze
 VFtw(pb::TWModel, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
 
 # vector field of the TW problem

@@ -47,7 +47,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 """
 $(TYPEDEF)
 
-This composite type implements Finite Differences based on a Trapezoidal rule (Order 2 in time) to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
+This composite type implements Finite Differences based on a Trapeze rule (aka Crank-Nicolson, order 2 in time) to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
 The scheme is as follows. We first consider a partition of ``[0, 1]`` given by ``0 < s_0 < \\cdots < s_m = 1`` and one looks for `T = x[end]` such that
 
@@ -64,9 +64,9 @@ $(TYPEDFIELDS)
 
 # Constructors
 
-The structure can be created by calling `PeriodicOrbitTrapProblem(;kwargs...)`. For example, you can declare such a problem without vector field by doing
+The structure can be created by calling `Trapeze(;kwargs...)`. For example, you can declare such a problem without vector field by doing
 
-    PeriodicOrbitTrapProblem(M = 100)
+    Trapeze(M = 100)
 
 # Orbit guess
 You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
@@ -89,7 +89,7 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct PeriodicOrbitTrapProblem{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFiniteDifferencesDiscretization
+@with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFiniteDifferencesDiscretization
     "a bifurcation problem"
     prob_vf::Tprob = nothing
 
@@ -108,7 +108,7 @@ $DocStrjacobianPOTrap
     "dimension of the problem in case of an `AbstractVector`"
     N::Int = 0
 
-    "linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a full matrix-free setting."
+    "linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a matrix-free setting."
     linsolver::Tls = DefaultLS()
 
     "whether the computation takes place on the gpu (Experimental)"
@@ -125,11 +125,11 @@ $DocStrjacobianPOTrap
     "symbol which describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = Dense()
 
-    @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `PeriodicOrbitTrapProblem`. Pick one in $_trapezoid_jacobian_type"
+    @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `Trapeze`. Pick one in $_trapezoid_jacobian_type"
 end
 
-function Base.show(io::IO, trap::PeriodicOrbitTrapProblem)
-    println(io, "┌─ Trapezoid method for periodic orbits (PO) / bvp")
+function Base.show(io::IO, trap::Trapeze)
+    println(io, "┌─ Trapeze method for periodic orbits (PO) / bvp")
     println(io, "├─ time slices    : ", trap.M)
     println(io, "├─ dimension      : ", get_state_dim(trap))
     println(io, "├─ jacobian       : ", trap.jacobian)
@@ -138,19 +138,19 @@ function Base.show(io::IO, trap::PeriodicOrbitTrapProblem)
     println(io, "└─ inplace        : ", isinplace(trap))
 end
 
-@inline isinplace(trap::PeriodicOrbitTrapProblem) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
-@inline get_time_step(trap::PeriodicOrbitTrapProblem, i::Int) = get_time_step(trap.mesh, i)
-get_times(trap::PeriodicOrbitTrapProblem) = cumsum(collect(trap.mesh))
-@inline hasmassmatrix(trap::PeriodicOrbitTrapProblem{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
-@inline getparams(trap::PeriodicOrbitTrapProblem) = getparams(trap.prob_vf)
-@inline getlens(trap::PeriodicOrbitTrapProblem) = getlens(trap.prob_vf)
-@inline getdelta(trap::PeriodicOrbitTrapProblem) = getdelta(trap.prob_vf)
-setparam(trap::PeriodicOrbitTrapProblem, p) = set(getparams(trap), getlens(trap), p)
-@inline get_state_dim(trap::PeriodicOrbitTrapProblem) = trap.N
-@inline length(trap::PeriodicOrbitTrapProblem) = trap.M * get_state_dim(trap)
+@inline isinplace(trap::Trapeze) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
+@inline get_time_step(trap::Trapeze, i::Int) = get_time_step(trap.mesh, i)
+get_times(trap::Trapeze) = cumsum(collect(trap.mesh))
+@inline hasmassmatrix(trap::Trapeze{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
+@inline getparams(trap::Trapeze) = getparams(trap.prob_vf)
+@inline getlens(trap::Trapeze) = getlens(trap.prob_vf)
+@inline getdelta(trap::Trapeze) = getdelta(trap.prob_vf)
+setparam(trap::Trapeze, p) = set(getparams(trap), getlens(trap), p)
+@inline get_state_dim(trap::Trapeze) = trap.N
+@inline length(trap::Trapeze) = trap.M * get_state_dim(trap)
 
 # type unstable!
-@inline function get_mass_matrix(trap::PeriodicOrbitTrapProblem, return_type_Array = false)
+@inline function get_mass_matrix(trap::Trapeze, return_type_Array = false)
     if return_type_Array == false
         return hasmassmatrix(trap) ? trap.massmatrix : SPA.spdiagm( 0 => ones(trap.N))
     else
@@ -158,22 +158,22 @@ setparam(trap::PeriodicOrbitTrapProblem, p) = set(getparams(trap), getlens(trap)
     end
 end
 # these functions extract the last component of the periodic orbit guess
-@inline _extract_period_fdtrap(trap::PeriodicOrbitTrapProblem, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
+@inline _extract_period_fdtrap(trap::Trapeze, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
-get_time_slices(trap::PeriodicOrbitTrapProblem, x) = get_time_slices(x, trap.N, trap.M)
+get_time_slices(trap::Trapeze, x) = get_time_slices(x, trap.N, trap.M)
 
 """
 $(TYPEDSIGNATURES)
 
 Compute the period of the periodic orbit associated to `x`.
 """
-@inline getperiod(prob::PeriodicOrbitTrapProblem, x, p) = _extract_period_fdtrap(prob, x)
+@inline getperiod(prob::Trapeze, x, p) = _extract_period_fdtrap(prob, x)
 
 # for a dummy constructor, useful for specifying the "algorithm" to look for periodic orbits,
-# just call PeriodicOrbitTrapProblem()
+# just call Trapeze()
 
-function PeriodicOrbitTrapProblem(prob_vf,
+function Trapeze(prob_vf,
                                     ϕ::vectype,
                                     xπ::vectype,
                                     m::Union{Int, AbstractVector}, 
@@ -183,10 +183,10 @@ function PeriodicOrbitTrapProblem(prob_vf,
     _length = ϕ isa AbstractVector ? length(ϕ) : 0
     M = m isa Number ? m : length(m) + 1
 
-    return PeriodicOrbitTrapProblem(;prob_vf, ϕ, xπ, M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
+    return Trapeze(;prob_vf, ϕ, xπ, M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
 end
 
-function PeriodicOrbitTrapProblem(prob_vf,
+function Trapeze(prob_vf,
                                     ϕ::vectype,
                                     xπ::vectype,
                                     m::Union{Int, AbstractVector},
@@ -198,7 +198,7 @@ function PeriodicOrbitTrapProblem(prob_vf,
                                     jacobian = Dense()) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
-    trap = PeriodicOrbitTrapProblem(;prob_vf,
+    trap = Trapeze(;prob_vf,
                                     ϕ = similar(ϕ, N*M),
                                     xπ = similar(xπ, N*M),
                                     M,
@@ -218,13 +218,13 @@ function PeriodicOrbitTrapProblem(prob_vf,
     return trap
 end
 
-PeriodicOrbitTrapProblem(prob_vf,
+Trapeze(prob_vf,
                         m::Union{Int, AbstractVector},
                         N::Int,
                         ls::AbstractLinearSolver = DefaultLS();
                         ongpu = false,
                         adaptmesh = false,
-                        massmatrix = nothing) = PeriodicOrbitTrapProblem(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
+                        massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
 
 
 # do not type h::Number because this will annoy CUDA
@@ -266,7 +266,7 @@ potrap_scheme!(trap, dest, u1, u2, par, h, tmp, linear = Val(true); applyf = Val
 """
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
-@views function po_residual!(trap::PeriodicOrbitTrapProblem, out, u, par)
+@views function po_residual!(trap::Trapeze, out, u, par)
     T = getperiod(trap, u, nothing)
     M, N = size(trap)
 
@@ -287,9 +287,9 @@ This function implements the functional for finding periodic orbits based on fin
         return out
     end
 end
-po_residual(trap::PeriodicOrbitTrapProblem, u, par) = po_residual!(trap, similar(u), u, par)
+po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 
-@views function po_residual_bare!(trap::PeriodicOrbitTrapProblem, outc, uc, par, T)
+@views function po_residual_bare!(trap::Trapeze, outc, uc, par, T)
     M, N = size(trap)
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop
@@ -309,7 +309,7 @@ end
 """
 Matrix free expression (jvp) of the jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
 """
-function po_jvp!(trap::PeriodicOrbitTrapProblem, out, u, par, du)
+function po_jvp!(trap::Trapeze, out, u, par, du)
     M, N = size(trap)
     T  = _extract_period_fdtrap(trap, u)
     dT = _extract_period_fdtrap(trap, du)
@@ -348,8 +348,8 @@ function po_jvp!(trap::PeriodicOrbitTrapProblem, out, u, par, du)
 end
 
 
-# residual(trap::PeriodicOrbitTrapProblem, u::AbstractVector, par) = residual!(trap, similar(u), u, par)
-po_jvp(trap::PeriodicOrbitTrapProblem, u::AbstractVector, par, du) = po_jvp!(trap, similar(du), u, par, du)
+# residual(trap::Trapeze, u::AbstractVector, par) = residual!(trap, similar(u), u, par)
+po_jvp(trap::Trapeze, u::AbstractVector, par, du) = po_jvp!(trap, similar(du), u, par, du)
 jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(wrap), u, par, du)
 
 ####################################################################################################
@@ -357,7 +357,7 @@ jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(w
 """
 Function to compute the Matrix-Free version of Aγ, see docs for its expression.
 """
-function Aγ!(trap::PeriodicOrbitTrapProblem, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
+function Aγ!(trap::Trapeze, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
     # u0 of size N * M + 1
     # du of size N * M
     M, N = size(trap)
@@ -376,7 +376,7 @@ end
 """
 Function to compute the Matrix-Free version of the cyclic matrix Jc, see docs for its expression.
 """
-function Jc(trap::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVector, par, T, du::AbstractVector, tmp)
+function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du::AbstractVector, tmp)
     # tmp plays the role of buffer array
     # u0 of size N * (M - 1)
     # du of size N * (M - 1)
@@ -402,7 +402,7 @@ function Jc(trap::PeriodicOrbitTrapProblem, outc::AbstractMatrix, u0::AbstractVe
     return vec(outc)
 end
 
-function Jc(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par, du::AbstractVector)
+function Jc(trap::Trapeze, u0::AbstractVector, par, du::AbstractVector)
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
     out  = similar(du)
@@ -414,7 +414,7 @@ end
 """
 Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
 """
-function po_jacobian_block(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par; γ = 1)
+function po_jacobian_block(trap::Trapeze, u0::AbstractVector, par; γ = 1)
     # extraction of various constants
     M, N = size(trap)
 
@@ -430,7 +430,7 @@ end
 """
 This function populates Jc with the cyclic matrix using the different Jacobians
 """
-function po_cylic_block!(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par, Jc::BA.BlockArray)
+function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
     # extraction of various constants
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
@@ -463,19 +463,19 @@ function po_cylic_block!(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par
     return Jc
 end
 
-function po_cylic_block(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
+function po_cylic_block(trap::Trapeze, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(trap)
     Jc = BA.BlockArray(SPA.spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
     po_cylic_block!(trap, u0, par, Jc)
 end
 
-cylic_potrap_sparse(trap::PeriodicOrbitTrapProblem, orbitguess0, par) = block_to_sparse(po_cylic_block(trap, orbitguess0, par))
+cylic_potrap_sparse(trap::Trapeze, orbitguess0, par) = block_to_sparse(po_cylic_block(trap, orbitguess0, par))
 
 """
-This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using a Sparse representation.
+This method returns the jacobian of the functional G encoded in Trapeze using a Sparse representation.
 """
-function po_jacobian_sparse(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
+function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
     # extraction of various constants
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
@@ -495,9 +495,9 @@ function po_jacobian_sparse(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, 
 end
 
 """
-This method returns the jacobian of the functional G encoded in PeriodicOrbitTrapProblem using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
+This method returns the jacobian of the functional G encoded in Trapeze using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
-@views function po_jacobian_sparse!(trap::PeriodicOrbitTrapProblem, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
+@views function po_jacobian_sparse!(trap::Trapeze, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
         M, N = size(trap)
         T = _extract_period_fdtrap(trap, u0)
 
@@ -548,7 +548,7 @@ This method returns the jacobian of the functional G encoded in PeriodicOrbitTra
         return J0
 end
 
-@views function po_jacobian_sparse!(trap::PeriodicOrbitTrapProblem, J0, u0::AbstractVector, par, indx; γ = 1, δ = getdelta(trap), updateborder::Bool = true)
+@views function po_jacobian_sparse!(trap::Trapeze, J0, u0::AbstractVector, par, indx; γ = 1, δ = getdelta(trap), updateborder::Bool = true)
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
 
@@ -602,7 +602,7 @@ end
     return J0
 end
 
-function jacobian_cyclic_sparse(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par, γ = 1)
+function jacobian_cyclic_sparse(trap::Trapeze, u0::AbstractVector, par, γ = 1)
     # extraction of various constants
     N = trap.N
     AγBlock = po_jacobian_block(trap, u0, par; γ)
@@ -613,7 +613,7 @@ function jacobian_cyclic_sparse(trap::PeriodicOrbitTrapProblem, u0::AbstractVect
     return Aγ[begin:end-N, begin:end-N]
 end
 
-function jacobian_block_diag(trap::PeriodicOrbitTrapProblem, u0::AbstractVector, par)
+function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
@@ -660,7 +660,7 @@ $(TYPEDSIGNATURES)
 
 This function updates the section during the continuation run.
 """
-@views function updatesection!(trap::PeriodicOrbitTrapProblem, x, pars)
+@views function updatesection!(trap::Trapeze, x, pars)
     @debug "Update section TRAP"
     M, N = size(trap)
     xc = get_time_slices(trap, x)
@@ -678,7 +678,7 @@ This function updates the section during the continuation run.
     return true
 end
 ####################################################################################################
-# Linear solvers for the jacobian of the functional G implemented by PeriodicOrbitTrapProblem
+# Linear solvers for the jacobian of the functional G implemented by Trapeze
 # composite type to encode the Aγ Operator and its associated cyclic matrix
 abstract type AbstractPOTrapAγOperator end
 
@@ -772,7 +772,7 @@ end
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
 ####################################################################################################
-# The following structure encodes the jacobian of a PeriodicOrbitTrapProblem which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
+# The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
     ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
     Aγ::Tag             # Aγ Operator involved in the Jacobian of the PO functional
@@ -826,12 +826,12 @@ get_periodic_orbit(prob::PeriodicOrbitFunctionalTrap, u::AbstractVector, p) = ge
 is_symmetric(::PeriodicOrbitFunctionalTrap) = false
 has_adjoint(::PeriodicOrbitFunctionalTrap) = false
 ##########################
-function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::Dense, orbitguess, pars; k...)
+function _generate_jacobian(trap::Trapeze, ::Dense, orbitguess, pars; k...)
     _J =  po_jacobian_sparse(trap, orbitguess, pars) |> Array
     return (Dense(), _J)
 end
 
-function _generate_jacobian(trap::PeriodicOrbitTrapProblem, ::FullSparseInplace, orbitguess, pars; k...)
+function _generate_jacobian(trap::Trapeze, ::FullSparseInplace, orbitguess, pars; k...)
     M, N = size(trap)
     # sparse matrix to hold the jacobian
     J =  po_jacobian_sparse(trap, orbitguess, getparams(trap.prob_vf))
@@ -857,7 +857,7 @@ POTrapJacobianBordered
 _jacobian_po(::PeriodicOrbitFunctionalTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
 # newton wrappers
-function _newton_po_from_disc(trap::PeriodicOrbitTrapProblem,
+function _newton_po_from_disc(trap::Trapeze,
                         orbitguess,
                         options::NewtonPar;
                         defOp::Union{Nothing, DeflationOperator} = nothing,
@@ -908,13 +908,13 @@ $(TYPEDSIGNATURES)
 This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments:
-- `prob` a problem of type [`PeriodicOrbitTrapProblem`](@ref) encoding the functional G.
-- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
+- `prob` a problem of type [`Trapeze`](@ref) encoding the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
 - `par` parameters to be passed to the functional.
 - `options` same as for the regular `newton` method.
 $DocStrjacobianPOTrap
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
-newton(trap::PeriodicOrbitTrapProblem,
+newton(trap::Trapeze,
         orbitguess,
         options::NewtonPar;
         kwargs...) = _newton_po_from_disc(trap, orbitguess, options; defOp = nothing, kwargs...)
@@ -924,7 +924,7 @@ $(TYPEDSIGNATURES)
 
 This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
-newton(trap::PeriodicOrbitTrapProblem,
+newton(trap::Trapeze,
         orbitguess::vectype,
         defOp::DeflationOperator{Tp, Tdot, T, vectype},
         options::NewtonPar;
@@ -938,8 +938,8 @@ $(TYPEDSIGNATURES)
 This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments
-- `prob::PeriodicOrbitTrapProblem` encodes the functional G.
-- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
+- `prob::Trapeze` encodes the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
 - `alg` continuation algorithm
 - `contParams` same as for the regular [`continuation`](@ref) method
 - `linear_algo` same as in [`continuation`](@ref)
@@ -951,7 +951,7 @@ $DocStrjacobianPOTrap
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """
-function continuation_po(trap::PeriodicOrbitTrapProblem,
+function continuation_po(trap::Trapeze,
                             orbitguess,
                             alg::AbstractContinuationAlgorithm,
                             contParams::ContinuationPar,
@@ -1027,8 +1027,8 @@ $(TYPEDSIGNATURES)
 This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
 
 # Arguments
-- `prob::PeriodicOrbitTrapProblem` encodes the functional G.
-- `orbitguess` a guess for the periodic orbit. See [`PeriodicOrbitTrapProblem`](@ref) for more details.
+- `prob::Trapeze` encodes the functional G.
+- `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
 - `alg` continuation algorithm.
 - `contParams` same as for the regular [`continuation`](@ref) method.
 
@@ -1039,7 +1039,7 @@ $DocStrjacobianPOTrap
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
-function continuation(trap::PeriodicOrbitTrapProblem,
+function continuation(trap::Trapeze,
                         orbitguess,
                         alg::AbstractContinuationAlgorithm,
                         _contParams::ContinuationPar;
@@ -1052,7 +1052,7 @@ end
 
 ####################################################################################################
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(trap::PeriodicOrbitTrapProblem, 
+function re_make(trap::Trapeze, 
                 prob_vf,
                 hopfpt,
                 ζr::AbstractVector,
@@ -1095,9 +1095,9 @@ Generate a guess and a periodic orbit problem from a solution.
 - `tspan = (0, 1)` estimate of the time span (period) of the periodic orbit
 
 ## Output
-- returns a `PeriodicOrbitTrapProblem` and an initial guess.
+- returns a `Trapeze` and an initial guess.
 """
-function generate_ci_problem(trap::PeriodicOrbitTrapProblem,
+function generate_ci_problem(trap::Trapeze,
                             bifprob::AbstractBifurcationProblem, 
                             sol::AbstractTimeseriesSolution,
                             tspan::Tuple; 
@@ -1129,5 +1129,5 @@ function generate_ci_problem(trap::PeriodicOrbitTrapProblem,
     return probtrap, ci
 end
 
-generate_ci_problem(trap::PeriodicOrbitTrapProblem, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generate_ci_problem(trap, bifprob, sol, (zero(period), period); ktrap...)
+generate_ci_problem(trap::Trapeze, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generate_ci_problem(trap, bifprob, sol, (zero(period), period); ktrap...)
 ####################################################################################################

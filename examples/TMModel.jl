@@ -58,7 +58,7 @@ args_po = (	record_from_solution = recordPO,
     )
 
 br_potrap = @time continuation(br, 4, opts_po_cont,
-    PeriodicOrbitTrapProblem(M = 150);
+    Trapeze(M = 150);
     # verbosity = 2, plot = true,
     args_po...,
     callback_newton = BK.cbMaxNorm(1.),

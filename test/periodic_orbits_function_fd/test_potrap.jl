@@ -12,19 +12,19 @@ orbitguess_f = rand(2n*M+1) # 17.166MiB
 prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> (dx -> 2 .* dx))
 probi = BK.BifurcationProblem((o, x, p) -> o .= x.^2, sol0, par; J = ((o, x, p, dx) -> o .= 2 .* dx), inplace = true)
 
-pb = PeriodicOrbitTrapProblem(
+pb = Trapeze(
             prob,
             rand(2n*M),
             rand(2n*M),
             rand(M-1))
 
-pbg = PeriodicOrbitTrapProblem(
+pbg = Trapeze(
             prob,
             pb.ϕ,
             pb.xπ,
             pb.mesh.ds ; ongpu = true)
 
-pbi = PeriodicOrbitTrapProblem(
+pbi = Trapeze(
             probi,
             pb.ϕ,
             pb.xπ,
@@ -170,7 +170,7 @@ _res = _dfunctional(pbmass, orbitguess_f, par, _du)
 # test whether the analytical version of the Jacobian is right
 n = 50
 prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
-pbsp = PeriodicOrbitTrapProblem(
+pbsp = Trapeze(
             prob,
             rand(2n*10),
             rand(2n*10),
@@ -246,7 +246,7 @@ Jan = BK.jacobian_cyclic_sparse(pbsp_mass, orbitguess_f, par)
 # test whether the inplace version of computation of the Jacobian is right
 n = 1000
 prob = BK.BifurcationProblem((x, p) -> x.^2, sol0, par; J = (x, p) -> spdiagm(0 => 2 .* x))
-pbsp = PeriodicOrbitTrapProblem(
+pbsp = Trapeze(
             prob,
             rand(2n*M),
             rand(2n*M),
@@ -294,13 +294,13 @@ BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx; updateborder =
 # test of the version with inhomogeneous time discretisation
 M = 10
 prob = BK.BifurcationProblem((x, p) -> cos.(x), sol0, par; J = (x, p) -> spdiagm(0 => -sin.(x)))
-pbsp = PeriodicOrbitTrapProblem(
+pbsp = Trapeze(
             prob,
             rand(2n*M),
             rand(2n*M),
             M)
 
-pbspti = PeriodicOrbitTrapProblem(
+pbspti = Trapeze(
             prob,
             pbsp.ϕ,
             pbsp.xπ,

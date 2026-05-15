@@ -76,7 +76,7 @@ br = @time continuation(re_make(probBif, params = (@set par_br.C = -0.2)), PALC(
 plot(br)
 get_normal_form(br, 1)
 ####################################################################################################
-# branching from Hopf bp using aBS-Trapezoid
+# branching from Hopf bp using aBS-Trapeze
 opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 20)
 
 eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
@@ -90,8 +90,8 @@ br_po = @time continuation(
     br, 1,
     # arguments for continuation
     optcontpo,
-    # PeriodicOrbitTrapProblem(M = M, jacobian = BK.FullSparseInplace());
     PeriodicOrbitOCollProblem(30, 4, jacobian = BK.FullSparseInplace());
+    # Trapeze(M = M, jacobian = BK.FullSparseInplace());
     # OPTIONAL parameters
     # we want to jump on the new branch at phopf + δp
     # ampfactor is a factor to increase the amplitude of the guess

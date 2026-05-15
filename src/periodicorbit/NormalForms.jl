@@ -1295,7 +1295,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
-function predictor(nf::PeriodDoublingPO{ <: PeriodicOrbitTrapProblem},
+function predictor(nf::PeriodDoublingPO{ <: Trapeze},
                     δp,
                     ampfactor;
                     override = false)
@@ -1333,7 +1333,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
-function predictor(nf::BranchPointPO{ <: PeriodicOrbitTrapProblem},
+function predictor(nf::BranchPointPO{ <: Trapeze},
                     δp,
                     ampfactor;
                     override = false)

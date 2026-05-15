@@ -171,7 +171,7 @@ module BifurcationKit
     export generate_solution, getperiod, get_periodic_orbit, guess_from_hopf, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
-    export PeriodicOrbitTrapProblem, continuation_potrap
+    export Trapeze, continuation_potrap
 
     # Periodic orbit computation based on Shooting
     export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS

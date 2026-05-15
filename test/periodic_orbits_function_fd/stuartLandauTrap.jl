@@ -30,7 +30,7 @@ optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_
 br = continuation(prob, PALC(), optconteq)
 ####################################################################################################
 prob2 = BK.BifurcationProblem(Fsl, u0, par_hopf, (@optic _.r); J = (x, p) -> sparse(ForwardDiff.jacobian(z -> Fsl(z, p), x)))# we put sparse to try the different linear solvers
-_trap = PeriodicOrbitTrapProblem(
+_trap = Trapeze(
                         prob2,
                         [1., 0],
                         zeros(2),

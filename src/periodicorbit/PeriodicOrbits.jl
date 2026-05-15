@@ -155,7 +155,7 @@ function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalT
     z = getsolution(state)
     if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
         @debug "[Periodic orbit] update section"
-        # Trapezoid and Shooting need the parameters for section update:
+        # Trapeze and Shooting need the parameters for section update:
         updatesection!(prob, z.u, setparam(wrap, z.p))
     end
     return true
@@ -598,7 +598,7 @@ $(TYPEDSIGNATURES)
 Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits
 - `ind_bif` index of the branch point
 - `_contParams` continuation parameters, see [`continuation`](@ref)
 

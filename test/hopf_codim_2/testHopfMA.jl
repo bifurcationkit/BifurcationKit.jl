@@ -195,7 +195,7 @@ let
     prob = BifurcationKit.BifurcationProblem(Fbru!, sol0, par_bru, (@optic _.l);
             J = Jbru_sp)
 
-    _trap = PeriodicOrbitTrapProblem(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
+    _trap = Trapeze(prob, real.(vec_hopf), hopf_nf.x0, M, 2n)
 
     jac_PO_fd = BK.finite_differences(x -> BK.po_residual(_trap, x, (@set par_bru.l = l_hopf + 0.01)), orbitguess_f)
     jac_PO_sp = BK.po_jacobian_sparse(_trap, orbitguess_f, (@set par_bru.l = l_hopf + 0.01))

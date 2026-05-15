@@ -174,7 +174,7 @@ list_of_time_steps = [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
 orbitguess_f = vcat(reduce(vcat, list_of_time_steps), pred.period)
 r_hopf = nf_hopf.params.r
 
-poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
+poTrap = Trapeze(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
                     BK.residual(prob, list_of_time_steps[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
                     zeros(2n), 
                     M, 
@@ -198,7 +198,7 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 opt_po = (@set opt_newton.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
 @assert false "Too much memory will be used!"
-br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
+br_pok2 = continuation(Trapeze(poTrap; jacobian = BK.FullLU()),
             orbitguess_f, PALC(),
             opts_po_cont;
             verbosity = 2,    plot = true,
@@ -327,7 +327,7 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMFi = PeriodicOrbitTrapProblem(
+poTrapMFi = Trapeze(
             probInplace,
             poTrap.ϕ , poTrap.xπ,
             M, 2n, ls0; jacobian = BK.FullMatrixFree())
@@ -471,7 +471,7 @@ sol_0 = ldiv!(Precilu_gpu, copy(CuArray(rhs)));
 
 # matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
-poTrapMFGPU = PeriodicOrbitTrapProblem(
+poTrapMFGPU = Trapeze(
     re_make(prob; J = (x,p) -> (dx -> dFcgl(x,p,dx))),
     CuArray(real.(vec_hopf)),
     CuArray(hopfpt.u),
