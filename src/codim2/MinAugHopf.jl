@@ -381,7 +381,7 @@ function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
                         l1 = 𝐇.l1,
                         BT = 𝐇.BT,
                         GH = 𝐇.GH,
-                        _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u, 𝐇), p))...
+                        _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u, 𝐇), p; iter, state))...
                         ) 
 end
 

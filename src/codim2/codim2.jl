@@ -127,7 +127,7 @@ for (op, at) in (
 end
 
 function re_make(𝐌𝐚::AbstractMinimallyAugmentedFormulation;
-                    params = getparams(𝐌𝐚))
+                 params = getparams(𝐌𝐚))
     new_prob = re_make(𝐌𝐚.prob_vf; params)
     return (@set 𝐌𝐚.prob_vf = new_prob)
 end
@@ -225,7 +225,19 @@ end
 
 getparams(z::BorderedArray, 𝐏𝐛::AbstractMABifurcationProblem) = getparams(z.u, z.p, 𝐏𝐛)
 
-function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, state::AbstractContinuationState)
+
+"""
+For two-parameter continuation, retrieve the current full parameters set. Can be used in a `record_from_solution` for example:
+
+```
+function myrecord(x,p;iter, state, k...)
+    @error p k getparams(iter, state)
+    return (E = x[1], x = x[2], u = x[3])
+end
+```
+"""
+function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, 
+                    state::AbstractContinuationState)
     return getparams(getx(state), getp(state), getprob(iter))
 end
 

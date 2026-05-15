@@ -124,18 +124,19 @@ $(TYPEDFIELDS)
 
 
 # Useful functions
-- `copy(state)` returns a copy of `state`
-- `copyto!(dest, state)`  copy `state` into `dest`
-- `getsolution(state)` returns the current solution (x, p)
-- `gettangent(state)` return the tangent at the current solution
-- `getpredictor(state)` return the predictor at the current solution
-- `getx(state)` returns the x component of the current solution
-- `getp(state)` returns the p component of the current solution
-- `get_previous_solution(state)` returns the previous solution (x, p)
-- `getpreviousx(state)` returns the x component of the previous solution
-- `getpreviousp(state)` returns the p component of the previous solution
-- `is_stable(state)` whether the current state is stable
-- `in_bisection(state)` whether the state is in bisection for locating special points
+- `copy(state)` returns a copy of `state`.
+- `copyto!(dest, state)`  copy `state` into `dest`.
+- `getsolution(state)` returns the current solution (x, p).
+- `gettangent(state)` return the tangent at the current solution.
+- `getpredictor(state)` return the predictor at the current solution.
+- `getx(state)` returns the x component of the current solution.
+- `getp(state)` returns the p component of the current solution.
+- `get_previous_solution(state)` returns the previous solution (x, p).
+- `getpreviousx(state)` returns the x component of the previous solution.
+- `getpreviousp(state)` returns the p component of the previous solution.
+- `is_stable(state)` whether the current state is stable.
+- `in_bisection(state)` whether the state is in bisection for locating special points.
+- `getparams(iter, state)` return the current parameter set.
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
     "predictor"
@@ -241,6 +242,7 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
+getparams(iter::ContIterable, state::AbstractContinuationState) = setparam(iter, getp(state))
 
 @inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################

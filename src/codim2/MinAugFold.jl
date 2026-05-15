@@ -326,7 +326,7 @@ function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
                     BT = 𝐅.BT, 
                     CP = 𝐅.CP, 
                     ZH = 𝐅.ZH,
-                    _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u), p;))...
+                    _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u), p; iter, state))...
                     ) 
 end
 
@@ -503,6 +503,7 @@ function continuation_fold(prob,
 
         𝒯 = typeof(p)
         L = jacobian(prob, foldpointguess.u, parbif)
+        # TODO: use _compute_bordered_vectors !!!!
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), VI.zerovector(a), one(𝒯))
         ~cv && @debug "Bordered linear solver for J did not converge."
 
