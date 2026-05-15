@@ -4,6 +4,7 @@ BifurcationKit.jl, Changelog
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
 
+- Change names `*ShootingProblem` for `*Shooting`, `PeriodicOrbitOCollProblem` for `Collocation` and `PeriodicOrbitTrapProblem` for `Trapeze`
 ## [0.6.1]
 - emove fields params and lens from PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
 - remove `param` field from `*MAProblem` structs (`FoldMAProblem`, `HopfMAProblem`, `PDMAProblem`, `NSMAProblem`, `BTMAProblem`) and from `WrapTW`; `getparams` now delegates to `getparams(get_formulation(prob))`

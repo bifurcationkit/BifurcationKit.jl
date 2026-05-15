@@ -117,11 +117,12 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
+    coll = get_discretization(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
     if bifpt.x isa POSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
-        if getprob(br).prob.meshadapt
+        if meshadapt(coll)
             update_mesh!(get_discretization(pbwrap), bifpt.x._mesh )
         end
         updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, nothing)
