@@ -421,7 +421,7 @@ function test_for_pd_gpd_cp(iter, state)
 
     p1 = get_parameter(zu, 𝐏𝐝) # TODO : what is this hack??
     pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, get_lenses(𝐏𝐛)[1], nothing, nothing, nothing, :none)
-    if get_discretization(pbwrap) isa ShootingProblem
+    if get_discretization(pbwrap) isa Shooting
         pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
         𝐏𝐝.GPD = pd.nf.nf.b3
     end

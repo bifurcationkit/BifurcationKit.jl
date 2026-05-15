@@ -84,9 +84,9 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
 ####################################################################################################
-# ShootingProblem
+# Shooting
 # Matrix free monodromy operators
-function MonodromyQaD_matrix_free(sh::ShootingProblem, x, p, du::AbstractVector)
+function MonodromyQaD_matrix_free(sh::Shooting, x, p, du::AbstractVector)
     # period of the cycle
     T = getperiod(sh, x)
 
@@ -108,7 +108,7 @@ function MonodromyQaD_matrix_free(sh::ShootingProblem, x, p, du::AbstractVector)
 end
 
 # Compute the monodromy matrix at `x` explicitly, not suitable for large systems
-function MonodromyQaD(sh::ShootingProblem)
+function MonodromyQaD(sh::Shooting)
     @assert false
     sh = JacSH.pb
     x = JacSH.x
@@ -141,7 +141,7 @@ end
 # Compute the monodromy matrix at `x` explicitly, not suitable for large systems
 # it is based on a matrix expression of the Jacobian of the shooting functional. We
 # just extract the blocks needed to compute the monodromy
-function MonodromyQaD(sh::ShootingProblem, J::AbstractMatrix, x, p)
+function MonodromyQaD(sh::Shooting, J::AbstractMatrix, x, p)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     mono = copy(J[1:N, 1:N])
@@ -162,7 +162,7 @@ end
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
 @views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, 
-                                powrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem}, 
+                                powrap::PeriodicOrbitFunctionalSh{ <: Shooting}, 
                                 x::AbstractVector, 
                                 par, 
                                 ζ::AbstractVector)
@@ -194,7 +194,7 @@ end
 # PoincareShooting
 
 # matrix free evaluation of monodromy operator
-function MonodromyQaD_matrix_free(psh::PoincareShootingProblem, x_bar, p, dx_bar::AbstractVector) 
+function MonodromyQaD_matrix_free(psh::PoincareShooting, x_bar, p, dx_bar::AbstractVector) 
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
@@ -222,7 +222,7 @@ end
 # matrix based formulation of monodromy operator, not suitable for large systems
 # it is based on a matrix expression of the Jacobian of the shooting functional. We thus
 # just extract the blocks needed to compute the monodromy
-function MonodromyQaD(sh::PoincareShootingProblem, J::AbstractMatrix, x, p)
+function MonodromyQaD(sh::PoincareShooting, J::AbstractMatrix, x, p)
     T = eltype(J)
 
     M = get_mesh_size(sh)
@@ -252,7 +252,7 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
-@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalSh{ <: PoincareShootingProblem}, x_bar::AbstractVector, p, ζ::AbstractVector)
+@views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x_bar::AbstractVector, p, ζ::AbstractVector)
     # get the shooting problem
     psh = get_discretization(powrap)
 

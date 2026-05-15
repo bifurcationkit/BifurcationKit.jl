@@ -42,7 +42,7 @@ prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0,5.), prob_de.p, reltol = 1e-8, abs
 sol = ODE.solve(prob_de, alg)
 ################################################################################
 ######    Shooting ########
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = ODE.Rodas5(), parallel = true)
+probsh, cish = generate_ci_problem( Shooting(M=3), prob, prob_de, sol, 2.; alg = ODE.Rodas5(), parallel = true)
 
 solpo = newton(probsh, cish, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -113,7 +113,7 @@ sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1, 0.1, 1, 0], tspan 
 sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
+probshns, ci = generate_ci_problem(Shooting(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
@@ -175,7 +175,7 @@ par_pop2 = @set par_pop.b0 = 0.45
 sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0, 1000)), ODE.Rodas5())
 sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), ODE.Rodas5())
 
-probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
+probshpd, ci = generate_ci_problem(Shooting(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);

@@ -120,7 +120,7 @@ end
 
 ####################################################################################################
 # this encodes the functional for the Shooting problem
-probSh = ShootingProblem(
+probSh = Shooting(
     # we pass the ODEProblem encoding the flow and the time stepper
     prob_sp, ETDRK2(krylov = true),
     [sol[:, end]], abstol = 1e-10, reltol = 1e-8,
@@ -161,7 +161,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    ShootingProblem(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = BK.FiniteDifferencesMF(),) ;
+    Shooting(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = BK.FiniteDifferencesMF(),) ;
     verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
     autodiff_nf = false,
     linear_algo = MatrixFreeBLS(@set ls.N = Mt*2n+2),

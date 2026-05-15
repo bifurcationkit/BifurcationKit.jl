@@ -134,7 +134,7 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 # end
 # probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
 #
-# probHPsh = BK.PoincareShootingProblem(
+# probHPsh = BK.PoincareShooting(
 #         prob, algsl,
 #         # probMono, Rodas4P(autodiff=false),
 #         normals, centers; abstol =1e-10, reltol=1e-10)

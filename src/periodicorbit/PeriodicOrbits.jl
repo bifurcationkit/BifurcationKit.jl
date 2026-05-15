@@ -17,7 +17,7 @@ function re_make(prob::AbstractPODifferentialDiscretization;
     @set prob.prob_vf = re_make(prob.prob_vf; params)
 end
 
-# ShootingProblem and PoincareShootingProblem store params directly in the corresponding struct
+# Shooting and PoincareShooting store params directly in the corresponding struct
 function re_make(prob::AbstractPOShootingDiscretization;
                 params = getparams(prob)
                 )
@@ -77,7 +77,7 @@ function generate_solution(pb::AbstractPeriodicOrbitDiscretization, orbit, perio
     orbitguess_a = [orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
-    if pb  isa PoincareShootingProblem
+    if pb  isa PoincareShooting
         return vec(orbitguess_v)
     else
         return vcat(vec(orbitguess_v), period) |> vec
@@ -237,10 +237,10 @@ Note that the linear solver has to be appropriately set up in `options`.
 
 # Arguments
 
-Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
+Similar to [`newton`](@ref) except that `prob` is either a [`Shooting`](@ref) or a [`PoincareShooting`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
 
 - `prob` a problem of type `<: AbstractPOShootingDiscretization` encoding the shooting functional G.
-- `orbitguess` a guess for the periodic orbit. See [`ShootingProblem`](@ref) and See [`PoincareShootingProblem`](@ref) for information regarding the shape of `orbitguess`.
+- `orbitguess` a guess for the periodic orbit. See [`Shooting`](@ref) and See [`PoincareShooting`](@ref) for information regarding the shape of `orbitguess`.
 - `par` parameters to be passed to the functional
 - `options` same as for the regular [`newton`](@ref) method.
 
@@ -265,7 +265,7 @@ This is the deflated Newton-Krylov Solver for computing a periodic orbit using a
 
 # Arguments
 
-Similar to [`newton`](@ref) except that `prob` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref).
+Similar to [`newton`](@ref) except that `prob` is either a [`Shooting`](@ref) or a [`PoincareShooting`](@ref).
 
 # Optional argument
 $DocStringJacobianPOSh
@@ -294,7 +294,7 @@ This is the continuation method for computing a periodic orbit using a (Standard
 
 # Arguments
 
-Similar to [`continuation`](@ref) except that `probPO` is either a [`ShootingProblem`](@ref) or a [`PoincareShootingProblem`](@ref). By default, it prints the period of the periodic orbit.
+Similar to [`continuation`](@ref) except that `probPO` is either a [`Shooting`](@ref) or a [`PoincareShooting`](@ref). By default, it prints the period of the periodic orbit.
 
 # Optional arguments
 - `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
@@ -455,14 +455,14 @@ function _continuation(hopfpt::Hopf,
     if usedeflation
         verbose &&
             println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
-        probPO isa PoincareShootingProblem &&
+        probPO isa PoincareShooting &&
             @warn "Poincaré Shooting does not work very well with stationary states."
         optn = _contParams.newton_options
 
         # we start with the case of zero amplitude
         orbitzeroamp_a = [hopfpt.x0 for _ = 1:M]
         # this factor prevent shooting jacobian from being singular at fixed points
-        if probPO isa PoincareShootingProblem
+        if probPO isa PoincareShooting
             Tfactor = 0
         elseif probPO isa AbstractPOFiniteDifferencesDiscretization
             Tfactor = 100 / abs(2pi / pred.ω)
@@ -475,7 +475,7 @@ function _continuation(hopfpt::Hopf,
         sol0 = newton(probPO0, orbitzeroamp, optn; callback = cb, kwargs...)
 
         # find the bifurcated branch using deflation
-        if ~(probPO isa PoincareShootingProblem)
+        if ~(probPO isa PoincareShooting)
             deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(𝒯), [sol0.u]; autodiff = true)
         else
             deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x, y) / M, one(𝒯), [sol0.u]; autodiff = true)

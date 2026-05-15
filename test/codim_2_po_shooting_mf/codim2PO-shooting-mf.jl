@@ -42,7 +42,7 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 # @info "import Zygote"
 # using Zygote, SciMLSensitivity
 
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
+probsh, cish = generate_ci_problem( Shooting(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
     alg = ODE.Rodas5(),
     jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF(),
@@ -126,7 +126,7 @@ sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,
 sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2.u[end]), ODE.Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5(),
+probshns, ci = generate_ci_problem( Shooting(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5(),
             jacobian = BK.AutoDiffMF()
             )
 

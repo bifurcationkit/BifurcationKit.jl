@@ -17,7 +17,7 @@ end
 """
 $(TYPEDEF)
 
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`ShootingProblem`](@ref). The hyperplane is defined by a point `center` and a `normal`.
+This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`Shooting`](@ref). The hyperplane is defined by a point `center` and a `normal`.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -72,7 +72,7 @@ end
 """
 $(TYPEDEF)
 
-This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShootingProblem`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
+This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShooting`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
 
 # Internal fields
 $(TYPEDFIELDS)

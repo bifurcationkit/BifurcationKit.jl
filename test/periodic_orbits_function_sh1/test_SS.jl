@@ -36,12 +36,12 @@ let
     fl = BK.Flow(vf, flow, dflow); @reset fl.flowFull = flow
     BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
-    _sh = BK.ShootingProblem(M = M, flow = fl,
+    _sh = BK.Shooting(M = M, flow = fl,
                 ds = LinRange(0, 1, M+1) |> diff,
                 section = section
                 )
 
-    _sh2 = BK.ShootingProblem(M = M, flow = fl,
+    _sh2 = BK.Shooting(M = M, flow = fl,
             ds = LinRange(0, 1, M+1) |> diff,
             section = BK.SectionSS(ones(N), zeros(N))
             )
@@ -87,11 +87,11 @@ let
 
     fl = BK.Flow(vf, flow, dflow)
 
-    _sh = BK.ShootingProblem(M = M, flow = fl,
+    _sh = BK.Shooting(M = M, flow = fl,
                 ds = LinRange(0,1,M+1) |> diff ,
                 section = section)
 
-    _sh2 = BK.ShootingProblem(M = M, flow = fl,
+    _sh2 = BK.Shooting(M = M, flow = fl,
                 ds = LinRange(0,1,M+1) |> diff ,
                 section = BK.SectionSS(ones(N), zeros(N))
                 )
@@ -173,7 +173,7 @@ let
 
     fl = BK.Flow(F = vf, flow = Π, flowSerial = Π2, jvpSerial = dflow)
     sectionps = SectionPS(normals, centers)
-    probPSh = PoincareShootingProblem(flow = fl, M = M, section = sectionps)
+    probPSh = PoincareShooting(flow = fl, M = M, section = sectionps)
 
 
     ci = reduce(vcat, BK.projection(probPSh, poguess.vec))

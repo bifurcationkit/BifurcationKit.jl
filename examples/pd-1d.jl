@@ -151,9 +151,9 @@ initpo = vcat(vec(orbitsection), 3.)
 
 BK.plot_periodic_shooting(initpo[1:end-1], 1);title!("")
 
-probSh = ShootingProblem(prob_sp, ODE.ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true,
+probSh = Shooting(prob_sp, ODE.ETDRK2(krylov=true), [sol(280.0)]; abstol=1e-14, reltol=1e-14, dt = 0.1, parallel = true,
     lens = (@optic _.C), par = par_br_hopf, jacobian = BK.FiniteDifferencesMF())
-# probSh = ShootingProblem(prob_ode, Rodas4P(), [sol(280.0)]; abstol=1e-10, reltol=1e-4, parallel = true)
+# probSh = Shooting(prob_ode, Rodas4P(), [sol(280.0)]; abstol=1e-10, reltol=1e-4, parallel = true)
 
 plot(probSh(initpo, par_br_hopf))
 
@@ -243,7 +243,7 @@ eig = EigKrylovKit(tol= 1e-10, x₀ = rand(2N), verbose = 2, dim = 40)
 opt_po = NewtonPar(tol = 1e-9, verbose = true, max_iterations = 12, linsolver  = ls)
 optcontpo = ContinuationPar(dsmin = 0.0001, dsmax = 0.01, ds= -0.005, p_min = -1.8, max_steps = 50, newton_options = (@set opt_po.eigsolver = eig), nev = 20, tol_stability = 1e-2, detect_bifurcation = 3, n_inversion = 8)
 
-probPO = ShootingProblem(1, prob_sp,
+probPO = Shooting(1, prob_sp,
                         ODE.ETDRK2(krylov=true); 
                         abstol=1e-14, reltol=1e-14,
                         jacobian = BK.FiniteDifferencesMF(),

@@ -174,7 +174,7 @@ module BifurcationKit
     export Trapeze, continuation_potrap
 
     # Periodic orbit computation based on Shooting
-    export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS
+    export Flow, Shooting, PoincareShooting, AbstractShootingProblem, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
     export Collocation, COPBLS, COPLS

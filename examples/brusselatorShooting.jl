@@ -161,7 +161,7 @@ sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,
 
 BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
-probSh = ShootingProblem(prob,
+probSh = Shooting(prob,
     ODE.Rodas4P(),
     [list_of_time_steps[:,ii] for ii=1:dM:M];
     abstol = 1e-11, reltol = 1e-9,
@@ -217,7 +217,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, 
-    ShootingProblem(Mt, prob, ODE.Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
+    Shooting(Mt, prob, ODE.Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
             jacobian = BK.FiniteDifferencesMF(),
             # jacobian = BK.AutoDiffMF(),
             );
@@ -252,7 +252,7 @@ Fbru(u,p) = Fbru!(similar(u),u,p)
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
-probHPsh = PoincareShootingProblem(prob, QNDF(), normals, centers;
+probHPsh = PoincareShooting(prob, QNDF(), normals, centers;
     abstol = 1e-10, reltol = 1e-8,
     parallel = false,
     δ = 1e-8,
@@ -302,7 +302,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    PoincareShootingProblem(Mt, prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
+    PoincareShooting(Mt, prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,

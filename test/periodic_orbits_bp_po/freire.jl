@@ -35,7 +35,7 @@ begin
     probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
     br_po = continuation(br, 1,
                 ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-                ShootingProblem(15, probsh, ODE.Rodas5(), parallel = true);
+                Shooting(15, probsh, ODE.Rodas5(), parallel = true);
                 record_from_solution,
                 δp = 0.001, 
     )

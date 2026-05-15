@@ -94,7 +94,7 @@ br_posh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Standard Shooting
-    ShootingProblem(15, prob_ode, ODE.Rodas5(), parallel = true,);
+    Shooting(15, prob_ode, ODE.Rodas5(), parallel = true,);
     linear_algo = MatrixBLS(),
     # verbosity = 2,
     plot = true,
@@ -111,7 +111,7 @@ br_popsh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Poincaré Shooting
-    PoincareShootingProblem(5, prob_ode, ODE.Rodas5(); parallel = true);
+    PoincareShooting(5, prob_ode, ODE.Rodas5(); parallel = true);
     # usedeflation = true,
     linear_algo = MatrixBLS(),
     verbosity = 2, plot = true,

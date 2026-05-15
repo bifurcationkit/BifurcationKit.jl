@@ -172,7 +172,7 @@ function _get_spectral_basis_prm_bp(dΠ, verbose)
     return (;ev, ev★)
 end
 
-function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
+function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                     bp0::BranchPoint,
                                     (ζ₁, ζs, ζₚₒ),
                                     optn::NewtonPar,
@@ -475,7 +475,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     return period_doubling_normal_form(pbwrap, pd0, (ζ₋₁, ζs), optn; verbose, nev, kwargs_nf...)
 end
 
-function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShootingProblem },
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 ::NewtonPar;
@@ -489,7 +489,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Poinc
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd0, psh, true)
 end
 
-function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
+function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
@@ -1208,7 +1208,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     return NeimarkSackerPO(ns.x0, T, ns.p, θ, v₁, v₁★, ns_new, coll, false)
 end
 
-function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
+function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -1220,7 +1220,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
 
     # first, get the bifurcation point parameters
     sh = get_discretization(pbwrap)
-    @assert sh isa ShootingProblem "Something is wrong. Please open an issue on the website"
+    @assert sh isa Shooting "Something is wrong. Please open an issue on the website"
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
     # bifurcation point
@@ -1244,7 +1244,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     return neimark_sacker_normal_form(pbwrap, ns0, (1, 1), optn; verbose, nev, kwargs_nf...)
 end
 
-function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: ShootingProblem },
+function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 ns0::NeimarkSacker,
                                 (ζ₋₁, ζs),
                                 optn::NewtonPar;
@@ -1456,7 +1456,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
-function predictor(nf::PeriodDoublingPO{ <: ShootingProblem },
+function predictor(nf::PeriodDoublingPO{ <: Shooting },
                     δp,
                     ampfactor;
                     override = false)
@@ -1486,7 +1486,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
-function predictor(nf::BranchPointPO{ <: ShootingProblem },
+function predictor(nf::BranchPointPO{ <: Shooting },
                     δp,
                     ampfactor;
                     override = false)
@@ -1507,7 +1507,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the period-doubling bifurcation of periodic orbit.
 """
-function predictor(nf::PeriodDoublingPO{ <: PoincareShootingProblem }, 
+function predictor(nf::PeriodDoublingPO{ <: PoincareShooting }, 
                     δp, 
                     ampfactor;
                     override = false)
@@ -1527,7 +1527,7 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the simple branch point of periodic orbit.
 """
-function predictor(nf::BranchPointPO{ <: PoincareShootingProblem},
+function predictor(nf::BranchPointPO{ <: PoincareShooting},
                     δp,
                     ampfactor;
                     override = false)
