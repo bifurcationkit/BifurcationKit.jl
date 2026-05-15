@@ -223,7 +223,7 @@ let
     floquetES = FloquetQaD(DefaultEig())
 
     # calcul des exposants de Floquet, extract full vector
-    pbwrap = BK.PeriodicOrbitFunctionalTrap(_trap, BK.AutoDiffDense(), orbitguess_f, par_bru, nothing, nothing, nothing)
+    pbwrap = BK.PeriodicOrbitFunctionalTrap(_trap, BK.AutoDiffDense(), nothing, nothing, nothing)
     floquetES(Val(:ExtractEigenVector), pbwrap, orbitguess_f, par_bru, orbitguess_f[1:2n])
 
     # continuation of periodic orbits using :BorderedLU linear algorithm
