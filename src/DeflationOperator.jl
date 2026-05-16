@@ -14,9 +14,9 @@ $(TYPEDEF)
 
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
 
-``F(u) ⋅ Πᵢ(||u - rootᵢ||⁻²ᵖ + α) := F(u) ⋅ M(u)`` 
+``F(u) ⋅ Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α) := F(u) ⋅ M(u)`` 
 
-where ``||u||² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
+where ``||u||₂² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
 # Internal fields
 
@@ -93,7 +93,8 @@ Base.lastindex(df::DeflationOperator) = length(df)
 Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff, df.δ)
 
 function Base.show(io::IO, df::DeflationOperator; prefix = "")
-    println(io, prefix * "┌─ Deflation operator with ", length(df.roots)," root(s)")
+    println(io, prefix * "┌─ Deflation operator Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α)")
+    println(io, prefix * "├─ roots    = ", length(df.roots))
     println(io, prefix * "├─ eltype   = ", eltype(df))
     println(io, prefix * "├─ power    = ", df.power)
     println(io, prefix * "├─ α        = ", df.α)
