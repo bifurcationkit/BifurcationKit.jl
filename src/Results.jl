@@ -349,7 +349,7 @@ A Branch is a structure which encapsulates the result of the computation of a br
 
 $(TYPEDFIELDS)
 """
-struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{<: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
+struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ <: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
     "Set of branches branching off the bifurcation point `bp`."
     γ::T
     "Bifurcation point. It is thought as the root of the branches in γ."
@@ -370,7 +370,7 @@ $(TYPEDSIGNATURES)
 Return the bifurcation point of a `::Branch`.
 """
 from(br::Branch) = br.bp
-from(br::Vector{Branch}) = length(br) > 0 ? from(first(br)) : nothing
+from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
 _getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
 Base.firstindex(br::Branch) = firstindex(br.γ)
