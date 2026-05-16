@@ -395,7 +395,7 @@ Automatic branch switching at branch points based on a computation of the normal
 
 The rest is as the regular `multicontinuation` function.
 """
-function multicontinuation(br::AbstractBranchResult,
+function multicontinuation(br::Tbr0,
                            bpnf::NdBranchPoint,
                            defOpm::DeflationOperator,
                            defOpp::DeflationOperator,
@@ -406,31 +406,34 @@ function multicontinuation(br::AbstractBranchResult,
                            max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
                            plot_solution = plot_solution(getprob(br)),
                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
-                           kwargs...) where {𝒯eigvec}
+                           kwargs...) where {𝒯eigvec, Tbr0 <: AbstractBranchResult}
 
     ds = isnothing(δp) ? options_cont.ds : δp |> abs
     dscont = abs(options_cont.ds)
     par = bpnf.params
     x0 = convert(𝒯eigvec, bpnf.x0)
-    prob = re_make(getprob(br); plot_solution)
+    # prob = re_make(getprob(br); plot_solution)
+    prob = getprob(br)
 
     # compute the different branches
-    function _continue(_sol, _dp, _ds)
+    function _continue(_sol, _dp, _ds)::Tbr0
         # needed to reset the tangent algorithm in case fields are used
         println("━"^50)
-        continuation(getprob(br),
+        continuation(prob,
             x0, par,            # first point on the branch
             _sol, bpnf.p + _dp, # second point on the branch
             empty(alg), getlens(br),
             (@set options_cont.ds = _ds); kwargs...)
     end
-
-    branches = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
+    # TODO: it should be a Branch of vectors not a vector of Branches. We duplicate bpnf
+    branches_no_type = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
 
     for id in 2:length(defOpp)
-        br = _continue(defOpp[id], ds, dscont); push!(branches, Branch(br, bpnf))
-        # br = _continue(defOpp[id], ds, -dscont); push!(branches, Branch(br, bpnf))
+        br = _continue(defOpp[id], ds, dscont); push!(branches_no_type, Branch(br, bpnf))
+        # br = _continue(defOpp[id], ds, -dscont); push!(branches_no_type, Branch(br, bpnf))
     end
-
+    # # plus branches_no_type is a Vector{Any} so we have to hack a bit. Using a Branch of vectors would probably help
+    Tbr = typeof(first(branches_no_type))
+    branches = convert(Vector{Tbr}, branches_no_type)
     return branches
 end
