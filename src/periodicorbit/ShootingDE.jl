@@ -94,11 +94,11 @@ function PoincareShooting(prob::ODEProblem,
                                  par = prob.p,
                                  kwargs...)
     pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
-    affect!(integrator, idx) = terminate!(integrator)
-    # we put nothing option to have an upcrossing
-    cb = VectorContinuousCallback(pSection, affect!, hyp.M; 
-                                    interp_points = interp_points, 
-                                    affect_neg! = nothing)
+    # SciMLBase v3 hands affect! a Vector{Int8} of per-event crossing flags
+    # (+1 upcrossing, -1 downcrossing, 0 none). Terminate only on upcrossings.
+    affect!(integrator, events) = any(==(Int8(1)), events) && terminate!(integrator)
+    cb = VectorContinuousCallback(pSection, affect!, hyp.M;
+                                    interp_points = interp_points)
     # change ODEProblem -> EnsembleProblem in the parallel case
     _M = hyp.M
     parallel = _M == 1 ? false : parallel
@@ -183,9 +183,10 @@ function PoincareShooting(prob1::ODEProblem, alg1,
                                 kwargs...)
     p = prob1.p # parameters
     pSection(out, u, t, integrator) = (hyp(out, u); out .*= integrator.iter > 1)
-    affect!(integrator, idx) = terminate!(integrator)
-    # we put nothing option to have an upcrossing
-    cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points, affect_neg! = nothing)
+    # SciMLBase v3 hands affect! a Vector{Int8} of per-event crossing flags
+    # (+1 upcrossing, -1 downcrossing, 0 none). Terminate only on upcrossings.
+    affect!(integrator, events) = any(==(Int8(1)), events) && terminate!(integrator)
+    cb = VectorContinuousCallback(pSection, affect!, hyp.M; interp_points = interp_points)
     # change the ODEProblem -> EnsembleProblem for the parallel case
     _M = hyp.M
     parallel = _M == 1 ? false : parallel

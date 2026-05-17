@@ -20,6 +20,7 @@ prob = BK.BifurcationProblem(freire!, zeros(3), par_freire, (@optic _.ν))
 br = continuation(prob, PALC(), ContinuationPar(dsmax = 0.05, n_inversion = 8))
 ##################################################################################
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqRosenbrock: Rodas5
 
 function record_from_solution(x, p; k...)
     xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -35,7 +36,7 @@ begin
     probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
     br_po = continuation(br, 1,
                 ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-                Shooting(15, probsh, ODE.Rodas5(), parallel = true);
+                Shooting(15, probsh, Rodas5(), parallel = true);
                 record_from_solution,
                 δp = 0.001, 
     )

@@ -3,6 +3,8 @@
 using BifurcationKit, ForwardDiff
 using LinearAlgebra
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqSDIRK: KenCarp4
+using SciMLBase: terminate!
 const FD = ForwardDiff
 const BK = BifurcationKit
 
@@ -31,7 +33,7 @@ par_sl = (r = 0.1, μ = 0., ω = 1.0, c3 = 1.0,)
 u0 = [.001, .001]
 δ = 1e-8
 prob = ODE.ODEProblem(Fsl!, u0, (0., 100.), par_sl)
-algsl = ODE.KenCarp4()#Rodas4P()
+algsl = KenCarp4()#Rodas4P()
 ####################################################################################################
 sol = ODE.solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
@@ -54,7 +56,7 @@ centers = [zeros(2)]
 
 sectionH(x, c, n) = dot( x .- c[1], n[1])
 pSection(u, t, integrator) = sectionH(u, centers, normals) * (integrator.iter > 1)
-affect!(integrator) = ODE.terminate!(integrator)
+affect!(integrator) = terminate!(integrator)
 cb = ODE.ContinuousCallback(pSection, affect!; affect_neg! = nothing)
 
 Π(x) = flowDE(x, Inf; callback = cb, save_everystep = false) # Poincaré return map
