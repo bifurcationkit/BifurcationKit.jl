@@ -16,13 +16,17 @@ Additional information is available on the [website](https://bifurcationkit.gith
 # Internal fields
 
 $(TYPEDFIELDS)
+
+# Constructor(s)
+
+`MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)`
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
-    "Tangent predictor, for example `PALC()`"
+    "Tangent predictor, for example `PALC()`."
     tangent::T
-    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative"
+    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative."
     method::MoorePenroseLS
-    "(Bordered) linear solver"
+    "(Bordered) linear solver."
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior

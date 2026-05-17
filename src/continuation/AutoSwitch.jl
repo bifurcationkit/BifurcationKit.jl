@@ -8,6 +8,9 @@ Continuation algorithm which switches automatically between Natural continuation
 # Internal fields
 $(TYPEDFIELDS)
 
+# Constructor(s)
+`AutoSwitch(;alg = PALC(tangent = Bordered()), tol_param = 1//2)`
+
 """
 struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
     "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
@@ -63,10 +66,11 @@ function corrector!(state::AbstractContinuationState,
     dotθ = getdot(alg.alg)
     @debug "" (1-θ)*abs(λ) dotθ(τ, θ)
     if (1-θ) * abs(λ) > alg.tol_param && ~in_bisection(state)
-        @debug "[corrector! NATURAL]" λ
+        @debug "[AutoSwitch corrector: NATURAL]" λ
         corrector!(state, it, Natural(); kwargs...)
+        @assert false
     else
-        @debug "[corrector! PALC]" λ
+        @debug "[AutoSwitch corrector: PALC]" λ
         corrector!(state, it, alg.alg; kwargs...)
     end
     return true

@@ -1,6 +1,11 @@
 struct ConstantPredictor <: AbstractTangentComputation end
+
 """
-    Natural continuation algorithm. The predictor is the constant predictor and the parameter is incremented by `ContinuationPar().ds` at each continuation step.
+Natural continuation algorithm. 
+The predictor is the constant predictor and the parameter is incremented by `ContinuationPar().ds` at each continuation step.
+
+# Constructor(s)
+`Natural()`
 """
 struct Natural <: AbstractContinuationAlgorithm
     bothside::Bool
