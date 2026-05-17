@@ -385,6 +385,7 @@ BK.getparams(hp_from_hh)
 ####################################################################################################
 # branching from Bautin to Fold of periodic orbits
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqRosenbrock: Rodas5
 prob_ode = ODE.ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1e-10, abstol = 1e-12)
 
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifurcation = 0, max_steps = 3, detect_event = 0, ds = 0.001)
@@ -413,7 +414,7 @@ opts_ns_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.02, detect_bifurc
 @reset opts_ns_po.newton_options.tol = 1e-12
 @reset opts_ns_po.newton_options.max_iterations = 10
 for disc in (Collocation(20, 3, update_section_every_step = 1), 
-                Shooting(5, prob_ode, ODE.Rodas5(), parallel = true, update_section_every_step = 1))
+                Shooting(5, prob_ode, Rodas5(), parallel = true, update_section_every_step = 1))
     ns_po = continuation(hp_codim2_1, 4, opts_ns_po, 
         disc;
         usehessian = false,
