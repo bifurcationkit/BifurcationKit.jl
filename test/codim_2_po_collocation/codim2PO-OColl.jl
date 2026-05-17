@@ -3,6 +3,7 @@ using Test, ForwardDiff, LinearAlgebra
 using BifurcationKit, Test
 const BK = BifurcationKit
 using OrdinaryDiffEq
+using OrdinaryDiffEqRosenbrock: Rodas5
 ###################################################################################################
 function Pop!(du, X, p, t = 0)
     (;r,K,a,ϵ,b0,e,d) = p

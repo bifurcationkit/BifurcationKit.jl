@@ -86,8 +86,12 @@ end
 function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
     # modify the function which assigns new initial conditions
     # see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
-    _epb = setproperties(fl.odeprob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    end
+    _epb = setproperties(fl.odeprob, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
@@ -122,8 +126,12 @@ end
 # differential of the flow when a problem is passed for the Monodromy
 function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: EnsembleProblem}
     N = size(x, 1)
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
-    _epb = setproperties(fl.odeprob_mono, output_func = (sol,i) -> ((t = sol.t[end], u = sol.u[end][1:N], du = sol.u[end][N+1:end]), false), prob_func = _prob_func)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
+    end
+    _epb = setproperties(fl.odeprob_mono, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end][1:N], du = sol.u[end][N+1:end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg_mono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
     return sol.u
 end
@@ -147,7 +155,11 @@ function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    end
     _epb = setproperties(fl.odeprob, prob_func = _prob_func)
     return SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
 end
