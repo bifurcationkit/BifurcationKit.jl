@@ -218,7 +218,7 @@ end
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
-                      disc::AbstractPeriodicOrbitDiscretization;
+                      disc::AbstractBoundaryValueDiscretization;
                       detect_codim2_bifurcation::Int = 0,
                       autodiff = true,
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
@@ -233,7 +233,7 @@ end
 function _continuation(gh::Bautin, 
                         br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        discPO::AbstractPeriodicOrbitDiscretization;
+                        discPO::AbstractBoundaryValueDiscretization;
                         alg = getalg(br),
                         linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
@@ -322,7 +322,7 @@ end
 
 function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             _contParams::ContinuationPar,
-            discPO::AbstractPeriodicOrbitDiscretization;
+            discPO::AbstractBoundaryValueDiscretization;
             whichns::Int = 1,
             alg = getalg(br),
             linear_algo = nothing,
@@ -443,7 +443,7 @@ end
 
 function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         _contParams::ContinuationPar,
-                        discPO::AbstractPeriodicOrbitDiscretization;
+                        discPO::AbstractBoundaryValueDiscretization;
                         whichns::Int = 1,
                         alg = getalg(br),
                         linear_algo = nothing,

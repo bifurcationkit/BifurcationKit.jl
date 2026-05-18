@@ -56,7 +56,7 @@ or
 
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p), dF(x,p)\\cdot y)``.
 """
-@with_kw_noshow struct Shooting{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractPOShootingDiscretization
+@with_kw_noshow struct Shooting{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractShootingDiscretization
     "`ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise."
     M::Int64 = 0                         # number of sections
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
@@ -80,7 +80,7 @@ end
 @inline issimple(sh::Shooting) = get_mesh_size(sh) == 1
 @inline isparallel(sh::Shooting) = sh.parallel
 @inline getlens(sh::Shooting) = sh.lens
-@inline getdelta(sh::AbstractPOShootingDiscretization) = getdelta(sh.flow)
+@inline getdelta(sh::AbstractShootingDiscretization) = getdelta(sh.flow)
 getparams(sh::Shooting) = sh.par
 setparam(sh::Shooting, p) = set(getparams(sh), getlens(sh), p)
 

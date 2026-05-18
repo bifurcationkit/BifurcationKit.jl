@@ -89,7 +89,7 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractPOFiniteDifferencesDiscretization
+@with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractFiniteDifferencesDiscretization
     "a bifurcation problem"
     prob_vf::Tprob = nothing
 
@@ -646,14 +646,14 @@ $(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-@views function get_periodic_orbit(trap::AbstractPOFiniteDifferencesDiscretization, u, p)
+@views function get_periodic_orbit(trap::AbstractFiniteDifferencesDiscretization, u, p)
     T = getperiod(trap, u, p)
     M, N = size(trap)
     uv = u[begin:end-1]
     uc = reshape(uv, N, M)
     return SolPeriodicOrbit(t = cumsum(T .* collect(trap.mesh)), u = uc)
 end
-get_periodic_orbit(prob::AbstractPOFiniteDifferencesDiscretization, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
+get_periodic_orbit(prob::AbstractFiniteDifferencesDiscretization, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
 """
 $(TYPEDSIGNATURES)

@@ -3,7 +3,7 @@
 
 Update the continuation parameters according to a problem. This can be useful for branching from PD points where the linear solvers have to be updated, e.g. the number of unknowns is roughly doubled.
 """
-function _update_cont_params(contParams::ContinuationPar, pb::AbstractPOShootingDiscretization, orbitguess)
+function _update_cont_params(contParams::ContinuationPar, pb::AbstractShootingDiscretization, orbitguess)
     if contParams.newton_options.linsolver isa GMRESIterativeSolvers
         @reset contParams.newton_options.linsolver.N = length(orbitguess)
     end
@@ -17,7 +17,7 @@ function _update_cont_params(cont_params::ContinuationPar, coll::Collocation, or
     return cont_params
 end
 
-@inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractPOFiniteDifferencesDiscretization, orbitguess) = cont_params
+@inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractFiniteDifferencesDiscretization, orbitguess) = cont_params
 ####################################################################################################
 @inline user_passed_pofunction(rf::RecordForPeriodicOrbits) = user_passed_function(rf.user_record_from_solution)
 

@@ -209,7 +209,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 - `residual!(coll, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 - `jacobian(coll, orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
 """
-@with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractPODifferentialDiscretization
+@with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractDifferentialDiscretization
     "Bifurcation problem."
     prob_vf::Tprob = nothing
 

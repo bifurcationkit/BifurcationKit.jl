@@ -526,7 +526,9 @@ function bogdanov_takens_normal_form(_prob,
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
 
-    @assert 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("We need an AbstractMinimallyAugmentedFormulation!\nWe found a ", typeof(𝐌𝐚))
+    end
 
     # kernel dimension
     N = 2

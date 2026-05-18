@@ -37,12 +37,12 @@ end
 ####################################################################################################
 __get_discretization(pb::AbstractWrapperPeriodicOrbitProblem) = get_discretization(pb)
 __get_discretization(𝐌𝐚::AbstractMinimallyAugmentedFormulation) = __get_discretization(𝐌𝐚.prob_vf)
-__get_discretization(disc::AbstractPeriodicOrbitDiscretization) = disc
+__get_discretization(disc::AbstractBoundaryValueDiscretization) = disc
 
 function __update_codim1_po!(𝐌𝐚, 
                             iter, 
                             state)
-    # we extract the AbstractPeriodicOrbitDiscretization
+    # we extract the AbstractBoundaryValueDiscretization
     disc_po = __get_discretization(𝐌𝐚)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
