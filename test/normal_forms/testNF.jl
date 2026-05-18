@@ -193,11 +193,14 @@ let
                                 b20 = rand(2,2,2),
                                 b30 = rand(2,2,2,2)),
                             :none)
-    vf.nf.b20[1,:,:] .= Symmetric(vf.nf.b20[1,:,:])
-    vf.nf.b20[2,:,:] .= Symmetric(vf.nf.b20[2,:,:])
+    vf.nf.b20[1,:,:] = Symmetric(vf.nf.b20[1,:,:]) # recall that NdBranchPoint is mutable struct
+    vf.nf.b20[2,:,:] = Symmetric(vf.nf.b20[2,:,:])
+    @test issymmetric(vf.nf.b20[1,:,:])
+    @test issymmetric(vf.nf.b20[2,:,:])
+
     symmetrize3!(@view vf.nf.b30[1,:,:,:])
     symmetrize3!(@view vf.nf.b30[2,:,:,:])
-    prob2d = BK.ODEBifProblem((x,p)->vf(Val(:reducedForm), x, p[1]), [0., 0], [-.1], 1)
+    prob2d = BK.ODEBifProblem((x,p) -> vf(Val(:reducedForm), x, p[1]), [0., 0], [-.1], 1)
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
     br = continuation(prob2d, PALC(), ContinuationPar(opts_br; n_inversion = 8, dsmax=0.01))
     @reset br.specialpoint[1].param = 0.

@@ -264,7 +264,7 @@ function newton_hopf(prob,
             kwargs...)
     # we first need to update d2F and d3F for them to accept complex arguments
 
-    hopfproblem = HopfMinimallyAugmentedFormulation(
+    𝐇 = HopfMinimallyAugmentedFormulation(
         re_make(prob; params = par),
         _copy(eigenvec_ad), # this is pb.a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is pb.b ≈ null space of  J - iω I
@@ -273,7 +273,7 @@ function newton_hopf(prob,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian = usehessian)
 
-    prob_h = HopfMAProblem(hopfproblem, nothing, hopfpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
 
     # options for the Newton Solver
     opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()

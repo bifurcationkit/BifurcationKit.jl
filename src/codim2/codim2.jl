@@ -1,4 +1,5 @@
-abstract type AbstractMinimallyAugmentedFormulation{Tprob} end
+abstract type AbstractCodim2Formulation{Tprob} end
+abstract type AbstractMinimallyAugmentedFormulation{Tprob} <: AbstractCodim2Formulation{Tprob} end
 abstract type AbstractMinimallyAugmentedFormulation_Fold_PD{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractMinimallyAugmentedFormulation_Hopf_NS{Tprob} <: AbstractMinimallyAugmentedFormulation{Tprob} end
 abstract type AbstractCodim2EigenSolver <: AbstractEigenSolver end

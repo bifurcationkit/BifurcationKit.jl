@@ -15,8 +15,8 @@ getsolver(eig::AbstractEigenSolver) = eig
 ####################################################################################################
 # Default Solvers
 ####################################################################################################
-__to_array_for_eig(x) = Array(x)
-__to_array_for_eig(x::Array) = x
+@inline __to_array_for_eig(x) = Array(x)
+@inline __to_array_for_eig(x::Array) = x
 """
 $(TYPEDEF)
 
