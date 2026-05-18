@@ -68,7 +68,6 @@ function corrector!(state::AbstractContinuationState,
     if (1-θ) * abs(λ) > alg.tol_param && ~in_bisection(state)
         @debug "[AutoSwitch corrector: NATURAL]" λ
         corrector!(state, it, Natural(); kwargs...)
-        @assert false
     else
         @debug "[AutoSwitch corrector: PALC]" λ
         corrector!(state, it, alg.alg; kwargs...)
