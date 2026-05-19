@@ -32,24 +32,24 @@ bvp = BifurcationKit.BVP.discretize(model, disc)
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (p₁ = 0.0,)
 t_vals = LinRange(0, 1, 201)
-x0 = zeros(2 * (1 + disc.m * disc.Ntst) + 1)
-x0[end] = 1.0 # Interval length T = 1.0
+x0 = 0.0ones(2 * (1 + disc.m * disc.Ntst) + 0)
+# x0[end] = 1.0 # Interval length T = 1.0
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.p₁);
     record_from_solution = (x, p; k...) -> begin
-        u = BifurcationKit.get_time_slices(x[1:end-1], 2, disc.m, disc.Ntst)
+        u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
         return (max_u = maximum(u[1, :]),)
     end,
     plot_solution = (x, p; kwargs...) -> begin
-        u = BifurcationKit.get_time_slices(x[1:end-1], 2, disc.m, disc.Ntst)
+        u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
         plot!(u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
     end
 )
 
 # 7. Setup Continuation Parameters
-optn = NewtonPar(tol = 1e-10, verbose=false)
+optn = NewtonPar(tol = 1e-10, verbose=true)
 optc = ContinuationPar(
     p_min = 0.0,
     p_max = 5.0,

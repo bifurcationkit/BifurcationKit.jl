@@ -98,7 +98,7 @@ function BVPBifProblem(
     params,
     lens;
     jacobian = AutoDiffDense(),
-    record_from_solution = (x, p; k...) -> (period = x[end],),
+    record_from_solution = (x, p; k...) -> (x = norm(x),),
     plot_solution = (x, p; kwargs...) -> nothing,
     save_solution = save_solution_default,
     update! = update_default
@@ -128,7 +128,7 @@ getparams(prob::BVPBifProblem) = prob.params
 getlens(prob::BVPBifProblem) = prob.lens
 getparam(prob::BVPBifProblem) = _get(prob.params, prob.lens)
 setparam(prob::BVPBifProblem, p0) = set(prob.params, prob.lens, p0)
-isinplace(prob::BVPBifProblem) = false
+isinplace(::BVPBifProblem) = false
 
 # Recording and plotting
 plot_solution(prob::BVPBifProblem) = prob.plotSolution
@@ -144,7 +144,7 @@ residual(prob::BVPBifProblem, x, p) = bvp_residual(prob.d_bvp, x, p)
 # For now, we assume no easy adjoint is available for arbitrary BVPs
 import ..BifurcationKit: has_adjoint, getdelta, BifFunction, dF, d2F, d3F
 has_adjoint(::BVPBifProblem) = false
-getdelta(::BVPBifProblem) = 1e-8
+getdelta(::BVPBifProblem) = 1e-8 # TODO remove this hack
 
 # Differentials (required for normal forms)
 function dF(prob::BVPBifProblem, x, p, dx)
