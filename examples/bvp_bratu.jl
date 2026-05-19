@@ -21,23 +21,23 @@ end
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
 # Fixed interval [0, 1] => phase condition fixes T=1.0
-model = BVPModel(Fbratu, gbratu; n=2, phase = (u, p, T) -> T - 1.0)
+model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2, phase = (u, p, T) -> T - 1.0)
 
 # 4. Discretize using Trapezoid method
 # Using 201 points for better accuracy
-disc = Collocation(Ntst=30, m=4)
-bvp = discretize(model, disc)
+disc = BifurcationKit.BVP.Collocation(Ntst=30, m=4)
+bvp = BifurcationKit.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (p₁ = 0.0,)
 t_vals = LinRange(0, 1, 201)
-x0 = zeros(2 * (1 + disc.m * disc.Ntst) + 1) 
+x0 = zeros(2 * (1 + disc.m * disc.Ntst) + 1)
 x0[end] = 1.0 # Interval length T = 1.0
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
-prob = BVPBifProblem(bvp, x0, params, (@optic _.p₁);
+prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.p₁);
     record_from_solution = (x, p; k...) -> begin
         u = BifurcationKit.get_time_slices(x[1:end-1], 2, disc.m, disc.Ntst)
         return (max_u = maximum(u[1, :]),)
@@ -51,11 +51,11 @@ prob = BVPBifProblem(bvp, x0, params, (@optic _.p₁);
 # 7. Setup Continuation Parameters
 optn = NewtonPar(tol = 1e-10, verbose=false)
 optc = ContinuationPar(
-    p_min = 0.0, 
-    p_max = 5.0, 
-    dsmax = 0.1, 
-    ds = 0.01, 
-    detect_bifurcation = 2, 
+    p_min = 0.0,
+    p_max = 5.0,
+    dsmax = 0.1,
+    ds = 0.01,
+    detect_bifurcation = 2,
     detect_fold = true,
     newton_options = optn,
     max_steps = 200,
@@ -65,7 +65,7 @@ optc = ContinuationPar(
 
 # 8. Perform initial continuation
 println("\nComputing primary branch for Bratu BVP (Collocation)...")
-br = continuation(prob, PALC(), optc; 
+br = continuation(prob, PALC(), optc;
     plot = true,
     verbosity = 3,
     normC=norminf,
@@ -106,7 +106,7 @@ if !isnothing(idx_bp)
         title!(p1, "Bratu Bifurcation Diagram")
         xlabel!(p1, "p₁")
         ylabel!(p1, "max(u)")
-        
+
         # Add labels for special points if any
         savefig(p1, "bvp_bratu_switching.png")
         println("Plot saved to bvp_bratu_switching.png")
