@@ -3,6 +3,13 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.7.3]
+- Remove `AbstractPeriodicOrbitDiscretization`, make subtypes inherit directly from `AbstractBoundaryValueDiscretization`
+- `AbstractPODifferentialDiscretization` → `AbstractDifferentialDiscretization`
+- `AbstractPOFiniteDifferencesDiscretization` → `AbstractFiniteDifferencesDiscretization`
+- `AbstractPOShootingDiscretization` → `AbstractShootingDiscretization`
+
+## [0.7.2]
 
 - Change names `*ShootingProblem` for `*Shooting`, `PeriodicOrbitOCollProblem` for `Collocation` and `PeriodicOrbitTrapProblem` for `Trapeze`
 ## [0.6.1]
