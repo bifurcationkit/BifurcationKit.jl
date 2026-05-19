@@ -1,9 +1,11 @@
 import BifurcationKit as BK
 import LinearAlgebra as LA
+import BifurcationKit.BorderedArray as BorderedArray
+import Random
 
 deepcollect(x::BK.BorderedArray) = vcat(x.u, x.p)
 deepcollect(x::Number) = x
-
+Random.seed!(1234)
 let
     LA.norm(BorderedArray(rand(2), 0), 0)
     LA.norm(BorderedArray(rand(2), 0), 1)

@@ -13,6 +13,9 @@ const RAW_ARGS = filter(arg -> arg ∉ ["-n", "--dryrun", "-a", "--all"], ARGS)
 
 # If RUN_ALL is set, ignore other arguments (set to empty so all tests run)
 # Otherwise use the filtered arguments
+# Example of use: 
+# Pkg.test(test_args = ["normal_forms"])
+# Pkg.test(test_args = ["normal*"])
 const TEST_ARGS = RUN_ALL ? String[] : RAW_ARGS
 
 if DRY_RUN

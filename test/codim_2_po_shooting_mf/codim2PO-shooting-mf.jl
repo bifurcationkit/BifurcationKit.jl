@@ -24,11 +24,12 @@ opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_
 @reset opts_br.newton_options.verbose = true
 ################################################################################
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqRosenbrock: Rodas5
 prob_de = ODE.ODEProblem(Pop!, z0, (0, 600.), par_pop)
-alg = ODE.Rodas5()
+alg = Rodas5()
 sol = ODE.solve(prob_de, alg)
 prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0, 5), par_pop, reltol = 1e-10, abstol = 1e-12)
-sol = ODE.solve(prob_de, ODE.Rodas5())
+sol = ODE.solve(prob_de, Rodas5())
 ################################################################################
 argspo = (record_from_solution = (x, p; k...) -> begin
         xtt = BK.get_periodic_orbit(p.prob, x, p.p)
@@ -42,8 +43,8 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 # @info "import Zygote"
 # using Zygote, SciMLSensitivity
 
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
-    alg = ODE.Rodas5(),
+probsh, cish = generate_ci_problem( Shooting(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
+    alg = Rodas5(),
     jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF(),
     # parallel = true,
@@ -85,7 +86,7 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 @reset opts_posh_fold.newton_options.tol = 1e-8
 # @reset opts_posh_fold.newton_options.linsolver.solver.N = opts_posh_fold.newton_options.linsolver.solver.N+1
 @reset opts_posh_fold.newton_options.verbose = false
-@reset opts_posh_fold.newton_options.linsolver.solver.verbose=0
+@reset opts_posh_fold.newton_options.linsolver.verbose=0
 # fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
 #     # verbosity = 3, #plot = true,
 #     detect_codim2_bifurcation = 0,
@@ -122,11 +123,11 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
 #####
 # find the PD NS case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
-sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2.u[end]), Rodas5())
 # plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5(),
+probshns, ci = generate_ci_problem( Shooting(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             )
 
@@ -145,7 +146,7 @@ brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_s
 @info "--> NS curve"
 opts_posh_ns = ContinuationPar(brpo_ns.contparams, detect_bifurcation = 0, max_steps = 0, p_min = -0., p_max = 1.2)
 @reset opts_posh_ns.newton_options.tol = 1e-8
-@reset opts_posh_ns.newton_options.linsolver.solver.verbose = 0
+@reset opts_posh_ns.newton_options.linsolver.verbose = 0
 @reset opts_posh_ns.newton_options.verbose = false
 ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         # verbosity = 2, plot = true,
@@ -158,6 +159,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         bothside = false,
         callback_newton = BK.cbMaxNorm(1),
         bdlinsolver = MatrixFreeBLS(lspo),
+        update_minaug_every_step = 0,
         )
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
 

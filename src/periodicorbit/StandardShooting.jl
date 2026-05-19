@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
+Create a problem to implement the Simple / Parallel Multiple Standard Shooting method to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitShooting/). The arguments are as described below.
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
@@ -17,7 +17,7 @@ You can then call `residual(pb, orbitguess, par)` to apply the functional to a g
 - `orbitguess::AbstractVector` must be of size `M * N + 1` where N is the number of unknowns of the state space and `orbitguess[M * N + 1]` is an estimate of the period `T` of the limit cycle. This form of guess is convenient for the use of the linear solvers in `IterativeSolvers.jl` (for example) which only accept `AbstractVector`s. 
 - `orbitguess::BorderedArray(guess, T)` where `guess[i]` is the state of the orbit at the `i`th time slice. This last form allows for non-vector state space which can be convenient for 2d problems for example, use `GMRESKrylovKit` for the linear solver in this case.
 
-# Fields
+# Internal fields
 $(TYPEDFIELDS)
 
 # Jacobian
@@ -27,36 +27,36 @@ $DocStringJacobianPOSh
 - The first important constructor is the following which is used for branching to periodic orbits from Hopf bifurcation points:
 
 
-    pb = ShootingProblem(M::Int, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
+    pb = Shooting(M::Int, prob::Union{ODEProblem, EnsembleProblem}, alg; kwargs...)
 
 - A convenient way to build the functional is to use:
 
 
-    pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
+    pb = Shooting(prob::Union{ODEProblem, EnsembleProblem}, alg, centers::AbstractVector; kwargs...)
 
 where `prob` is an `ODEProblem` (resp. `EnsembleProblem`) which is used to create a flow using the ODE solver `alg` (for example `Tsit5()`). `centers` is list of `M` points close to the periodic orbit, they will be used to build a constraint for the phase. `parallel = false` is an option to use Parallel simulations (Threading) to simulate the multiple trajectories in the case of multiple shooting. This is efficient when the trajectories are relatively long to compute. Finally, the arguments `kwargs` are passed to the ODE solver defining the flow. Look at `DifferentialEquations.jl` for more information. Note that, in this case, the derivative of the flow is computed internally using Finite Differences.
 
 - Another way to create a Shooting problem with more options is the following where in particular, one can provide its own scalar constraint `section(x)::Number` for the phase:
 
 
-    pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; parallel = false, kwargs...)
+    pb = Shooting(prob::Union{ODEProblem, EnsembleProblem}, alg, M::Int, section; parallel = false, kwargs...)
 
 or
 
-    pb = ShootingProblem(prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; parallel = false, kwargs...)
+    pb = Shooting(prob::Union{ODEProblem, EnsembleProblem}, alg, ds, section; parallel = false, kwargs...)
 
 - The next way is an elaboration of the previous one
 
 
-    pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; parallel = false, kwargs...)
+    pb = Shooting(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, M::Int, section; parallel = false, kwargs...)
 
 or
 
-    pb = ShootingProblem(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
+    pb = Shooting(prob1::Union{ODEProblem, EnsembleProblem}, alg1, prob2::Union{ODEProblem, EnsembleProblem}, alg2, ds, section; parallel = false, kwargs...)
 
 where we supply now two `ODEProblem`s. The first one `prob1`, is used to define the flow associated to `F` while the second one is a problem associated to the derivative of the flow. Hence, `prob2` must implement the following vector field ``\\tilde F(x,y,p) = (F(x,p), dF(x,p)\\cdot y)``.
 """
-@with_kw_noshow struct ShootingProblem{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractShootingProblem
+@with_kw_noshow struct Shooting{Tf <: AbstractFlow, Tjac <: AbstractJacobianType, Ts, Tsection, Tpar, Tlens} <: AbstractShootingDiscretization
     "`ds`: vector of time differences for each shooting. Its length is written `M`. If `M == 1`, then the simple shooting is implemented and the multiple one otherwise."
     M::Int64 = 0                         # number of sections
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
@@ -74,66 +74,68 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     update_section_every_step::UInt = 1
     "Describes the type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = AutoDiffDense()
-    @assert jacobian in [AutoDiffMF(), MatrixFree(), AutoDiffDense(), AutoDiffDenseAnalytical(), FiniteDifferences(), FiniteDifferencesMF()] "This jacobian is not defined. Please chose another one."
+    @assert jacobian in _po_sh_jacobian_types "This jacobian is not defined. Please chose another one."
 end
 
-@inline issimple(sh::ShootingProblem) = get_mesh_size(sh) == 1
-@inline isparallel(sh::ShootingProblem) = sh.parallel
-@inline getlens(sh::ShootingProblem) = sh.lens
-getparams(prob::ShootingProblem) = prob.par
-setparam(prob::ShootingProblem, p) = set(getparams(prob), getlens(prob), p)
+@inline issimple(sh::Shooting) = get_mesh_size(sh) == 1
+@inline isparallel(sh::Shooting) = sh.parallel
+@inline getlens(sh::Shooting) = sh.lens
+@inline getdelta(sh::AbstractShootingDiscretization) = getdelta(sh.flow)
+getparams(sh::Shooting) = sh.par
+setparam(sh::Shooting, p) = set(getparams(sh), getlens(sh), p)
 
 # getindex function for getting the time slices
 _getindex(v, i) = v[i]
 _getindex(v::VI.MinimalVec, i) = v.vec[i]
 
-function Base.show(io::IO, sh::ShootingProblem)
-    println(io, "┌─ Standard shooting functional for periodic orbits")
+function Base.show(io::IO, sh::Shooting)
+    color = :cyan; bold = true
+    println(io, "┌─ Standard shooting method for periodic orbits (PO) / bvp")
     print(io, "├─ time slices    : ")
-    printstyled(io, get_mesh_size(sh), "\n"; color=:cyan, bold = true)
+    printstyled(io, get_mesh_size(sh), "\n"; color, bold)
 
     print(io, "├─ lens           : ")
-    printstyled(io, get_lens_symbol(sh.lens), "\n"; color=:cyan, bold = true)
+    printstyled(io, get_lens_symbol(sh.lens), "\n"; color, bold)
 
     print(io, "├─ jacobian       : ")
-    printstyled(io, sh.jacobian, "\n"; color=:cyan, bold = true)
+    printstyled(io, sh.jacobian, "\n"; color, bold)
 
     print(io, "├─ update section : ")
-    printstyled(io, sh.update_section_every_step, "\n"; color=:cyan, bold = true)
+    printstyled(io, sh.update_section_every_step, "\n"; color, bold)
 
     if sh.flow isa FlowDE
         print(io, "├─ integrator     : ")
-        printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color=:cyan, bold = true)
+        printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color, bold)
     end
 
     print(io, "└─ parallel       : ")
-    printstyled(io, isparallel(sh), "\n"; color=:cyan, bold = true)
+    printstyled(io, isparallel(sh), "\n"; color, bold)
 end
 
 # this function updates the section during the continuation run
-function updatesection!(sh::ShootingProblem, x, pars)
+function updatesection!(sh::Shooting, x, pars)
     @debug "Update section shooting"
     x1 = get_time_slice(sh, x, 1)
-    @views update!(sh.section, vf(sh.flow, x1, pars), x1)
+    @views update!(sh.section, vector_field(sh.flow, x1, pars), x1)
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
 
-@inline get_time_slice(::ShootingProblem, x::AbstractMatrix, ii::Int) = @view x[:, ii]
+@inline get_time_slice(::Shooting, x::AbstractMatrix, ii::Int) = @view x[:, ii]
 # orbit stored as [x1, x2, ...] where x1 is N-dimensional
-@inline get_time_slice(::ShootingProblem, x::AbstractVector, ii::Int) = x[ii]
-@inline get_time_slice(sh::ShootingProblem, x::AbstractVector{<:Real}, ii::Int) = get_time_slices(sh, x)[:, ii]
-@inline get_time_slice(::ShootingProblem, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
+@inline get_time_slice(::Shooting, x::AbstractVector, ii::Int) = x[ii]
+@inline get_time_slice(sh::Shooting, x::AbstractVector{ <: Real}, ii::Int) = get_time_slices(sh, x)[:, ii]
+@inline get_time_slice(::Shooting, x::BorderedArray, ii::Int) = _getindex(x.u, ii)
 
-@inline get_time_slices(::ShootingProblem ,x::BorderedArray) = x.u
-@views function get_time_slices(sh::ShootingProblem, x::AbstractVector{<:Real})
+@inline get_time_slices(::Shooting ,x::BorderedArray) = x.u
+@views function get_time_slices(sh::Shooting, x::AbstractVector{ <: Real})
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     return reshape(x[begin:end-1], N, M)
 end
 ####################################################################################################
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
-@views function (sh::ShootingProblem)(x::AbstractVector, pars)
+@views function po_residual(sh::Shooting, x::AbstractVector, pars)
     T = getperiod(sh, x)
 
     # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
@@ -150,7 +152,7 @@ end
     return out
 end
 
-@views function po_residual_bare!(sh::ShootingProblem, outc, xc, pars, T)
+@views function po_residual_bare!(sh::Shooting, outc, xc, pars, T)
     N, M = size(xc)
     if ~isparallel(sh)
         for ii in 1:M
@@ -167,7 +169,7 @@ end
 end
 
 # shooting functional for BorderedArray
-function (sh::ShootingProblem)(x::BorderedArray, pars)
+function po_residual(sh::Shooting, x::BorderedArray, pars)
     # period of the cycle
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
@@ -190,7 +192,11 @@ function (sh::ShootingProblem)(x::BorderedArray, pars)
 end
 
 # jacobian of the shooting functional
-@views function jvp(sh::ShootingProblem, x::AbstractVector, pars, dx::AbstractVector; δ = convert(eltype(x), 1e-8))
+@views function po_jvp(sh::Shooting,
+                    x::AbstractVector,
+                    pars,
+                    dx::AbstractVector; 
+                    δ = getdelta(sh))
     # period of the cycle
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
@@ -208,14 +214,14 @@ end
             ip1 = (ii == M) ? 1 : ii+1
             tmp = jvp(sh.flow, xc[:, ii], pars, dxc[:, ii], sh.ds[ii] * T)
             # call jacobian of the flow, jacobian-vector product
-            outc[:, ii] .= tmp.du .+ vf(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= tmp.du .+ vector_field(sh.flow, tmp.u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     else
         solOde = jvp(sh.flow, xc, pars, dxc, sh.ds .* T)
         # call jacobian of the flow, jacobian-vector product
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
-            outc[:, ii] .= solOde[ii].du .+ vf(sh.flow, solOde[ii].u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
+            outc[:, ii] .= solOde[ii].du .+ vector_field(sh.flow, solOde[ii].u, pars) .* sh.ds[ii] .* dT .- dxc[:, ip1]
         end
     end
 
@@ -226,7 +232,7 @@ end
 end
 
 # jacobian of the shooting functional, this allows for Array state space
-function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), 1e-8))
+function po_jvp(sh::Shooting, x::BorderedArray, pars, dx::BorderedArray; δ = convert(VI.scalartype(x), getdelta(sh)))
     dT = getperiod(sh, dx)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -239,7 +245,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow
             tmp = jvp(sh.flow, _getindex(x.u, ii), pars, _getindex(dx.u, ii), sh.ds[ii] * T)
-            _copyto!(_getindex(out.u, ii), tmp.du .+ vf(sh.flow, tmp.u, pars) .* (sh.ds[ii] * dT) .- _getindex(dx.u, ip1))
+            _copyto!(_getindex(out.u, ii), tmp.du .+ vector_field(sh.flow, tmp.u, pars) .* (sh.ds[ii] * dT) .- _getindex(dx.u, ip1))
         end
     else
         error("Not implemented yet. Try using AbstractVectors instead")
@@ -251,7 +257,7 @@ function jvp(sh::ShootingProblem, x::BorderedArray, pars, dx::BorderedArray; δ 
 end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
-function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix, x::AbstractVector, pars)
+function po_jacobian!(sh::Shooting, J::AbstractMatrix, x::AbstractVector, pars)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
@@ -275,7 +281,7 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
         end
         # we fill the last column
         tmp = @views evolve(sh.flow, Val(:SerialTimeSol), xc[:, ii], pars, sh.ds[ii] * T).u
-        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vf(sh.flow, tmp, pars) .* sh.ds[ii]
+        J[(ii-1)*N+1:(ii-1)*N+N, end] .= vector_field(sh.flow, tmp, pars) .* sh.ds[ii]
     end
 
     # we fill the last row
@@ -286,74 +292,65 @@ function (sh::ShootingProblem)(::Val{:JacobianMatrixInplace}, J::AbstractMatrix,
 end
 
 # out of place version
-(sh::ShootingProblem)(::Val{:JacobianMatrix}, x::AbstractVector, pars) = sh(Val(:JacobianMatrixInplace), zeros(eltype(x), length(x), length(x)), x, pars)
+po_jacobian(sh::Shooting, x::AbstractVector, pars) = po_jacobian!(sh, zeros(VI.scalartype(x), length(x), length(x)), x, pars)
 
-function residual!(pb::ShootingProblem, out, x, p)
-    _copyto!(out, pb(x, p))
+function po_residual!(pb::Shooting, out, x, p)
+    _copyto!(out, po_residual(pb, x, p))
     out
 end
-residual(pb::ShootingProblem, x, p) = pb(x, p)
 ####################################################################################################
 """
 $(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
-function get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, pars; kode...)
-    T = getperiod(prob, x)
-    M = get_mesh_size(prob)
+function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
+    T = getperiod(sh, x)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
-    Th = eltype(x)
-
-    if ~isparallel(prob)
-        sol = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
-        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
-        # we could also use Matrix(sol[1])
-        for ii in 2:M
-            append!(time, sol[ii].t .+ time[end])
-            append!(u.u, sol[ii].u)
-        end
-        return SolPeriodicOrbit(t = time, u = u)
-
+    if ~isparallel(sh)
+        sol = RecursiveArrayTools.VectorOfArray([evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M])
     else # threaded version
-        sol = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
-        time = sol[1].t; u = RecursiveArrayTools.VectorOfArray(sol[1].u)
-        for ii in 2:M
-            append!(time, sol[ii].t .+ time[end])
-            append!(u.u, sol[ii].u)
-        end
-        return SolPeriodicOrbit(t = time, u = u)
+        sol = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
+    time = sol.u[1].t
+    u = RecursiveArrayTools.VectorOfArray(sol.u[1].u)
+    for ii in 2:M
+        append!(time, sol.u[ii].t .+ time[end])
+        append!(u.u, sol.u[ii].u)
+    end
+    return SolPeriodicOrbit(t = time, u = u)
 end
-get_periodic_orbit(prob::ShootingProblem, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(prob, x, setparam(prob, p); kode...)
+get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
-function get_po_solution(prob::ShootingProblem, x, pars; kode...)
-    T = getperiod(prob, x)
-    M = get_mesh_size(prob)
+function get_po_solution(sh::Shooting, x, pars; kode...)
+    T = getperiod(sh, x)
+    M = get_mesh_size(sh)
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
 
-    if ~isparallel(prob)
-        sol_ode = [evolve(prob.flow, Val(:Full), xc[:, ii], pars, prob.ds[ii] * T; kode...) for ii in 1:M]
+    if ~isparallel(sh)
+        sol_ode = [evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M]
     else # threaded version
-        sol_ode = evolve(prob.flow, Val(:Full), xc, pars, prob.ds .* T; kode...)
+        sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
 
     sol = (period = T, sol = sol_ode)
 
-    return POSolution(prob, sol, pars)
+    return POSolution(sh, sol, pars)
 end
 
-function (sol::POSolution{ <: ShootingProblem})(t)
+function (sol::POSolution{ <: Shooting})(t)
     T = sol.x.period
     t = mod(t, T)
     t0 = zero(t)
     M = get_mesh_size(sol.pb)
     ii = 1
     while ii <= M
+        # TODO: it breaks for VoA! use getindex?
         tspan = sol.x.sol[ii].prob.tspan
         if t0 + tspan[1] <= t <= t0 + tspan[2]
             break
@@ -362,17 +359,17 @@ function (sol::POSolution{ <: ShootingProblem})(t)
             ii += 1
         end
     end
-    sol.x.sol[ii](t-t0)
+    sol.x.sol[ii](t - t0)
 end
 ####################################################################################################
 # functions needed for Branch switching from Hopf bifurcation point
-function re_make(prob::ShootingProblem, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
+function re_make(sh::Shooting, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
     # append period at the end of the initial guess
     orbitguess_v = reduce(vcat, orbitguess_a)
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
-    section = isnothing(prob.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), _copy(orbitguess_a[1])) : prob.section
+    section = isnothing(sh.section) ? SectionSS(residual(prob_vf, orbitguess_a[1], hopfpt.params), _copy(orbitguess_a[1])) : sh.section
     # update the problem but not the section if the user passed one
-    probSh = setproperties(prob; 
+    probSh = setproperties(sh; 
                             section = section, 
                             par = getparams(prob_vf), 
                             lens = getlens(prob_vf))

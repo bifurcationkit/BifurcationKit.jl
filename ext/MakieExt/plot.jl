@@ -163,7 +163,7 @@ function plot_branch_cont(contres::ContResult,
         y = getproperty(contres.branch, 1)[end]
         u = contres.branch[end].param - contres.branch[end-1].param
         v = getproperty(contres.branch, 1)[end] - getproperty(contres.branch, 1)[end-1]
-        Makie.arrows!(ax1, [x], [y], [u], [v], color = :green, arrowsize = 20)
+        Makie.arrows2d!(ax1, [x], [y], [u], [v], color = :green, tipwidth = 15, tiplength = 15, minshaftlength = 0)
     end
 
     plot!(ax1, contres; plotfold, plotstability, plotspecialpoints, putspecialptlegend, filterspecialpoints, linewidthunstable, linewidthstable, plotcirclesbif, applytoY, applytoX)
@@ -215,11 +215,11 @@ function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
     if ratio == 1
-        heatmap(outpo[1:n, :]', ylabel = "Time", color = :viridis)
+        heatmap(outpo[1:n, :]', colormap = :viridis)
     else
         fig = Makie.Figure()
-        ax1 = Axis(fig[1, 1], ylabel = "Time")
-        ax2 = Axis(fig[1, 2], ylabel = "Time")
+        ax1 = Axis(fig[1, 1])
+        ax2 = Axis(fig[1, 2])
         # Makie.heatmap!(ax1, rand(2,2))
         Makie.heatmap!(ax1, outpo[1:n, :]')
         Makie.heatmap!(ax2, outpo[n+2:end, :]')

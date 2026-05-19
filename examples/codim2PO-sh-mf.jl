@@ -54,10 +54,10 @@ argspo = (record_from_solution = (x, p; k...) -> begin
 using Test, ForwardDiff
 import DifferentiationInterface as DI
 
-probsh0 = ShootingProblem(M=1)
+probsh0 = Shooting(M=1)
 
-probshMatrix, = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5())
-probsh, cish = generate_ci_problem( ShootingProblem(M=3), prob, prob_de, sol, 2.; alg = Rodas5(),
+probshMatrix, = generate_ci_problem( Shooting(M=3), prob, prob_de, sol, 2.; alg = Rodas5())
+probsh, cish = generate_ci_problem( Shooting(M=3), prob, prob_de, sol, 2.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             # jacobian = BK.FiniteDifferencesMF()
             )
@@ -179,7 +179,7 @@ sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], ts
 sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
 plot(sol2, xlims= (8,10))
 
-probshns, ci = generate_ci_problem( ShootingProblem(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
+probshns, ci = generate_ci_problem( Shooting(M=3), re_make(prob, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             # jacobian = BK.FiniteDifferencesMF()
             )

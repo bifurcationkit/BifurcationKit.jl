@@ -1,27 +1,34 @@
 module BifurcationKit
-    using Printf, Dates
-    import BlockArrays, StructArrays, LinearMaps
-    using Reexport
-    @reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
-    @reexport using ArnoldiMethod: LM, LR, LI, SR, SI
-    using Parameters: @with_kw, @with_kw_noshow
-    using PreallocationTools: DiffCache, get_tmp
-    using DocStringExtensions
+    import Dates
+    import Printf: @printf, @sprintf
+    import StructArrays, LinearMaps
     import DataStructures # used for Polynomial predictor
-    using ForwardDiff
+    import ForwardDiff
     import Random: randn!
     import LinearAlgebra as LA
+    import BlockArrays as BA
+    import SparseArrays as SPA
+
+    using Parameters: @with_kw, @with_kw_noshow
+    import PreallocationTools: DiffCache, get_tmp
+    using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF, TYPEDFIELDS, TYPEDSIGNATURES
+
+    # used in Problems.jl
+    import SciMLBase
+
+    import Reexport
+    Reexport.@reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic
+    Reexport.@reexport using ArnoldiMethod: LM, LR, LI, SR, SI
 
     include("Accessors.jl")
-    include("Problems.jl")
     include("jacobianTypes.jl")
+    include("ContKind.jl")
+    include("Problems.jl")
 
     # we put this here to be used in LinearBorderSolver and Continuation
     abstract type AbstractContinuationAlgorithm end
     abstract type AbstractContinuationIterable{kind} end
     abstract type AbstractContinuationState{Tv} end
-
-    include("ContKind.jl")
 
     include("BorderedArrays.jl")
     include("LinearSolver.jl")
@@ -89,8 +96,8 @@ module BifurcationKit
     include("periodicorbit/NormalForms.jl")
 
     # periodic orbit codim 2
-    include("periodicorbit/codim2/utils.jl")
     include("periodicorbit/codim2/codim2.jl")
+    include("periodicorbit/codim2/utils.jl")
     # include("periodicorbit/codim2/PeriodicOrbitTrapeze.jl")
     include("periodicorbit/codim2/PeriodicOrbitCollocation.jl")
     include("periodicorbit/codim2/StandardShooting.jl")
@@ -116,7 +123,7 @@ module BifurcationKit
 
     # linear solvers
     export norminf
-    
+
     export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit, KrylovLS, KrylovLSInplace
     export DefaultEig, EigArpack, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
@@ -153,10 +160,10 @@ module BifurcationKit
     export ContIterable, iterate, ContState, getsolution, getx, getp, getpreviousx, getpreviousp, gettangent, getpredictor, get_previous_solution
 
     # codim2 Fold continuation
-    export foldpoint, FoldProblemMinimallyAugmented, FoldLinearSolverMinAug
+    export foldpoint, FoldLinearSolverMinAug
 
     # codim2 Hopf continuation
-    export HopfPoint, HopfProblemMinimallyAugmented, HopfLinearSolverMinAug
+    export HopfPoint, HopfLinearSolverMinAug
 
     # normal form
     export get_normal_form, hopf_normal_form, predictor, normal_form
@@ -168,20 +175,17 @@ module BifurcationKit
     export generate_solution, getperiod, get_periodic_orbit, guess_from_hopf, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
-    export PeriodicOrbitTrapProblem, continuation_potrap
+    export Trapeze, continuation_potrap
 
     # Periodic orbit computation based on Shooting
-    export Flow, ShootingProblem, PoincareShootingProblem, AbstractShootingProblem, SectionPS, SectionSS
+    export Flow, Shooting, PoincareShooting, AbstractShootingProblem, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
-    export PeriodicOrbitOCollProblem, COPBLS, COPLS
+    export Collocation, COPBLS, COPLS
 
     # Floquet multipliers computation
     export FloquetQaD, FloquetColl, FloquetGEV
 
     # waves
-    export TWProblem
-
-    # BVP
-    @reexport using .BVP
+    export TWModel
 end

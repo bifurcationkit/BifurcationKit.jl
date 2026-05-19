@@ -3,6 +3,10 @@
 using BifurcationKit, ForwardDiff
 using LinearAlgebra
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqSDIRK: KenCarp4
+using SciMLBase: terminate!
+const FD = ForwardDiff
+const BK = BifurcationKit
 
 function Fsl!(f, u, p, t)
     (;r, μ, ω, c3) = p
@@ -23,12 +27,13 @@ function diffAD(f, x, dx)
     ForwardDiff.derivative(t -> f(x .+ t .* dx), 0.)
 end
 
+let
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ω = 1.0, c3 = 1.0,)
 u0 = [.001, .001]
 δ = 1e-8
 prob = ODE.ODEProblem(Fsl!, u0, (0., 100.), par_sl)
-algsl = ODE.KenCarp4()#Rodas4P()
+algsl = KenCarp4()#Rodas4P()
 ####################################################################################################
 sol = ODE.solve(prob, algsl, abstol =1e-9, reltol=1e-6)
 
@@ -37,7 +42,7 @@ function flowTS(x, t, pb; alg = algsl, kwargs...)
     sol = ODE.solve(_pb, alg; abstol=1e-10, reltol=1e-9, save_everystep = false, kwargs...)
     return sol.t, sol
 end
-flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2][end]
+flowDE = (x, t, pb = prob; alg = algsl, kwargs...) -> flowTS(x, t, pb; alg = alg, kwargs...)[2].u[end]
 
 
 dflowDE = (x, dx, ts; kwargs...) -> diffAD(z -> flowDE(z, ts; kwargs...), x, dx)
@@ -64,7 +69,7 @@ function DPoincare(x, dx, p, normal, center, _cb, pb; verbose = false)
     abs(dot(normal, dx)) > 1e-12 && @warn "Vector does not belong to hyperplane!  dot(normal, dx) = $(abs(dot(normal, dx))) and $(dot(dx, dx))"
     # compute the Poincare map from x
     _tΣ, _solΣ = flowTS(x, Inf, pb; callback = _cb, save_everystep = false)
-    tΣ, solΣ = _tΣ[end], _solΣ[end]
+    tΣ, solΣ = _tΣ[end], _solΣ.u[end]
 
     z = Fsl(solΣ, p)
     verbose && @show z tΣ solΣ
@@ -102,12 +107,10 @@ println("\n──> Norm of the difference = ", resAna - resFD |> norminf)
 @test resAna - resFD |> norminf < 1e-4
 ####################################################################################################
 # matrix of the Poincare map, analytical formula
-const FD = ForwardDiff
-const BK = BifurcationKit
 
 tΣ, solΣ = flowTS(u0, Inf64, prob; callback = cb);
-tΣ = tΣ[end]; solΣ = solΣ[end]
-dϕ = FD.jacobian( x -> flowTS(x, tΣ, prob)[2][end], (u0))
+tΣ = tΣ[end]; solΣ = solΣ.u[end]
+dϕ = FD.jacobian( x -> flowTS(x, tΣ, prob)[2].u[end], (u0))
 F = Fsl(Π(u0), par_sl)
 normal = normals[1]
 
@@ -133,7 +136,7 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 # end
 # probMono = ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_sl)
 #
-# probHPsh = BK.PoincareShootingProblem(
+# probHPsh = BK.PoincareShooting(
 #         prob, algsl,
 #         # probMono, Rodas4P(autodiff=false),
 #         normals, centers; abstol =1e-10, reltol=1e-10)
@@ -143,3 +146,4 @@ Jtmp = dϕ .- F * normal' * dϕ ./ dot(F, normal)
 # resDP = DPoincare(u0, du0, par_sl, normals[1], centers[1], cb, prob; verbose = true)
 # resDPBK = BK.diffPoincareMap(probHPsh, u0, par_sl, du0, 1)
 # @test norminf(resDP - resDPBK) < 1e-6
+end

@@ -13,22 +13,27 @@ Additional information is available on the [website](https://bifurcationkit.gith
 
 `alg = MoorePenrose(tangent = PALC())`
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
+
+# Constructor(s)
+
+`MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)`
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
-    "Tangent predictor, for example `PALC()`"
+    "Tangent predictor, for example `PALC()`."
     tangent::T
-    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative"
+    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative."
     method::MoorePenroseLS
-    "(Bordered) linear solver"
+    "(Bordered) linear solver."
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 @inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
+getbls(alg::MoorePenrose) = alg.ls
 
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
 
@@ -62,8 +67,8 @@ end
 
 function update(alg0::MoorePenrose,
                 contParams::ContinuationPar,
-                linearAlgo)
-    tgt = update(alg0.tangent, contParams, linearAlgo)
+                linear_algo) #TODO type unstable
+    tgt = update(alg0.tangent, contParams, linear_algo)
     alg = @set alg0.tangent = tgt
 
     # for direct methods, we need a direct solver
@@ -71,12 +76,12 @@ function update(alg0::MoorePenrose,
         @reset alg.ls = DefaultLS()
     end
 
-    if isnothing(linearAlgo) && alg.method != iterative
+    if isnothing(linear_algo) && alg.method != iterative
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
             return @set alg.ls.solver = contParams.newton_options.linsolver
         end
     else
-        return @set alg.ls = isnothing(linearAlgo) ? MatrixBLS() : linearAlgo
+        return @set alg.ls = isnothing(linear_algo) ? MatrixBLS() : linear_algo
     end
     alg
 end
@@ -138,7 +143,6 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     z0 = getsolution(state)
     τ0 = state.τ
     z_pred = state.z_pred
-    ds = state.ds
 
     (;tol, max_iterations, verbose) = contparams.newton_options
     (;p_min, p_max) = contparams

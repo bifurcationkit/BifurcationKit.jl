@@ -21,9 +21,7 @@ function Pop!(du, X, p, t = 0)
 end
 
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
-
 z0 = [0.1,0.1,1,0]
-
 prob_bif = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
 
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, nev = 4, max_steps = 20000)
@@ -67,7 +65,7 @@ argspo = (record_from_solution = recordFromSolution,
     plot_solution = plotSolution
     )
 ################################################################################
-probtrap, ci = generate_ci_problem(PeriodicOrbitTrapProblem(M = 150;  jacobian = BK.AutoDiffDense(), update_section_every_step = 0), prob_bif, sol, 2.)
+probtrap, ci = generate_ci_problem(Trapeze(M = 150;  jacobian = BK.AutoDiffDense(), update_section_every_step = 0), prob_bif, sol, 2.)
 
 solpo = BK.newton(probtrap, ci, NewtonPar(verbose = true))
 
@@ -103,7 +101,7 @@ fold_po_trap1 = continuation(deepcopy(brpo_fold), 2, (@optic _.ϵ), opts_potrap_
 
 BK.plot(fold_po_trap1)[1]
 ################################################################################
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 4;
+probcoll, ci = generate_ci_problem(Collocation(30, 4;
             jacobian = BK.DenseAnalyticalInplace(),
             # meshadapt = true,
             ),
@@ -227,11 +225,11 @@ BK.plot!(ax,pd_po_coll, vars = (:ϵ, :b0));f
 #####
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.4
-sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(30, 4; 
+probcoll, ci = generate_ci_problem(Collocation(30, 4; 
                 # jacobian = BK.DenseAnalyticalInplace(),
                 update_section_every_step = 0), 
                 re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
@@ -242,7 +240,7 @@ brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_s
     # bothside = true,
     )
 
-get_normal_form(brpo_ns, 1; prm = true)
+get_normal_form(brpo_ns, 1; prm = Val(true))
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -291,11 +289,11 @@ f,ax=BK.plot(ns_po_coll, pd_po_coll2, vars = (:ϵ, :b0)); f
 #####
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probcoll, ci = generate_ci_problem(PeriodicOrbitOCollProblem(26, 3; update_section_every_step = 0), re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(Collocation(26, 3; update_section_every_step = 0), re_make(prob_bif, params = sol2.prob.p), sol2, 1.2)
 
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -323,7 +321,7 @@ f,ax=BK.plot(fold_po_coll1, fold_po_coll2);f
 BK.plot!(ax,pd_po_coll2, vars = (:ϵ, :b0));f
 ################################################################################
 ######    Shooting ########
-probsh, cish = generate_ci_problem( ShootingProblem(M=5), prob_bif, prob_de, sol, 2.; alg = Rodas5(), parallel = true)
+probsh, cish = generate_ci_problem( Shooting(M=5), prob_bif, prob_de, sol, 2.; alg = ODE.Rodas5(), parallel = true)
 
 opts_po_cont = setproperties(opts_br, max_steps = 50, save_eigenvectors = true, detect_loop = true, tol_stability = 1e-3)
 @reset opts_po_cont.newton_options.verbose = false
@@ -337,7 +335,7 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), ContinuationPar(opts_po_cont, m
     verbosity = 3, plot = true,
     argspo...
     )
-pd = get_normal_form(brpo_pd_sh, 1; autodiff = false, detailed=true)
+pd = get_normal_form(brpo_pd_sh, 1; autodiff = false, detailed = Val(true))
 BK.predictor(pd, 0.1,0.1)
 
 #########
@@ -411,11 +409,11 @@ BK.plot!(ax,pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD");f
 #####
 # find the NS case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probshns, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob_bif, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshns, ci = generate_ci_problem(Shooting(M=3), re_make(prob_bif, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 0, plot = true,
@@ -449,11 +447,11 @@ BK.plot!(ax, fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD");f
 #########
 # find the PD case
 par_pop2 = @set par_pop.b0 = 0.45
-sol2 = solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
-sol2 = solve(remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), Rodas5())
+sol2 = ODE.solve(ODE.remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), ODE.Rodas5())
+sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2[end]), ODE.Rodas5())
 lines(sol2)
 
-probshpd, ci = generate_ci_problem(ShootingProblem(M=3), re_make(prob_bif, params = sol2.prob.p), remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5())
+probshpd, ci = generate_ci_problem(Shooting(M=3), re_make(prob_bif, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = ODE.Rodas5())
 
 prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);

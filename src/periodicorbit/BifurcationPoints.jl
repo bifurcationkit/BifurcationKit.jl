@@ -7,7 +7,7 @@ for op in (:BranchPointPO, :PeriodDoublingPO,)
         """
         $(TYPEDEF)
 
-        # Fields
+        # Internal fields
 
         $(TYPEDFIELDS)
 
@@ -50,7 +50,7 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
     println(io, "├─ Period = ", abs(pd.T), " -> ", 2abs(pd.T))
     print(io, "├─ Problem: ")
     printstyled(io, typeof(pd.prob).name.name, "\n", bold = true)
-    if pd.prob isa ShootingProblem
+    if pd.prob isa Shooting
         show(io, pd.nf)
     else
         if ~pd.prm
@@ -86,7 +86,7 @@ end
 """
 $(TYPEDEF)
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 

@@ -1,4 +1,6 @@
 """
+$(TYPEDSIGNATURES)
+
 For an initial guess from the index of a Hopf bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newton_hopf`.
 """
 function hopf_point(br::AbstractBranchResult, index::Int)
@@ -12,7 +14,9 @@ function hopf_point(br::AbstractBranchResult, index::Int)
 end
 ###################################################################################################
 # this function encodes the functional
-function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) where 𝒯
+hopf_ma_test(𝐇, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = 𝐇.linbdsolver(J, a, b, J22, _zero, n; shift = Complex{𝒯}(0, -ω))
+
+function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
     # Hopf bifurcation point
     # input:
@@ -32,20 +36,10 @@ function (𝐇::HopfProblemMinimallyAugmented)(x, p::𝒯, ω::𝒯, params) whe
     par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
     # note that the shift argument only affect J in this call:
-    _, σ1, cv, = 𝐇.linbdsolver(jacobian(𝐇.prob_vf, x, par), a, b, zero(𝒯), 𝐇.zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    J = jacobian(𝐇.prob_vf, x, par)
+    _, σ1, cv, = hopf_ma_test(𝐇, J, a, b, zero(𝒯), 𝐇.zero, one(𝒯), ω)
     ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
-end
-
-# this function encodes the functional
-function (𝐇::HopfProblemMinimallyAugmented)(x::BorderedArray, params)
-    res = 𝐇(x.u, x.p[1], x.p[2], params)
-    return BorderedArray(res[1], [res[2], res[3]])
-end
-
-@views function (𝐇::HopfProblemMinimallyAugmented)(x::AbstractVector, params)
-    res = 𝐇(x[begin:end-2], x[end-1], x[end], params)
-    return vcat(res[1], res[2], res[3])
 end
 ###################################################################################################
 """
@@ -56,13 +50,13 @@ Compute the solution of
 ```
 ┌                ┐ ┌  ┐   ┌   ┐
 │ J - iω    𝐇.a  │ │v │ = │ 0 │
-│  𝐇.b'    0     │ │σ │   │ 1 │
+│  𝐇.b'      0   │ │σ │   │ 1 │
 └                ┘ └  ┘   └   ┘
 ```
 
 and the same for the adjoint system.
 """
-function _compute_bordered_vectors(𝐇::HopfProblemMinimallyAugmented, J_at_xp, JAd_at_xp, ω)
+function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp, ω)
     return __compute_bordered_vectors(𝐇.linbdsolver,
                                       𝐇.linbdsolverAdjoint,
                                       J_at_xp,
@@ -85,7 +79,7 @@ function __compute_bordered_vectors(linbdsolver, linbdsolver_adjoint, J_at_xp, J
     return (; v, w, itv, itw)
 end
 
-function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω::𝒯, par) where 𝒯
+function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
     # update parameter
     lens = getlens(𝐇)
     par0 = set(par, lens, p)
@@ -101,6 +95,7 @@ function _get_bordered_terms(𝐇::HopfProblemMinimallyAugmented, x, p::𝒯, ω
     ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
     ################### computation of σx σp ####################
     # TODO!! This is only finite differences
+    # we can probably use R01 and R11
     dₚF   = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
              residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
     dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
@@ -116,7 +111,7 @@ end
 ###################################################################################################
 # since this is matrix based, it requires X to ba an AbstractVector
 function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector{𝒯}, par) where {Tprob, 𝒯}
-    𝐇 = pdpb.prob
+    𝐇 = get_formulation(pdpb)
     x = @view X[begin:end-2]
     p = X[end-1]
     ω = X[end]
@@ -125,6 +120,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
 
     cw = conj(w)
     vr = real(v); vi = imag(v)
+    # TODO: this is R20
     u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
     u1i = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vi, par0, cw, true)
     u2 = apply(JAd_at_xp,  cw)
@@ -132,7 +128,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     σxv2i = @. -(u1i - u2) / ϵ2
     σₓ = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
-    Jhopf = hcat(_get_matrix(J_at_xp), dₚF, VI.zerovector(dₚF))
+    Jhopf = hcat(J_at_xp, dₚF, VI.zerovector(dₚF))
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
 end
@@ -143,8 +139,8 @@ struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 """
 This function solves the linear problem associated with a linearization of the minimally augmented formulation of the Hopf bifurcation point.
 """
-function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimallyAugmented, par,
-                            duu, dup, duω) where 𝒯
+function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugmentedFormulation, par,
+                              duu, dup, duω) where 𝒯
     # N = length(du) - 2
     # The Jacobian J of the vector field is expressed at (x, p)
     # the jacobian expression Jhopf of the hopf problem is
@@ -194,40 +190,39 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfProblemMinimally
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
     LS = Matrix{𝒯}(undef, 2, 2);
     rhs = Vector{𝒯}(undef, 2);
-    LS[1,1] = real(σₚ - σxx2); LS[1,2] = real(σω)
-    LS[2,1] = imag(σₚ + σxx2); LS[2,2] = imag(σω)
+    LS[1, 1] = real(σₚ - σxx2); LS[1, 2] = real(σω)
+    LS[2, 1] = imag(σₚ + σxx2); LS[2, 2] = imag(σω)
     rhs[1] = dup - real(σxx1); rhs[2] =  duω + imag(σxx1)
     dp, dω = LS \ rhs
     return x1 .- dp .* x2, dp, dω, true, it1 + it2 + sum(itv) + sum(itw)
 end
 
-function (hopfl::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwargs...)  where {vectype, 𝒯}
+function (::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwargs...)  where {vectype, 𝒯}
     # kwargs is used by AbstractLinearSolver
     out = _hopf_MA_linear_solver((Jhopf.x).u, #!! TODO !! This seems TU
                 (Jhopf.x).p[1],
                 (Jhopf.x).p[2],
-                Jhopf.hopfpb,
+                Jhopf.pbma,
                 Jhopf.params,
                 du.u, du.p[1], du.p[2])
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
 ###################################################################################################
-# define a problem <: AbstractBifurcationProblem
-@inline has_adjoint(hopfpb::HopfMAProblem) = has_adjoint(hopfpb.prob)
-@inline is_symmetric(hopfpb::HopfMAProblem) = is_symmetric(hopfpb.prob)
-@inline getdelta(hopfpb::HopfMAProblem) = getdelta(hopfpb.prob)
-residual(hopfpb::HopfMAProblem, x, p) = hopfpb.prob(x, p)
-residual!(hopfpb::HopfMAProblem, out, x, p) = (_copyto!(out, hopfpb.prob(x, p)); out)
-save_solution(::HopfMAProblem, x ,p) = x
+@inline has_adjoint(pb::HopfMAProblem) = has_adjoint(get_formulation(pb))
+@inline is_symmetric(pb::HopfMAProblem) = is_symmetric(get_formulation(pb))
 
-# jacobian(hopfpb::HopfMAProblem, x, p) = hopfpb.jacobian(x, p)
-jacobian(hopfpb::HopfMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, hopfpb = hopfpb.prob)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> hopfpb.prob(z, p), x)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferences}, x, p) where {Tprob} = finite_differences( z -> hopfpb.prob(z, p), x; δ = 1e-8)
-
-jacobian(hopfpb::HopfMAProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (hopfpb.prob(x .+ 1e-8 .* dx, p) .- hopfpb.prob(x .- 1e-8 .* dx, p)) / (2e-8)
+function finalise_solution(iter::ContIterable{HopfCont},
+                            state::AbstractContinuationState, 
+                            contres)
+    isbt = isnothing(contres) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contres.specialpoint))
+    fin_user = iter.finalise_solution(getsolution(state),
+                                  state.τ,
+                                  state.step,
+                                  contres; 
+                                  state,
+                                  iter)
+    return isbt && fin_user
+end
 ###################################################################################################
 """
 $(TYPEDSIGNATURES)
@@ -269,8 +264,8 @@ function newton_hopf(prob,
             kwargs...)
     # we first need to update d2F and d3F for them to accept complex arguments
 
-    hopfproblem = HopfProblemMinimallyAugmented(
-        prob,
+    𝐇 = HopfMinimallyAugmentedFormulation(
+        re_make(prob; params = par),
         _copy(eigenvec_ad), # this is pb.a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is pb.b ≈ null space of  J - iω I
         options.linsolver,
@@ -278,7 +273,7 @@ function newton_hopf(prob,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian = usehessian)
 
-    prob_h = HopfMAProblem(hopfproblem, nothing, hopfpointguess, par, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
 
     # options for the Newton Solver
     opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
@@ -288,7 +283,7 @@ function newton_hopf(prob,
 end
 
 function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
-            prob = br.prob,
+            prob = getprob(br),
             normN = norm,
             options = br.contparams.newton_options,
             verbose = true,
@@ -303,7 +298,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     ζ ./= normN(ζ)
-    ζad = LinearAlgebra.conj.(ζ)
+    ζad = conj.(ζ)
 
     if start_with_eigen
         # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
@@ -317,12 +312,77 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζstar, λstar = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev = nev, verbose = false)
+        ζstar, _ = get_adjoint_basis(_Jt, conj(λ), options.eigsolver; nev, verbose = false)
         ζad .= ζstar ./ VI.inner(ζstar, ζ)
     end
 
     # solve the hopf equations
     return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζad, options; normN, kwargs...)
+end
+
+function update!(𝐏𝐛::HopfMAProblem, iter, state)
+    # it is called to update the Minimally Augmented problem
+    # by updating the vectors a, b
+    # we first check that the continuation step was successful
+    # if not, we do not update the problem with bad information!
+    # if we are in a bisection, we still update the MA problem, this does not work well otherwise
+    𝐇 = get_formulation(𝐏𝐛)
+    success = converged(state)
+    step = state.step
+    if (~mod_counter(step, 𝐇.update_minaug_every_step) || success == false) || in_bisection(state)
+        # update vector field
+        return update!(𝐇, iter, state)
+    end
+
+    @debug "[Hopf] Update vectors a and b"
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐇)
+
+    # expression of the jacobian
+    x = getvec(zu, 𝐇) # fold point
+    newpar = getparams(iter, state)
+    J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
+    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
+
+    bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+
+    𝐇.a .= bd_vec.w ./ 𝐇.norm(bd_vec.w)
+    # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
+    𝐇.b .= bd_vec.v ./ 𝐇.norm(bd_vec.v)
+
+    # we stop continuation at Bogdanov-Takens points
+    threshBT = 100 * iter.contparams.newton_options.tol
+    # if the frequency is null, this is not a Hopf point, we halt the process
+    isbt = abs(ω) < threshBT
+
+    if isbt
+        p1 = get_parameter(zu, 𝐇)
+        p2 = getp(state)
+        @warn "[Codim 2 Hopf - update!]\nThe Hopf curve seems to be close to a BT point: ω ≈ $ω.\nStopping computations at ($p1, $p2) .\nIf the BT point is not detected, try lowering Newton tolerance or dsmax."
+    end
+
+    # call the user-passed update
+    update_result = update!(𝐇, iter, state)
+
+    return ((abs(ω) >= threshBT) || in_bisection(state) == false) && (~isbt) && update_result
+end
+
+function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
+                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+    𝐏𝐛 = getprob(iter)
+    𝐇 = get_formulation(𝐏𝐛)
+    lens1, lens2 = get_lenses(𝐏𝐛)
+    lenses = get_lens_symbol(lens1, lens2)
+    u = getx(state)
+    p = getp(state)
+
+    return (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
+                        ωₕ = getp(u, 𝐇)[2],
+                        l1 = 𝐇.l1,
+                        BT = 𝐇.BT,
+                        GH = 𝐇.GH,
+                        _namedrecordfromsol(𝐏𝐛.recordFromSolution(getvec(u, 𝐇), p; iter, state))...
+                        ) 
 end
 
 """
@@ -344,7 +404,7 @@ codim 2 continuation of Hopf points. This function turns an initial guess for a 
 - `bdlinsolver` bordered linear solver for the constraint equation with top-left block (J-iω). Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `bdlinsolver_adjoint` bordered linear solver for the constraint equation with top-left block (J-iω)^*. Required in the linear solver for the Minimally Augmented Hopf functional. This option can be used to pass a dedicated linear solver for example with specific preconditioner.
 - `update_minaug_every_step` update vectors `a,b` in Minimally Formulation every `update_minaug_every_step` steps
-- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event>0`, it allows the detection of ZH, HH points.
+- `compute_eigen_elements = false` whether to compute eigenelements. If `options_cont.detect_event > 0`, it allows the detection of ZH, HH points.
 - `kwargs` keywords arguments to be passed to the regular [`continuation`](@ref)
 
 # Simplified call:
@@ -389,8 +449,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     # tolerance for detecting BT bifurcation and stopping continuation
     threshBT = 100options_newton.tol
 
-    𝐇 = HopfProblemMinimallyAugmented(
-        prob_vf,
+    𝐇 = HopfMinimallyAugmentedFormulation(
+        re_make(prob_vf; params = par),
         _copy(eigenvec_ad), # this is a ≈ null space of (J - iω I)^*
         _copy(eigenvec),    # this is b ≈ null space of  J - iω I
         options_newton.linsolver,
@@ -404,30 +464,16 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         update_minaug_every_step
         )
 
-    # Jacobian for the Hopf problem
-    if jacobian_ma == AutoDiff()
+    # jacobians for the Hopf problem
+    record_hopf = RecordForHopf(record_from_solution, BifurcationKit.record_from_solution(prob_vf))
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, AutoDiff(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newton_options.linsolver = DefaultLS()
-    elseif jacobian_ma == FiniteDifferencesMF()
-        hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, FiniteDifferencesMF(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == FiniteDifferences()
-        hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, FiniteDifferences(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
-    elseif jacobian_ma == MinAugMatrixBased()
-        hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, MinAugMatrixBased(), hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
-        opt_hopf_cont = @set options_cont.newton_options.linsolver = options_cont.newton_options.linsolver
+        prob_hopf = HopfMAProblem(𝐇, jacobian_ma, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
+        opt_hopf_cont = deepcopy(options_cont)
     else
-        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, par, lens2, prob_vf.plotSolution, prob_vf.recordFromSolution)
+        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = HopfLinearSolverMinAug()
     end
-
-    # this functions allows to tackle the case where the two parameters have the same name
-    lenses = get_lens_symbol(lens1, lens2)
 
     # current lyapunov coefficient
     eTb = eltype(Tb)
@@ -435,83 +481,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     𝐇.BT = one(eTb)
     𝐇.GH = one(eTb)
 
-    # this function is used as a Finalizer
-    # it is called to update the Minimally Augmented problem
-    # by updating the vectors a, b
-    function update_minaug_hopf(z, tau, step, contResult; kUP...)
-        # user-passed finalizer
-        finaliseUser = get(kwargs, :finalise_solution, nothing)
-
-        # we first check that the continuation step was successful
-        # if not, we do not update the problem with bad information!
-        # if we are in a bisection, we still update the MA problem, this does not work well otherwise
-        success = get(kUP, :state, nothing).converged
-        if (~mod_counter(step, update_minaug_every_step) || success == false)
-            # we call the user finalizer
-            return isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
-        end
-
-        @debug "[Hopf] Update vectors a and b"
-        x = getvec(z.u, 𝐇)   # hopf point
-        p1, ω = getp(z.u, 𝐇) # first parameter
-        p2 = z.p              # second parameter
-        newpar = set(par, lens1, p1)
-        newpar = set(newpar, lens2, p2)
-
-        # expression of the jacobian
-        J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-        JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-
-        bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
-
-        𝐇.a .= bd_vec.w ./ normC(bd_vec.w)
-        # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
-        𝐇.b .= bd_vec.v ./ normC(bd_vec.v)
-
-        # we stop continuation at Bogdanov-Takens points
-        # CA NE DEVRAIT PAS ETRE ISSNOT?
-        isbt = isnothing(contResult) ? true : isnothing(findfirst(x -> x.type in (:bt, :ghbt, :btgh), contResult.specialpoint))
-
-        # if the frequency is null, this is not a Hopf point, we halt the process
-        if abs(ω) < threshBT
-            @warn "[Codim 2 Hopf - Finalizer] The Hopf curve seems to be close to a BT point: ω ≈ $ω. Stopping computations at ($p1, $p2). If the BT point is not detected, try lowering Newton tolerance or dsmax."
-        end
-
-        # call the user-passed finalizer
-        final_result = isnothing(finaliseUser) ? true : finaliseUser(z, tau, step, contResult; prob = 𝐇, kUP...)
-
-        return abs(ω) >= threshBT && isbt && final_result
-    end
-
-    # the following allows to append information specific to the codim 2 continuation to the user data
-    _printsol = record_from_solution
-    _printsol2 = isnothing(_printsol) ?
-        (u, p; kw...)  -> begin
-                 (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
-                            ωₕ = getp(u, 𝐇)[2],
-                            l1 = 𝐇.l1,
-                            BT = 𝐇.BT,
-                            GH = 𝐇.GH,
-                            _namedrecordfromsol(BifurcationKit.record_from_solution(prob_vf)(getvec(u, 𝐇), p; kw...))...
-                            )
-            end :
-        (u, p; kw...) -> begin
-            (; zip(lenses, (getp(u, 𝐇)[1], p))..., 
-                        ωₕ = getp(u, 𝐇)[2],
-                        l1 = 𝐇.l1,
-                        BT = 𝐇.BT,
-                        GH = 𝐇.GH,
-                        _namedrecordfromsol(_printsol(getvec(u, 𝐇), p; kw...))...
-                        )
-        end
-
-    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
-
     # eigen solver
     eigsolver = HopfEig(getsolver(opt_hopf_cont.newton_options.eigsolver), prob_hopf)
 
-    # Define event for detecting codim 2 bifurcations.
-    # Couple it with user passed events
+    # define event for detecting codim 2 bifurcations
+    # couple it with user passed events
     event_user = get(kwargs, :event, nothing)
     event_bif = ContinuousEvent(2, test_bt_gh, compute_eigen_elements, ("bt", "gh"), threshBT)
 
@@ -532,28 +506,26 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         end
     end
 
-    prob_hopf = re_make(prob_hopf, record_from_solution = _printsol2)
-
     # solve the hopf equations
     br = continuation(
                 prob_hopf, alg,
                 (@set opt_hopf_cont.newton_options.eigsolver = eigsolver);
                 kwargs...,
-                kind ,
+                kind,
                 linear_algo = BorderingBLS(solver = opt_hopf_cont.newton_options.linsolver, check_precision = false),
                 normC,
-                finalise_solution = update_minaug_every_step == 0 ? get(kwargs, :finalise_solution, finalise_default) : update_minaug_hopf,
+                finalise_solution = get(kwargs, :finalise_solution, finalise_default),
                 event
             )
     @assert ~isnothing(br) "Empty branch!"
-    return correct_bifurcation(br)
+    return _correct_event_labels(br)
 end
 
 function continuation_hopf(prob,
                         br::AbstractBranchResult, ind_hopf::Int64,
                         lens2::AllOpticTypes,
                         options_cont::ContinuationPar = br.contparams;
-                        alg = br.alg,
+                        alg = getalg(br),
                         normC = norm,
                         nev = br.contparams.nev,
                         start_with_eigen = false,
@@ -567,7 +539,7 @@ function continuation_hopf(prob,
     bifpt = br.specialpoint[ind_hopf]
 
     if isnothing(br.eig) 
-        error("The branch contains no eigen elements. This is strange because a Hopf point was detected. Please open an issue on the website.")
+        error("The branch contains no eigen elements.\nThis is strange because a Hopf point was detected.\nPlease open an issue on the website.")
     end
 
     p = bifpt.param
@@ -595,7 +567,8 @@ function continuation_hopf(prob,
         # we use a minimally augmented formulation to set the initial vectors
         # we start with a vector similar to an eigenvector, we must ensure that
         # it is complex valued
-        ζ = VI.scale(_copy(getu0(br.prob)), one(Complex{VI.scalartype(getu0(br.prob))}))
+        _u0 = getu0(getprob(br))
+        ζ = VI.scale(_copy(_u0), one(Complex{VI.scalartype(_u0)}))
         a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
         b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
@@ -612,7 +585,7 @@ function continuation_hopf(prob,
         ζ   = VI.scale(v,  1 / normC(v))
     end
 
-    return continuation_hopf(br.prob, alg,
+    return continuation_hopf(getprob(br), alg,
                     hopfpointguess, parbif,
                     getlens(br), lens2,
                     ζ, ζad,
@@ -624,23 +597,16 @@ function continuation_hopf(prob,
 end
 
 function test_bt_gh(iter, state)
-    probma = getprob(iter)
-    𝐇 = probma.prob
-    𝒯 = eltype(𝐇) 
-    lens1, lens2 = get_lenses(probma)
+    𝐏𝐛 = getprob(iter)
+    𝐇 = get_formulation(𝐏𝐛)
+    𝒯 = eltype(𝐇)
 
-    z = getx(state)
-    x = getvec(z, 𝐇)   # hopf point
-    p1, ω = getp(z, 𝐇) # first parameter
-    p2 = getp(state)   # second parameter
-    par = getparams(probma)
-    newpar = set(par, lens1, p1)
-    newpar = set(newpar, lens2, p2)
-
-    a = 𝐇.a
-    b = 𝐇.b
+    zu = getx(state)
+    ω = get_frequency(zu, 𝐇)
 
     # expression of the jacobian
+    x = getvec(zu, 𝐇) # fold point
+    newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : transpose(J_at_xp)
 
@@ -655,11 +621,10 @@ function test_bt_gh(iter, state)
 
     # test function for Bogdanov-Takens
     𝐇.BT = ω
-    BT2 = real( VI.inner(ζ★ ./ 𝐇.norm(ζ★), ζ) )
     ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
-    hp0 = Hopf(x, nothing, p1, ω, newpar, lens1, ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
-    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO! WE NEED A KWARGS here
+    hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(𝐏𝐛)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
+    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO!! WE NEED A KWARGS here
     # lyapunov coefficient
     𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.
@@ -676,11 +641,11 @@ struct HopfEig{P, S} <: AbstractCodim2EigenSolver
 end
 
 function (eig::HopfEig)(Jma, nev; k...)
-    n = min(nev, length(Jma.x.u))
+    n = min(nev, length(getvec(Jma.x)))
     x = Jma.x.u     # hopf point
-    p1, ω = Jma.x.p # first parameter
-    newpar = set(Jma.params, getlens(Jma.hopfpb), p1)
-    J = jacobian(Jma.hopfpb.prob_vf, x, newpar)
+    p1, _ = Jma.x.p # first parameter
+    newpar = set(Jma.params, getlens(Jma.pbma), p1)
+    J = jacobian(Jma.pbma.prob_vf, x, newpar)
     eigenelts = eig.eigsolver(J, n; k...)
     return eigenelts
 end

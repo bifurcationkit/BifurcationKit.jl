@@ -1,48 +1,39 @@
-function d2F(wrapsh::WrapPOSh, x, p, dx1, dx2)
-    d2PO(z -> residual(wrapsh.prob, z, p), x, dx1, dx2)
+function d2F(wrapsh::PeriodicOrbitFunctionalSh, x, p, dx1, dx2)
+    d2PO(z -> po_residual(get_discretization(wrapsh), z, p), x, dx1, dx2)
 end
 
 # if the jacobian is matrix based, use transpose
-@inline has_adjoint(::WrapPOSh{ <: ShootingProblem{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
-@inline has_jvp(wrap::WrapPOSh) = has_jvp(wrap.prob)
-
-function Base.transpose(J::FloquetWrapper{ <: ShootingProblem })
-    @set J.jacpb = transpose(J.jacpb)
-end
-
-function Base.adjoint(J::FloquetWrapper{ <: ShootingProblem })
-    @set J.jacpb = adjoint(J.jacpb)
-end
+@inline has_adjoint(::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
+@inline has_jvp(wrap::PeriodicOrbitFunctionalSh) = has_jvp(get_discretization(wrap))
 
 # this function is necessary for pdtest to work in PDMinimallyAugmented problem
-function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj}
-    dx -> jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, 1, dx)
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj}
+    dx -> jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, 1, dx)
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem
-function jacobian_adjoint_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par)
+function jacobian_adjoint_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par)
     dx -> jacobian_adjoint_period_doubling_matrix_free(pbwrap, x, par, dx)
 end
 
-jacobian_adjoint_period_doubling_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, 1, dx)
+jacobian_adjoint_period_doubling_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, 1, dx)
 
-jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, -cis(-ω), dx)
+jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, -cis(-ω), dx)
 
 # same as above but matrix based
-function jacobian_period_doubling(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = get_mesh_size(pbwrap.prob)
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+    M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
+    J = copy(Jac)
     # put the PD boundary condition
-    @set Jac.jacpb = copy(Jac.jacpb)
-    J = Jac.jacpb
     J[end-N:end-1, 1:N] .= LA.I(N)
-    @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1]
 end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
-    sh = pbwrap.prob
+function jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
+    sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
@@ -51,7 +42,7 @@ function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, p
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
-    out = similar(dx, promote_type(eltype(dx), 𝒯))
+    out = similar(dx, promote_type(VI.scalartype(dx), 𝒯))
     outc = reshape(out, N, M)
 
     # jacobian of the flow
@@ -83,8 +74,8 @@ function jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, p
 end
 
 # matrix free adjoint linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, α::𝒯, dx) where 𝒯
-    sh = pbwrap.prob
+function jacobian_adjoint_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
+    sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
     N  = div(length(x) - 1, M)
@@ -93,7 +84,7 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem
     dxc = reshape(dx, N, M)
 
     # variable to hold the computed result
-    out = similar(dx, promote_type(eltype(dx), 𝒯))
+    out = similar(dx, promote_type(VI.scalartype(dx), 𝒯))
     outc = reshape(out, N, M)
 
     # jacobian of the flow
@@ -125,22 +116,22 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem
     return out
 end
 
-function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj}
-    dx -> jacobian_pd_nf_matrix_free(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, -cis(ω), dx)
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj}
+    dx -> jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, -cis(ω), dx)
 end
 
-function jacobian_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
-    M = get_mesh_size(pbwrap.prob)
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
+    M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
-    J = Complex.(copy(Jac.jacpb))
+    J = Complex.(copy(Jac))
     J[end-N:end-1, 1:N] .*= cis(ω)
-    @set Jac.jacpb = J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1]
 end
 
 # this function is necessary for the jacobian of a PDMinimallyAugmented problem
-function jacobian_adjoint_neimark_sacker(pbwrap::WrapPOSh{ <: ShootingProblem }, x, par, ω)
+function jacobian_adjoint_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω)
     dx -> jacobian_adjoint_neimark_sacker_matrix_free(pbwrap, x, par, ω, dx)
 end
 
@@ -150,7 +141,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     detect_codim2_bifurcation::Int = 0,
                     update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     biftype = br.specialpoint[ind_bif].type
 
     # options to detect codim2 bifurcations
@@ -173,7 +164,7 @@ $(SIGNATURES)
 Continuation of curve of fold bifurcations of periodic orbits computed using shooting method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits computed with a [`Trapeze`](@ref)
 - `ind_bif` index of the fold point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
@@ -184,25 +175,22 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     options_cont::ContinuationPar = br.contparams ;
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     biftype = br.specialpoint[ind_bif].type
     bifpt = br.specialpoint[ind_bif]
 
     pbwrap = getprob(br)
-    sh = pbwrap.prob
+    sh = get_discretization(pbwrap)
 
-    _finsol = modify_po_finalise(FoldMAProblem(FoldProblemMinimallyAugmented(WrapPOSh(sh)),lens2), kwargs, sh.update_section_every_step)
-
-    options_foldpo = @set options_cont.newton_options.linsolver = FloquetWrapperLS(options_cont.newton_options.linsolver)
+    options_foldpo = options_cont
 
     # perform continuation
     br_fold_po = continuation_fold(
         pbwrap,
         br, ind_bif, lens2,
         options_foldpo;
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
-        finalise_solution = _finsol,
         kwargs...)
 end
 
@@ -212,7 +200,7 @@ $(SIGNATURES)
 Continuation of curve of period-doubling bifurcations of periodic orbits computed using shooting method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits computed with a [`Trapeze`](@ref)
 - `ind_bif` index of the PD point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
@@ -221,10 +209,10 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     Jᵗ = nothing,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
         verbose = get(kwargs, :verbosity, 0) > 0
 
         bifpt = br.specialpoint[ind_bif]
@@ -232,8 +220,8 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         pdpointguess = pd_point(br, ind_bif)
 
         # copy the problem for not mutating the one passed by the user
-        pbwrap = br.prob
-        sh = deepcopy(pbwrap.prob)
+        pbwrap = getprob(br)
+        sh = deepcopy(get_discretization(pbwrap))
 
         # get the parameters
         par_pd = setparam(br, pdpointguess.p)
@@ -257,7 +245,7 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
         p = copy(q)
 
         # perform continuation
-        continuation_pd(br.prob, alg,
+        continuation_pd(getprob(br), alg,
             pdpointguess, setparam(br, pdpointguess.p),
             getlens(br), lens2,
             # ζs, ζs_ad,
@@ -274,7 +262,7 @@ $(SIGNATURES)
 Continuation of curve of Neimark-Sacker bifurcations of periodic orbits computed using shooting method.
 
 # Arguments
-- `br` branch of periodic orbits computed with a [`PeriodicOrbitTrapProblem`](@ref)
+- `br` branch of periodic orbits computed with a [`Trapeze`](@ref)
 - `ind_bif` index of the NS point
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
@@ -283,10 +271,10 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
-                    alg = br.alg,
+                    alg = getalg(br),
                     start_with_eigen = false,
                     bdlinsolver = MatrixBLS(),
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: WrapPOSh}
+                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
 
@@ -295,8 +283,8 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     nspointguess = ns_point(br, ind_bif)
 
     # copy the problem for not mutating the one passed by the user
-    pbwrap = br.prob
-    sh = deepcopy(br.prob.prob)
+    pbwrap = getprob(br)
+    sh = deepcopy(get_discretization(pbwrap))
 
     M = get_mesh_size(sh)
     N = div(length(bifpt.x) - 1, M)
@@ -318,19 +306,19 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     # ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     # # compute the full eigenvector
     # floquetsolver = br.contparams.newton_options.eigsolver
-    # ζ_a = floquetsolver(Val(:ExtractEigenVector), br.prob, bifpt.x, setparam(br, bifpt.param), real.(ζ))
+    # ζ_a = floquetsolver(Val(:ExtractEigenVector), getprob(br), bifpt.x, setparam(br, bifpt.param), real.(ζ))
     # ζs = reduce(vcat, ζ_a)
     # ζs_ad = copy(ζs)
 
     # perform continuation
-    continuation_ns(br.prob, alg,
+    continuation_ns(getprob(br), alg,
         nspointguess, setparam(br, nspointguess.p[1]),
         getlens(br), lens2,
         p, q,
         # ζs, copy(ζs_ad),
         options_cont;
         kwargs...,
-        bdlinsolver = bdlinsolver,
+        bdlinsolver,
         kind = NSPeriodicOrbitCont(),
         )
 end

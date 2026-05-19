@@ -1,46 +1,57 @@
 # The next type is for holding the methods related to the vector field.
-# So, the residual, its jacobian and higher differentials.
-# It is a convenience for a bifurcation problem so it is not strictly necessary albeit useful.
+# Namely: the residual, its jacobian and higher differentials.
+# It is not strictly necessary but proves useful for the current implementation.
 abstract type AbstractBifurcationFunction end
-# This is the abstract type for a bifurcation problem. It should implement
+# The next type is the abstract type for a bifurcation problem. It should implement
+# the following methods. See below for a description.
 #   - getparams(pb::AbstractBifurcationProblem) 
 #   - getlens(pb::AbstractBifurcationProblem)
 #   - record_from_solution(pb::AbstractBifurcationProblem)
 #   - plot_solution(pb::AbstractBifurcationProblem)
-#   - residual(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian(pb::AbstractAllJetBifProblem, x, p)
-#   - jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p)
-#   - getdelta(pb::AbstractAllJetBifProblem)
-#   - dF(pb::AbstractAllJetBifProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
-#   - vjp(pb::AbstractAllJetBifProblem, x, p, dx)
+#   - residual(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian(pb::AbstractBifurcationProblem, x, p)
+#   - jacobian_adjoint(pb::AbstractBifurcationProblem, x, p)
+#   - getdelta(pb::AbstractBifurcationProblem)
+#   - dF(pb::AbstractBifurcationProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
+#   - vjp(pb::AbstractBifurcationProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
-# This abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# This current ``implementation'' of this abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
 # It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+################################################################################
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
-abstract type AbstractMABifurcationProblem{T} <: AbstractBifurcationProblem end
+abstract type AbstractMABifurcationProblem{T, Tjac} <: AbstractBifurcationProblem end
 ################################################################################
 abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
 # Periodic orbit computations by discretizing the time derivative (collocation, trapezoid)
-abstract type AbstractPODiffProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractPOFDProblem <: AbstractPODiffProblem end
+abstract type AbstractPODifferentialProblem <: AbstractPeriodicOrbitProblem end
+# finite differences is a sub-case of Differential discretization
+abstract type AbstractPOFiniteDifferencesProblem <: AbstractPODifferentialProblem end
 #####################################
 # Periodic orbit computations by shooting method
-abstract type AbstractShootingProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractPoincareShootingProblem <: AbstractShootingProblem end
+abstract type AbstractPOShootingProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractPOPoincareShootingProblem <: AbstractPOShootingProblem end
 #####################################
 # wrapper problems for periodic orbits, basically making them a BifurcationProblem
-abstract type AbstractWrapperPOProblem <: AbstractPeriodicOrbitProblem end
-abstract type AbstractWrapperShootingProblem <: AbstractWrapperPOProblem end
-abstract type AbstractWrapperFDProblem <: AbstractWrapperPOProblem end
+# these problems are based on a AbstractPeriodicOrbitDiscretization
+abstract type AbstractWrapperPeriodicOrbitProblem <: AbstractPeriodicOrbitProblem end
+abstract type AbstractWrapperPOShootingProblem <: AbstractWrapperPeriodicOrbitProblem end
+abstract type AbstractWrapperPODifferentialProblem <: AbstractWrapperPeriodicOrbitProblem end
+abstract type AbstractWrapperPOFiniteDifferencesProblem <: AbstractWrapperPODifferentialProblem end
 ################################################################################
-import SciMLBase
+abstract type AbstractWaveProblem <: AbstractBifurcationProblem end
+################################################################################
+abstract type HasJetUserPassedTrait end
+struct TraitUserPassed <: HasJetUserPassedTrait end
+struct TraitNoUserPassed  <: HasJetUserPassedTrait end
 
-# const type to hold "all" the types of optics. Note that we relied on Setfield.jl where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
+has_dpF(::Type{T}) where T = isbits(T) ? TraitUserPassed() : TraitNoUserPassed()
+################################################################################
+# const type to hold "all" types of optics. Note that we used to rely on `Setfield.jl` where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
 """
@@ -54,16 +65,20 @@ function _isinplace(f)
     return m == 3
 end
 
+# define the ϵ for finite differences
+_getprecision(::Type{T}) where {T} = sqrt(eps(T))
+_getprecision(x) = _getprecision(VI.scalartype(x))
+
 """
 $(TYPEDEF)
 
 Structure to hold the vector field and its derivatives. It should rarely be called directly. Also, in essence, it is very close to `SciMLBase.ODEFunction`.
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 - `residual(pb::BifFunction, x, p)` calls `pb.F(x,p)`
 - `residual!(pb::BifFunction, o, x, p)` calls `pb.F(o, x, p)`
 - `jacobian(pb::BifFunction, x, p)` calls `pb.J(x, p)`
@@ -144,13 +159,13 @@ dFad(pb::BifFunction, x, p, dx) = pb.dFad(x, p, dx) #vpj change name!!
 dF(pb::BifFunction, x, p, dx) = pb.dF(x, p, dx) # 🚧🚧 TODO call it jvp ! 🚧🚧
 
 function dF(pb::BifFunction{Tf, TFinp, Nothing}, x, p, dx) where {Tf, TFinp}
-    ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(eltype(dx)))
+    ForwardDiff.derivative(t -> pb.F(x .+ t .* dx, p), zero(VI.scalartype(dx)))
 end
 #####
 d2F(pb::BifFunction, x, p, dx1, dx2) = pb.d2F(x, p, dx1, dx2)
 
 function d2F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
-    ForwardDiff.derivative(t -> dF(pb, x .+ t .* dx2, p, dx1), zero(eltype(dx1)))
+    ForwardDiff.derivative(t -> dF(pb, x .+ t .* dx2, p, dx1), zero(VI.scalartype(dx1)))
 end
 
 function d2Fc(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Nothing}, x, p, dx1, dx2) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp}
@@ -164,14 +179,15 @@ end
 #####
 d3F(pb::BifFunction, x, p, dx1, dx2, dx3) = pb.d3F(x, p, dx1, dx2, dx3)
 
-function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc,Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc}
-    ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(eltype(dx1)))
+function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Nothing}, x, p, dx1, dx2, dx3) where {Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc}
+    ForwardDiff.derivative(t -> d2F(pb, x .+ t .* dx3, p, dx1, dx2), zero(VI.scalartype(dx1)))
 end
 #####
 
+#####
 
-const _type_jet  = [ Symbol("T", i, j)        for i=0:3, j=1:7 if i+i<7] |> vec
-const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec 
+const _type_jet  = vcat(:T01!, vec([ Symbol("T", i, j)  for i=0:3, j=1:7 if i+i<7]))
+const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<7]))
 
 @eval begin
     """
@@ -189,28 +205,78 @@ const _field_jet = [(Symbol('R', i, j), i, j) for i=0:3, j=1:7 if i+i<7] |> vec
 
     For now, we ask the user to pass an out-of-place formulation of the functions.
 
-    ## Fields
+    # Internal fields
 
     $(TYPEDFIELDS)
     """
-    @with_kw_noshow struct Jet{$(_type_jet...)}
-        $(map(i -> :( $(_field_jet[i][1])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
+    @with_kw_noshow struct Jet{Tδ, TR01trait, $(_type_jet...)}
+        δ::Tδ
+        R01Trait::TR01trait
+        $(map(i -> :( $(_field_jet[i])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
     end
 end
 
 # getters for the jet
 for Rij in _field_jet
+    fname = Symbol(:has_, Rij)
+    fname_trait = Symbol(:has_, Rij, :_trait)
     @eval begin
-        $(Rij[1])(pb::Jet, args...; kwargs...) = pb.$(Rij[1])(args...; kwargs...)
-        @inline $(Rij[1])(pb::BifFunction, args...; kwargs...) = $(Rij[1])(pb.jet, args...; kwargs...)
-        @inline $(Rij[1])(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij[1])(pb.VF, args...; kwargs...)
+        $fname(::Nothing) = false
+        $fname_trait(::Nothing) = TraitNoUserPassed()
+
+        $fname(jet::Jet) = ~isnothing(jet.$(Rij))
+        $fname(pb::BifFunction) = $fname(pb.jet)
+        $fname_trait(pb::BifFunction) = $fname_trait(pb.jet)
+        
+        $fname(pb::AbstractAllJetBifProblem) = $fname(pb.VF)
+        $fname_trait(pb::AbstractAllJetBifProblem) = $fname_trait(pb.VF)
     end
+
+    if (Rij in (:R01, :R01!)) == false
+        @eval begin
+            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : TraitNoUserPassed()
+            $(Rij)(jet::Jet, args...; kwargs...) = jet.$(Rij)(args...; kwargs...)
+            @inline $(Rij)(::TraitUserPassed, pb::BifFunction, args...; kwargs...) = $(Rij)(pb.jet, args...; kwargs...)
+            @inline $(Rij)(::TraitUserPassed, pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)(TraitUserPassed(), pb.VF, args...; kwargs...)
+            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+        end
+    else
+        @eval begin
+            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : jet.R01Trait
+            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+        end
+    end
+end
+
+function R01!(::Union{TraitNoUserPassed, Nothing},
+                prob::AbstractAllJetBifProblem,
+                dpF,
+                x0,
+                par,
+                p::Number; δ = nothing)
+    _copyto!(dpF, ForwardDiff.derivative(z -> residual(prob, x0, set(par, getlens(prob), z)), p))
+end
+
+function R01!(::FiniteDifferences,
+                prob::AbstractAllJetBifProblem,
+                dFdp,
+                x,
+                par,
+                p::Number, res_f = nothing; δ = getdelta(prob))
+    # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
+    ϵ = getdelta(prob)
+    𝒯 = VI.scalartype(x)
+    _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ)))
+    if isnothing(res_f)
+        res_f = residual(prob, x, set(par, getlens(prob), p))
+    end
+    minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
 const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
-    :ODEBifProblem => "Specific to Ordinary Differential Equations (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
-    :PDEBifProblem => "Specific to Partial Differential Equations (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :ODEBifProblem => "Specific to Ordinary Differential Equations  (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :PDEBifProblem => "Specific to Partial Differential Equations   (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
     :DAEBifProblem => "Specific to Differential Algebraic Equations (DAE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
 )
 
@@ -220,22 +286,24 @@ record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
-
 # create specific problems where pretty much is available
-for (op, at) in (
-                (:BifurcationProblem, AbstractBifurcationProblem),
-                (:ODEBifProblem, AbstractBifurcationProblem),
-                (:DAEBifProblem, AbstractBifurcationProblem),
-                (:PDEBifProblem, AbstractBifurcationProblem),
-                (:FoldMAProblem, AbstractMABifurcationProblem),
-                (:HopfMAProblem, AbstractMABifurcationProblem),
-                (:PDMAProblem, AbstractMABifurcationProblem),
-                (:NSMAProblem, AbstractMABifurcationProblem),
-                (:BTMAProblem, AbstractMABifurcationProblem),
-                (:WrapPOTrap, AbstractWrapperFDProblem),
-                (:WrapPOSh, AbstractWrapperShootingProblem),
-                (:WrapPOColl, AbstractWrapperFDProblem),
-                (:WrapTW, AbstractWrapperFDProblem),
+for (op, at, kd) in (
+                (:BifurcationProblem, AbstractBifurcationProblem, nothing),
+                (:ODEBifProblem, AbstractBifurcationProblem, nothing),
+                (:DAEBifProblem, AbstractBifurcationProblem, nothing),
+                (:PDEBifProblem, AbstractBifurcationProblem, nothing),
+
+                (:FoldMAProblem, AbstractMABifurcationProblem, nothing),
+                (:HopfMAProblem, AbstractMABifurcationProblem, nothing),
+                (:PDMAProblem,   AbstractMABifurcationProblem, nothing),
+                (:NSMAProblem,   AbstractMABifurcationProblem, nothing),
+                (:BTMAProblem,   AbstractMABifurcationProblem, nothing),
+
+                (:PeriodicOrbitFunctionalTrap, AbstractWrapperPOFiniteDifferencesProblem, :PeriodicOrbit),
+                (:PeriodicOrbitFunctionalSh,   AbstractWrapperPOShootingProblem, :PeriodicOrbit),
+                (:PeriodicOrbitFunctionalColl, AbstractWrapperPODifferentialProblem, :PeriodicOrbit),
+
+                (:WrapTW, AbstractWaveProblem, :TravellingWave),
            )
     if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
         @eval begin
@@ -244,11 +312,7 @@ for (op, at) in (
 
             Structure to hold a bifurcation problem. $($(_dict_doc_string_prob[op]))
 
-            ## Fields
-
-            $(TYPEDFIELDS)
-
-            ## Methods
+            # Methods
 
             - `re_make(pb; kwargs...)` modify a bifurcation problem
             - `getu0(pb)` calls `pb.u0`
@@ -259,19 +323,22 @@ for (op, at) in (
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
             - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
+            - `getdelta(prob)`
 
-            ## Constructors
+            # Constructors
             - `$($op)(F, u0, params, lens)` all derivatives are computed using ForwardDiff.
             - `$($op)(F, u0, params, lens; J, Jᵗ, d2F, d3F, kwargs...)` and `kwargs` are the fields above. You can pass your own jacobian with `J` (see [`BifFunction`](@ref) for description of the jacobian function) and jacobian adjoint with `Jᵗ`. For example, this can be used to provide finite differences based jacobian using `BifurcationKit.finite_differences`. You can also pass
                 - `record_from_solution` see above
                 - `plot_solution` see above
                 - `issymmetric[=false]` whether the jacobian is symmetric, this remove the need of providing an adjoint
-                - `jvp` jacobian-vector product, signature `jvp(x,p,dx)`
-                - `vjp` vector-jacobian product (adjoint of jvp), signature `vjp(x,p,dx)`
+                - `jvp` jacobian-vector product, signature `jvp(x, p, dx)`
+                - `vjp` vector-jacobian product (adjoint of jvp), signature `vjp(x, p,dx)`
                 - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x, p, dx1, dx2)`
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x, p, dx1, dx2, dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
 
+            # Internal fields
+            $(TYPEDFIELDS)
             """
             struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)."
@@ -282,13 +349,13 @@ for (op, at) in (
                 params::Tp
                 "Typically a `Accessors.PropertyLens`. It specifies which parameter axis among `params` is used for continuation. For example, if `par = (α = 1.0, β = 1.78)`, we can perform continuation w.r.t. `α` by using `lens = (@optic _.α)`. If you have an array `par = [1.0, 2.0]` and want to perform continuation w.r.t. the first variable, you can use `lens = (@optic _[1])` or pass directly `lens = 1`. For more information, we refer to `Accessors.jl`."
                 lens::Tl
-                "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for Plot.jl and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the Makie package(s)."
+                "user function to plot solutions during continuation. Signature: `plot_solution(x, p; kwargs...)` for `Plot.jl` and `plot_solution(ax, x, p; ax1 = nothing, kwargs...)` for the `Makie.jl`."
                 plotSolution::Tplot
-                "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x,p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
+                "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x, p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default`."
+                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`."
                 save_solution::Tgets
-                "Function to update the problem after each continuation step. Defaults to `update_default`."
+                "Function to update the problem after each continuation step. Defaults to `update_default`. It has signature `update!(prob, iter, state)` where `prob` is the current bifurcation problem, `iter::ContIterable` the current iterable and `state::ContState` the current state of the continuation. It should return `true` if the update was successful and `false` otherwise. The continuation will stop if `false` is returned. This type of function is useful for example to update the problem internals like meshes, preconditioners, etc."
                 update!::Tupdate
             end
 
@@ -307,45 +374,53 @@ for (op, at) in (
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob}
+            struct $op{Tprob, Tjac, Tu0, Tl <: OpticType, Tplot, Trecord} <: $at{Tprob, Tjac}
                 prob::Tprob
                 jacobian::Tjac
                 u0::Tu0
-                params::Tp
-                lens::Tl
+                lens::Tl # Cannot be removed, it is distinct from getlens(disc)
                 plotSolution::Tplot
                 recordFromSolution::Trecord
             end
 
             _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
-            isinplace(pb::$op) = isinplace(pb.prob)
+            isinplace(pb::$op) = isinplace(get_formulation(pb))
+            @inline getparams(prob::$op) = getparams(get_formulation(prob))
             # dummy constructor
-            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
+            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, lens, nothing, nothing)
         end
     else
-        @eval begin #WrapPOTrap, WrapPOSh, WrapPOColl, WrapTW
+        @eval begin #PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
+        # we could have defined a single type PeriodicOrbitFunctional and dispatch on
+        # PeriodicOrbitFunctional{Tprob} but that would complicate a bit the methods
             """
             $(TYPEDEF)
 
-            Problem wrap of a functional. It is not meant to be used directly albeit perhaps by advanced users.
+            Problem wrap of a functional based on a discretization. It is not meant to be used directly albeit perhaps by advanced users.
+
+            !!! danger "Parameters et optic"
+                The discretization must implement `getparams` and `getlens`.
 
             $(TYPEDFIELDS)
             """
-            struct $op{Tprob, Tjac, Tu0, Tp, Tl <: OpticType, Tplot, Trecord} <: $at
-                prob::Tprob
+            struct $op{Tdisc, Tjac, Tu0, Tplot, Trecord} <: $at
+                disc::Tdisc
                 jacobian::Tjac
                 u0::Tu0
-                params::Tp
-                lens::Tl
                 plotSolution::Tplot
                 recordFromSolution::Trecord
             end
 
-            _getvectortype(::$op{Tprob, Tjac, Tu0}) where {Tprob, Tjac, Tu0} = Tu0
-            isinplace(pb::$op) = isinplace(pb.prob)
+            _getvectortype(::$op{Tdisc, Tjac, Tu0}) where {Tdisc, Tjac, Tu0} = Tu0
             # dummy constructor
-            $op(prob, lens = getlens(prob)) = $op(prob, nothing, nothing, nothing, lens, nothing, nothing)
-            residual!(pb::$op, o, x, p) = residual!(pb.prob, o, x, p)
+            $op(disc, lens = getlens(disc)) = $op(disc, nothing, nothing, nothing, nothing)
+            @inline getparams(pb::$op) = getparams(get_discretization(pb))
+            @inline getlens(pb::$op) = getlens(get_discretization(pb))
+            @inline get_discretization(pb::$op) = pb.disc
+            @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
+            residual(pb::$op, x, p) = residual($kd(get_discretization(pb)), x, p)
+            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), $kd, o, x, p)
+            @inline getdelta(pb::$op) = getdelta(get_discretization(pb))
         end
     end
 
@@ -358,6 +433,7 @@ for (op, at) in (
             Constructor for a bifurcation problem.
             
             ## Optional argument
+            - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x,par,p)`
             """
             function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
@@ -372,10 +448,11 @@ for (op, at) in (
                          issymmetric::Bool = false,
                          record_from_solution = record_sol_default,
                          plot_solution = plot_default,
-                         delta = convert(eltype(u0), 1e-8),
+                         delta = _getprecision(u0),
                          save_solution = save_solution_default,
                          inplace = false,
                          update! = update_default,
+                         R01 = AutoDiff(),
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
@@ -384,7 +461,7 @@ for (op, at) in (
                 end
                 Foop = if inplace || _isinplace(_F)
                     # promote_type useful for R01 and R11
-                    (x, p) -> _F(similar(x, promote_type(eltype(x), typeof(_get(p, new_lens)))), x, p)
+                    (x, p) -> _F(similar(x, promote_type(VI.scalartype(x), typeof(_get(p, new_lens)))), x, p)
                 else
                     _F
                 end
@@ -401,10 +478,36 @@ for (op, at) in (
                     J!
                 end
 
-                # type unstable but simplifies the type a lot
-                jet = isempty(kwargs_jet) ? nothing : Jet(;kwargs_jet...)
-                vf = BifFunction(Foop, Finp, jvp, vjp, J, Jᵗ, J!, d2F, d3F, d2Fc, d3Fc, issymmetric, delta, inplace, jet)
-                return $op(vf, u0, parms, new_lens, plot_solution, record_from_solution, save_solution, update!)
+                # type unstable but simplifies the types a lot
+                jet = if (isempty(kwargs_jet) && R01 === AutoDiff()) 
+                    nothing 
+                else
+                    R01Trait = R01 === FiniteDifferences() ? R01 : nothing
+                    Jet(;δ = delta, R01Trait, kwargs_jet...)
+                end
+                vf = BifFunction(Foop,
+                                Finp,
+                                jvp,
+                                vjp,
+                                J,
+                                Jᵗ,
+                                J!,
+                                d2F,
+                                d3F,
+                                d2Fc,
+                                d3Fc,
+                                issymmetric,
+                                delta,
+                                inplace,
+                                jet)
+                return $op(vf,
+                            u0,
+                            parms,
+                            new_lens,
+                            plot_solution,
+                            record_from_solution,
+                            save_solution,
+                            update!)
             end
         end
     end
@@ -413,6 +516,8 @@ end
 # getters for AbstractBifurcationProblem
 getu0(pb::AbstractBifurcationProblem) = pb.u0
 """
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem.
 """
 @inline getparams(pb::AbstractBifurcationProblem) = pb.params
@@ -440,38 +545,6 @@ has_adjoint(pb::AbstractAllJetBifProblem) = has_adjoint(pb.VF)
 has_adjoint_MF(pb::AbstractAllJetBifProblem) = has_adjoint_MF(pb.VF)
 getdelta(pb::AbstractAllJetBifProblem) = getdelta(pb.VF)
 
-for op in (:WrapPOTrap, :WrapPOSh, :WrapPOColl, :WrapTW)
-    @eval begin
-        function Base.show(io::IO, pb::$op)
-            printstyled(io, "Problem wrap of\n", bold = true)
-            show(io, pb.prob)
-        end
-    end
-end
-
-for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
-    @eval begin
-        function Base.show(io::IO, pb::$op)
-            printstyled(io, "Problem wrap for curve of " * $txt * " of periodic orbits.\n", bold = true)
-            println("Based on the formulation:")
-            show(io, pb.prob.prob_vf)
-        end
-    end
-end
-
-function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
-    print(io, prefix * "┌─ Bifurcation problem with uType ")
-    printstyled(io, _getvectortype(prob), color = :cyan, bold = true)
-    print(io, "\n" * prefix * "├─ Inplace: ")
-    printstyled(io, isinplace(prob), color = :cyan, bold = true)
-    print(io, "\n" * prefix * "├─ Dimension: ")
-    printstyled(io, length(getu0(prob)), color = :cyan, bold = true)
-    print(io, "\n" * prefix * "├─ Symmetric: ")
-    printstyled(io, is_symmetric(prob), color = :cyan, bold = true)
-    print(io, "\n" * prefix * "└─ Parameter: ")
-    printstyled(io, get_lens_symbol(getlens(prob)), color = :cyan, bold = true)
-end
-
 function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_jac = false)
     if is_symmetric(pb)
         # return apply(pb.J(x, par), dx)
@@ -489,7 +562,7 @@ function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_ja
         end
     end
 end
-
+####################################################################################################
 """
 $(SIGNATURES)
 
@@ -509,20 +582,78 @@ function re_make(prob::AbstractBifurcationProblem;
                 Jᵗ = missing,
                 d2F = missing,
                 d3F = missing)
-    prob2 = setproperties(prob; u0, params, lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
+    new_prob = setproperties(prob; u0, params, lens, recordFromSolution = record_from_solution, plotSolution = plot_solution)
     if ~ismissing(J)
-        @reset prob2.VF.J = J
+        @reset new_prob.VF.J = J
     end
     if ~ismissing(Jᵗ)
-        @reset prob2.VF.Jᵗ = Jᵗ
+        @reset new_prob.VF.Jᵗ = Jᵗ
     end
     if ~ismissing(d2F)
-        @reset prob2.VF.d2F = d2F
+        @reset new_prob.VF.d2F = d2F
     end
     if ~ismissing(d3F)
-        @reset prob2.VF.d3F = d3F
+        @reset new_prob.VF.d3F = d3F
     end
-    return prob2
+    return new_prob
+end
+
+function re_make(prob::AbstractMABifurcationProblem;
+                u0 = prob.u0,
+                params = getparams(prob),
+                plot_solution = plot_solution(prob)
+                )
+    disc = re_make(get_formulation(prob); params)
+    new_prob = setproperties(prob; prob = disc, u0, plotSolution = plot_solution)
+end
+
+function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitProblem};
+                u0 = prob.u0,
+                params = getparams(prob)
+                )
+    disc = re_make(get_discretization(prob); params)
+    new_prob = setproperties(prob; disc, u0)
+end
+####################################################################################################
+# simple trait for dispatching on user passed functions
+struct NoUserPassedFunction end
+struct UserPassedFunction end
+user_passed_function(f) = UserPassedFunction()
+user_passed_function(::Nothing) = NoUserPassedFunction()
+########
+for op in (:PeriodicOrbitFunctionalTrap, :PeriodicOrbitFunctionalSh, :PeriodicOrbitFunctionalColl, :WrapTW)
+    @eval begin
+        function Base.show(io::IO, wrap::$op)
+            printstyled(io, "Problem wrap of\n", bold = true)
+            show(io, get_discretization(wrap))
+        end
+    end
+end
+########
+@inline get_formulation(𝐏𝐛::AbstractMABifurcationProblem) = 𝐏𝐛.prob
+
+for (op, txt) in ((:NSMAProblem, "NS"), (:PDMAProblem, "PD"))
+    @eval begin
+        function Base.show(io::IO, 𝐏𝐛::$op)
+            printstyled(io, "Problem wrap for curve of " * $txt * " of periodic orbits.\n", bold = true)
+            println("Based on the formulation:")
+            show(io, get_formulation(𝐏𝐛).prob_vf)
+        end
+    end
+end
+########
+function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
+    color = :cyan; bold = true
+    print(io, prefix * "┌─ Bifurcation problem with uType ")
+    printstyled(io, _getvectortype(prob); color, bold)
+    print(io, "\n" * prefix * "├─ Inplace: ")
+    printstyled(io, isinplace(prob); color, bold)
+    print(io, "\n" * prefix * "├─ Dimension: ")
+    printstyled(io, length(getu0(prob)); color, bold)
+    print(io, "\n" * prefix * "├─ Symmetric: ")
+    printstyled(io, is_symmetric(prob); color, bold)
+    print(io, "\n" * prefix * "└─ Parameter: ")
+    printstyled(io, get_lens_symbol(getlens(prob)); color, bold)
 end
 ####################################################################################################
 # the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
@@ -578,3 +709,34 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
+####################################################################################################
+for op in (
+        :RecordForFold,
+        :RecordForHopf,
+        :RecordForPeriodicOrbits,
+        :RecordForNS,
+        :RecordForPD,
+        :RecordForTW, # travelling waves
+        )
+    @eval begin
+        """
+        $(TYPEDEF)
+
+        [Internal] Structure to hold the record functions for chained bifurcation problems.
+
+        ## Internal fields
+
+        $(TYPEDFIELDS)
+        """
+        struct $op{T1, T2}
+            "User passed record function for the vector field as a kwargs say for periodic orbits computation from a Hopf bifurcation point."
+            user_record_from_solution::T1
+            "Initial (upper most) record solution, usually associated with a BifurcationProblem."
+            vf_record_from_solution::T2
+        end
+        (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)
+        (fr::$op{Nothing})(x, p; kwargs...) = fr.vf_record_from_solution(x, p; kwargs...)
+        $op(u::$op, vf) = u # constructor, do not iterate the same structure
+    end
+end
+

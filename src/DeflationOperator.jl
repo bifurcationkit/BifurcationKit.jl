@@ -14,11 +14,11 @@ $(TYPEDEF)
 
 This operator allows to handle the following situation. Assume you want to solve `F(x)=0` with a Newton algorithm but you want to avoid the process to return some already known solutions ``roots_i``. The deflation operator penalizes these roots. You can create a `DeflationOperator` to define a scalar function `M(u)` used to find, with Newton iterations, the zeros of the following function
 
-``F(u) ⋅ Πᵢ(||u - rootᵢ||⁻²ᵖ + α) := F(u) ⋅ M(u)`` 
+``F(u) ⋅ Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α) := F(u) ⋅ M(u)`` 
 
-where ``||u||² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
+where ``||u||₂² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -26,7 +26,7 @@ Given `defOp::DeflationOperator`, one can access its roots via `defOp[n]` as a s
 
 Also, one can add (resp. remove) a new root by using `push!(defOp, newroot)` (resp. `pop!(defOp)`). Finally `length(defOp)` is a shortcut for `length(defOp.roots)`
 
-## Constructors
+# Constructors
 
 - `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}; autodiff = false)`
 - `DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false)`
@@ -34,7 +34,7 @@ Also, one can add (resp. remove) a new root by using `push!(defOp, newroot)` (re
 
 The option `autodiff` triggers the use of automatic differentiation for the computation of the gradient of the scalar function `M`. This works only on `AbstractVector` for now.
 
-## Custom distance
+# Custom distance
 
 You are asked to pass a scalar product like `dot` to build a `DeflationOperator`. However, in some cases, you may want to pass a custom distance `dist(u, v)`. You can do this using
 
@@ -42,7 +42,7 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
 
 Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
 
-## Linear solvers / jacobians
+# Linear solvers / jacobians
 
 When used with newton, you have access to the following linear solvers
 
@@ -76,11 +76,11 @@ end
 
 # constructors
 DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, VI.inner, α, roots, _copy(roots[1]), autodiff, T(1e-8))
-DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(eltype(roots[1]), 1e-8))
+DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(VI.scalartype(roots[1]), 1e-8))
 DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, VI.inner, α, roots, v, autodiff, T(1e-8))
 
 # methods to deal with DeflationOperator
-Base.eltype(df::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
+Base.eltype(::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
 Base.push!(df::DeflationOperator{Tp, Tdot, T, vectype}, v::vectype) where {Tp, Tdot, T, vectype} = push!(df.roots, v)
 Base.pop!(df::DeflationOperator) = pop!(df.roots)
 Base.getindex(df::DeflationOperator, inds...) = getindex(df.roots, inds...)
@@ -88,12 +88,13 @@ Base.length(df::DeflationOperator) = length(df.roots)
 Base.isempty(df::DeflationOperator) = isempty(df.roots)
 Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
-Base.firstindex(df::DeflationOperator) = 1
+Base.firstindex(::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
 Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff, df.δ)
 
 function Base.show(io::IO, df::DeflationOperator; prefix = "")
-    println(io, prefix * "┌─ Deflation operator with ", length(df.roots)," root(s)")
+    println(io, prefix * "┌─ Deflation operator Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α)")
+    println(io, prefix * "├─ roots    = ", length(df.roots))
     println(io, prefix * "├─ eltype   = ", eltype(df))
     println(io, prefix * "├─ power    = ", df.power)
     println(io, prefix * "├─ α        = ", df.α)
@@ -366,7 +367,7 @@ function newton(prob::AbstractBifurcationProblem,
                 x0::vectype,
                 x1::vectype, p0,
                 options::NewtonPar{T, L, E},
-                defOp::DeflationOperator = DeflationOperator(2, one(eltype(x0)), Vector{vectype}(), _copy(x0); autodiff = true),
+                defOp::DeflationOperator = DeflationOperator(2, one(VI.scalartype(x0)), Vector{vectype}(), _copy(x0); autodiff = true),
                 linsolver = DeflatedProblemCustomLS();
                 kwargs...) where {T, vectype, L, E}
     prob0 = re_make(prob, u0 = x0, params = p0)

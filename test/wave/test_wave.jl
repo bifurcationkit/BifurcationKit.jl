@@ -1,4 +1,4 @@
-# using Revise, Plots
+# using Revise#, Plots
 using Test
 using BifurcationKit, SparseArrays, LinearAlgebra, ForwardDiff
 const BK = BifurcationKit
@@ -87,7 +87,6 @@ out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
 
 opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
 br = continuation(prob, PALC(), opts_br, verbosity = 0)
-
 ####################################################################################################
 # we test the jacobian
 # _J0 = BK.jacobian(prob, sol0, par_cgl)
@@ -122,7 +121,7 @@ function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0,
     return p_hopf, 2pi/ωH, orbitguess, specialpoint.x, vec_hopf1, vec_hopf2
 end
 ####################################################################################################
-# we test TWProblem: travelling wave problem
+# we test TWModel: traveling wave problem
 # number of time slices in the periodic orbit
 M = 50
 
@@ -133,61 +132,65 @@ uold = copy(orbitguess2[1][1:2n])
 # plot(uold[1:end-1]; linewidth = 5)
 
 # we create a TW problem
-probTW = BK.TWProblem(prob, par_cgl.Db, copy(uold))
-BK.residual(probTW, vcat(uold,.1), par_cgl)
-show(probTW)
+TWmodel = BK.TWModel(prob, par_cgl.Db, copy(uold))
+BK.residual(BK.TravellingWave(TWmodel), vcat(uold,.1), par_cgl)
+show(TWmodel)
 
 # we test the sparse formulation of the problem jacobian
 _sol0 = rand(2n+1)
-_J1 = FD.jacobian(z->BK.residual(probTW, z, par_cgl), _sol0) |> sparse
-_J0 = probTW(Val(:JacFullSparse), _sol0, par_cgl)
+_J1 = FD.jacobian(z->BK.residual(BK.TravellingWave(TWmodel), z, par_cgl), _sol0) |> sparse
+_J0 = TWmodel(Val(:JacFullSparse), _sol0, par_cgl)
 @test _J1 ≈ _J0
 
 # we test the matrix-free formulation of the problem jacobian
 _sol0 = rand(2n+1)
 _dsol0 = rand(2n+1)
-_out1 = FD.derivative(t -> BK.residual(probTW,_sol0 .+ t .* _dsol0, par_cgl), 0)
-_out0 = probTW(_sol0, par_cgl, _dsol0)
+_out1 = FD.derivative(t -> BK.residual(BK.TravellingWave(TWmodel), _sol0 .+ t .* _dsol0, par_cgl), 0)
+_out0 = TWmodel(_sol0, par_cgl, _dsol0)
 @test _out0 ≈ _out1
 
-BK.VFtw(probTW, uold, (user=par_cgl, s=Tuple(0.,)))
+BK.VFtw(TWmodel, uold, (user=par_cgl, s=Tuple(0.,)))
 
 # we test the ∂
-BK.applyD(probTW, rand(2n))
+BK.applyD(TWmodel, rand(2n))
 
 # we test update section
-BK.updatesection!(probTW, probTW.u₀)
+BK.updatesection!(TWmodel, TWmodel.u₀)
 ####################################################################################################
 # test newton method, not meant to converge
-sol = newton(probTW, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
-@test BK.converged(sol)
-BK.is_symmetric(sol.prob)
-sol = newton((@set probTW.jacobian = :FullLU), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
-@test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFree), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
-@test BK.converged(sol)
-sol = newton((@set probTW.jacobian = :MatrixFreeAD), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
-@test BK.converged(sol)
+let
+    sol = BK.newton(TWmodel, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
+    @test BK.converged(sol)
+    BK.is_symmetric(sol.prob)
+    sol = newton((@set TWmodel.jacobian = BK.FullLU()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
+    @test BK.converged(sol)
+    sol = newton((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
+    @test BK.converged(sol)
+    sol = newton((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
+    @test BK.converged(sol)
+end
 ####################################################################################################
 # test continuation method with different Generalised eigensolvers
-optn = NewtonPar(tol = 1e-8)
-opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 3, detect_bifurcation = 2)
-continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+let
+    optn = NewtonPar(tol = 1e-8)
+    opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 3, detect_bifurcation = 2)
+    continuation((@set TWmodel.jacobian = BK.FullLU()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@reset opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
-continuation((@set probTW.jacobian = :FullLU), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    @reset opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
+    continuation((@set TWmodel.jacobian = BK.FullLU()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-BK.GEigArpack(nothing, :LR)
-@reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
-continuation(probTW, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    BK.GEigArpack(nothing, :LR)
+    @reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
+    continuation(TWmodel, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 
-@reset opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
-@reset opt_cont_br.newton_options.eigsolver = EigArpack(sigma = 0.1, nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
-@reset opt_cont_br.detect_bifurcation = 1
-try
-    continuation((@set probTW.jacobian = :MatrixFreeAD), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 1)
-catch
+    @reset opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
+    @reset opt_cont_br.newton_options.eigsolver = EigArpack(sigma = 0.1, nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
+    @reset opt_cont_br.detect_bifurcation = 1
+    try
+        continuation((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 1)
+    catch
+    end
+    @reset opt_cont_br.detect_bifurcation = 0
+    continuation((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    continuation((@set TWmodel.jacobian = BK.FiniteDifferences()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
 end
-@reset opt_cont_br.detect_bifurcation = 0
-continuation((@set probTW.jacobian = :MatrixFree), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
-continuation((@set probTW.jacobian = :FiniteDifferences), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)

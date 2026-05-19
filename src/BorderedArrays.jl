@@ -1,5 +1,5 @@
-import Base: eltype, zero
-import LinearAlgebra: norm, length, similar
+import Base: eltype, zero, length
+import LinearAlgebra: norm
 import KrylovKit: VectorInterface
 const VI = VectorInterface
 
@@ -161,6 +161,8 @@ function VI.scale!!(y::BorderedArray{𝒯v1, 𝒯p1}, x::BorderedArray{𝒯v2, �
     end
 end
 ########################
+# add(y, x, [α::Number = 1, β::Number = 1])
+# y * β + x * α and storing the result in y
 function VI.add(y::BorderedArray, 
                 x::BorderedArray,
                 α::Number, 

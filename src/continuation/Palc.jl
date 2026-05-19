@@ -1,6 +1,7 @@
 """
 $(TYPEDEF)
 
+# Internal fields
 $(TYPEDFIELDS)
 
 This parametric type allows to define a new dot product from the one saved in `dt::dot`. More precisely:
@@ -41,8 +42,8 @@ Compute
 function arc_length_eq(dt::DotTheta, u1, u2, p, du, dp, θ, ds)
     # θ⋅dot(x - z0.u, τ0.u) / n + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
     #  arc_length_eq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
-    out = arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
-          arc_length_eq(dt, u2, p, du, 0, θ, 0)
+    return arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
+           arc_length_eq(dt, u2, p, du, 0, θ, 0)
 
 end
 ####################################################################################################
@@ -53,7 +54,7 @@ Pseudo-arclength continuation algorithm.
 
 Additional information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/).
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -79,6 +80,7 @@ getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
 getdot(it::ContIterable) = getdot(it.alg)
 getθ(it::ContIterable) = getθ(it.alg)
+getbls(alg::PALC) = alg.bls
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)
@@ -88,8 +90,8 @@ function Base.empty!(alg::PALC)
     alg
 end
 
-function update(alg::PALC, contParams::ContinuationPar, linear_algo)
-    if isnothing(linear_algo)
+function update(alg::PALC, contParams::ContinuationPar, linear_algo::Tla) where {Tla}
+    if Tla == Nothing
         if isnothing(alg.bls.solver)
             bls = alg.bls
             return @set alg.bls = update_bls(bls, contParams.newton_options.linsolver)
@@ -143,8 +145,8 @@ function addtangent!(state::AbstractContinuationState, nrm = false)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                  iter::AbstractContinuationIterable,
-                  alg::PALC,
+                  ::AbstractContinuationIterable,
+                  ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
@@ -183,7 +185,7 @@ _shortname(::PALC{Secant}) = "PALC [Secant]"
 function _secant_tangent!(τ::M, 
                           z₁::M, 
                           z₀::M, 
-                          it::AbstractContinuationIterable, 
+                          ::AbstractContinuationIterable, 
                           ds, 
                           θ, 
                           verbosity, 
@@ -227,7 +229,7 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 # it is updated inplace
 function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    tgt_algo::Bordered, 
+                    ::Bordered, 
                     dotθ)
     (it.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(it.prob)
@@ -262,6 +264,7 @@ end
 """
     Polynomial Tangent predictor
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)
@@ -315,12 +318,13 @@ _shortname(::PALC{Polynomial}) = "PALC [Polynomial]"
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"
-    Polynomial(n, k, zeros(eltype(v0), k, n+1), pred,
+    𝒯 = VI.scalartype(v0)
+    Polynomial(n, k, zeros(𝒯, k, n+1), pred,
         DataStructures.CircularBuffer{typeof(v0)}(k),  # solutions
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # parameters
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # arclengths
+        DataStructures.CircularBuffer{𝒯}(k),  # parameters
+        DataStructures.CircularBuffer{𝒯}(k),  # arclengths
         Vector{typeof(v0)}(undef, n+1), # coeffsSol
-        Vector{eltype(v0)}(undef, n+1), # coeffsPar
+        Vector{𝒯}(undef, n+1), # coeffsPar
         true)
 end
 Polynomial(n, k, v0) = Polynomial(Secant(), n, k, v0)
@@ -429,8 +433,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     x_pred = _copy(x)
 
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
-    dp = zero(𝒯)
-    up = zero(𝒯)
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
