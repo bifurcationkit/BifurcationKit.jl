@@ -27,10 +27,10 @@ end
 # Fixed interval [0, 1] => phase condition fixes T=1.0
 nf = 3
 ng = 3
-model = BVPModel(F_bvp, g_bvp; n=nf, phase = (u, p, T) -> T - 1)
+model = BifurcationKit.BVP.BVPModel(F_bvp, g_bvp; n=nf, phase = (u, p, T) -> T - 1)
 # 4. Discretize using Collocation method
-disc = Collocation(Ntst=30, m=4)
-bvp = discretize(model, disc)
+disc = BifurcationKit.BVP.Collocation(Ntst=30, m=4)
+bvp = BifurcationKit.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 params = (ϵ = 0.7,)
@@ -44,7 +44,7 @@ yslice = reduce(hcat, [[0,0,t] for t in LinRange(0,1,disc.m * disc.Ntst,)])
 record_from_solution(y, p; k...) = (y[2]-y[1]) * sum(y->y^2, y)
 
 # 6. Create BVPBifProblem
-prob = BVPBifProblem(bvp, y0, params, (@optic _.ϵ);
+prob = BifurcationKit.BVP.BVPBifProblem(bvp, y0, params, (@optic _.ϵ);
     record_from_solution,
 	plot_solution = (x, p; kwargs...) -> begin
         u = BifurcationKit.get_time_slices(x[1:end], 3, disc.m, disc.Ntst)

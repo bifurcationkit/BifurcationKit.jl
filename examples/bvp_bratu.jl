@@ -23,7 +23,7 @@ end
 # Fixed interval [0, 1] => phase condition fixes T=1.0
 model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2, phase = (u, p, T) -> T - 1.0)
 
-# 4. Discretize using Trapezoid method
+# 4. Discretize using Collocation method
 # Using 201 points for better accuracy
 disc = BifurcationKit.BVP.Collocation(Ntst=40, m=5)
 bvp = BifurcationKit.BVP.discretize(model, disc)
