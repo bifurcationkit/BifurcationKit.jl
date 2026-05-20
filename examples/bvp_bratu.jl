@@ -1,16 +1,16 @@
 using Revise
 
 using BifurcationKit, LinearAlgebra, Plots
-
+using Test
 
 # ==============================================================================
 # Bratu Problem BVP Example
 # ==============================================================================
 
 # 1. Define the vector field (first-order form)
-# u'' + p₁ * exp(u) = 0  =>  u₁' = u₂, u₂' = -p₁ * exp(u₁)
+# u'' + p₁ * exp(u) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
 function Fbratu(x, p)
-    return [x[2], -p.p₁ * exp(x[1])]
+    return [x[2], -10*(p.a * (exp(x[1]) - 1 - p.b * x[1]^2/2))]
 end
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
@@ -25,22 +25,22 @@ model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2, phase = (u, p, T) -> T 
 
 # 4. Discretize using Trapezoid method
 # Using 201 points for better accuracy
-disc = BifurcationKit.BVP.Collocation(Ntst=30, m=4)
+disc = BifurcationKit.BVP.Collocation(Ntst=40, m=5)
 bvp = BifurcationKit.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
-params = (p₁ = 0.0,)
-t_vals = LinRange(0, 1, 201)
-x0 = 0.0ones(2 * (1 + disc.m * disc.Ntst) + 0)
+params = (a = 0.5, b = 0.)
+t_vals = LinRange(0, 1, 101)
+x0 = zeros(2 * (1 + disc.m * disc.Ntst))
 # x0[end] = 1.0 # Interval length T = 1.0
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
-prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.p₁);
+prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a);
     record_from_solution = (x, p; k...) -> begin
         u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
-        return (max_u = maximum(u[1, :]),)
+        return (max_u = norm(x, 2), s = sum(x))
     end,
     plot_solution = (x, p; kwargs...) -> begin
         u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
@@ -49,77 +49,66 @@ prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.p₁);
 )
 
 # 7. Setup Continuation Parameters
-optn = NewtonPar(tol = 1e-10, verbose=true)
+optn = NewtonPar(tol = 1e-10, verbose=false)
 optc = ContinuationPar(
-    p_min = 0.0,
-    p_max = 5.0,
+    p_min = 0.1,
+    p_max = 10.05,
     dsmax = 0.1,
     ds = 0.01,
-    detect_bifurcation = 2,
-    detect_fold = true,
+    detect_bifurcation = 3,
+    # detect_fold = false,
     newton_options = optn,
     max_steps = 200,
     nev = 20,
     n_inversion = 6
 )
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 8. Perform initial continuation
 println("\nComputing primary branch for Bratu BVP (Collocation)...")
 br = continuation(prob, PALC(), optc;
     plot = true,
-    verbosity = 3,
-    normC=norminf,
+    verbosity = 0,
+    normC = norminf,
 )
-show(br)
 
-# 9. Branch switching logic
-idx_bp = findfirst(x -> x.type == :bp, br.specialpoint)
+plot(br)
+plot(br, vars = (:param, :s))
+@test br.specialpoint[1].param ≈ pi^2/10 atol = 1e-4
+@test br.specialpoint[2].param ≈ 2^2*pi^2/10 atol = 1e-4
+@test br.specialpoint[4].param ≈ 3^2*pi^2/10 atol = 1e-4
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# NORMAL FORM COMPUTATION
+get_normal_form(br, 1; autodiff=false)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# BRANCH SWITCHING
+br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
+plot(br, br2, vars = (:param, :s))
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# AUTOMATIC BIFURCATION DIAGRAM
+diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
+plot(diagram, vars = (:param, :s), legend = false)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CODIMENSION 2
+bp_codim = continuation(br, 1, (@optic _.b), ContinuationPar(optc, p_min = -1.);
+            verbosity = 0,
+            jacobian_ma = BK.MinAug(), # autodiff is too slow
+            usehessian = false,        # not yet defined for BVPBifProblem
+            )
+plot(bp_codim)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# deflated continuation
+deflationOp = DeflationOperator(2, dot, 1.0, [zero(BK.getu0(prob))])
+perturb_solution(sol, p, id) = sol .+ 0.1 .* rand(length(sol))
+alg = DefCont(;deflation_operator = deflationOp, perturb_solution, max_branches = 10)
+# br = @time continuation(
+#     prob, alg,
+#     setproperties(optc; ds = 0.001, dsmin=1e-5, max_steps = 20000,
+#         p_max = 10., p_min = 0.005, detect_bifurcation = 0, plot_every_step = 100,
+#         newton_options = setproperties(optn; tol = 1e-9, max_iterations = 100, verbose = false));
+#     normC = norminf,
+#     verbosity = 1,
+#     callback_newton = BK.cbMaxNorm(1e3) 
+#     )
 
-if false
-    println("\n" * "="^60)
-    println("BRANCH SWITCHING")
-    println("Found Branch Point at step $(br.specialpoint[idx_bp].step)")
-    println("Parameter p₁ ≈ $(round(br.specialpoint[idx_bp].param, digits=4))")
-    println("="^60)
-
-    # We use a slightly adjusted ContinuationPar for the second branch
-    optc_sec = @set optc.ds = 0.005
-    optc_sec = @set optc_sec.max_steps = 100
-    optc_sec = @set optc_sec.p_min = -1.0 # Allow exploration
-
-    println("\nSwitching to secondary branch...")
-    try
-        br_sec = continuation(br, idx_bp, optc_sec;
-            ampfactor = 0.2,       # Increased perturbation
-            verbosity = 1,
-            plot = false
-        )
-
-        println("\nSecondary branch found with $(length(br_sec)) points.")
-
-        # 10. Plot results
-        println("\nPlotting branches...")
-        p1 = plot(br, xaxis=:p, yaxis=:max_u, label="Primary", lw=2)
-        if length(br_sec) > 1
-            plot!(p1, br_sec, xaxis=:p, yaxis=:max_u, label="Secondary", lw=2, linestyle=:dash)
-        end
-        title!(p1, "Bratu Bifurcation Diagram")
-        xlabel!(p1, "p₁")
-        ylabel!(p1, "max(u)")
-
-        # Add labels for special points if any
-        savefig(p1, "bvp_bratu_switching.png")
-        println("Plot saved to bvp_bratu_switching.png")
-    catch e
-        println("\nBranch switching failed or stopped early: ", e)
-        Base.display_error(e, catch_backtrace())
-        p1 = plot(br, xaxis=:p, yaxis=:max_u, label="Primary")
-        savefig(p1, "bvp_bratu_only_primary.png")
-    end
-else
-    println("\nNo branch point (bp) found for switching.")
-    p1 = plot(br, xaxis=:p, yaxis=:max_u)
-    savefig(p1, "bvp_bratu_primary.png")
-end
 
 println("\nExample complete!")
