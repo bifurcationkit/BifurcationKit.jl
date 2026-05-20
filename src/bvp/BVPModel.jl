@@ -5,6 +5,7 @@
 #   - Vector field F(u, p)
 #   - Boundary conditions g(u(0), u(1), p) = 0
 
+# TODO: we allow F(u,p,t)?
 using DocStringExtensions
 
 """
@@ -108,7 +109,7 @@ end
 """State dimension of the model."""
 state_dimension(model::BVPModel) = model.n
 
-"""Check if the model has a phase constraint."""
+"""Check if the model has a phase constraint.""" # TODO use static test
 has_phase_constraint(model::BVPModel) = !isnothing(model.phase)
 
 """Evaluate the vector field."""
@@ -117,7 +118,7 @@ evaluate_F(model::BVPModel, u, p) = model.F(u, p)
 """Evaluate the boundary condition."""
 evaluate_g(model::BVPModel, u0, u1, p) = model.g(u0, u1, p)
 
-"""Evaluate the phase constraint (if present)."""
+"""Evaluate the phase constraint (if present)."""# TODO should remove
 function evaluate_phase(model::BVPModel, u, p, T)
     isnothing(model.phase) && return zero(eltype(u))
     # Support both (u, p) and (u, p, T) signatures

@@ -75,7 +75,7 @@ show(br)
 # 9. Branch switching logic
 idx_bp = findfirst(x -> x.type == :bp, br.specialpoint)
 
-if !isnothing(idx_bp)
+if false
     println("\n" * "="^60)
     println("BRANCH SWITCHING")
     println("Found Branch Point at step $(br.specialpoint[idx_bp].step)")

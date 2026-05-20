@@ -48,8 +48,6 @@ function discretize(model::BVPModel, disc::Shooting)
 end
 
 function create_cache(disc::Shooting, n::Int)
-    M = disc.M
-    # Workspace for shooting
     return (
         u_work = zeros(n),
         Φ_work = zeros(n, n),

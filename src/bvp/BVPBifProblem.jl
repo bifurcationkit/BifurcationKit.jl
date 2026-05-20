@@ -159,7 +159,7 @@ function d3F(prob::BVPBifProblem, x, p, dx1, dx2, dx3)
     ForwardDiff.derivative(t -> d2F(prob, x .+ t .* dx3, p, dx1, dx2), zero(eltype(x)))
 end
 
-# Bridge to BifFunction (needed for some internal BK methods like branch switching)
+# Bridge to BifFunction (needed for some internal BK methods like branch switching) # TODO: not sure!!
 function BifFunction(prob::BVPBifProblem)
     return BifFunction(
         (x, p) -> residual(prob, x, p),      # F
@@ -184,8 +184,8 @@ end
 # Jacobian - dispatch on AutoDiffDense (default behavior)
 jacobian(prob::BVPBifProblem{Tbvp, AutoDiffDense}, x, p) where {Tbvp} = bvp_jacobian(prob.d_bvp, prob.jacobian, x, p)
 
-# Make the problem callable (required by BifurcationKit)
-(prob::BVPBifProblem)(x, p) = bvp_residual(prob.d_bvp, x, p)
+# Make the problem callable (required by BifurcationKit)  # TODO Remove?
+# (prob::BVPBifProblem)(x, p) = bvp_residual(prob.d_bvp, x, p)
 
 # is_symmetric defaults to false
 is_symmetric(::BVPBifProblem) = false
