@@ -3,7 +3,7 @@
 # This module defines the mathematical structure of a Boundary Value Problem
 # without any discretization. The BVPModel captures:
 #   - Vector field F(u, p)
-#   - Boundary conditions g(u(0), u(1), p) = 0
+#   - Boundary conditions g(u(t0), u(tf), p) = 0
 
 # TODO: we allow F(u,p,t)?
 using DocStringExtensions
@@ -15,8 +15,8 @@ Mathematical formulation of a Boundary Value Problem (no discretization).
 
 ## Mathematical Definition
 
-    u'(t) = F(u(t), p),        t ∈ [0, 1]
-    g(u(0), u(1), p) = 0       boundary conditions
+    u'(t) = F(u(t), p),        t ∈ [t0, tf]
+    g(u(t0), u(tf), p) = 0       boundary conditions
 
 ## Fields
 $(TYPEDFIELDS)
@@ -31,7 +31,7 @@ g(u0, u1, p) = u0 .- u1  # Periodic BC
 model = BVPModel(F, g; n=2)
 ```
 """
-struct BVPModel{TF, Tg, Tphase}
+struct BVPModel{TF, Tg, Tphase, T}
     "Vector field: F(u, p) → ℝⁿ"
     F::TF
     
@@ -43,6 +43,9 @@ struct BVPModel{TF, Tg, Tphase}
     
     "State dimension n"
     n::Int
+
+    "Time interval"
+    time_interval::Tuple{T, T}
 end
 
 # ============================================================================
@@ -70,8 +73,8 @@ g(u0, u1, p) = u0 .- u1
 model = BVPModel(F, g; n=2)
 ```
 """
-function BVPModel(F, g; n::Int=0, phase=nothing)
-    BVPModel(F, g, phase, n)
+function BVPModel(F, g; n::Int=0, phase=nothing, t0 = 0., tf = 1.)
+    BVPModel(F, g, phase, n, (t0, tf))
 end
 
 """
@@ -118,6 +121,8 @@ evaluate_F(model::BVPModel, u, p) = model.F(u, p)
 """Evaluate the boundary condition."""
 evaluate_g(model::BVPModel, u0, u1, p) = model.g(u0, u1, p)
 
+get_time_interval(model::BVPModel) = model.time_interval
+
 """Evaluate the phase constraint (if present)."""# TODO should remove
 function evaluate_phase(model::BVPModel, u, p, T)
     isnothing(model.phase) && return zero(eltype(u))
@@ -138,7 +143,8 @@ function Base.show(io::IO, model::BVPModel)
     println(io, "├─ State dimension n : ", model.n == 0 ? "unspecified" : model.n)
     println(io, "├─ Vector field F    : ", typeof(model.F).name.name)
     println(io, "├─ Boundary cond g   : ", typeof(model.g).name.name)
-    print(io,   "└─ Phase constraint  : ", has_phase_constraint(model) ? "yes" : "none")
+    println(io,   "├─ Phase constraint  : ", has_phase_constraint(model) ? "yes" : "none")
+    print(io,   "└─ Time interval     : ", get_time_interval(model))
 end
 
 # ============================================================================

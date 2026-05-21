@@ -18,6 +18,8 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     nf = state_dimension(model)
     Ntst, m = disc.Ntst, disc.m
     N_total = 1 + Ntst * m
+    interval = get_time_interval(model)
+    δT = interval[2] - interval[1]
 
     # Extract solution
     Xc = reshape(@view(X[1:nf*N_total]), nf, N_total)
@@ -40,7 +42,7 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     # Core residual computation from BifurcationKit
     # This writes to outc[:, 1:Ntst*m]
     #po_residual_bare!(po_coll, outc, Xc, p, 1)
-    po_residual_bare!(po_coll, outc, Xc, 1, BifurcationKit.get_Ls(po_coll), p; compute_phase = Val(false))
+    po_residual_bare!(po_coll, outc, Xc, δT, BifurcationKit.get_Ls(po_coll), p; compute_phase = Val(false))
 
     # Boundary condition: g(u(0), u(T), p) = 0
     u0 = @view Xc[:, 1]

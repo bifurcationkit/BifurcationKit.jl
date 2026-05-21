@@ -12,14 +12,14 @@ Compute the residual for shooting discretization.
 Calls BifurcationKit's po_residual_bare! and adds phase condition.
 """
 function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
-    model = bvp.model
-    disc = bvp.discretizer
+    model = get_model(bvp)
+    disc = get_discretizer(bvp)
     n = state_dimension(model)
     M = disc.M
     
     # Extract shooting points and period
     U = reshape(@view(X[1:n*M]), n, M)
-    T = X[end]
+    T = 1
     
     # Allocate output
     out = similar(X)
@@ -44,8 +44,8 @@ Core shooting residual computation for DiscretizedBVP.
 This implements the same logic as BifurcationKit's po_residual_bare! for ShootingProblem.
 """
 @views function po_residual_bare!(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, outc, xc, pars, T)
-    model = bvp.model
-    disc = bvp.discretizer
+    model = get_model(bvp)
+    disc = get_discretizer(bvp)
     n, M = size(xc)
     dt = T / M
     

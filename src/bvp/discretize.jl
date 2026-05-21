@@ -113,7 +113,7 @@ function discretize(model::BVPModel, disc::Collocation)
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
 
-    Ntst, m = disc.Ntst, disc.m
+    (;Ntst, m, K, meshadapt) = disc
 
     # Create a BifurcationProblem wrapper for the vector field
     prob_vf = BifurcationKit.BifurcationProblem(
@@ -126,7 +126,7 @@ function discretize(model::BVPModel, disc::Collocation)
     )
 
     # Create PeriodicOrbitOCollProblem
-    po_coll = BifurcationKit.Collocation(Ntst, m; N = n, prob_vf = prob_vf)
+    po_coll = BifurcationKit.Collocation(Ntst, m; N = n, prob_vf, meshadapt, K)
 
     cache = (
         po_coll = po_coll,
