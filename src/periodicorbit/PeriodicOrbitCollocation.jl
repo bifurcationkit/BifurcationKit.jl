@@ -643,19 +643,30 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 @views function po_analytical_jacobian!(J,
                                     coll::Collocation,
                                     u::AbstractVector{𝒯},
-                                    pars;
+                                    pars; kw...) where {𝒯}
+    uc = get_time_slices(coll, u)
+    period = getperiod(coll, u, nothing)
+    _pocoll_jacobian_types(J, coll, u, pars, uc, period; kw...)
+    return J
+end
+
+@views function _po_analytical_jacobian!(J,
+                                    coll::Collocation,
+                                    u::AbstractVector{𝒯},
+                                    pars,
+                                    uc::AbstractMatrix{𝒯},
+                                    period::𝒯; 
                                     _transpose::Val{TransposeBool} = Val(false),
+                                    _compute_borders::Val{Compute_borders} = Val(true),
                                     ρD = one(𝒯),
                                     ρF = one(𝒯),
-                                    ρI = zero(𝒯)) where {𝒯, TransposeBool}
+                                    ρI = zero(𝒯)) where {𝒯, TransposeBool, Compute_borders}
     n, m, Ntst = size(coll)
     nJ = length(coll) + 1
     L, ∂L = get_Ls(coll.mesh_cache) # L is of size (m+1, m)
     mesh = getmesh(coll)
     ω = coll.mesh_cache.gauss_weight
-    period = getperiod(coll, u, nothing)
     phase = zero(𝒯)
-    uc = get_time_slices(coll, u)
     pj = get_tmp(coll.cache.gi, u) # zeros(𝒯, n, m)
     In = coll.cache.In # this helps greatly the for loop for J0 below
     J0 = zeros(𝒯, n, n)
@@ -689,19 +700,23 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                 J[_rgX, rgNy .+ (l2-1)*n ] .= @. (-α * L[l2, l] * ρF) * J0 +
                                                 (ρD * ∂L[l2, l] - α * L[l2, l] * ρI) * In
             end
-            # add derivative w.r.t. the period
-            residual!(VF, J[_rgX, nJ], pj[:, l], pars)
-            J[_rgX, nJ] .*= (-dt)
+            if Compute_borders
+                # add derivative w.r.t. the period
+                residual!(VF, J[_rgX, nJ], pj[:, l], pars)
+                J[_rgX, nJ] .*= (-dt)
 
-            phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+                phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+            end
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
         rgNy = rgNy .+ (m * n)
     end
 
-    J[end, begin:end-1] .= coll.cache.∇phase ./ period
-    J[nJ, nJ] = -phase / period^2
+    if Compute_borders
+        J[end, begin:end-1] .= coll.cache.∇phase ./ period
+        J[nJ, nJ] = -phase / period^2
+    end
     return J
 end
 

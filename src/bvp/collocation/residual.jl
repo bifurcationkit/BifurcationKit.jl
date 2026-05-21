@@ -11,10 +11,10 @@ $(TYPEDSIGNATURES)
 Compute the residual for collocation discretization.
 Uses BifurcationKit's PeriodicOrbitOCollProblem for efficient computation.
 """
-function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
-    model = bvp.model
-    disc = bvp.discretizer
-    po_coll = bvp.cache.po_coll
+function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
+    model = get_model(d_bvp)
+    disc = get_discretizer(d_bvp)
+    po_coll = d_bvp.cache.po_coll
     nf = state_dimension(model)
     Ntst, m = disc.Ntst, disc.m
     N_total = 1 + Ntst * m

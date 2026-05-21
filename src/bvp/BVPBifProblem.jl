@@ -188,9 +188,9 @@ is_symmetric(::BVPBifProblem) = false
 function re_make(prob::BVPBifProblem; 
     d_bvp = prob.d_bvp,
     jacobian = prob.jacobian,
-    u0 = prob.u0,
-    params = prob.params,
-    lens = prob.lens,
+    u0 = getu0(prob),
+    params = getparams(prob),
+    lens = getlens(prob),
     plot_solution = prob.plotSolution,
     record_from_solution = prob.recordFromSolution,
     update! = prob.update!
@@ -224,9 +224,33 @@ get_solution_bvp(::BVPBifProblem, x, p) = x
 # save_solution functions specific to BVP problems
 # ============================================================================
 save_solution(prob::BVPBifProblem, x, p) = save_solution(prob.d_bvp, x, p)
-
 save_solution(::DiscretizedBVP, x, _) = x
 
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars)
     BifurcationKit.__save_solution_coll(bvp.cache.po_coll, x, pars)
+end
+
+
+function jacobian(prob::BVPBifProblem{Tbvp, <: BifurcationKit.DenseAnalytical}, u, pars) where {Tbvp}
+    d_bvp = prob.d_bvp
+    disc = get_discretizer(d_bvp)
+    model = get_model(d_bvp)
+    coll = d_bvp.cache.po_coll # TODO: a bit of a hack for now
+    𝒯 = eltype(coll)
+    Jcoll = zeros(𝒯, length(coll), length(coll))
+    n, m, Ntst = size(coll)
+    uc = reshape(u, n, 1 + Ntst * m)
+    period = one(𝒯)
+    BifurcationKit._po_analytical_jacobian!(Jcoll, 
+                                            coll, 
+                                            u, 
+                                            pars,
+                                            uc,
+                                            period;
+                                            _compute_borders = Val(false))
+    u0 = uc[:, 1]
+    uf = uc[:, end]
+    Jcoll[end-n+1:end, 1:n] .= ForwardDiff.jacobian(z -> model.g(z, uf, pars), u0)
+    Jcoll[end-n+1:end, end-n+1:end] .= ForwardDiff.jacobian(z -> model.g(u0, z, pars), uf)
+    return Jcoll
 end

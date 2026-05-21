@@ -37,15 +37,22 @@ x0 = zeros(2 * (1 + disc.m * disc.Ntst))
 # 6. Create BVPBifProblem
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))
 
+####
+# test jacobian
+prob_ana = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a); jacobian = BifurcationKit.DenseAnalytical())
+_Jfd = BifurcationKit.jacobian(prob, prob.u0, prob.params)
+_Jan = BifurcationKit.jacobian(prob_ana, prob.u0, prob.params)
+@test norm(_Jan - _Jfd) ≈ 0 atol = 1e-14
+####
+
 # 7. Setup Continuation Parameters
 optn = NewtonPar(tol = 1e-10, verbose=false)
 optc = ContinuationPar(
     p_min = 0.1,
-    p_max = 10.05,
+    p_max = 10.0,
     dsmax = 0.1,
     ds = 0.01,
     detect_bifurcation = 3,
-    # detect_fold = false,
     newton_options = optn,
     max_steps = 200,
     nev = 20,
