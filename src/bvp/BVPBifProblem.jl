@@ -226,14 +226,8 @@ Get the underlying DiscretizedBVP from a BVPBifProblem.
 """
 get_bvp(prob::BVPBifProblem) = prob.d_bvp
 
-
-"""
-$(TYPEDSIGNATURES)
-
-Extract the periodic orbit from a BVPBifProblem solution.
-"""
-get_periodic_orbit(prob::BVPBifProblem, x, p) = get_periodic_orbit(prob.d_bvp, x, p)
-
+get_solution_bvp(br::BifurcationKit.AbstractBranchResult, ind::Int) = get_solution_bvp(BifurcationKit.getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
+get_solution_bvp(::BVPBifProblem, x, p) = x
 # ============================================================================
 # save_solution functions specific to BVP problems
 # ============================================================================
@@ -244,5 +238,3 @@ save_solution(::DiscretizedBVP, x, _) = x
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars)
     BifurcationKit.__save_solution_coll(bvp.cache.po_coll, x, pars)
 end
-
-get_solution_bvp(br::BifurcationKit.AbstractBranchResult, ind::Int) = get_solution_bvp(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))

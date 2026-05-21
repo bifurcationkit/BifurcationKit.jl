@@ -70,6 +70,8 @@ br = continuation(prob, PALC(), optc;
     normC = norminf,
 )
 
+BifurcationKit.BVP.get_solution_bvp(br, 1)
+
 plot(br)
 plot(br, vars = (:param, :s))
 @test br.specialpoint[1].param ≈ pi^2/10     atol = 1e-4
