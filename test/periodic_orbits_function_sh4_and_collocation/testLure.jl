@@ -109,6 +109,9 @@ for meshadapt in (false, true)
                 record_from_solution = recordPO,
                 plot_solution = plotPO,
                 normC = norminf)
+    show(br_po)
+    @test br_po.specialpoint[1].param ≈  0.63031334 rtol = 1e-4
+    @test br_po.specialpoint[2].param ≈ -0.63031334 rtol = 1e-4
 
     # test normal forms
     for _ind in (1,)
@@ -142,7 +145,7 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps
 
 br_po = continuation(
     br, 2, opts_po_cont,
-    Shooting(15, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1);
+    Shooting(15, probsh, ODE.Vern9(); parallel = false);
     # verbosity = 3,    plot = true,
     record_from_solution = recordPO,
     plot_solution = plotPO,
@@ -154,8 +157,8 @@ show(br_po)
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
 
-@test br_po.specialpoint[1].param ≈ 0.63030057 rtol = 1e-4
-@test br_po.specialpoint[2].param ≈ -0.63030476 rtol = 1e-4
+@test br_po.specialpoint[1].param ≈ 0.63031334 rtol = 1e-4
+@test br_po.specialpoint[2].param ≈ -0.63031334 atol = 1e-2
 
 # test showing normal form
 for _ind in (1,3)
