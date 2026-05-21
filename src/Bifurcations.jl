@@ -52,7 +52,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
             norm = iter.normC(getx(state)),
             printsol = NamedTuple{keys(branch[end-1])[begin:npar]}(values(branch[end-1])[begin:npar]),
             x = save_solution(iter.prob, _copy(getx(state)), setparam(iter.prob, getp(state))),
-            τ = copy(state.τ),
+            τ = _copy(state.τ),
             ind_ev = 0,
             # it means the fold occurs between step - 2 and step:
             step = length(branch) - 1,
@@ -69,7 +69,11 @@ end
 """
 Function for coarse identification of bifurcation points.
 """
-function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval::Tuple{T, T}, eig::AbstractEigenSolver) where T
+function get_bifurcation_type(it::ContIterable, 
+                                state, 
+                                status::Symbol, 
+                                interval::Tuple{T, T}, 
+                                eig::AbstractEigenSolver) where T
     # this boolean ensures that edge cases are handled
     known::Bool = false
 
@@ -127,10 +131,10 @@ function get_bifurcation_type(it::ContIterable, state, status::Symbol, interval:
         # record information about the bifurcation point
         # because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information) corresponding to the current bifurcation point are saved in br.eig[step+1]
         specialpoint = SpecialPoint(it, state, tp, status, interval;
-            δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
-            idx = state.step + 1,
-            ind_ev = ind_ev)
-        (it.verbosity>0) && printstyled(color=:red, "──> ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
+                                    δ = (n_unstable - n_unstable_prev, n_imag - n_imag_prev),
+                                    idx = state.step + 1,
+                                    ind_ev = ind_ev)
+        (it.verbosity > 0) && printstyled(color=:red, "──> ", tp, " Bifurcation point at p ≈ ", getp(state), ", δn_unstable = ", δn_unstable,",  δn_imag = ", δn_imag, "\n")
     else
         throw("We could not detect/identify the bifurcation point. (δn_unstable, δn_imag) = ($δn_unstable, $δn_imag)")
     end
@@ -203,7 +207,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     # emulate a do-while
     while true
         if ~converged(state)
-            error("Newton failed to fully locate bifurcation point using bisection parameters!")
+            @error "Newton failed to fully locate bifurcation point using bisection parameters!"
             break
          end
 
@@ -292,10 +296,10 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
     # point is still deemed undetected
     if iseven(n_inversion)
         status = n_inversion >= contParams.n_inversion ? :converged : :guess
-        copyto!(_state.z_old, state.z_old)
-        copyto!(_state.z_pred, state.z_pred)
-        copyto!(_state.z, state.z)
-        copyto!(_state.τ, state.τ)
+        _copyto!(_state.z_old, state.z_old)
+        _copyto!(_state.z_pred, state.z_pred)
+        _copyto!(_state.z, state.z)
+        _copyto!(_state.τ, state.τ)
 
         _state.eigvals = state.eigvals
         if save_eigenvectors(contParams)
@@ -312,10 +316,10 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
         interval = (getp(state), getp(before))
     else
         status = :guessL
-        copyto!(_state.z_old, after.z_old)
-        copyto!(_state.z_pred, after.z_pred)
-        copyto!(_state.z,  after.z)
-        copyto!(_state.τ, after.τ)
+        _copyto!(_state.z_old, after.z_old)
+        _copyto!(_state.z_pred, after.z_pred)
+        _copyto!(_state.z,  after.z)
+        _copyto!(_state.τ, after.τ)
 
         _state.eigvals = after.eigvals
         if contParams.save_eigenvectors

@@ -1,0 +1,397 @@
+# using Revise#, Plots
+using Test
+using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
+const BK = BifurcationKit
+using Core.Compiler: return_type # for type stability testing
+##################################################################
+# The goal of these tests is to test all combinations of options
+##################################################################
+# no allocation
+function Fsl!(f, u, p, t = 0)
+    (;r, μ, ν, c3) = p
+    u1 = u[1]
+    u2 = u[2]
+    ua = u1^2 + u2^2
+    f[1] = r * u1 - ν * u2 - ua * (c3 * u1 - μ * u2)
+    f[2] = r * u2 + ν * u1 - ua * (c3 * u2 + μ * u1)
+    return f
+end
+
+function Jsl!(J, u, p, t = 0)
+    (; r, μ, ν, c3) = p
+    u1 = u[1]
+    u2 = u[2]
+    ua = u1^2 + u2^2
+    A = c3*u1 - μ*u2
+    B = c3*u2 + μ*u1
+
+    J[1,1] =  r - (2*u1*A + ua*c3)
+    J[1,2] = -ν - (2*u2*A - ua*μ)
+    J[2,1] =  ν - (2*u1*B + ua*μ)
+    J[2,2] =  r - (2*u2*B + ua*c3)
+
+    return J
+end
+Jsl(u, p, t = 0) = Jsl!(zeros(2,2), u, p, t)
+####################################################################################################
+par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
+u0 = [.001, .001]
+par_hopf = (@set par_sl.r = 0.1)
+probsl = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), J=Jsl, J! = Jsl!)
+probsl_ip = BifurcationProblem(Fsl!, u0, par_hopf, (@optic _.r), inplace = true, J! = Jsl!)
+####################################################################################################
+# continuation, Hopf bifurcation point detection
+optconteq = ContinuationPar(ds = -0.01, detect_bifurcation = 3, p_min = -0.5, n_inversion = 8)
+br = continuation(probsl, PALC(), optconteq)
+####################################################################################################
+# test hopf predictor
+let
+    hp = get_normal_form(br, 1)
+    pred = predictor(hp, 0.1)
+    @test pred.orbit(0)[1] ≈ sqrt(0.1)
+end
+####################################################################################################
+let
+    Ntst = 4
+    m = 4
+    N = 3
+    Mf = rand(N, N)
+    prob1 = BK.BifurcationProblem((x,p) -> Mf * x.^2, zeros(1), nothing)
+    coll = BK.Collocation(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
+    size(coll)
+    length(coll)
+    BK.get_times(coll)
+    BK.get_max_time_step(coll)
+    BK.get_gauss_nodes(coll)
+    size(coll.mesh_cache)
+    BK.update_mesh!(coll, coll.mesh_cache.τs)
+    @test BK.lagrange(1, 1.0, 1:10) == 1
+    @test BK.lagrange(1, 2.0, 1:10) == 0
+
+    Collocation(10, 2) |> BK.get_mesh_size
+    BK.get_Ls(coll)
+    show(coll)
+    
+    _orbit(t) = [cos(2pi * t), 0, 0] * sqrt(par_sl.r / par_sl.c3)
+    _ci = BK.generate_solution(coll, _orbit, 1.)
+    BK.get_periodic_orbit(coll, _ci, par_sl)
+    @test BK.∂(sin, Val(2))(0.) == 0
+    BK.po_residual(coll, _ci, par_sl) #|> scatter
+    BK.get_time_slices(coll, _ci)
+
+    # interpolate solution
+    sol = BK.POSolution(coll, _ci)
+    sol(rand())
+end
+####################################################################################################
+let
+    coll = Collocation(200, 5, prob_vf = probsl, N = 1000)
+    _ci = BK.generate_solution(coll, t -> cos(t) .* ones(1000), 2pi)
+    BK.get_times(coll)
+    sol = BK.POSolution(coll, _ci)
+    @test sol(0.1) ≈ cos(0.1) .* ones(1000)
+    for (i,t) in pairs(BK.get_times(coll))
+        @test sol(t)[1] ≈ cos(t)
+    end
+    _time = BK.get_times(coll)
+    for t in BK.getmesh(coll)
+        @test t in _time
+    end
+end
+####################################################################################################
+# test precision of phase condition, it must work for non uniform mesh
+# recall that it is 1/T int(f,g')
+@views function phaseCond(pb::Collocation, u, v)
+    𝒯 = eltype(u)
+    phase = zero(𝒯)
+    
+    uc = BK.get_time_slices(pb, u)
+    vc = BK.get_time_slices(pb, v)
+    
+    n, m, Ntst = size(pb)
+    
+    T = BK.getperiod(pb, u, nothing)
+    
+    guj = zeros(𝒯, n, m)
+    uj  = zeros(𝒯, n, m+1)
+    
+    gvj = zeros(𝒯, n, m)
+    vj  = zeros(𝒯, n, m+1)
+    
+    L, ∂L = BK.get_Ls(pb.mesh_cache)
+    ω = pb.mesh_cache.gauss_weight
+    
+    rg = UnitRange(1, m+1)
+    @inbounds for j in 1:Ntst
+        uj .= uc[:, rg]
+        vj .= vc[:, rg]
+        mul!(guj, uj, L)
+        mul!(gvj, vj, ∂L)
+        @inbounds for l in 1:m
+            # for mul!(gvj, vj, L')
+            # phase += dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
+            phase += dot(guj[:, l], gvj[:, l]) * ω[l]
+        end
+        rg = rg .+ m
+    end
+    return phase / T
+end
+
+let
+    for Ntst in 2:10:100
+        # @info "Ntst" Ntst
+        coll = Collocation(Ntst, 10, prob_vf = probsl, N = 1)
+        # test non uniform mesh
+        BK.update_mesh!(coll, sort(vcat(0,rand(Ntst-1),1)))
+        
+        _ci1 = BK.generate_solution(coll, t -> [1], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [t], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) ≈ 1 atol = 1e-10
+        # @info phaseCond(coll, _ci1, _ci2)/pi
+        
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [sin(t)], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) ≈ 1/2 atol = 1e-5
+        # @info phaseCond(coll, _ci1, _ci2)/pi-1
+        
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) / pi ≈ 0 atol = 1e-11
+        # @info phaseCond(coll, _ci1, _ci2) / pi
+        
+        _ci1 = BK.generate_solution(coll, t -> [cos(t)], 2pi)
+        _ci2 = BK.generate_solution(coll, t -> [t], 2pi)
+        @test phaseCond(coll, _ci1, _ci2) / pi ≈ 0 atol = 1e-5
+        # @info phaseCond(coll, _ci1, _ci2) / pi
+    end
+end
+
+let
+    coll = Collocation(22, 10, prob_vf = probsl, N = 1)
+    _ci1 = BK.generate_solution(coll, t -> [cos(2pi*t)], 1)
+    _ci2 = BK.generate_solution(coll, t -> [cos(2pi*t)], 1)
+    @test BK.∫(coll, BK.get_time_slices(coll, _ci1), BK.get_time_slices(coll, _ci2)) ≈ 0.5
+    
+    coll = Collocation(22, 10, prob_vf = probsl, N = 1)
+    _ci1 = BK.generate_solution(coll, t -> [cos(2pi*t)], 3)
+    _ci2 = BK.generate_solution(coll, t -> [cos(2pi*t)], 3)
+    @test BK.∫(coll, BK.get_time_slices(coll, _ci1), BK.get_time_slices(coll, _ci2), 3) ≈ 3/2
+    @test BK.∫(coll, _ci1, _ci2, 3) ≈ 3/2 # test vector form
+end
+####################################################################################################
+let
+    Ntst = 50
+    m = 4
+    N = 2
+    coll = BK.Collocation(Ntst, m; 
+    prob_vf = probsl,
+    N = 2,
+    ϕ = rand(N*( 1 + m * Ntst)),
+    xπ = zeros(N*( 1 + m * Ntst)))
+    coll.ϕ[2] = 1 #phase condition
+    
+    _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
+    _ci = BK.generate_solution(coll, _orbit, 2pi)
+    BK.po_residual(coll, _ci, par_sl)
+    @test BK.po_residual(coll, _ci, par_sl)[1:end-1] |> norminf < 1e-7
+    
+    colll_ip = @set coll.prob_vf = probsl_ip
+    
+    @time BK.po_residual(coll, _ci, par_sl);
+    @time BK.po_residual(colll_ip, _ci, par_sl);
+    
+    # test precision of generated solution
+    _sol = BK.get_periodic_orbit(coll, _ci, nothing)
+    for (i, t) in pairs(_sol.t)
+        @test _sol.u[:, i] ≈ _orbit(t)
+    end
+    
+    args = (
+        plot_solution = (x,p; k...) -> begin
+        outt = get_periodic_orbit(coll, x, p)
+        plot!(vec(outt.t), outt.u[1, :]; k...)
+        end,
+        finalise_solution = (z, tau, step, contResult; k...) -> begin
+            return true
+        end,
+    )
+
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
+    @reset optcontpo.ds = -0.01
+    @reset optcontpo.newton_options.verbose = false
+
+    coll2 = (@set colll_ip.prob_vf.params = par_sl)
+    @reset coll2.jacobian = BK.AutoDiffDense()
+    sol_po = newton(coll2, _ci, optcontpo.newton_options);
+
+    # test solution
+    solc = BK.POSolution(coll2, sol_po.u)
+    # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
+    let
+        mesh = BK.getmesh(coll2)
+        solpo = get_periodic_orbit(coll2, sol_po.u, nothing)
+        for (i, t) in pairs(solpo.t)
+            @test solc(t) ≈ solpo.u[:, i]
+        end
+    end
+
+    # 0.131970 seconds (32.51 k allocations: 309.737 MiB, 14.97% gc time)
+    @reset coll2.update_section_every_step = 1
+    br_po = @time continuation(coll2, _ci, PALC(tangent = Bordered()), optcontpo;
+            verbosity = 0, plot = false,
+            args...,
+            );
+
+    br_po = @time continuation(coll2, _ci, PALC(tangent = Bordered()), optcontpo;
+            verbosity = 0, plot = false,
+            args...,
+            linear_algo  = COPBLS(),
+            );
+
+    # test the values of the Floquet exponents
+    for k in 1:length(br_po)-1
+        local _eigvals = br_po[k].eigenvals
+        μ1_bk = minimum(real, _eigvals)
+        μ1 = -2*br_po[k].param*(br_po[k].period)
+        @test isapprox(μ1_bk, μ1, atol = 1e-5 )
+    end 
+
+    newton(coll2, _ci, NewtonPar())
+    newton(coll2, _ci, NewtonPar(linsolver = COPLS()))
+
+    Jw = @time (BK.jacobian(BK.getprob(br_po), br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
+    J = (Jw) |> copy
+    @test BK._eig_floquet_coll((J),2,4,50,2)[1] ≈ BK._eig_floquet_coll(sparse(J),2,4,50,2)[1] atol=1e-10
+    @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)))[1] ≈ BK._eig_floquet_coll((J),2,4,50,2)[1] atol=1e-10
+    @test BK._eig_floquet_coll_small_n((J),2,4,50,2,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)))[1] ≈ FloquetGEV(DefaultEig(),size(J,1)-1,2)(BK.get_discretization(BK.getprob(br_po)),Jw,2)[1]
+end
+####################################################################################################
+# test analytical jacobian
+let
+    Ntst = 10
+    m = 3
+    N = 4
+    nullvf(x,p) = zero(x)
+    prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
+    coll = BK.Collocation(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    BK.po_residual(coll,_ci, par_sl);
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(coll, z, par_sl), _ci);
+    D = @time BK.po_analytical_jacobian(coll, _ci, par_sl); #0.000121 seconds (341 allocations: 156.516 KiB)
+    @test norminf(Jcofd - D) < 1e-14
+    
+    # same but with linear vector field
+    Ntst = 140
+    m = 4
+    N = 5
+    _al = I(N) + 0.1 .* rand(N,N)
+    idvf(x,p) = _al*x
+    prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
+    coll = BK.Collocation(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(coll, z, par_sl), _ci);
+    Jco = BK.po_analytical_jacobian(coll, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
+    @test norminf(Jcofd - Jco) < 1e-14
+    
+    # same but with Stuart-Landau vector field
+    N = 2
+    @assert N == 2 "must be the dimension of the SL"
+    Ntst = 3
+    m = 2
+    coll = BK.Collocation(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jcofd = ForwardDiff.jacobian(z->BK.po_residual(coll, z, par_sl), _ci);
+    Jco = @time BK.po_analytical_jacobian(coll, _ci, par_sl);
+    Jco_bk = @time BK.po_jacobian_block(coll, _ci, par_sl);
+    @test norminf(Jcofd - Jco) < 1e-14
+    @test norminf(Jcofd - Jco_bk) < 1e-14
+    
+    BK.po_analytical_jacobian(coll, _ci, par_sl; _transpose = Val(true), ρF = 1);
+    # test for the case of sparse arrays
+    # jacobian using BlockArray
+    _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
+    prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
+    prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
+    coll_dense = BK.Collocation(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll       = BK.Collocation(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(coll_dense.ϕ), xπ = copy(coll_dense.xπ))
+    _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
+    Jco_sp = BK.po_analytical_jacobian_sparse(coll, _ci, par_sl);
+    Jco = BK.po_analytical_jacobian(coll_dense, _ci, par_sl);
+    @test norminf(Jco - Array(Jco_sp)) < 1e-15
+    Jco2 = copy(Jco) |> sparse;
+    Jco2 .= 0
+    _indx = BifurcationKit.get_blocks(coll, Jco2);
+    @time BifurcationKit.jacobian_poocoll_sparse_indx!(coll, Jco2, _ci, par_sl, _indx);
+    @test norminf(Jco - Jco2) < 1e-14
+end
+####################################################################################################
+let 
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
+    _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
+    _hp = BK.get_normal_form(br, 1; detailed = Val(true))
+    pred = BK.predictor(_hp, 0.1)
+    # @code_warntype (pred.orbit)(0.1)
+    # TODO: this does not seem type stable
+    @test isconcretetype(return_type( (pred.orbit), typeof((0.1)))) == false
+    BK._continuation(_hp, br.prob, _cont_po,
+                    Collocation(20, 5; jacobian = BK.DenseAnalytical()))
+end
+####################################################################################################
+# test Hopf aBS
+let
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
+    for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), ), use_nf in (true, false)
+        useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
+        _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
+        for lspo in (BK.MatrixBLS(), BK.COPBLS())
+            for eig in (EigArnoldiMethod(;sigma=0.1), EigArpack(0.1), DefaultEig())
+                # @error "" jacPO use_nf typeof(lspo) eig
+                br_po_gev = continuation(br, 1, _cont_po,
+                    Collocation(20, 5; jacobian = jacPO);
+                    δp = 0.1,
+                    use_normal_form = use_nf,
+                    usedeflation = true,
+                    eigsolver = useGEV ? BK.FloquetGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
+                )
+                issorted(br_po_gev.eig[1].eigenvals, by = real)
+
+                br_po = continuation(br, 1, _cont_po,
+                    Collocation(20, 5; jacobian = jacPO);
+                    δp = 0.1,
+                    use_normal_form = use_nf,
+                    usedeflation = true,
+                    eigsolver = BK.FloquetColl(),
+                )
+                issorted(br_po.eig[1].eigenvals, by = real)
+
+                # we test that the 2 methods give the same floquet exponents
+                if eig isa DefaultEig
+                    for i=1:length(br_po)-1
+                        @test BK.eigenvals(br_po, i) ≈ BK.eigenvals(br_po_gev, i)
+                    end
+                end
+
+                for k in 1:length(br_po)-1
+                    _eigvals = br_po[k].eigenvals
+                    μ1_bk = minimum(real, _eigvals)
+                    valid = minimum(abs, _eigvals) < 1e-9 # Floquet exponent not precise?
+                    μ1 = -2*br_po[k].param*(br_po[k].period)
+                    # @error "" k _eigvals μ1_bk μ1 eig
+                    @test isapprox(μ1_bk, μ1, atol = 1e-5) || (eig isa EigArnoldiMethod) || (eig isa EigArpack) || ~valid
+                end
+            end
+            
+            # test mesh adaptation
+            br_po_adapt = continuation(br, 1, _cont_po,
+                Collocation(20, 5; jacobian = jacPO, meshadapt = true);
+                δp = 0.1,
+                use_normal_form = use_nf,
+                linear_algo = lspo,
+                usedeflation = true,
+                eigsolver = BK.FloquetColl(),
+            )
+            issorted(br_po_adapt.eig[1].eigenvals, by = real)
+        end
+    end
+end

@@ -1,26 +1,26 @@
 """
 $(TYPEDEF)
 
-Construct a Poincaré return map `Π` to an hyperplane `Σ` from a `AbstractPeriodicOrbitProblem`.
+Construct a Poincaré return map `Π` to an hyperplane `Σ` from an `AbstractBoundaryValueDiscretization`.
 If the state space is of size `Nₓ x N𝕪`, then we can evaluate the map as `Π(xₛ, par)` where `xₛ ∈ Σ` is of size `Nₓ x N𝕪`.
 
-## Fields
+# Internal fields
 $(TYPEDFIELDS)
 """
 struct PoincaréMap{Tp, Tpo, Ts <: AbstractSection, To}
-    "periodic orbit problem"
+    "periodic orbit problem."
     probpo::Tp
-    "Periodic orbit"
+    "Periodic orbit."
     po::Tpo
-    "section"
+    "section."
     Σ::Ts
-    "Newton options"
+    "Newton options."
     options::To
 end
 
-@inline get_mesh_size(Π::PoincaréMap{ <: WrapPOSh}) = get_mesh_size(Π.probpo.prob) - 1
+@inline get_mesh_size(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}) = get_mesh_size(get_discretization(Π.probpo)) - 1
 
-@views function get_time_slices(Π::PoincaréMap{ <: WrapPOSh}, x::AbstractVector)
+@views function get_time_slices(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x::AbstractVector)
     M = get_mesh_size(Π)
     if M == 0
         return x
@@ -35,26 +35,26 @@ function (Π::PoincaréMap)(xₛ, par)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
-Constructor for the Poincaré return map. Return a `PoincaréMap`
+Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
-function PoincareMap(wrap::WrapPOSh, po, par, optn)
-    sh = wrap.prob
-    Π = PoincaréMap(wrap, po, deepcopy(wrap.prob.section), optn)
+function PoincareMap(wrap::PeriodicOrbitFunctionalSh, po, par, optn)
+    sh = get_discretization(wrap)
+    Π = PoincaréMap(wrap, po, deepcopy(sh.section), optn)
     poc = get_time_slices(sh, po)
-    @views update!(Π.Σ, vf(sh.flow, poc[:, begin], par), poc[:, begin])
+    @views update!(Π.Σ, vector_field(sh.flow, poc[:, begin], par), poc[:, begin])
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
-Constructor for the Poincaré return map. Return a `PoincaréMap`
+Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
-function PoincareMap(wrap::WrapPOColl, po, par, optn)
-    coll = wrap.prob
+function PoincareMap(wrap::PeriodicOrbitFunctionalColl, po, par, optn)
+    coll = get_discretization(wrap)
     N, m, Ntst = size(coll)
     Σ = SectionSS(rand(N), rand(N))
     poc = get_time_slices(coll, po)
@@ -63,16 +63,15 @@ function PoincareMap(wrap::WrapPOColl, po, par, optn)
     return PoincaréMap(wrap, po, Σ, optn)
 end
 
-function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
-    # shooting problem
-    sh = Π.probpo.prob
+function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, par, x₁)
+    sh = get_discretization(Π.probpo)
 
     M = get_mesh_size(Π)
     N = div(length(Π.po) - 1, M+1)
     T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
-    tₘ = _extract_period(x)    # estimate of the last bit for the return time
+    tₘ = _extract_period(x)   # estimate of the last bit for the return time
 
-    # extract the orbit guess and reshape it into a matrix as it's more convenient to handle it
+    # extract the orbit guess and reshape it into a matrix as it's more convenient to handle
     poc = get_time_slices(sh, Π.po)
     # unknowns are po₁, po₂, ..., poₘ, period
     @assert size(poc) == (N, M+1)
@@ -81,12 +80,12 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     # unknowns are x₂,...,xₘ,tΣ
 
     # variable to hold the computed result
-    out = similar(x, typeof(x[1]*x₁[1]*_get(par, getlens(sh))))
+    out = similar(x, typeof(x[1] * x₁[1] * _get(par, getlens(sh))))
     outc = get_time_slices(Π, out)
 
     if M == 0
         𝒯 = typeof(x[1] * x₁[1])
-        # this type promotion is to use ForwardDiff
+        # this type promotion is for ForwardDiff
         out[1] = Π.Σ(evolve(sh.flow, 𝒯.(x₁), par, tₘ * T⁰).u, T⁰)
         return out
     end
@@ -108,19 +107,19 @@ function poincaré_functional(Π::PoincaréMap{ <: WrapPOSh }, x, par, x₁)
     out
 end
 
-function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
+function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
     @assert (Π.po isa AbstractVector) "The case of a general AbstractArray for the state space is not handled yet."
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
     # get the size of the state space
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     M = get_mesh_size(sh)
     N = div(length(Π.po) - 1, M)
     # we construct the initial guess
     x₀ = Π.po[N+1:end]
     x₀[end] = sh.ds[end]
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
-    # @assert false "needs a jacobian"
+    ## TODO needs a jacobian
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
@@ -130,8 +129,8 @@ function _solve(Π::PoincaréMap{ <: WrapPOSh}, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
-    sh = Π.probpo.prob
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, solΠ, par)
+    sh = get_discretization(Π.probpo)
     # we get the return time
     T⁰ = getperiod(sh, Π.po)
     tₘ = _extract_period(solΠ)
@@ -148,22 +147,22 @@ function _extend(Π::PoincaréMap{ <: WrapPOSh }, solΠ, par)
     return (u = xᵣ, t = tᵣ)
 end
 
-@views function poincaré_functional(Π::PoincaréMap{ <: WrapPOColl }, u, par, x₁)
-    # shooting problem
-    coll = Π.probpo.prob
+@views function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, u, par, x₁)
+    # collocation problem
+    coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
 
     uc = get_time_slices(coll, u)
     T = getperiod(coll, u, nothing)
-    𝒯 = typeof(u[1] * x₁[1])
+    𝒯 = promote_type(VI.scalartype(u), VI.scalartype(x₁))
     result = 𝒯.(u)
     resultc = get_time_slices(coll, result)
-    functional_coll_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
+    po_residual_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
     resultc[:, end] .= x₁ .- uc[:, 1]
     return vcat(vec(resultc), Π.Σ(u[end-N:end-1], T))
 end
 
-function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
+function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
     # we construct the initial guess
@@ -178,8 +177,8 @@ function _solve(Π::PoincaréMap{ <: WrapPOColl }, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
-    coll = Π.probpo.prob
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
+    coll = get_discretization(Π.probpo)
     N,_,_ = size(coll)
     T⁰ = getperiod(coll, Π.po)
     tₘ = _extract_period(solΠ)
@@ -187,42 +186,41 @@ function _extend(Π::PoincaréMap{ <: WrapPOColl }, solΠ, par)
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end
 
-function d1F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h)
+function d1F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h)
     @assert length(x) == length(h)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
     # differential of return time
-    ∂th = - dot(normal, y) / dot(normal, Fx)
+    ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
     out = @. y + ∂th * Fx
     return (u = out, t = ∂th)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
-Compute the monodromy matrix of the Poincaré Return Map. It yields a `Matrix{𝒯}`
-
+Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
-function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
-    sh = Π.probpo.prob
+function jacobian(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     # monodromy matrix
     N = length(x)
     𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
     Mono = zeros(𝒯p, N, N)
     h = zeros(𝒯p, N)
-    for i = eachindex(h)
+    for i in eachindex(h)
         h[i] += 1
         y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
         # differential of return time
-        ∂th = - dot(normal, y) / dot(normal, Fx)
+        ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
         out = @. y + ∂th * Fx
         Mono[:, i] .= out
         h[i] -= 1
@@ -230,16 +228,15 @@ function jacobian(Π::PoincaréMap{ <: WrapPOSh }, x::AbstractVector{𝒯}, pars
     return Mono
 end
 
-
-function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
+function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     Πx, tΣ = Π(x, pars)
-    Fx = vf(sh.flow, Πx, pars)
+    Fx = vector_field(sh.flow, Πx, pars)
     ∂Πh2, ∂th2 = d1F(Π, x, pars, h₂) # not good, we recompute a lot
 
     ∂ϕ(z,h) = evolve(sh.flow, Val(:SerialdFlow), z, pars, h, tΣ).du
@@ -249,26 +246,26 @@ function d2F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂)
     ∂2ϕh12 = ∂2ϕ(x,h₁,h₂)
 
     # differentials of return times
-    ∂th1 = -dot(normal, ∂ϕh1) / dot(normal, Fx)
+    ∂th1 = -LA.dot(normal, ∂ϕh1) / LA.dot(normal, Fx)
     y = ∂ϕ(x,h₂)
 
     y = dvf(Πx, ∂Πh2) .* ∂th1 .+
         ∂2ϕh12 .+ dvf(Πx, ∂ϕh1) .* ∂th2
-    ∂2t = -dot(normal, y) / dot(normal, Fx)
+    ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(dot(normal, y)))"
+    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(LA.dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end
 
-function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
+function d3F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂, h₃)
     @assert length(x) == length(h₁) == length(h₂) == length(h₃)
-    sh = Π.probpo.prob
+    sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
     Πx, tΣ = Π(x, pars)
 
-    VF(z) = vf(sh.flow, z, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
     d2vf(z,h1,h2) = ForwardDiff.derivative(t -> dvf(z .+ t .* h2, h1), 0)
 
@@ -311,9 +308,9 @@ function d3F(Π::PoincaréMap{ <: WrapPOSh }, x, pars, h₁, h₂, h₃)
            dvf(Πx, ∂ϕh1) .* ∂2t23
 
     # we compute dτ(x)[h₁, h₂, h₃]
-    ∂3t = -dot(normal, y) / dot(normal, Fx)
+    ∂3t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     out = y .+ ∂3t .* Fx
 
-    abs(dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(dot(normal, out))) > 1e-10"
+    abs(LA.dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(LA.dot(normal, out))) > 1e-10"
     return (u = out, t = ∂3t)
 end

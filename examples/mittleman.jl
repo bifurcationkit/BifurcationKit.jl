@@ -29,8 +29,8 @@ function Laplacian2D(Nx, Ny, lx, ly)
     return A, D2x
 end
 
-ϕ(u, λ)  = -10(u-λ*exp(u))
-dϕ(u, λ) = -10(1-λ*exp(u))
+ϕ(u, λ)  = -10(u - λ * exp(u))
+dϕ(u, λ) = -10(1 - λ * exp(u))
 
 function NL!(dest, u, p)
     (;λ) = p
@@ -38,11 +38,11 @@ function NL!(dest, u, p)
     return dest
 end
 
-NL(u, p) = NL!(similar(u), u, p)
+NL(u, p) = NL!(similar(u .* p.λ), u, p)
 
 function Fmit!(f, u, p)
-    mul!(f, p.Δ, u)
-    f .= f .+ NL(u, p)
+    NL!(f, u, p)
+    mul!(f, p.Δ, u, 1, 1)
     return f
 end
 
@@ -53,10 +53,12 @@ function dFmit(x, p, dx)
     f .= f .+ nl
 end
 
-function JFmit!(out,x,p)
+function JFmit!(out, x, p)
     J = p.Δ
     dg = dϕ.(x, p.λ)
-    out .= J .+ spdiagm(0 => dg)
+    out .= J
+    out[diagind(out)] .+= dg
+    out
 end
 JFmit(x,p) = JFmit!(L1, x, p)
 ####################################################################################################
@@ -110,10 +112,11 @@ kwargsC = (verbosity = 3,
     plot = true,
     callback_newton = cb,
     finalise_solution = finSol,
-    normC = norminf
+    normC = norminf,
+    autodiff = false,
     )
 
-opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.04, ds = 0.005, p_max = 3.5, p_min = 0.01, detect_bifurcation = 3, nev = 50, plot_every_step = 10, newton_options = (@set opt_newton.verbose = false), max_steps = 251, tol_stability = 1e-6, n_inversion = 6, max_bisection_steps = 25)
+opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds = 0.005, p_max = 3.5, p_min = 0.01, detect_bifurcation = 3, nev = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 250, tol_stability = 1e-6, n_inversion = 6)
 
 br = @time continuation(prob, PALC(), opts_br; kwargsC...)
 
@@ -162,8 +165,8 @@ bp2d = @time get_normal_form(br, 2, nev = 30)
 
 res = BK.continuation(br, 2,
     setproperties(opts_br; detect_bifurcation = 3, ds = 0.001, p_min = 0.01, max_steps = 32 ) ;
-    nev = 30, verbosity = 3,
     kwargsC...,
+    nev = 30, verbosity = 0,
     )
 
 plot(res..., br ;plotfold= false)

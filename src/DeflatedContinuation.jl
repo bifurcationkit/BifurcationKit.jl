@@ -7,7 +7,7 @@ $(TYPEDEF)
 
 Structure which holds the parameters specific to Deflated continuation.
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -52,6 +52,8 @@ end
 $(TYPEDEF)
 
 Structure holding the result from deflated continuation.
+
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -106,7 +108,6 @@ function updatebranch!(dcIter::DefContIterable,
     it = dcIter.it                 # continuation iterator
     alg = dcIter.alg
     (;step, ds) = state
-    (; verbosity) = it
     state.z_pred.p = current_param
 
     getpredictor!(state, it)
@@ -119,7 +120,7 @@ function updatebranch!(dcIter::DefContIterable,
 
     if converged(sol1)
         # record previous parameter (cheap) and update current solution
-        copyto!(state.z.u, sol1.u); state.z.p = current_param
+        _copyto!(state.z.u, sol1.u); state.z.p = current_param
         state.z_old.p = current_param
 
         # get tangent, it only mutates tau
@@ -158,7 +159,7 @@ function _get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) whe
         error("You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process.")
     end
     contIt = iter.it
-    copyto!(contIt.prob.u0, roots[1])
+    _copyto!(contIt.prob.u0, roots[1])
     states = [DCState(rt, iterate(contIt)[1]) for rt in roots]
     # allocate branches to hold the result
     branches = [ContResult(contIt, st.state) for st in states]
@@ -171,7 +172,7 @@ function plot_DCont_branch end
 
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This function computes the set of curves of solutions `γ(s) = (x(s), p(s))` to the equation `F(x,p) = 0` based on the algorithm of **deflated continuation** as described in Farrell, Patrick E., Casper H. L. Beentjes, and Ásgeir Birkisson. “The Computation of Disconnected Bifurcation Diagrams.” ArXiv:1603.00809 [Math], March 2, 2016. http://arxiv.org/abs/1603.00809.
 
@@ -255,7 +256,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         prob_df = re_make(cont_iter.prob;
                             u0 = alg.perturb_solution(u0, _p, _idb),
                             params = set(par, lens, _p))
-        soln = solve(prob_df, deflationOp,
+        local soln = solve(prob_df, deflationOp,
                 setproperties(optnewton; max_iterations = alg.max_iter_defop);
                 normN = cont_iter.normC,
                 callback = cont_iter.callback_newton,
@@ -283,7 +284,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         empty!(deflationOp)
 
         # update the known branches
-        for (idb, dcstate) in enumerate(dcstates)
+        for (idb, dcstate) in pairs(dcstates)
             # this computes the solution for the new parameter value current_param
             # it also updates deflationOp
             # if the branch is inactive, it returns
@@ -307,7 +308,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
         if mod(nstep, alg.seek_every_step) == 0 && nactive < alg.max_branches
             n_active = 0
             # we restrict to 1:nbrs because we don't want to update the newly found branches
-            for (idb, dcstate) in enumerate(dcstates[begin:nbrs])
+            for (idb, dcstate) in enumerate(Iterators.take(dcstates, nbrs))
                 if isactive(dcstate) && (n_active < alg.max_branches)
                     n_active += 1
                     _success = true

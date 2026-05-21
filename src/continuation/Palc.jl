@@ -1,6 +1,7 @@
 """
 $(TYPEDEF)
 
+# Internal fields
 $(TYPEDFIELDS)
 
 This parametric type allows to define a new dot product from the one saved in `dt::dot`. More precisely:
@@ -19,7 +20,7 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( (x, y) -> dot(x, y) / length(x), x -> rmul!(x, 1/length(x))   )
+DotTheta() = DotTheta( (x, y) -> VI.inner(x, y) / length(x), x -> VI.scale!(x, 1/length(x))   )
 DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
@@ -41,8 +42,8 @@ Compute
 function arc_length_eq(dt::DotTheta, u1, u2, p, du, dp, θ, ds)
     # θ⋅dot(x - z0.u, τ0.u) / n + (1 - θ)⋅(p - z0.p)⋅τ0.p - ds
     #  arc_length_eq(dotθ, minus(u, z0.u), _p - z0.p, τ0.u, τ0.p, θ, ds)
-    out = arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
-          arc_length_eq(dt, u2, p, du, 0, θ, 0)
+    return arc_length_eq(dt, u1, p, du, dp, θ, ds) - 
+           arc_length_eq(dt, u2, p, du, 0, θ, 0)
 
 end
 ####################################################################################################
@@ -53,7 +54,7 @@ Pseudo-arclength continuation algorithm.
 
 Additional information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/).
 
-# Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
@@ -79,6 +80,7 @@ getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
 getdot(it::ContIterable) = getdot(it.alg)
 getθ(it::ContIterable) = getθ(it.alg)
+getbls(alg::PALC) = alg.bls
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)
@@ -88,8 +90,8 @@ function Base.empty!(alg::PALC)
     alg
 end
 
-function update(alg::PALC, contParams::ContinuationPar, linear_algo)
-    if isnothing(linear_algo)
+function update(alg::PALC, contParams::ContinuationPar, linear_algo::Tla) where {Tla}
+    if Tla == Nothing
         if isnothing(alg.bls.solver)
             bls = alg.bls
             return @set alg.bls = update_bls(bls, contParams.newton_options.linsolver)
@@ -108,7 +110,7 @@ function initialize!(state::AbstractContinuationState,
     # fails at bifurcation points. Instead, we start with a Secant predictor
     gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
-    copyto!(state.z, state.z_old)
+    _copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
     addtangent!(state, nrm)
 end
@@ -128,20 +130,23 @@ function getpredictor!(state::AbstractContinuationState,
     addtangent!(state, nrm)
 end
 
-# this function only mutates z_pred
-# the nrm argument allows to just the increment z_pred.p by ds
+"""
+This function only mutates z_pred. The nrm argument allows to just the increment z_pred.p by ds.
+
+We perform z_pred = z + ds * τ
+"""
 function addtangent!(state::AbstractContinuationState, nrm = false)
     # we perform z_pred = z + ds * τ
     # note that state.z contains the last converged state
-    copyto!(state.z_pred, state.z)
+    _copyto!(state.z_pred, state.z)
     ds = state.ds
     ρ = nrm ? ds / state.τ.p : ds
-    axpy!(ρ, state.τ, state.z_pred)
+    VI.add!(state.z_pred, state.τ, ρ)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                  iter::AbstractContinuationIterable,
-                  alg::PALC,
+                  ::AbstractContinuationIterable,
+                  ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
 function corrector!(state::AbstractContinuationState,
@@ -163,7 +168,7 @@ function corrector!(state::AbstractContinuationState,
 
     # update solution
     if converged(sol)
-        copyto!(state.z, sol.u)
+        _copyto!(state.z, sol.u)
     end
 
     return true
@@ -174,22 +179,23 @@ end
     Secant Tangent predictor
 """
 struct Secant <: AbstractTangentComputation end
+_shortname(::PALC{Secant}) = "PALC [Secant]"
 
 # This function is used for initialization in iterate_from_two_points
 function _secant_tangent!(τ::M, 
                           z₁::M, 
                           z₀::M, 
-                          it::AbstractContinuationIterable, 
+                          ::AbstractContinuationIterable, 
                           ds, 
                           θ, 
                           verbosity, 
                           dotθ) where {T, vectype, M <: BorderedArray{vectype, T}}
     (verbosity > 0) && println("Predictor:  Secant")
     # secant predictor: τ = z₁ - z₀; tau *= sign(ds) / normtheta(tau)
-    copyto!(τ, z₁)
-    minus!(τ, z₀)
+    _copyto!(τ, z₁)
+    minus!!(τ, z₀)
     α = sign(ds) / dotθ(τ, θ)
-    rmul!(τ, α)
+    VI.scale!(τ, α)
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Secant, ::Bool) = nothing
@@ -212,6 +218,7 @@ gettangent!(state::AbstractContinuationState,
 struct Bordered <: AbstractTangentComputation end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Bordered, ::Bool) = nothing
+_shortname(::PALC{Bordered}) = "PALC [Bordered]"
 
 # tangent computation using Bordered system
 # τ is the tangent prediction found by solving
@@ -222,7 +229,7 @@ internal_adaptation!(::Bordered, ::Bool) = nothing
 # it is updated inplace
 function gettangent!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    tgt_algo::Bordered, 
+                    ::Bordered, 
                     dotθ)
     (it.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(it.prob)
@@ -232,8 +239,8 @@ function gettangent!(state::AbstractContinuationState,
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
     dFdl = residual(it.prob, state.z.u, setparam(it, state.z.p + ϵ))
-    minus!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
-    rmul!(dFdl, 1/ϵ)
+    minus!!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
+    VI.scale!(dFdl, 1/ϵ)
 
     # compute jacobian at the current solution
     J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
@@ -242,21 +249,22 @@ function gettangent!(state::AbstractContinuationState,
     τu, τp, flag, itl = solve_bls_palc(getlinsolver(it),
                                         it, state,
                                         J, dFdl,
-                                        0*state.z.u, one(T)) # Right-hand side
+                                        VI.zerovector(state.z.u), one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
     α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
 
-    copyto!(τ.u, τu)
+    _copyto!(τ.u, τu)
     τ.p = τp
-    rmul!(τ, α)
+    VI.scale!(τ, α)
 end
 ####################################################################################################
 """
     Polynomial Tangent predictor
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)
@@ -306,15 +314,17 @@ mutable struct Polynomial{T <: Real, Tvec, Ttg <: AbstractTangentComputation} <:
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
+_shortname(::PALC{Polynomial}) = "PALC [Polynomial]"
 
 function Polynomial(pred, n, k, v0)
     @assert n<k "k must be larger than the degree of the polynomial"
-    Polynomial(n, k, zeros(eltype(v0), k, n+1), pred,
+    𝒯 = VI.scalartype(v0)
+    Polynomial(n, k, zeros(𝒯, k, n+1), pred,
         DataStructures.CircularBuffer{typeof(v0)}(k),  # solutions
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # parameters
-        DataStructures.CircularBuffer{eltype(v0)}(k),  # arclengths
+        DataStructures.CircularBuffer{𝒯}(k),  # parameters
+        DataStructures.CircularBuffer{𝒯}(k),  # arclengths
         Vector{typeof(v0)}(undef, n+1), # coeffsSol
-        Vector{eltype(v0)}(undef, n+1), # coeffsPar
+        Vector{𝒯}(undef, n+1), # coeffsPar
         true)
 end
 Polynomial(n, k, v0) = Polynomial(Secant(), n, k, v0)
@@ -353,8 +363,8 @@ function update_pred!(polypred::Polynomial)
     for jj in 1:polypred.n; polypred.A[:, jj+1] .= polypred.A[:, jj] .* Ss; end
     # invert linear system for least square fitting
     B = (polypred.A' * polypred.A) \ polypred.A'
-    mul!(polypred.coeffsSol, B, polypred.solutions)
-    mul!(polypred.coeffsPar, B, polypred.parameters)
+    LA.mul!(polypred.coeffsSol, B, polypred.solutions)
+    LA.mul!(polypred.coeffsPar, B, polypred.parameters)
     return true
 end
 
@@ -423,13 +433,11 @@ function newton_palc(iter::AbstractContinuationIterable,
     x_pred = _copy(x)
 
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
-    dp = zero(𝒯)
-    up = zero(𝒯)
 
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    minus!(dFdp, res_f) # dFdp = dFdp - res_f
-    rmul!(dFdp, one(𝒯) / ϵ)
+    dFdp = minus!!(dFdp, res_f) # dFdp = dFdp - res_f
+    VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
     residuals = [res]
@@ -443,8 +451,8 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!(dFdp, res_f); rmul!(dFdp, one(𝒯) / ϵ)
+        _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
+        minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -462,10 +470,10 @@ function newton_palc(iter::AbstractContinuationIterable,
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
-                copyto!(x_pred, x); axpy!(-α, u, x_pred)
+                _copyto!(x_pred, x); VI.add!(x_pred, u, -α)
 
                 p_pred = p - α * up
-                copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
                 res = normAC(res_f, res_n)
@@ -475,7 +483,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                         α *= 2
                     end
                     line_step = true
-                    copyto!(x, x_pred)
+                    _copyto!(x, x_pred)
 
                     # p = p_pred
                     p  = clamp(p_pred, p_min, p_max)
@@ -486,9 +494,9 @@ function newton_palc(iter::AbstractContinuationIterable,
             # we put back the initial value
             α = α0
         else
-            minus!(x, u)
+            minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
-            copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 

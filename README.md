@@ -33,7 +33,7 @@ The current focus is on large scale nonlinear problems and multiple hardwares. H
 
 ## SciML Integration
 
-**BifurcationKit.jl** is listed in Third patry parameter analysis of [SciML Docs](https://docs.sciml.ai/DiffEqDocs/stable/#DifferentialEquations.jl:-Efficient-Differential-Equation-Solving-in-Julia) under the "Analysis" menu. [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/tutorials/bifurcation_diagram_computation/) and [Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/steady_state_functionality/bifurcation_diagrams/) rely on **BifurcationKit.jl** as external dependency.
+**BifurcationKit.jl** is listed in Third-party parameter analysis of [SciML Docs](https://docs.sciml.ai/DiffEqDocs/stable/#DifferentialEquations.jl:-Efficient-Differential-Equation-Solving-in-Julia) under the "Analysis" menu. [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/tutorials/bifurcation_diagram_computation/) and [Catalyst.jl](https://docs.sciml.ai/Catalyst/stable/steady_state_functionality/bifurcation_diagrams/) rely on **BifurcationKit.jl** as external dependency.
 
 ## 📚 Support and citation
 If you use `BifurcationKit.jl` in your work, we ask that you cite the following paper on [HAL-Inria](https://hal.archives-ouvertes.fr/hal-02902346) with *bibtex* entry [CITATION.bib](https://github.com/bifurcationkit/BifurcationKit.jl/blob/master/CITATION.bib). Open source development as part of academic research strongly depends on this. Please also consider starring this repository if you like our work, this will help us to secure funding in the future.

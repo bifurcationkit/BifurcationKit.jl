@@ -1,5 +1,5 @@
 """
-    $(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 This event implements the detection of when the parameter values, used during continuation, equals one of the values in `positions`. This state is then saved in the branch.
 
@@ -28,7 +28,7 @@ function finaliser_sae(event_point, it, state, success)
                             iterationC = 0,
                             p = p)
     if converged(sol)
-        copyto!(event_point.x, sol.u)
+        _copyto!(event_point.x, sol.u)
         @reset event_point.param = p
         @reset event_point.precision = newton_options.tol
         state.z.p = p
@@ -54,7 +54,7 @@ compute_eigenelements(::BifEvent) = true
 @inline has_custom_labels(::BifEvent) = true
 
 function detect_bifurcation_event(iter, state)
-    # Note that the computation of eigen-elements should have occurred before events are called
+    # note that the computation of eigen-elements should have occurred before events are called
     # state should be thus up to date at this stage
     ~(state.n_unstable[1] >=0) && error("Issue with `detect_bifurcation_event`. Please open an issue on https://github.com/rveltz/BifurcationKit.jl/issues.")
     # put the max because n_unstable is initialized at -1 at the beginning of the continuation
@@ -73,7 +73,8 @@ function get_event_type(event::BifEvent,
                         state, 
                         verbosity, 
                         status::Symbol, 
-                        interval::Tuple{T, T}, 
-                        ind = :; typeE = :user) where T
+                        interval::Tuple{𝒯, 𝒯}, 
+                        ind = :; 
+                        typeE = :user) where 𝒯
     return get_bifurcation_type(iter, state, status, interval)
 end

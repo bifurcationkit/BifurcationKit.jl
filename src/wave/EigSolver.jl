@@ -1,4 +1,4 @@
-using IterativeSolvers, Arpack, LinearAlgebra
+import Arpack
 
 # abstract type for generalised eigenvector
 abstract type AbstractGEigenSolver <: AbstractEigenSolver end
@@ -20,7 +20,7 @@ end
 
 function (l::DefaultGEig)(Jac, nev; kwargs...)
     # I put Array so we can call it on small sparse matrices
-    F = eigen(Array(Jac), l.B)
+    F = LA.eigen(Array(Jac), l.B)
     I = sortperm(F.values, by = l.which, rev = true)
     nev2 = min(nev, length(I))
     J = findall( abs.(F.values[I]) .< 100000)
@@ -34,6 +34,8 @@ convertToGEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B f
 ####################################################################################################
 """
 $(TYPEDEF)
+
+# Internal fields
 $(TYPEDFIELDS)
 
 More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgebra/Arpack.jl). You can pass the following parameters `tol=0.0, maxiter=300, ritzvec=true, v0=zeros((0,))`.
@@ -70,7 +72,7 @@ function (l::GEigArpack)(J, nev; kwargs...)
             error("The v0 argument must be provided in EigArpack for the matrix-free case")
         end
         N = length(l.kwargs[:v0])
-        T = eltype(l.kwargs[:v0])
+        T = VI.scalartype(l.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
         λ, ϕ, ncv, = Arpack.eigs(Jmap, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
     end

@@ -1,4 +1,3 @@
-using LinearAlgebra
 import KrylovKit
 import ArnoldiMethod, RecursiveArrayTools
 
@@ -33,7 +32,7 @@ end
 
 function LinearAlgebra.:\(Pl::PrecPartialSchur, rhs::AbstractArray)
     out = similar(rhs)
-    ldiv!(out, Pl, rhs)
+    LA.ldiv!(out, Pl, rhs)
     return out
 end
 
@@ -43,8 +42,8 @@ end
 Builds a preconditioner based on deflation of `nev` eigenvalues chosen according to `which`. A partial Schur decomposition is computed (Matrix-Free), using the package `KrylovKit.jl`, from which a projection is built. The options are similar to the ones of `EigKrylovKit()`.
 """
 function PrecPartialSchurKrylovKit(J, x0, nev, which = :LM; krylovdim = max(2nev, 20), verbosity = 0, kwargs...)
-    H, V, vals, info = KrylovKit.schursolve(J, x0, nev, which, KrylovKit.Arnoldi(;krylovdim = krylovdim, verbosity = verbosity, kwargs...))
-    Q, S = qr(H)
+    H, V, vals, _ = KrylovKit.schursolve(J, x0, nev, which, KrylovKit.Arnoldi(;krylovdim = krylovdim, verbosity = verbosity, kwargs...))
+    Q, S = LA.qr(H)
     U = convert(Array, RecursiveArrayTools.VectorOfArray(V)) * Matrix(Q) # (m, nev) * (nev, nev) = (m, nev)
     return PrecPartialSchur(S, U, inv(S), vals)
 end
@@ -56,10 +55,10 @@ Builds a preconditioner based on deflation of `nev` eigenvalues chosen according
 """
 function PrecPartialSchurArnoldiMethod(J, N, nev, which = ArnoldiMethod.LM(); tol = 1e-9, kwargs...)
     if J isa AbstractMatrix
-        decomp, history = ArnoldiMethod.partialschur(J; nev = nev, tol = tol, which = which, kwargs...)
+        decomp, _ = ArnoldiMethod.partialschur(J; nev, tol, which, kwargs...)
     else
         Jmap = LinearMaps.LinearMap{Float64}(J, N, N ; ismutating = false)
-        decomp, history = ArnoldiMethod.partialschur(Jmap; nev = nev, tol = tol, which = which, kwargs...)
+        decomp, _ = ArnoldiMethod.partialschur(Jmap; nev, tol, which, kwargs...)
     end
     return PrecPartialSchur(decomp.R, decomp.Q, inv(decomp.R), decomp.eigenvalues)
 end

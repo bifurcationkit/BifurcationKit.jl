@@ -3,6 +3,76 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [0.7.3]
+- Remove `AbstractPeriodicOrbitDiscretization`, make subtypes inherit directly from `AbstractBoundaryValueDiscretization`
+- `AbstractPODifferentialDiscretization` → `AbstractDifferentialDiscretization`
+- `AbstractPOFiniteDifferencesDiscretization` → `AbstractFiniteDifferencesDiscretization`
+- `AbstractPOShootingDiscretization` → `AbstractShootingDiscretization`
+
+## [0.7.2]
+
+- Change names `*ShootingProblem` for `*Shooting`, `PeriodicOrbitOCollProblem` for `Collocation` and `PeriodicOrbitTrapProblem` for `Trapeze`
+## [0.6.1]
+- emove fields params and lens from PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalColl, WrapTW
+- remove `param` field from `*MAProblem` structs (`FoldMAProblem`, `HopfMAProblem`, `PDMAProblem`, `NSMAProblem`, `BTMAProblem`) and from `WrapTW`; `getparams` now delegates to `getparams(get_formulation(prob))`
+- add `re_make` methods for `AbstractMABifurcationProblem`, `AbstractWaveProblem`, `AbstractWrapperPeriodicOrbitProblem`, `AbstractPODifferentialDiscretization`, `AbstractPOShootingDiscretization`, `TWModel`, `AbstractMinimallyAugmentedFormulation`
+- add `getlens` method for `TWModel`
+## [0.6.0]
+- add `AbstractBoundaryValueDiscretization`, `AbstractPeriodicOrbitDiscretization`, `AbstractPODifferentialDiscretization`, `AbstractPOFiniteDifferencesDiscretization`
+- `AbstractPoincareShootingProblem` becomes `AbstractPoincareShootingDiscretization`
+- `AbstractShootingProblem` becomes `AbstractPOShootingDiscretization`
+- `BTProblemMinimallyAugmented` becomes `BTMinimallyAugmentedFormulation`
+- `TWProblem` becomes `TWModel`
+- remove `modify_po_finalise`, `modify_po_record`, `modify_tw_record` and `Finalizer`
+- change `Fold/Hopf/PeriodDoubling/NeimarkSackerProblemMinimallyAugmented` into `Fold/Hopf/PeriodDoubling/NeimarkSackerMinimallyAugmentedFormulation`
+- `AbstractProblemMinimallyAugmented` becomes `AbstractMinimallyAugmentedFormulation`
+- make `AbstractMABifurcationProblem{T, Tjac}` dependent on 2 parameters
+- add method `finalise_solution(iter::ContIterable, state::AbstractContinuationState, contRes)`
+- remove `update_minaug_hopf`, `update_minaug_fold`, `update_min_aug_ns`, `update_min_aug_pd`
+- `WrapPOColl` becomes `PeriodicOrbitFunctionalColl`
+- `WrapPOSh` becomes `PeriodicOrbitFunctionalSh`
+- `WrapPOTrap` becomes `PeriodicOrbitFunctionalTrap`
+- `correct_bifurcation` becomes `_correct_event_labels`
+- add `PeriodicOrbit{Tdisc}`, `TravellingWave{Tdisc}` to bridge discretization and problem
+- add `MASolution`, `MASolutionFreq` to hold codim1 MA solutions (for mesh adaptation in codim2)
+- add `RecordForFold`, `RecordForHopf`, `RecordForPeriodicOrbits`, `RecordForNS`, `RecordForPD`, `RecordForTW` to replace closure-based callbacks
+- add accessor methods `get_discretization`, `get_formulation`, `get_solution`, `getparams`
+- add `update!` for `PDMAProblem`, `NSMAProblem`, `HopfMAProblem` and periodic orbit wrappers
+- `TWModel` inherits from `AbstractTravelingWaveDiscretization` instead of `AbstractBifurcationProblem`
+- change signature of `continuation` for periodic orbits: `probPO::AbstractPeriodicOrbitProblem` becomes `disc::AbstractPeriodicOrbitDiscretization`
+- `DefaultLS` uses `VI.Zero()` / `VI.One()` instead of literal 0 / 1
+- closure removal for `record_from_solution` in all continuation types (codim1 and codim2, periodic orbits, waves)
+- add mesh adaptation in codim2 continuation
+- change initialization of `delta` in `BifurcationProblem` to use `getdelta`
+- simplify `is_event_crossed` and refactor events
+- remove dead code in `_continuation(gh::Bautin)`
+- various bug fixes: correction of jacobian selection in PD continuation, fix plotting in NS continuation, correct PD formulation, correct linear bordered solver `solve_bls_block`, correct type stability of Hopf predictor, correct type assert in Bautin normal form, do not update MA problem when in bisection
+## [0.5.8]
+- add `AbstractBifurcationPointCodim2`, `NdBranchPoint` for bifurcation points with dim(Ker) > 1
+- add method `minus(x::POSolutionAndState, y::POSolutionAndState)` for `detect_loop` with collocation and mesh adaptation
+- add branching to curve of periodic orbits from curve of Hopf points
+- set `PALC(tangent = Bordered())` as default in `autoswitch` constructor
+- remove type constraint `Tlens <: AllOpticTypes` in `BifurcationPoints`
+- improve type stability of `get_normal_formNd`, `biorthogonalise`, etc.
+- refactor `BranchSwitching.jl`
+- simplify `multicontinuation` to return a `Branch` instead of `Vector{Branch}`
+- bump compat for `RecursiveArrayTools` to 4
+## [0.5.6] (future)
+- reorganise tests:
+  - each test belongs to a test category (like in previous versions)
+  - the test directory arborescence reflects this organisation
+  - the runtests.jl file is now generic and runs accepts arguments which define which tests will be run
+  - the .github/workflows/ci.yml can now run a subset of tests (using the previous runtests.jl modifications) bases on the labels of PR/commit/..
+  - examples of valid labels: `Run test(s): wave`,  `Run test(s): wave | newton`
+## [0.5.5]
+- most Standard shooting code works with `VI.MinimalVec`
+## [0.5.4]
+- modify dispatch for get_time_slice and get_time_slices
+## [0.5.3]
+- make BorderedArray comply with VectorInterface.jl (VI)
+- most of BK code complies with VI
+- bug correction in mesh adaptation for collocation
+- massive improvement in computation of reduced equations. Improve type stability as well.
 ## [0.5.2]
 - export `ODEBifProblem`
 - add new jacobian types
@@ -70,19 +140,19 @@ All notable changes to this project will be documented in this file (hopefully).
 
 ## [0.2.8] - 2023-05-18
 - add `getDelta` to the interface of `AbstractFlow`
-- remove `finDiffEps` from `ContinuationPar`. 
+- remove `finDiffEps` from `ContinuationPar`.
 
 ## [0.2.8] - 2023-04-23
 - use jvp function name in `Flow` interface
 - add radius to section of Poincare Shooting
 - add _mesh field to reconstruct POColl problem (adapted mesh) from previous solution
-- add new jacobian parametrization using `struct`s instead of Symbol 
+- add new jacobian parametrization using `struct`s instead of Symbol
 - remove `θ` from ContinuationPar
 
 ## [0.2.8] - 2023-04-17
 - add delta keyword to BifurcationProblem constructor
 
-MISSSINF 
+MISSSINF
 
 ## [0.2.0] - 2022-07-23
 - new interface based on the problem `BifurcationProblem`
@@ -103,7 +173,7 @@ MISSSINF
 - add abstract types `AbstractDirectLinearSolver` and `AbstractIterativeLinearSolver`
 - the function `getTrajectory` becomes `getPeriodicOrbit`
 - add struct `SolPeriodicOrbit` to allow for unified plotting interface with all methods for computing periodic orbits
-- ⛳️ the keyword argument 	`linearPO` is renamed into `jacobianPO`
+- ⛳️ the keyword argument   `linearPO` is renamed into `jacobianPO`
 - add newton / continuation methods for `TWProblem`
 - add `GEigArpack` generalized eigensolver
 

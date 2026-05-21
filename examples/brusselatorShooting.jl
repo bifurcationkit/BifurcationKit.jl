@@ -101,45 +101,69 @@ br = @time continuation(
     opts_br_eq, verbosity = 0,
     plot = true,
     normC = norminf)
-#################################################################################################### Continuation of Periodic Orbit
+###################################################################################################
+# Continuation of Periodic Orbit
 M = 10
 ind_hopf = 1
-l_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opts_br_eq.newton_options.eigsolver, M, 22*0.075)
-#
-orbitguess_f2 = reduce(hcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
+nf_hopf = BK.get_normal_form(br, ind_hopf; detailed = Val(false))
+pred = predictor(nf_hopf, 1; ampfactor = 22*0.075)
+list_of_time_steps = reduce(hcat, [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]])
+orbitguess_f = vcat(vec(list_of_time_steps), pred.period)
 ####################################################################################################
 # Standard Shooting
-using DifferentialEquations, ForwardDiff
+import OrdinaryDiffEq as ODE
+# ForwardDiff
 
 u0 = sol0 .+ 0.01 .* rand(2n)
 par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
-prob = ODEProblem(Fbru!, u0, (0., 520.), par_hopf) # gives 0.68s
+prob = ODE.ODEProblem(Fbru!, u0, (0, 520), par_hopf) # gives 0.68s
+####################################################################################################
+# this part allows to have AD derive the sparse jacobian for us with very few allocations
+import DifferentiationInterface as DI
+using SparseConnectivityTracer, SparseMatrixColorings
+
+u0 = sol0 .+ 0.01 .* rand(2n)
+par_hopf = (@set par_bru.l = br.specialpoint[1].param + 0.01)
+prob = ODE.ODEProblem(Fbru!, u0, (0., 520.), par_hopf) # gives 0.68s
 #####
 # this part allows to have AD derive the sparse jacobian for us with very few allocations
-jac_prototype = Jbru_sp(ones(2n), @set par_bru.β = 0)
-using SparseDiffTools, SparseArrays
-_colors = matrix_colors(jac_prototype)
 JlgvfColorsAD(J, u, p, colors = _colors) =  SparseDiffTools.forwarddiff_color_jacobian!(J, (out, x) -> Fbru!(out,x,p), u, colorvec = colors)
-vf = ODEFunction(Fbru!; jac_prototype = jac_prototype, colorvec = _colors)
-prob = ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
+
+const sparse_forward_backend = DI.AutoSparse(
+    DI.AutoForwardDiff();  # any object from ADTypes
+    sparsity_detector=TracerSparsityDetector(),
+    coloring_algorithm=GreedyColoringAlgorithm(),
+)
+
+const jac_prep_sparse_nonallocating = DI.prepare_jacobian(Fbru!, zeros(2n), sparse_forward_backend, ones(2n), DI.Constant(par_hopf))
+const jac_buffer = similar(sparsity_pattern(jac_prep_sparse_nonallocating), eltype(ones(2n)))
+
+J1 = copy(jac_buffer)
+
+function JlgvfColorsAD(J, x, p)
+    DI.jacobian!(Fbru!, zero(x), J, jac_prep_sparse_nonallocating, sparse_forward_backend, x, DI.Constant(p)) 
+    J
+end
+
+vf = ODE.ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_colors(jac_prep_sparse_nonallocating))
+prob = ODE.ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 #####
 # solve the Brusselator
-sol = @time solve(prob, QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
+sol = @time ODE.solve(prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
 ####################################################################################################
 M = 10
-dM = 5
-orbitsection = Array(orbitguess_f2[:, 1:dM:M])
+dM = 3
+orbitsection = Array(list_of_time_steps[:, 1:dM:M])
 
-initpo = vcat(vec(orbitsection), 3.0)
+initpo = vcat(vec(orbitsection), 3.1)
 
-sol = @time solve(remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
+sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
 
 BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
-probSh = ShootingProblem(prob,
-    Rodas4P(),
-    [orbitguess_f2[:,ii] for ii=1:dM:M];
+probSh = Shooting(prob,
+    ODE.Rodas4P(),
+    [list_of_time_steps[:,ii] for ii=1:dM:M];
     abstol = 1e-11, reltol = 1e-9,
     parallel = true, #pb with LoopVectorization
     lens = (@optic _.l),
@@ -193,10 +217,10 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, 
-    ShootingProblem(Mt, prob, Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
+    Shooting(Mt, prob, ODE.Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
             jacobian = BK.FiniteDifferencesMF(),
             # jacobian = BK.AutoDiffMF(),
-            update_section_every_step = 1);
+            );
     ampfactor = 1., δp = 0.005,
     verbosity = 3,
     plot = true,
@@ -228,7 +252,7 @@ Fbru(u,p) = Fbru!(similar(u),u,p)
 normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
 centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
 
-probHPsh = PoincareShootingProblem(prob, QNDF(), normals, centers;
+probHPsh = PoincareShooting(prob, QNDF(), normals, centers;
     abstol = 1e-10, reltol = 1e-8,
     parallel = false,
     δ = 1e-8,
@@ -278,7 +302,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    PoincareShootingProblem(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
+    PoincareShooting(Mt, prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,

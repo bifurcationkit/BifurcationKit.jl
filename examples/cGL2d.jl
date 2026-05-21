@@ -127,13 +127,13 @@ br_hopf = continuation(br, 1, (@optic _.γ),
 plot(br_hopf, branchlabel = "Hopf curve", legend = :top)
 
 # normal form of BT point
-get_normal_form(br_hopf, 2; autodiff = false)
-
-# improve estimation of BT point
-btsol = BK.newton(br_hopf, 2; jacobian_ma = BK.MinAug(),)
-
 # find the index of the BT point
 indbt = findfirst(x -> x.type == :bt, br_hopf.specialpoint)
+get_normal_form(br_hopf, indbt; autodiff = false)
+
+# improve estimation of BT point
+btsol = BK.newton(br_hopf, indbt; jacobian_ma = BK.MinAug(),)
+
 # branch from the BT point
 brfold = continuation(br_hopf, indbt, 
                     setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
@@ -167,12 +167,18 @@ plot!(hopf_from_zh)
 ind_hopf = 1
 # number of time slices
 M = 30
-r_hopf, Th, orbitguess2, hopfpt, vec_hopf = BK.guess_from_hopf(br, ind_hopf, opt_newton.eigsolver, M, 22*sqrt(0.1); phase = 0.25)
 
-orbitguess_f2 = reduce(hcat, orbitguess2)
-orbitguess_f = vcat(vec(orbitguess_f2), Th) |> vec
+nf_hopf = BK.get_normal_form(br, ind_hopf; detailed = Val(false))
+pred = predictor(nf_hopf, 1; ampfactor = 22*sqrt(0.1))
+list_of_time_steps = [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
+orbitguess_f = vcat(reduce(vcat, list_of_time_steps), pred.period)
+r_hopf = nf_hopf.params.r
 
-poTrap = PeriodicOrbitTrapProblem(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), real.(vec_hopf), hopfpt.u, M, 2n; jacobian = BK.FullMatrixFree())
+poTrap = Trapeze(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
+                    BK.residual(prob, list_of_time_steps[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
+                    zeros(2n), 
+                    M, 
+                    2n; jacobian = BK.FullMatrixFree())
 
 ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
 poTrapMF = setproperties(poTrap; linsolver = ls0)
@@ -189,11 +195,10 @@ deflationOp = DeflationOperator(2, (x,y) -> dot(x[1:end-1],y[1:end-1]), 1.0, [ze
 #                                     slow version DO NOT RUN!!!
 #
 ####################################################################################################
-# opt_po = (@set opt_po.eigsolver = EigKrylovKit(tol = 1e-4, x₀ = rand(2Nx*Ny), verbose = 2, dim = 20))
-opt_po = (@set opt_po.eigsolver = DefaultEig())
+opt_po = (@set opt_newton.eigsolver = DefaultEig())
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 2.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = DefaultLS()), nev = 5, tol_stability = 1e-7, detect_bifurcation = 0)
-@assert 1==0 "Too much memory will be used!"
-br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
+@assert false "Too much memory will be used!"
+br_pok2 = continuation(Trapeze(poTrap; jacobian = BK.FullLU()),
             orbitguess_f, PALC(),
             opts_po_cont;
             verbosity = 2,    plot = true,
@@ -203,7 +208,7 @@ br_pok2 = continuation(PeriodicOrbitTrapProblem(poTrap; jacobian = BK.FullLU()),
 # we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
 Jpo = @time poTrap(Val(:JacFullSparse), orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
 
-Precilu = @time ilu(Jpo, τ = 0.005); # ~2 sec
+Precilu = @time ilu(Jpo, τ = 0.005); # ~1 sec
 
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
 ls(Jpo, rand(ls.N))
@@ -239,14 +244,17 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, poTrapMF;
-    # ampfactor = 3.,
+    autodiff_nf = false, # for Hopf normal form
     verbosity = 3, 
     plot = true,
     # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),
     finalise_solution = (z, tau, step, contResult; k...) ->
     (BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals) ;true),
     plot_solution = (x, p; kwargs...) -> BK.plot_periodic_potrap(x, M, Nx, Ny; ratio = 2, kwargs...),
-    record_from_solution = (u, p; k...) -> BK.amplitude(u, Nx*Ny, M; ratio = 2), 
+    record_from_solution = (u, p; k...) -> begin
+                solpo = BK.get_periodic_orbit(p.prob, u, nothing)
+                maximum(solpo.u)
+        end,
     normC = norminf)
 ####################################################################################################
 # Experimental, full Inplace
@@ -297,19 +305,21 @@ end
 
 function Fcgl!(f, u, p, t = 0.)
     NL!(f, u, p)
-    mul!(f, p.Δ, u, 1., 1.)
+    mul!(f, p.Δ, u, 1, 1)
+    return f
 end
 
 function dFcgl!(f, x, p, dx)
     # 19.869 μs (0 allocations: 0 bytes)
     dNL!(f, x, p, dx)
-    mul!(f, p.Δ, dx, 1., 1.)
+    mul!(f, p.Δ, dx, 1, 1)
+    return f
 end
 
 sol0f = vec(sol0)
 out_ = similar(sol0f)
-@time Fcgl!(out_, sol0f, par_cgl)
-@time dFcgl!(out_, sol0f, par_cgl, sol0f)
+@time Fcgl!(out_, sol0f, par_cgl);
+@time dFcgl!(out_, sol0f, par_cgl, sol0f);
 
 probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
@@ -317,25 +327,21 @@ ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), rest
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMFi = PeriodicOrbitTrapProblem(
+poTrapMFi = Trapeze(
             probInplace,
-            real.(vec_hopf), hopfpt.u,
+            poTrap.ϕ , poTrap.xπ,
             M, 2n, ls0; jacobian = BK.FullMatrixFree())
 
 # ca ne devrait pas allouer!!!
 out_po = copy(orbitguess_f)
 @time BK.residual!(poTrapMFi, out_po, orbitguess_f, par_cgl);
-@time BK.potrap_functional_jac!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f)
+@time BK.jvp!(poTrapMFi, out_po, orbitguess_f, par_cgl, orbitguess_f);
 opt_po_inp = @set opt_po.linsolver = ls
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 
 lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
 opt_po_inp_kl = @set opt_po.linsolver = lsi
-# outpo_f = @time newton(poTrapMFi, 
-#                         orbitguess_f,
-#                         opt_po_inp_kl; 
-#                         normN = norminf, 
-#                         )
+# outpo_f = @time newton(poTrapMFi, orbitguess_f,opt_po_inp_kl; normN = norminf, )
 
 ####################################################################################################
 # Computation of Fold of limit cycle
@@ -465,7 +471,7 @@ sol_0 = ldiv!(Precilu_gpu, copy(CuArray(rhs)));
 
 # matrix-free problem on the gpu
 ls0gpu = GMRESKrylovKit(rtol = 1e-9)
-poTrapMFGPU = PeriodicOrbitTrapProblem(
+poTrapMFGPU = Trapeze(
     re_make(prob; J = (x,p) -> (dx -> dFcgl(x,p,dx))),
     CuArray(real.(vec_hopf)),
     CuArray(hopfpt.u),

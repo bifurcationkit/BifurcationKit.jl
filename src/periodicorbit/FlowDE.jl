@@ -22,7 +22,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
     "How the monodromy is computed"
     jacobian::Tjac
 
-    "adjoint of the monodromy (Matrix-Free)."
+    "adjoint of the monodromy (matrix-free)."
     vjp::Tvjp
 
     "delta used in finite differences wrt to parameter. Used for example in PALC."
@@ -30,11 +30,11 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
 end
 
 has_monodromy_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
-getdelta(fl::FlowDE) = fl.delta
+@inline getdelta(fl::FlowDE) = fl.delta
 ####################################################################################################
 # constructors
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Creates a `Flow` variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
 """
@@ -59,7 +59,7 @@ _apply_vector_field(prob::EnsembleProblem, o, x, p) = _apply_vector_field(prob.p
 @inline _isinplace(pb::ODEProblem) = isinplace_sciml(pb)
 @inline _isinplace(pb::EnsembleProblem) = isinplace_sciml(pb.prob)
 
-function vf(fl::FlowDE, x, pars)
+function vector_field(fl::FlowDE, x, pars)
     if _isinplace(fl.odeprob)
         out = similar(x)
         _apply_vector_field(fl.odeprob, out, x, pars)
@@ -86,8 +86,12 @@ end
 function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
     # modify the function which assigns new initial conditions
     # see docs at https://docs.sciml.ai/dev/features/ensemble/#Performing-an-Ensemble-Simulation-1
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
-    _epb = setproperties(fl.odeprob, output_func = (sol, i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    end
+    _epb = setproperties(fl.odeprob, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
@@ -98,11 +102,11 @@ function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
     # the use of concrete_solve makes it compatible with Zygote
-    sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...)[end]
+    sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...).u[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
-function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(eltype(x), 1e-9), kwargs...)
+function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
     sol1 = _flow(x .+ δ .* dx, pars, tm, pb, alg; kwargs...).u
     sol2 = _flow(x           , pars, tm, pb, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
@@ -122,14 +126,18 @@ end
 # differential of the flow when a problem is passed for the Monodromy
 function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: EnsembleProblem}
     N = size(x, 1)
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
-    _epb = setproperties(fl.odeprob_mono, output_func = (sol,i) -> ((t = sol.t[end], u = sol[end][1:N], du = sol[end][N+1:end]), false), prob_func = _prob_func)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
+    end
+    _epb = setproperties(fl.odeprob_mono, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end][1:N], du = sol.u[end][N+1:end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg_mono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)
     return sol.u
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(eltype(x), 1e-9), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -143,13 +151,17 @@ end
 # this function takes into account a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: ODEProblem}
     _prob = remake(fl.odeprob; u0 = x, tspan = (zero(tm), tm), p = pars)
-    sol = SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
+    return SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
-    _prob_func = (prob, ii, repeat) -> prob = remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
+    _prob_func = (prob, ctx_or_i, _rest...) -> begin
+        ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
+        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+    end
     _epb = setproperties(fl.odeprob, prob_func = _prob_func)
-    sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
+    return SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, pars, δt; k...) where {T1 <: ODEProblem}
@@ -160,7 +172,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialTimeSol}, x::AbstractArray, pars, t
     _flow(x, pars, tm, fl.odeprob.prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
+function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
         return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
@@ -172,6 +184,6 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx,
     dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), 1e-9), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
+function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
     dflow_fdSerial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end

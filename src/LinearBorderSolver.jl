@@ -5,7 +5,7 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing, dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
 
-# Reminder we want to solve the linear system
+# Reminder: we want to solve the linear system
 # Cramer's rule gives σ = det(J) / det(M)
 #     ┌        ┐┌   ┐   ┌ ┐
 # M = │ J    b ││ v │ = │0│
@@ -35,37 +35,45 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                  applyξu!)
 end
 
-update_bls(lbs::AbstractBorderedLinearSolver, ls) = throw("")
+update_bls(lbs::AbstractBorderedLinearSolver, ls) = error("update_bls not implemented for $(typeof(lbs))")
 ####################################################################################################
 """
 $(TYPEDEF)
 
-This struct is used to provide the bordered linear solver based on the Bordering Method. Using the options, you can trigger a sequence of Bordering reductions to meet a precision.
+This struct is used to provide the bordered linear solver based on the Bordering method. Using the options, you can trigger a sequence of Bordering reductions to meet a given precision.
 
-# Reference
-
-This is the solver BEC + k in Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
-
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructors
 
 - there is a  simple constructor `BorderingBLS(ls)` where `ls` is a linear solver, for example `ls = DefaultLS()`
-- you can use keyword argument to create such solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
+- you can pass keyword arguments to create the solver, for example `BorderingBLS(solver = DefaultLS(), tol = 1e-4)`
 
+# Reference(s)
+
+This is the solver BEC + k in:
+
+Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SIAM Journal on Matrix Analysis and Applications 12, no. 3 (July 1, 1991): 469–83. https://doi.org/10.1137/0612034.
 """
-@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol} <: AbstractBorderedLinearSolver
+@with_kw struct BorderingBLS{S <: Union{AbstractLinearSolver, Nothing}, Ttol <: Real, Tdot, Tnorm} <: AbstractBorderedLinearSolver
     "Linear solver for the Bordering method."
     solver::S = nothing
 
-    "Tolerance for checking precision"
+    "Tolerance for checking precision."
     tol::Ttol = 1e-12
 
     "Check precision of the linear solve?"
     check_precision::Bool = true
 
-    "Number of recursions to achieve tolerance"
+    "Number of recursions to achieve tolerance."
     k::Int64 = 1
+
+    "Inner product used by the solver."
+    dot::Tdot = VI.inner
+
+    "Norm used by the solver."
+    norm::Tnorm = VI.norm
 
     @assert k > 0 "Number of recursions must be positive"
 end
@@ -82,7 +90,7 @@ function (lbs::BorderingBLS)(J, dR,
                              R, n::𝒯,
                              ξu::𝒯ξ = one(𝒯), 
                              ξp::𝒯ξ = one(𝒯); 
-                             dotp = dot, 
+                             dotp = lbs.dot, 
                              shift::𝒯s = nothing,
                              applyξu! = nothing # A CORRIGER
                              ) where {𝒯, 𝒯ξ <: Number, 𝒯s}
@@ -90,7 +98,7 @@ function (lbs::BorderingBLS)(J, dR,
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
     # in which the dot product is dotp(x,y) = dot(x,y) / length(x). For more general 
-    # dot products like dotp(x,y) = dot(x, S, y)
+    # dot products like dotp(x, y) = dot(x, S, y)
     # it is better to directly use dotp instead of rescaling ξu
 
     k = 0 # number of BEC iterations
@@ -102,11 +110,11 @@ function (lbs::BorderingBLS)(J, dR,
     failBLS::Bool = true
     while lbs.check_precision && k < lbs.k && failBLS
         δX, δl = res_bec(dX, dl)
-        failBLS = norm(δX) > lbs.tol || abs(δl) > lbs.tol
-        @debug k, norm(δX), abs(δl)
+        failBLS = lbs.norm(δX) > lbs.tol || abs(δl) > lbs.tol
         if failBLS
             dX1, dl1, cv, itlinear = BEC0(δX, δl)
-            axpy!(1, dX1, dX)
+            # axpy!(1, dX1, dX)
+            VI.add!(dX, dX1, 1)
             dl += dl1
             k += 1
         end
@@ -121,19 +129,17 @@ function BEC(lbs::BorderingBLS,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
              shift::𝒯s = nothing,
-             dotp = dot)  where {𝒯, 𝒯ξ, 𝒯s}
+             dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
     if isnothing(shift)
         x1, δx, success, itlinear = lbs.solver(J, R, dR)
     else
         x1, δx, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
     end
-
     ~success && @debug "Linear solver failed to converge in BorderingBLS."
 
     dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
-
     # dX = x1 .- dl .* δx
-    axpy!(-dl, δx, x1)
+    VI.add!(x1, δx, -dl)
     return x1, dl, success, itlinear
 end
 
@@ -144,63 +150,58 @@ function residualBEC(lbs::BorderingBLS,
                             dX, dl,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
-                            shift::𝒯s = nothing, dotp = dot)  where {𝒯, 𝒯ξ, 𝒯s}
+                            shift::𝒯s = nothing, 
+                            dotp = lbs.dot) where {𝒯, 𝒯ξ, 𝒯s}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
     # hence δx = R - (shift⋅I + J) * dX - dl * dR
     δX = apply(J, dX)
     if ~isnothing(shift)
-        axpy!(shift, dX, δX)
+        VI.add!(δX, dX, shift)
     end
-    axpy!(dl, dR, δX)
-    axpby!(1, R, -1, δX)
-
+    VI.add!(δX, dR, dl)
+    VI.add!(δX, R, 1, -1)
     δl = n - ξp * dzp * dl - ξu * dotp(dzu, dX)
-
     return δX, δl
 end
 
-# specific version with b,c,d being matrices / tuples of vectors
+# specific version with b, c, d being matrices / tuples of vectors
 # ┌         ┐
 # │  J    b │
 # │  c'   d │
 # └         ┘
 function solve_bls_block(lbs::BorderingBLS, 
-                            J, 
-                            b::NTuple{M, AbstractVector}, 
-                            c::NTuple{M, AbstractVector}, 
-                            d::AbstractMatrix, 
-                            rhst, 
-                            rhsb) where M
+                         J, 
+                         b::NTuple{M, 𝒯vec}, 
+                         c::NTuple{M, 𝒯vec}, 
+                         d::AbstractMatrix, 
+                         rhst, 
+                         rhsb) where {M, 𝒯vec <: AbstractArray}
     m = size(d, 1)
-    @assert length(b) == length(c) == m == M
-    x1 = lbs.solver(J, rhst)[1]
-    x2s = typeof(b[1])[]
+    if ~(length(b) == length(c) == m == M)
+        error("Linear bordered solver, wrong sizes!")
+    end
+
+    x1, cv, it = lbs.solver(J, rhst)
+    x2s = Vector{𝒯vec}()
     its = Int[]
     cv = true
-    δx = similar(x2s)
     for ii in eachindex(b)
-        x2, success, it = lbs.solver(J, b[ii])
+        x2, flag, it = lbs.solver(J, b[ii])
         push!(x2s, x2)
         push!(its, it)
-        cv = cv & success
+        cv &= flag
     end
-    # we compute c*x2 in M_m(R)
-    # ∑_k c[i,k] x2[k,j]
-    c_mat  = hcat(c...)
-    x2_mat = hcat(x2s...)
-    # TODO USE mul!
-    δd = d - c_mat' * x2_mat
-
-    cx1 = zeros(eltype(d), m)
+    # produce Schur complement
+    S = [ d[i,j] - VI.inner(c[i], x2s[j])  for i in 1:m, j in 1:m ]
+    # reduce rhs
+    h = [ rhsb[i] - VI.inner(c[i], x1)  for i in 1:m ]
+    # solve Schur complement
+    u2 = S \ h
+    u1 = x1
     for ii in eachindex(c)
-        cx1[ii] = dot(c[ii], x1)
+        u1 .-= u2[ii] .* x2s[ii]
     end
-
-    u2 = δd \ (rhsb - cx1)
-    # TODO USE mul!
-    u1 = x1 - x2_mat * u2
-
     return u1, u2, cv, (its...)
 end
 ####################################################################################################
@@ -208,6 +209,8 @@ end
 $(TYPEDEF)
 
 This struct is used to  provide the bordered linear solver based on inverting the full matrix.
+
+# Internal fields
 
 $(TYPEDFIELDS)
 """
@@ -237,7 +240,7 @@ function (lbs::MatrixBLS)(J, dR,
     if isnothing(shift)
         A = J
     else
-        A = J + shift * I
+        A = J + shift * LA.I
     end
     # USE BLOCK ARRAYS LAZY?
     # A = hcat(A, dR)
@@ -247,7 +250,7 @@ function (lbs::MatrixBLS)(J, dR,
     # USE Hvcat
     # n = size(A, 1)
     # A = hvcat((n+1, n+1), A, dR, adjoint(dzu .* ξu), dzp * ξp) # much slower than the following
-    A = vcat(hcat(A, dR), hcat(adjoint(dzu .* ξu), dzp * ξp))
+    A = vcat(hcat(A, dR), hcat(LA.adjoint(dzu .* ξu), dzp * ξp))
 
     # apply a linear operator to ξu
     if isnothing(applyξu!) == false
@@ -266,14 +269,14 @@ end
 # │  J    a │
 # │  b'   c │
 # └         ┘
-function solve_bls_block(lbs::MatrixBLS,
+function solve_bls_block(::MatrixBLS,
                            J,
                            a::Tuple,
                            b::Tuple,
                            c::AbstractMatrix,
                            rhst,
                            rhsb)
-    @assert length(a) == length(b) == size(c,1)
+    @assert length(a) == length(b) == size(c, 1)
     n = size(c, 1)
     # A = [J hcat(a...); hcat(b...)' c]
     A = vcat(hcat(J, hcat(a...)), hcat(adjoint(hcat(b...)), c))
@@ -302,24 +305,24 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
     dot::Td # possibly custom dot product
 end
 
-function (lbmap::MatrixFreeBLSmap)(x::BorderedArray)
-    out = similar(x)
-    copyto!(out.u, apply(lbmap.J, x.u))
-    axpy!(x.p, lbmap.a, out.u)
+function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
+    VI.add!(out.u, lbmap.a, x.p)
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, x.u, out.u)
+        VI.add!(out.u, x.u, lbmap.shift)
     end
-    out.p = lbmap.dot(lbmap.b, x.u)  + lbmap.c  * x.p
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
 
 function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     # This implements the case where Tc is a number, ie there is one scalar constraint in the
     # bordered linear system
-    out = similar(x)
+    out = VI.zerovector(x)
     xu = @view x[begin:end-1]
     xp = x[end]
-    # copyto!(out.u, apply(lbmap.J, x.u))
+    # _copyto!(out.u, apply(lbmap.J, x.u))
     if isnothing(lbmap.shift)
         out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
     else # we do this to fuse for-loops
@@ -331,13 +334,13 @@ end
 
 # case matrix by blocks
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
-    out = similar(x)
-    copyto!(out.u, apply(lbmap.J, x.u))
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
     for ii in eachindex(lbmap.a)
-        axpy!(x.p[ii], lbmap.a[ii], out.u)
+        VI.add!(out.u, lbmap.a[ii], x.p[ii])
     end
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, x.u, out.u)
+        VI.add!(out.u, x.u, lbmap.shift)
     end
     out.p .= lbmap.c * x.p
     for ii in eachindex(lbmap.b)
@@ -359,11 +362,11 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::AbstractArray) where {Tj, Ta <
 
     out[begin:end-m] .= apply(lbmap.J, xu)
     for ii in eachindex(lbmap.a)
-        axpy!(xp[ii], lbmap.a[ii], outu)
+        VI.add!(outu, lbmap.a[ii], xp[ii])
     end
 
     if isnothing(lbmap.shift) == false
-        axpy!(lbmap.shift, xu, outu)
+        VI.add!(outu, xu, lbmap.shift)
     end
     outp .= lbmap.c * xp
     for ii in eachindex(lbmap.b)
@@ -375,20 +378,20 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to  provide the bordered linear solver based a matrix free operator for the full system in `(x, p)`.
+This struct is used to provide a bordered linear solver based on a matrix free operator for the full system in `(x, p)`.
 
-## Constructor
+# Constructor
 
     MatrixFreeBLS(solver, ::Bool)
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 """
 struct MatrixFreeBLS{S <: Union{AbstractLinearSolver, Nothing}} <: AbstractBorderedLinearSolver
-    "Linear solver for solving the extended linear system"
+    "Linear solver for solving the extended linear system."
     solver::S
-    "What is the structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used."
+    "Structure used to hold `(x, p)`. If `true`, this is achieved using `BorderedArray`. If `false`, a `Vector` is used which is analogous to `vcat(x, p)`."
     use_bordered_array::Bool
 end
 
@@ -407,15 +410,15 @@ get_par_bls(x::BorderedArray, m::Int = 1)  = x.p
 # We restrict to bordered systems where the added component is scalar
 function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  dzu, dzp::𝒯, 
-                                 R, n::𝒯,
+                                 R,   n::𝒯,
                                  ξu::𝒯ξ = 1, 
                                  ξp::𝒯ξ = 1; 
                                  shift = nothing, 
-                                 dotp = dot,
+                                 dotp = LA.dot,
                                  applyξu! = nothing
                                  ) where {𝒯 <: Number, 𝒯ξ, S}
-    linearmap = MatrixFreeBLSmap(J, dR, rmul!(copy(dzu), ξu), dzp * ξp, shift, dotp)
-    rhs = lbs.use_bordered_array ? BorderedArray(copy(R), n) : vcat(R, n)
+    linearmap = MatrixFreeBLSmap(J, dR, VI.scale(dzu, ξu), dzp * ξp, shift, dotp)
+    rhs = lbs.use_bordered_array ? BorderedArray(_copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol), get_par_bls(sol), cv, it
 end
@@ -426,9 +429,9 @@ function solve_bls_block(lbs::MatrixFreeBLS,
                                 b, c, 
                                 rhst, rhsb; 
                                 shift::𝒯s = nothing, 
-                                dotp = dot) where {𝒯s}
+                                dotp = LA.dot) where {𝒯s}
     linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
-    rhs = lbs.use_bordered_array ? BorderedArray(copy(rhst), rhsb) : vcat(rhst, rhsb)
+    rhs = lbs.use_bordered_array ? BorderedArray(_copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it
 end
@@ -441,12 +444,13 @@ $(TYPEDEF)
 
 This structure is used to provide the following linear solver. To solve (1) J⋅x = rhs, one decomposes J using Matrix by blocks and then use a bordering strategy to solve (1).
 
-> It is interesting for solving the linear system associated with Collocation / Trapezoid functionals, for example using `BorderingBLS(solver = BK.LSFromBLS(), tol = 1e-9, k = 2, check_precision = true)`
-
-$(TYPEDFIELDS)
+> It is interesting for solving the linear system associated with Collocation / Trapeze functionals, for example using `BorderingBLS(solver = BK.LSFromBLS(), tol = 1e-9, k = 2, check_precision = true)`
 
 !!! warn "Warning"
     The solver only works for `AbstractMatrix`
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 struct LSFromBLS{Ts} <: AbstractLinearSolver
     "Linear solver used to solve the smaller linear systems."
@@ -456,13 +460,13 @@ end
 LSFromBLS() = LSFromBLS(BorderingBLS(solver = DefaultLS(useFactorization = false), check_precision = false))
 
 function (l::LSFromBLS)(J, rhs)
-    F = factorize(J[begin:end-1, begin:end-1])
+    F = LA.factorize(J[begin:end-1, begin:end-1])
     x1, x2, flag, it = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs[begin:end-1]), rhs[end])
     return vcat(x1, x2), flag, sum(it)
 end
 
 function  (l::LSFromBLS)(J, rhs1, rhs2)
-    F = factorize(J[begin:end-1,begin:end-1])
+    F = LA.factorize(J[begin:end-1,begin:end-1])
     x1, x2, flag1, it1 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs1[begin:end-1]), rhs1[end])
 
     y1, y2, flag2, it2 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs2[begin:end-1]), rhs2[end])

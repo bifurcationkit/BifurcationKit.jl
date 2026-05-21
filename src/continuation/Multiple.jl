@@ -3,6 +3,7 @@
 
 The predictor is designed [Uecker2014] to avoid spurious branch switching and pass singular points especially in PDE where branch point density can be quite high. It is called `pmcont` in `pde2path`.
 
+# Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)
@@ -14,31 +15,31 @@ $(TYPEDFIELDS)
     Multiple(x0, α, n)
 """
 @with_kw mutable struct Multiple{T <: Real, Tvec, Tpred <: PALC} <: AbstractContinuationAlgorithm
-    "Tangent predictor used"
+    "Tangent predictor used."
     alg::Tpred = PALC()
 
-    "Save the current tangent"
+    "Save the current tangent."
     τ::Tvec
 
-    "Damping in Newton iterations, 0 < α < 1"
+    "Damping in Newton iterations, 0 < α < 1."
     α::T
 
     "Number of predictors"
     nb::Int64
 
-    "Index of the largest converged predictor"
+    "Index of the largest converged predictor."
     currentind::Int64 = 0
 
-    "Index for lookup in residual history"
+    "Index for lookup in residual history."
     pmimax::Int64 = 1
 
-    "Maximum index for lookup in residual history"
+    "Maximum index for lookup in residual history."
     imax::Int64 = 4
 
-    "Factor to increase ds upon successful step"
+    "Factor to increase ds upon successful step."
     dsfact::T = 1.5
 end
-Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg = alg, τ = BorderedArray(x0, T(0)), α = α, nb = nb)
+Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, T(0)), α, nb)
 Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
 getlinsolver(alg::Multiple) = getlinsolver(alg.alg)
@@ -78,21 +79,24 @@ function getpredictor!(state::AbstractContinuationState,
     return nothing
 end
 
-function corrector!(_state::AbstractContinuationState, it::AbstractContinuationIterable,
-        algo::Multiple, linear_algo = MatrixFreeBLS(); kwargs...)
+function corrector!(_state::AbstractContinuationState,
+                    it::AbstractContinuationIterable,
+                    algo::Multiple,
+                    linear_algo = MatrixFreeBLS(); 
+                    kwargs...)
     verbose = it.verbosity
     # we create a copy of the continuation cache
     state = copy(_state)
     (;ds) = state
-    (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─Multiple tangent predictor\n")
+    (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─ Multiple tangent predictor\n")
     # we combine the callbacks for the newton iterations
     cb = (state; k...) -> callback(it)(state; k...) && algo(state; k...)
     # note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
     for ii in algo.nb:-1:1
         algo.currentind = ii # record the current index
         zpred = _copy(state.z_pred)
-        axpy!(ii * ds, algo.τ, zpred)
-        copyto!(state.z_pred, zpred)
+        VI.add!(zpred, algo.τ, ii * ds)
+        _copyto!(state.z_pred, zpred)
         # we restore the original callback if it reaches the usual case ii == 0
         corrector!(state, it, algo.alg; callback = cb, kwargs...)
         if verbose > 1

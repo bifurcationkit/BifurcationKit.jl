@@ -1,21 +1,21 @@
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
-Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`.
+Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`(s).
 
-## Fields
+# Internal fields
 
 $(TYPEDFIELDS)
 
-## Methods
+# Methods
 
 - `hasbranch(diagram)`
 - `get_branch(diagram)` return the `AbstractBranch` stored inside the current node.
 - `from(diagram)` return the parent bifurcation point.
-- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`.
+- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. This is essentially the Ulam-Harris-Neveu labeling.
 """
 mutable struct BifDiagNode{Tγ, Tc}
-    "current recursion level."
+    "current recursion level in the tree."
     level::Int64
 
     "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
@@ -35,17 +35,19 @@ get_branch(tree::BifDiagNode) = tree.γ
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
-add!(tree::BifDiagNode, γ::Nothing, level::Int, code::Int) = nothing
+add!(::BifDiagNode, ::Nothing, ::Int, ::Int) = nothing
 get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
 getalg(tree::BifDiagNode) = tree.γ.alg
 Base.getindex(tree::BifDiagNode, code...) = get_branch(tree, code)
 get_solution(tree::BifDiagNode, ind) = get_solution(tree.γ, ind)
+get_normal_form(tree::BifDiagNode, args...; kwargs...) = get_normal_form(tree.γ, args...; kwargs...)
+
 
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
     println(io, " ┌─ From $(tree.code)-th bifurcation point.")
-    println(io, " ├─ Children number: $(length(tree.child))" );
+    println(io, " ├─ Number of children: $(length(tree.child))" );
     println(io, " └─ Root (recursion level $(tree.level))")
     show(io, tree.γ; prefix = "      ")
 end
@@ -54,14 +56,14 @@ end
 _size(tree::BifDiagNode) = length(tree.child) > 0 ? 1 + mapreduce(size, +, tree.child) : 1
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the size of the bifurcation diagram. The argument `code` is the same as in `get_branch`.
 """
 Base.size(tree::BifDiagNode, code = ()) = _size(get_branch(tree, code))
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the part of the diagram (bifurcation diagram) by recursively descending down the diagram using the `Int` valued tuple `code`. For example `get_branch(diagram, (1,2,3,))` returns `diagram.child[1].child[2].child[3]`.
 """
@@ -71,7 +73,7 @@ function get_branch(diagram::BifDiagNode, code)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Return the part of the diagram corresponding to the indbif-th bifurcation point on the root branch.
 """
@@ -82,7 +84,7 @@ function get_branches_from_BP(diagram::BifDiagNode, indbif::Int)
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recursively.
 
@@ -90,7 +92,7 @@ Compute the bifurcation diagram associated with the problem `F(x, p) = 0` recurs
 - `prob::AbstractBifurcationProblem` bifurcation problem
 - `alg` continuation algorithm
 - `level` maximum branching (or recursion) level for computing the bifurcation diagram
-- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
+- `options = (x, p, level) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p) = 0`.
 - `kwargs` optional arguments. Look at [`bifurcationdiagram!`](@ref) for more details.
 
 # Simplified call:
@@ -136,7 +138,7 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 
 Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node` from which you want to further compute the bifurcated branches. It is usually used with `node = get_branch(diagram, code)` from a previously computed bifurcation `diagram`.
 
@@ -153,14 +155,16 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
-                            node::BifDiagNode,
-                            maxlevel::Int,
-                            options;
-                            code = "0",
-                            halfbranch = false,
-                            verbosediagram = false,
-                            kwargs...)
-    if node.level >= maxlevel || isnothing(node.γ); return node; end
+                              node::BifDiagNode,
+                              maxlevel::Int,
+                              options;
+                              code = "0",
+                              halfbranch = false,
+                              verbosediagram = false,
+                              kwargs...)
+    if node.level >= maxlevel || isnothing(node.γ)
+        return node
+    end
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
 
     # current level of recursion
@@ -168,25 +172,24 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
     # convenient function for branching
     function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        plotfunc = get(kwargs, :plot_solution, plot_default)
         optscont = options(_pt.x, _pt.param, _level + 1)
         @reset optscont.ds *= _dsfactor
-
         continuation(get_contresult(node.γ), _id, optscont;
-            nev = optscont.nev, 
-            kwargs...,
-            ampfactor = _ampfactor,  
+                    nev = optscont.nev, 
+                    kwargs...,
+                    ampfactor = _ampfactor,  
         )
     end
 
-    for (id, pt) in enumerate(node.γ.specialpoint)
-        # we put this condition in case the specialpoint at step = 0 corresponds to the one we are branching from. If we remove this, we keep computing the same branch (possibly).
+    for (id, pt) in pairs(node.γ.specialpoint)
+        # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
+        # If we remove this, we may keep computing the same branch.
         if pt.step > 1 && (pt.type in (:bp, :nd))
             try
                 if verbose
                     println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", 
-                                kernel_dimension(pt), 
-                                    ", code = $code, from bp #",id,
+                                    kernel_dimension(pt), 
+                                    ", code = $code, from bp #", id,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
@@ -210,13 +213,13 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 end
 
             catch ex
-                @error "Failed to compute new branch at p = $(pt.param)" exception=ex
+                @error "Failed to compute new branch at p = $(pt.param)" exception = ex
             end
         end
     end
-    for (ii, _node) in enumerate(node.child)
+    for (ii, nd) in pairs(node.child)
         bifurcationdiagram!(prob, 
-                            _node, 
+                            nd, 
                             maxlevel, 
                             options; 
                             code = (code..., ii), 

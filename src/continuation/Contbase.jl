@@ -30,6 +30,9 @@ Base.empty!(alg::AbstractContinuationAlgorithm) = alg
 Base.empty!(alg::AbstractTangentComputation) = alg
 # Base.copy(::AbstractContinuationAlgorithm) = throw("Not defined. Please define a copy method for your continuation algorithm")
 
+# name to be print in show(::AbstractBranch)
+_shortname(alg::AbstractContinuationAlgorithm) = typeof(alg).name.name
+
 # we need to be able to reset / empty the predictors when locating bifurcation points and when doing automatic branch switching
 function Base.empty(alg::AbstractContinuationAlgorithm)
     alg2 = deepcopy(alg)
@@ -40,6 +43,9 @@ end
 # this is called during initialization of the continuation method. Can be used to adjust the algo.
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
+# get the bordered linear solver used for the continuation algorithm
+getbls(::AbstractContinuationAlgorithm) = MatrixBLS()
+
 # helper functions to update ::ContState when calling the corrector
 function _update_field_but_not_sol!(state::AbstractContinuationState,
                                     sol::NonLinearSolution)
@@ -48,7 +54,7 @@ function _update_field_but_not_sol!(state::AbstractContinuationState,
     state.itlinear  = sol.itlineartot
     # record previous solution
     if converged(sol)
-        copyto!(state.z_old, state.z)
+        _copyto!(state.z_old, state.z)
     end
 end
 ####################################################################################################

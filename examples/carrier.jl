@@ -49,7 +49,7 @@ plot(out.u, label = "Solution")
 optcont = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= -0.01, p_min = 0.05, newton_options = NewtonPar(tol = 1e-8, max_iterations = 20, verbose = false), nev = 40, n_inversion = 6)
 br = @time continuation(
     prob, PALC(bls = BorderingBLS(solver = DefaultLS())), optcont;
-    plot = true, verbosity = 0,
+    plot = true,
     normC = norminf)
 
 plot(br)
@@ -63,20 +63,27 @@ optdef = setproperties(optnew; tol = 1e-7, max_iterations = 200)
 
 function perturbsol(sol, p, id)
     sol0 = @. exp(-.01/(1-par_car.X^2)^2)
-    solp = 0.02*rand(length(sol))
+    solp = 0.5*rand(length(sol))
     return sol .+ solp .* sol0
 end
 
 outdef1 = @time BK.solve(
-    (@set prob.u0 = perturbsol(-out.u, 0, 0)), deflationOp,
-    # perturbsol(deflationOp[1],0,0), par_def,
+    (@set prob.u0 = perturbsol(-out.u, 0, 0)), 
+    deflationOp,
     optdef;
-    # callback = BK.cbMaxNorm(1e8)
     )
 BK.converged(outdef1) && push!(deflationOp, outdef1.u)
 
 plot(); for _s in deflationOp.roots; plot!(_s);end;title!("")
 perturbsol(-deflationOp[1],0,0) |> plot
+####################################################################################################
+# bifurcation diagram
+diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
+        (@set optcont.newton_options.verbose = false);
+        autodiff = false,
+        plot = true)
+
+plot(diagram, legend = false)
 ####################################################################################################
 # bifurcation diagram with deflated continuation
 # empty!(deflationOp)
@@ -87,7 +94,7 @@ alg = DefCont(deflation_operator = deflationOp,
 
 brdc = @time continuation(
     (@set prob.params.ϵ = 0.6), alg,
-    setproperties(optcont; ds = -0.0001, dsmin = 1e-5, max_steps = 20000,
+    setproperties(optcont; ds = -0.0005, dsmin = 1e-5, max_steps = 20000,
         p_max = 0.7, p_min = 0.05, detect_bifurcation = 0, plot_every_step = 40,
         newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 100, verbose = false)),
     ;verbosity = 1,
@@ -95,11 +102,3 @@ brdc = @time continuation(
     )
 
 plot(brdc, legend=true)#, marker=:d)
-####################################################################################################
-# bifurcation diagram
-diagram = bifurcationdiagram(prob, PALC(bls = BorderingBLS(solver = DefaultLS())), 2,
-        (@set optcont.newton_options.verbose = false);
-        autodiff = false,
-        plot = true)
-
-plot(diagram, legend = false)
