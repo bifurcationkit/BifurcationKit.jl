@@ -85,19 +85,19 @@ br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false,
 plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
-diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
+diagram = bifurcationdiagram(prob, br, 2, BifurcationKit.getcontparams(br); autodiff = false, plot = true)
 plot(diagram, vars = (:param, :s), legend = false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # CODIMENSION 2
 bp_codim = continuation(br, 1, (@optic _.b), ContinuationPar(optc, p_min = -1.);
             verbosity = 0,
-            jacobian_ma = BK.MinAug(), # autodiff is too slow
+            jacobian_ma = BifurcationKit.MinAug(), # autodiff is too slow
             usehessian = false,        # not yet defined for BVPBifProblem
             )
 plot(bp_codim)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # deflated continuation
-deflationOp = DeflationOperator(2, dot, 1.0, [zero(BK.getu0(prob))])
+deflationOp = DeflationOperator(2, dot, 1.0, [zero(BifurcationKit.getu0(prob))])
 perturb_solution(sol, p, id) = sol .+ 0.1 .* rand(length(sol))
 alg = DefCont(;deflation_operator = deflationOp, perturb_solution, max_branches = 10)
 # br = @time continuation(
@@ -107,7 +107,7 @@ alg = DefCont(;deflation_operator = deflationOp, perturb_solution, max_branches 
 #         newton_options = setproperties(optn; tol = 1e-9, max_iterations = 100, verbose = false));
 #     normC = norminf,
 #     verbosity = 1,
-#     callback_newton = BK.cbMaxNorm(1e3) 
+#     callback_newton = BifurcationKit.cbMaxNorm(1e3)
 #     )
 
 
