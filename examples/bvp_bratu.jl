@@ -1,5 +1,4 @@
 using Revise
-
 using BifurcationKit, LinearAlgebra, Plots
 using Test
 
@@ -8,7 +7,7 @@ using Test
 # ==============================================================================
 
 # 1. Define the vector field (first-order form)
-# u'' + p₁ * exp(u) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
+# u'' + 10(a * exp(u₁) - 1 - b u₁²/2) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
 function Fbratu(x, p)
     return [x[2], -10*(p.a * (exp(x[1]) - 1 - p.b * x[1]^2/2))]
 end
@@ -21,7 +20,7 @@ end
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
 # Fixed interval [0, 1] => phase condition fixes T=1.0
-model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2, phase = (u, p, T) -> T - 1.0)
+model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2)
 
 # 4. Discretize using Collocation method
 # Using 201 points for better accuracy
@@ -85,6 +84,7 @@ br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false,
 plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
+diagram = bifurcationdiagram(prob, br, 2, BifurcationKit.getcontparams(br); autodiff = false, plot = true)
 diagram = bifurcationdiagram(prob, br, 2, BifurcationKit.getcontparams(br); autodiff = false, plot = true)
 plot(diagram, vars = (:param, :s), legend = false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
