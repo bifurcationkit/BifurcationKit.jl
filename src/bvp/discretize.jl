@@ -135,67 +135,6 @@ function discretize(model::BVPModel, disc::Collocation)
     return DiscretizedBVP(model, disc, cache)
 end
 
-"""
-Compute Lagrange interpolation matrices for collocation.
-Returns (L, ∂L, gauss_nodes, gauss_weights).
-"""
-function compute_lagrange_matrices(m::Int)
-    @assert false # TODO: je pense jamais appele
-    # Gauss-Legendre nodes and weights on [-1, 1]
-    # For now, use simple approximation; in production use FastGaussQuadrature
-    gauss_nodes = cos.(π .* (2 .* (1:m) .- 1) ./ (2m))  # Chebyshev nodes as approximation
-    gauss_weights = fill(2.0 / m, m)  # Simplified weights
-
-    # Collocation points on [-1, 1]
-    σ = collect(LinRange(-1.0, 1.0, m + 1))
-
-    # Lagrange basis matrices
-    L = zeros(m + 1, m)   # L[j, l] = ℓⱼ(σₗ) where σₗ is Gauss point
-    ∂L = zeros(m + 1, m)  # ∂L[j, l] = ℓ'ⱼ(σₗ)
-
-    for l in 1:m
-        x = gauss_nodes[l]
-        for j in 1:(m + 1)
-            L[j, l] = lagrange_basis(j, x, σ)
-            ∂L[j, l] = lagrange_basis_derivative(j, x, σ)
-        end
-    end
-
-    return L, ∂L, gauss_nodes, gauss_weights
-end
-
-"""Lagrange basis polynomial ℓⱼ(x)."""
-function lagrange_basis(j::Int, x, nodes)
-    @assert false # TODO: je pense jamais appele
-    n = length(nodes)
-    result = one(x)
-    for k in 1:n
-        if k != j
-            result *= (x - nodes[k]) / (nodes[j] - nodes[k])
-        end
-    end
-    return result
-end
-
-"""Derivative of Lagrange basis polynomial ℓ'ⱼ(x)."""
-function lagrange_basis_derivative(j::Int, x, nodes)
-    @assert false # TODO: je pense jamais appele
-    n = length(nodes)
-    result = zero(x)
-    for i in 1:n
-        if i != j
-            term = one(x) / (nodes[j] - nodes[i])
-            for k in 1:n
-                if k != j && k != i
-                    term *= (x - nodes[k]) / (nodes[j] - nodes[k])
-                end
-            end
-            result += term
-        end
-    end
-    return result
-end
-
 # ============================================================================
 # Utility: Generate initial guess
 # ============================================================================
