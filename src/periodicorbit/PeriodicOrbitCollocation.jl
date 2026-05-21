@@ -946,11 +946,15 @@ end
 # for recording the solution in a branch
 function save_solution(wrap::PeriodicOrbitFunctionalColl, x, pars)
     coll = get_discretization(wrap)
+    return __save_solution_coll(coll::Collocation, x, pars)
+end
+
+function __save_solution_coll(coll::Collocation, x, pars)
     if meshadapt(coll) # mildly type unstable but Union{T1, T2} handles it
         return POSolutionAndState(copy(get_times(coll)),
                 x,
                 copy(getmesh(coll.mesh_cache)),
-                copy(coll.ϕ),
+                _copy(coll.ϕ),
                 )
     else
         return x
