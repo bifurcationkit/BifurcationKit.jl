@@ -226,12 +226,6 @@ Get the underlying DiscretizedBVP from a BVPBifProblem.
 """
 get_bvp(prob::BVPBifProblem) = prob.d_bvp
 
-"""
-$(TYPEDSIGNATURES)
-
-Get the period from a BVPBifProblem solution.
-"""
-getperiod(prob::BVPBifProblem, x, p) = x[end]
 
 """
 $(TYPEDSIGNATURES)

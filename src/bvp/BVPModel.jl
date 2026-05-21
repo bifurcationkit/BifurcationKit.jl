@@ -35,7 +35,7 @@ struct BVPModel{TF, Tg, Tphase, T}
     "Vector field: F(u, p) → ℝⁿ"
     F::TF
     
-    "Boundary conditions: g(u(0), u(1), p) → ℝⁿᵇ (must equal zero)"
+    "Boundary conditions: g(u(t0), u(tf), p) → ℝⁿᵇ (must equal zero)"
     g::Tg
     
     "Phase/integral constraint (optional): phase(u, p) → ℝ"
@@ -101,9 +101,10 @@ model = PeriodicOrbitModel(F; n=2)
 ```
 """
 function PeriodicOrbitModel(F; n::Int=0, phase=nothing)
-    g_periodic(u0, u1, p) = u0 .- u1
-    BVPModel(F, g_periodic, phase, n)
+    BVPModel(F, __g_periodic, phase, n)
 end
+
+__g_periodic(u0, u1, p) = u0 .- u1
 
 # ============================================================================
 # Getters

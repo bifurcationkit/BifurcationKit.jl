@@ -98,7 +98,7 @@ Create a trapezoidal discretizer.
 - `M::Int = 100`: Number of time slices
 - `jacobian = :auto`: Jacobian computation method
 """
-Trap(; M::Int=100, jacobian=:auto) = Trap(M, jacobian)
+Trap(; M::Int=100, jacobian = BifurcationKit.AutoDiffDense()) = Trap(M, jacobian)
 
 # ============================================================================
 # Collocation
@@ -149,7 +149,7 @@ Create a collocation discretizer.
 - `meshadapt::Bool = false`: Enable mesh adaptation
 - `K::Float64 = 100.0`: Mesh adaptation parameter
 """
-Collocation(; Ntst::Int=20, m::Int=4, jacobian=:auto, meshadapt::Bool=false, K::Float64=100.0) = 
+Collocation(; Ntst::Int=20, m::Int=4, jacobian=BifurcationKit.AutoDiffDense(), meshadapt::Bool=false, K=100.0) = 
     Collocation(Ntst, m, jacobian, meshadapt, K)
 
 # ============================================================================
