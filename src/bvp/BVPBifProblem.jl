@@ -39,7 +39,7 @@ $(TYPEDFIELDS)
 
 - `BVPBifProblem(d_bvp, u0, params, lens; kwargs...)` where `d_bvp` is a `DiscretizedBVP`
 """
-struct BVPBifProblem{Tbvp<:DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tgets, Tupdate} <: AbstractBifurcationProblem
+struct BVPBifProblem{Tbvp<:DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: AbstractBifurcationProblem
     "The discretized BVP"
     d_bvp::Tbvp
     "The jacobian (type or function)"
@@ -54,8 +54,6 @@ struct BVPBifProblem{Tbvp<:DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tgets,
     plotSolution::Tplot
     "Function to record from solution"
     recordFromSolution::Trec
-    "Function to save the full solution"
-    save_solution::Tgets
     "Function to update the problem"
     update!::Tupdate
 end
@@ -75,7 +73,6 @@ Create a `BVPBifProblem` from a discretized BVP.
 - `jacobian`: Jacobian type (default: `DenseAnalytical()`)
 - `record_from_solution`: Function to record from solution (default records period)
 - `plot_solution`: Function to plot solution (default: nothing)
-- `save_solution`: Function to save the full solution (default: `save_solution_default`)
 - `update!`: Function to update the problem (default: `update_default`)
 
 ## Example
@@ -100,7 +97,6 @@ function BVPBifProblem(
     jacobian = AutoDiffDense(),
     record_from_solution = (x, p; k...) -> (x = norm(x),),
     plot_solution = (x, p; kwargs...) -> nothing,
-    save_solution = save_solution_default,
     update! = update_default
 )
     return BVPBifProblem(
@@ -111,7 +107,6 @@ function BVPBifProblem(
         lens,
         plot_solution,
         record_from_solution,
-        save_solution,
         update!
     )
 end
@@ -134,7 +129,6 @@ isinplace(::BVPBifProblem) = false
 plot_solution(prob::BVPBifProblem) = prob.plotSolution
 record_from_solution(prob::BVPBifProblem) = prob.recordFromSolution
 record_from_solution(prob::BVPBifProblem, x, p; k...) = prob.recordFromSolution(x, p; k...)
-save_solution(prob::BVPBifProblem, x, p) = prob.save_solution(x, p)
 @inline update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(args...; kwargs...)
 
 # Residual - delegate to the DiscretizedBVP
@@ -199,7 +193,6 @@ function re_make(prob::BVPBifProblem;
     lens = prob.lens,
     plot_solution = prob.plotSolution,
     record_from_solution = prob.recordFromSolution,
-    save_solution = prob.save_solution,
     update! = prob.update!
 )
     return BVPBifProblem(
@@ -210,7 +203,6 @@ function re_make(prob::BVPBifProblem;
         lens,
         plot_solution,
         record_from_solution,
-        save_solution,
         update!
     )
 end
