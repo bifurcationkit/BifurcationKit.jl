@@ -1,6 +1,17 @@
 using Revise
 using BifurcationKit, LinearAlgebra, Plots
 using Test
+const BK = BifurcationKit
+
+function record_from_solution(x, p; k...)
+    u = BK.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
+    return (max_u = norm(x, 2), s = sum(x))
+end
+
+function plot_solution(x, p; kwargs...)
+    u = BK.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
+    plot!(u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
+end
 
 # ==============================================================================
 # Bratu Problem BVP Example
@@ -20,12 +31,12 @@ end
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
 # Fixed interval [0, 1] => phase condition fixes T=1.0
-model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2)
+model = BK.BVP.BVPModel(Fbratu, gbratu; n=2)
 
 # 4. Discretize using Collocation method
 # Using 201 points for better accuracy
-disc = BifurcationKit.BVP.Collocation(Ntst=40, m=5)
-bvp = BifurcationKit.BVP.discretize(model, disc)
+disc = BK.BVP.Collocation(Ntst=40, m=5)
+bvp = BK.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
@@ -36,15 +47,10 @@ x0 = zeros(2 * (1 + disc.m * disc.Ntst))
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
-prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a);
-    record_from_solution = (x, p; k...) -> begin
-        u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
-        return (max_u = norm(x, 2), s = sum(x))
-    end,
-    plot_solution = (x, p; kwargs...) -> begin
-        u = BifurcationKit.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
-        plot!(u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
-    end
+# we could also do x0 = BK.BVP.generate_solution(bvp, my_guess_function)
+prob = BK.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a);
+    record_from_solution,
+    plot_solution
 )
 
 # 7. Setup Continuation Parameters
@@ -70,7 +76,7 @@ br = continuation(prob, PALC(), optc;
     normC = norminf,
 )
 
-BifurcationKit.BVP.get_solution_bvp(br, 1)
+BK.BVP.get_solution_bvp(br, 1)
 
 plot(br)
 plot(br, vars = (:param, :s))
@@ -86,20 +92,20 @@ br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false,
 plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
-diagram = bifurcationdiagram(prob, br, 2, BifurcationKit.getcontparams(br); autodiff = false, plot = true)
-diagram = bifurcationdiagram(prob, br, 2, BifurcationKit.getcontparams(br); autodiff = false, plot = true)
+diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
+diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
 plot(diagram, vars = (:param, :s), legend = false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # CODIMENSION 2
 bp_codim = continuation(br, 1, (@optic _.b), ContinuationPar(optc, p_min = -1.);
             verbosity = 0,
-            jacobian_ma = BifurcationKit.MinAug(), # autodiff is too slow
+            jacobian_ma = BK.MinAug(), # autodiff is too slow
             usehessian = false,        # not yet defined for BVPBifProblem
             )
 plot(bp_codim)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # deflated continuation
-deflationOp = DeflationOperator(2, dot, 1.0, [zero(BifurcationKit.getu0(prob))])
+deflationOp = DeflationOperator(2, dot, 1.0, [zero(BK.getu0(prob))])
 perturb_solution(sol, p, id) = sol .+ 0.1 .* rand(length(sol))
 alg = DefCont(;deflation_operator = deflationOp, perturb_solution, max_branches = 10)
 # br = @time continuation(
@@ -109,7 +115,7 @@ alg = DefCont(;deflation_operator = deflationOp, perturb_solution, max_branches 
 #         newton_options = setproperties(optn; tol = 1e-9, max_iterations = 100, verbose = false));
 #     normC = norminf,
 #     verbosity = 1,
-#     callback_newton = BifurcationKit.cbMaxNorm(1e3)
+#     callback_newton = BK.cbMaxNorm(1e3)
 #     )
 
 
