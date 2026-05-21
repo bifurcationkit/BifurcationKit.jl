@@ -140,6 +140,7 @@ Compute Lagrange interpolation matrices for collocation.
 Returns (L, ∂L, gauss_nodes, gauss_weights).
 """
 function compute_lagrange_matrices(m::Int)
+    @assert false # TODO: je pense jamais appele
     # Gauss-Legendre nodes and weights on [-1, 1]
     # For now, use simple approximation; in production use FastGaussQuadrature
     gauss_nodes = cos.(π .* (2 .* (1:m) .- 1) ./ (2m))  # Chebyshev nodes as approximation
@@ -165,6 +166,7 @@ end
 
 """Lagrange basis polynomial ℓⱼ(x)."""
 function lagrange_basis(j::Int, x, nodes)
+    @assert false # TODO: je pense jamais appele
     n = length(nodes)
     result = one(x)
     for k in 1:n
@@ -177,6 +179,7 @@ end
 
 """Derivative of Lagrange basis polynomial ℓ'ⱼ(x)."""
 function lagrange_basis_derivative(j::Int, x, nodes)
+    @assert false # TODO: je pense jamais appele
     n = length(nodes)
     result = zero(x)
     for i in 1:n
