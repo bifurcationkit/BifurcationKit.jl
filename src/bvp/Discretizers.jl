@@ -120,16 +120,13 @@ $(TYPEDFIELDS)
 disc = Collocation(Ntst=20, m=4)
 ```
 """
-struct Collocation{Tjac} <: AbstractDiscretizer
+struct Collocation <: AbstractDiscretizer
     "Number of mesh intervals"
     Ntst::Int
     
     "Polynomial degree"
     m::Int
-    
-    "Jacobian computation method"
-    jacobian::Tjac
-    
+
     "Enable mesh adaptation"
     meshadapt::Bool
     
@@ -149,8 +146,8 @@ Create a collocation discretizer.
 - `meshadapt::Bool = false`: Enable mesh adaptation
 - `K::Float64 = 100.0`: Mesh adaptation parameter
 """
-Collocation(; Ntst::Int=20, m::Int=4, jacobian=BifurcationKit.AutoDiffDense(), meshadapt::Bool=false, K=100.0) = 
-    Collocation(Ntst, m, jacobian, meshadapt, K)
+Collocation(; Ntst::Int=20, m::Int=4, meshadapt::Bool=false, K=100.0) = 
+    Collocation(Ntst, m, meshadapt, K)
 
 # ============================================================================
 # Common Interface
@@ -195,6 +192,5 @@ function Base.show(io::IO, d::Collocation)
     println(io, "├─ Mesh intervals Ntst : ", d.Ntst)
     println(io, "├─ Polynomial degree m : ", d.m)
     println(io, "├─ Total points        : ", mesh_size(d))
-    println(io, "├─ Jacobian            : ", d.jacobian)
     print(io,   "└─ Mesh adaptation     : ", d.meshadapt)
 end
