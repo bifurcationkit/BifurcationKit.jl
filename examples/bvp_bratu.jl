@@ -72,7 +72,7 @@ br = continuation(prob, PALC(), optc;
 
 plot(br)
 plot(br, vars = (:param, :s))
-@test br.specialpoint[1].param ≈ pi^2/10 atol = 1e-4
+@test br.specialpoint[1].param ≈ pi^2/10     atol = 1e-4
 @test br.specialpoint[2].param ≈ 2^2*pi^2/10 atol = 1e-4
 @test br.specialpoint[4].param ≈ 3^2*pi^2/10 atol = 1e-4
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
