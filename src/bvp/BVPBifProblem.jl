@@ -245,4 +245,4 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
     BifurcationKit.__save_solution_coll(bvp.cache.po_coll, x, pars)
 end
 
-BifurcationKit.get_solution_bvp(br::AbstractBranchResult, ind::Int) = get_solution_bvp(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
+get_solution_bvp(br::BifurcationKit.AbstractBranchResult, ind::Int) = get_solution_bvp(getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))

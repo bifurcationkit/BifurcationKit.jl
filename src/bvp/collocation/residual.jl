@@ -49,15 +49,5 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     uT = @view Xc[:, end]
     g_val = model.g(u0, uT, p)
     outc[:, end] .= g_val
-
-    # Phase condition
-    if has_phase_constraint(model)
-        # @assert false
-        # out[end] = evaluate_phase(model, Xc[:, 1], p, T)
-    else
-        # Default: user set T-1 in example or we could use integral phase
-        # out[end] = T - 1.0 # Standard for Bratu example
-    end
-
     return out
 end

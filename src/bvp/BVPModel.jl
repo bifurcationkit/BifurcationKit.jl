@@ -31,15 +31,12 @@ g(u0, u1, p) = u0 .- u1  # Periodic BC
 model = BVPModel(F, g; n=2)
 ```
 """
-struct BVPModel{TF, Tg, Tphase, T}
+struct BVPModel{TF, Tg, T}
     "Vector field: F(u, p) → ℝⁿ"
     F::TF
     
     "Boundary conditions: g(u(t0), u(tf), p) → ℝⁿᵇ (must equal zero)"
     g::Tg
-    
-    "Phase/integral constraint (optional): phase(u, p) → ℝ"
-    phase::Tphase
     
     "State dimension n"
     n::Int
@@ -63,7 +60,6 @@ Create a BVP model with vector field `F` and boundary conditions `g`.
 
 ## Keyword Arguments
 - `n::Int = 0`: State dimension (can be inferred later)
-- `phase = nothing`: Optional phase/integral constraint
 
 ## Example
 ```julia
@@ -73,8 +69,8 @@ g(u0, u1, p) = u0 .- u1
 model = BVPModel(F, g; n=2)
 ```
 """
-function BVPModel(F, g; n::Int=0, phase=nothing, t0 = 0., tf = 1.)
-    BVPModel(F, g, phase, n, (t0, tf))
+function BVPModel(F, g; n::Int=0, t0 = 0., tf = 1.)
+    BVPModel(F, g, n, (t0, tf))
 end
 
 """
@@ -89,7 +85,6 @@ The boundary condition is automatically set to `u(0) = u(1)`.
 
 ## Keyword Arguments
 - `n::Int = 0`: State dimension
-- `phase = nothing`: Optional phase constraint
 
 ## Example
 ```julia
@@ -101,7 +96,7 @@ model = PeriodicOrbitModel(F; n=2)
 ```
 """
 function PeriodicOrbitModel(F; n::Int=0, phase=nothing)
-    BVPModel(F, __g_periodic, phase, n)
+    BVPModel(F, __g_periodic, n)
 end
 
 __g_periodic(u0, u1, p) = u0 .- u1
@@ -112,9 +107,6 @@ __g_periodic(u0, u1, p) = u0 .- u1
 
 """State dimension of the model."""
 state_dimension(model::BVPModel) = model.n
-
-"""Check if the model has a phase constraint.""" # TODO use static test
-has_phase_constraint(model::BVPModel) = !isnothing(model.phase)
 
 """Evaluate the vector field."""
 evaluate_F(model::BVPModel, u, p) = model.F(u, p)
@@ -144,7 +136,6 @@ function Base.show(io::IO, model::BVPModel)
     println(io, "├─ State dimension n : ", model.n == 0 ? "unspecified" : model.n)
     println(io, "├─ Vector field F    : ", typeof(model.F).name.name)
     println(io, "├─ Boundary cond g   : ", typeof(model.g).name.name)
-    println(io,   "├─ Phase constraint  : ", has_phase_constraint(model) ? "yes" : "none")
     print(io,   "└─ Time interval     : ", get_time_interval(model))
 end
 
