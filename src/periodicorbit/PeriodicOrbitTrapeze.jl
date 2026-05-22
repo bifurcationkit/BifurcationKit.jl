@@ -289,7 +289,7 @@ This function implements the functional for finding periodic orbits based on fin
 end
 po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 
-@views function po_residual_bare!(trap::Trapeze, outc, uc, par, T)
+@views function po_residual_bare!(trap::Trapeze, outc, uc::AbstractMatrix, par, T)
     M, N = size(trap)
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop
