@@ -116,11 +116,11 @@ function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
     # Create a BifurcationProblem wrapper for the vector field
     prob_vf = BifurcationKit.BifurcationProblem(
         (u, p) -> model.F(u, p),
-        zeros(n),
-        (dummy = 0.0,),
-        (@optic _.dummy);
+        zeros(0),
+        nothing,
+        (@optic _);
         inplace = false,
-        record_from_solution = (x, p; k...) -> nothing
+        record_from_solution = BifurcationKit.record_sol_default
     )
 
     # Create PeriodicOrbitOCollProblem
