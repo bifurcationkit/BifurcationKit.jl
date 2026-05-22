@@ -646,7 +646,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                     pars; kw...) where {𝒯}
     uc = get_time_slices(coll, u)
     period = getperiod(coll, u, nothing)
-    _pocoll_jacobian_types(J, coll, u, pars, uc, period; kw...)
+    _po_analytical_jacobian!(J, coll, u, pars, uc, period; kw...)
     return J
 end
 
