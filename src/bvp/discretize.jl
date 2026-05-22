@@ -47,7 +47,7 @@ function discretize(model::BVPModel, disc::Shooting)
     return DiscretizedBVP(model, disc, cache)
 end
 
-function create_cache(disc::Shooting, n::Int)
+function create_cache(disc::Shooting, n::Int) # TODO type of array must be specified. Now only Float64
     return (
         u_work = zeros(n),
         Φ_work = zeros(n, n),
@@ -58,8 +58,6 @@ end
 # ============================================================================
 # Trapezoid
 # ============================================================================
-
-#import BifurcationKit: PeriodicOrbitTrapProblem, PeriodicOrbitOCollProblem, BifurcationProblem, TimeMesh
 import BifurcationKit
 import PreallocationTools: DiffCache, get_tmp
 
@@ -98,7 +96,7 @@ function discretize(model::BVPModel, disc::Trap)
 
     cache = (
         po_trap = po_trap,          # BifurcationKit's trap problem for po_residual_bare!
-        F_vals = zeros(n, M),       # Vector field at each slice
+        F_vals = zeros(n, M),       # Vector field at each slice # TODO utile? et type?
         temp = zeros(n),            # Temporary
     )
 
@@ -109,7 +107,7 @@ end
 # Collocation
 # ============================================================================
 
-function discretize(model::BVPModel, disc::Collocation)
+function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
 

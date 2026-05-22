@@ -230,7 +230,6 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
     BifurcationKit.__save_solution_coll(bvp.cache.po_coll, x, pars)
 end
 
-
 function jacobian(prob::BVPBifProblem{Tbvp, <: BifurcationKit.DenseAnalytical}, u, pars) where {Tbvp}
     d_bvp = prob.d_bvp
     disc = get_discretizer(d_bvp)
