@@ -15,7 +15,7 @@ Mathematical formulation of a Boundary Value Problem (no discretization).
 
 ## Mathematical Definition
 
-    u'(t) = F(u(t), p),        t ∈ [t0, tf]
+    u'(t) = F(u(t), p),          t ∈ [t0, tf]
     g(u(t0), u(tf), p) = 0       boundary conditions
 
 ## Fields

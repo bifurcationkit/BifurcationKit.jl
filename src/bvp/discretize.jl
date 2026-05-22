@@ -4,6 +4,7 @@
 # BVP model with a numerical discretization method.
 
 using DocStringExtensions
+import SciMLBase
 
 """
 $(TYPEDSIGNATURES)
@@ -38,23 +39,12 @@ function discretize end
 # ============================================================================
 # Shooting
 # ============================================================================
-
-function discretize(model::BVPModel, disc::Shooting)
-    n = state_dimension(model)
-    @assert n > 0 "State dimension must be specified in the model"
-
-    cache = create_cache(disc, n)
+function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.EnsembleProblem, SciMLBase.DAEProblem}}, 
+                    disc::Shooting; 
+                    kwargsDE...)
+    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
-
-function create_cache(disc::Shooting, n::Int) # TODO type of array must be specified. Now only Float64
-    return (
-        u_work = zeros(n),
-        Φ_work = zeros(n, n),
-        F_work = zeros(n),
-    )
-end
-
 # ============================================================================
 # Trapezoid
 # ============================================================================
@@ -161,7 +151,6 @@ end
 function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
     n = state_dimension(model)
     M = disc.M
-
     # Sample at M shooting points
     X = zeros(n * M + 1)
     for i in 1:M
@@ -169,14 +158,12 @@ function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
         X[(i-1)*n+1 : i*n] .= orbit(t)
     end
     X[end] = period
-
     return X
 end
 
 function generate_solution(model::BVPModel, disc::Trap, cache, orbit)
     n = state_dimension(model)
     M = disc.M
-
     # Sample at M time slices
     X = zeros(n * M + 1)
     for i in 1:M
@@ -184,7 +171,6 @@ function generate_solution(model::BVPModel, disc::Trap, cache, orbit)
         X[(i-1)*n+1 : i*n] .= orbit(t)
     end
     X[end] = period
-
     return X
 end
 
