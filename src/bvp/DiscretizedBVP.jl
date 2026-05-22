@@ -72,29 +72,6 @@ import BifurcationKit: AutoDiffDense
 function bvp_jacobian(d_bvp::DiscretizedBVP, ::AutoDiffDense, x, p)
     ForwardDiff.jacobian(z -> bvp_residual(d_bvp, z, p), x)
 end
-
-
-"""
-$(TYPEDSIGNATURES)
-
-This function generates an initial guess for the solution of the BVP problem based on the orbit `t -> orbit(t)` for t ∈ [t0, tf] and the `period`. Used also in `generate_ci_problem`.
-"""
-function generate_solution(d_bvp::DiscretizedBVP{Tmodel, Tc}, orbit) where {Tmodel, Tc <: Collocation}
-    model = get_model(d_bvp)
-    disc = get_discretizer(d_bvp)
-    coll = d_bvp.cache.po_coll # TODO: caca
-    𝒯 = eltype(coll)
-    n, _m, Ntst = size(coll)
-    ts = BifurcationKit.get_times(coll)
-    Nt = length(ts)
-    t0, tf = get_time_interval(model)
-    ci = zeros(𝒯, n, Nt)
-    for (l, t) in pairs(ts)
-        ci[:, l] .= orbit(t0 + (tf - t0) * t)
-    end
-    return vec(ci)
-end
-
 # ============================================================================
 # Getters
 # ============================================================================
@@ -111,8 +88,8 @@ get_model(bvp::DiscretizedBVP) = bvp.model
 """Get the discretizer."""
 get_discretizer(bvp::DiscretizedBVP) = bvp.discretizer
 
-"""Get the period/parameter from solution vector X."""
-getperiod(bvp::DiscretizedBVP, X, p=nothing) = X[end]
+"""Get the cache."""
+get_cache(bvp::DiscretizedBVP) = bvp.cache
 
 # ============================================================================
 # Display

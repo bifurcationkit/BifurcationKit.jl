@@ -145,21 +145,20 @@ Generate an initial guess for the discretized BVP from an orbit function.
 ## Arguments
 - `bvp::DiscretizedBVP`: The discretized problem
 - `orbit`: Function `t -> u(t)` giving the orbit at time t
-- `period`: Estimated period of the orbit
 
 ## Returns
 - Initial guess vector X
 
 ## Example
 ```julia
-x0 = generate_solution(bvp, t -> [cos(t), sin(t)], 2π)
+x0 = generate_solution(bvp, t -> [cos(t), sin(t)])
 ```
 """
-function generate_solution(bvp::DiscretizedBVP, orbit, period)
-    return generate_solution(bvp.model, bvp.discretizer, orbit, period)
+function generate_solution(d_bvp::DiscretizedBVP, orbit)
+    return generate_solution(get_model(d_bvp), get_discretizer(d_bvp), get_cache(d_bvp), orbit)
 end
 
-function generate_solution(model::BVPModel, disc::Shooting, orbit, period)
+function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
     n = state_dimension(model)
     M = disc.M
 
@@ -174,7 +173,7 @@ function generate_solution(model::BVPModel, disc::Shooting, orbit, period)
     return X
 end
 
-function generate_solution(model::BVPModel, disc::Trap, orbit, period)
+function generate_solution(model::BVPModel, disc::Trap, cache, orbit)
     n = state_dimension(model)
     M = disc.M
 
@@ -189,26 +188,17 @@ function generate_solution(model::BVPModel, disc::Trap, orbit, period)
     return X
 end
 
-function generate_solution(model::BVPModel, disc::Collocation, orbit, period)
+function generate_solution(model::BVPModel, disc::Collocation, cache, orbit)
     n = state_dimension(model)
-    Ntst, m = disc.Ntst, disc.m
-    N_total = Ntst * m + 1
-
-    # Sample at all collocation points
-    X = zeros(n * N_total + 1)
-    mesh = LinRange(0.0, 1.0, Ntst + 1)
-    σ = LinRange(-1.0, 1.0, m + 1)
-
-    idx = 1
-    for j in 1:Ntst
-        for l in 1:(j == Ntst ? m + 1 : m)
-            τ = mesh[j] + (1 + σ[l]) / 2 * (mesh[j+1] - mesh[j])
-            t = τ * period
-            X[(idx-1)*n+1 : idx*n] .= orbit(t)
-            idx += 1
-        end
+    coll = cache.po_coll # TODO: caca
+    𝒯 = eltype(coll)
+    n, _m, Ntst = size(coll)
+    ts = BifurcationKit.get_times(coll)
+    Nt = length(ts)
+    t0, tf = get_time_interval(model)
+    ci = zeros(𝒯, n, Nt)
+    for (l, t) in pairs(ts)
+        ci[:, l] .= orbit(t0 + (tf - t0) * t)
     end
-    X[end] = period
-
-    return X
+    return vec(ci)
 end
