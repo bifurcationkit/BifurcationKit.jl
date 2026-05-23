@@ -42,15 +42,12 @@ function discretize end
 function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.EnsembleProblem, SciMLBase.DAEProblem}}, 
                     disc::Shooting; 
                     kwargsDE...)
-    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; kwargsDE...)
+    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; parallel = isparallel(disc), kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
 # ============================================================================
 # Trapezoid
 # ============================================================================
-import BifurcationKit
-import PreallocationTools: DiffCache, get_tmp
-
 function discretize(model::BVPModel, disc::Trap)
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
