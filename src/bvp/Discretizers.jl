@@ -52,7 +52,7 @@ Base.@kwdef struct Shooting{Talg} <: AbstractDiscretizer
     parallel::Bool
 end
 
-isparallel(sh::Shooting) = sh.parallel
+is_parallel(sh::Shooting) = sh.parallel
 
 # ============================================================================
 # Trapezoid (Finite Difference)

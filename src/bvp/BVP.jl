@@ -50,6 +50,7 @@ using LinearAlgebra
 using ForwardDiff
 using Accessors
 using PreallocationTools: DiffCache, get_tmp
+import BifurcationKit
 
 # Core types
 include("BVPModel.jl")

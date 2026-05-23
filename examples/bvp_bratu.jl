@@ -20,7 +20,7 @@ end
 # 1. Define the vector field (first-order form)
 # u'' + 10(a * exp(u₁) - 1 - b u₁²/2) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
 function Fbratu(x, p)
-    return [x[2], -10*(p.a * (exp(x[1]) - 1 - p.b * x[1]^2/2))]
+    return [x[2], -10*(p.a * (exp(x[1]) - p.c - p.b * x[1]^2/2))]
 end
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
@@ -40,7 +40,7 @@ bvp = BK.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
-params = (a = 0.5, b = 0.)
+params = (a = 0.5, b = 0., c = 0.)
 t_vals = LinRange(0, 1, 101)
 x0 = zeros(2 * (1 + disc.m * disc.Ntst))
 # x0[end] = 1.0 # Interval length T = 1.0

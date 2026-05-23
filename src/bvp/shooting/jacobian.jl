@@ -18,7 +18,7 @@ Compute the Jacobian for shooting discretization.
 Where Φᵢ = ∂φ(uᵢ)/∂uᵢ is the monodromy matrix.
 """
 
-function bvp_jacobian(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, jac::BifurcationKit.DenseAnalytical, X, p)
+function bvp_jacobian(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, jac::Nothing, X, p)
     model = bvp.model
     disc = bvp.discretizer
     

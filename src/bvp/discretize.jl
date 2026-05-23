@@ -42,7 +42,7 @@ function discretize end
 function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.EnsembleProblem, SciMLBase.DAEProblem}}, 
                     disc::Shooting; 
                     kwargsDE...)
-    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; parallel = isparallel(disc), kwargsDE...)
+    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; parallel = is_parallel(disc), kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
 # ============================================================================

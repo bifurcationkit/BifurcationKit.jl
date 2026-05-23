@@ -310,6 +310,12 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
+    _get_shooting_solution(sh, xc, T, pars; kode...)
+end
+get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
+
+function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars;kode...)
+    M = get_mesh_size(sh)
     if ~isparallel(sh)
         sol = RecursiveArrayTools.VectorOfArray([evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M])
     else # threaded version
@@ -323,7 +329,6 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
     end
     return SolPeriodicOrbit(t = time, u = u)
 end
-get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
 function get_po_solution(sh::Shooting, x, pars; kode...)
     T = getperiod(sh, x)
