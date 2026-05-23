@@ -34,9 +34,14 @@ $(TYPEDFIELDS)
 ```julia
 using OrdinaryDiffEq
 disc = Shooting(M=4, alg=Tsit5())
+
+## Constructor
+- `M::Int = 1`: Number of shooting intervals (M=1 is simple shooting)
+- `alg = nothing`: ODE solver algorithm
+- `parallel::Bool = false`: Use parallel integration
 ```
 """
-struct Shooting{Talg} <: AbstractDiscretizer
+Base.@kwdef struct Shooting{Talg} <: AbstractDiscretizer
     "Number of shooting intervals"
     M::Int
     
@@ -47,17 +52,7 @@ struct Shooting{Talg} <: AbstractDiscretizer
     parallel::Bool
 end
 
-"""
-$(TYPEDSIGNATURES)
-
-Create a shooting discretizer.
-
-## Keyword Arguments
-- `M::Int = 1`: Number of shooting intervals (M=1 is simple shooting)
-- `alg = nothing`: ODE solver algorithm
-- `parallel::Bool = false`: Use parallel integration
-"""
-Shooting(; M::Int=1, alg=nothing, parallel::Bool=false) = Shooting(M, alg, parallel)
+isparallel(sh::Shooting) = sh.parallel
 
 # ============================================================================
 # Trapezoid (Finite Difference)
