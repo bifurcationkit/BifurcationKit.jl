@@ -21,8 +21,8 @@ end
 
 # 1. Define the vector field (first-order form)
 # u'' + p₁ * exp(u) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
-function Fbratu(x, p)
-    return [x[2], -10*(p.a * (exp(x[1]) - 1 - p.b * x[1]^2/2))]
+function Fbratu(x, p, t = 0)
+    return [x[2], -10*(p.a * (exp(x[1]) - p.c - p.b * x[1]^2/2))]
 end
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
@@ -33,19 +33,19 @@ end
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
 # Fixed interval [0, 1] => phase condition fixes T=1.0
-model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2)
+params = (a = 0.5, b = 0., c = 0.1)
+odeprob = ODE.ODEProblem(Fbratu, zeros(2), (0,1), params)
+model = BifurcationKit.BVP.BVPModel(odeprob, gbratu; n=2)
 
 # 4. Discretize using Collocation method
 # Using 201 points for better accuracy
-disc = BifurcationKit.BVP.Shooting(2, ODE.Vern9(), true)
-bvp = BifurcationKit.BVP.discretize(model, disc)
+disc = BifurcationKit.BVP.Shooting(2, ODE.Vern9(), false)
+bvp = BifurcationKit.BVP.discretize(model, disc; abstol = 1e-12, reltol = 1e-10)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
-params = (a = 0.5, b = 0.)
-t_vals = LinRange(0, 1, 101)
-x0 = zeros(2 * disc.M)
-# x0[end] = 1.0 # Interval length T = 1.0
+t_vals = LinRange(0, 1, disc.M+1)[1:end-1]
+x0 = mapreduce(t -> 0.1.*[t,t], vcat, t_vals)
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
@@ -61,7 +61,7 @@ optc = ContinuationPar(
     p_max = 10.05,
     dsmax = 0.1,
     ds = 0.01,
-    detect_bifurcation = 3,
+    detect_bifurcation = 0,
     # detect_fold = false,
     newton_options = optn,
     max_steps = 200,
@@ -70,7 +70,7 @@ optc = ContinuationPar(
 )
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 8. Perform initial continuation
-println("\nComputing primary branch for Bratu BVP (Collocation)...")
+println("\nComputing primary branch for Bratu BVP (Shooting)...")
 br = continuation(prob, PALC(), optc;
     plot = true,
     verbosity = 0,

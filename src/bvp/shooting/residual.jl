@@ -15,25 +15,19 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     model = get_model(bvp)
     disc = get_discretizer(bvp)
     n = state_dimension(model)
+    t0, tf = get_time_interval(model)
     M = disc.M
-    
+
     # Extract shooting points and period
     U = reshape(@view(X[1:n*M]), n, M)
-    T = 1
-    
+    T = tf - t0
+
     # Allocate output
     out = similar(X)
     outU = reshape(@view(out[1:n*M]), n, M)
     
     # Core residual computation using BVP-specific po_residual_bare!
-    po_residual_bare!(bvp, outU, U, p, T)
-    
-    # Phase condition (last scalar)
-    u0 = @view U[:, 1]
-    dt = T / M
-    uT = integrate_shooting(model.F, @view(U[:, M]), p, dt, disc.alg)
-    out[end] = _shooting_phase(model, u0, uT, p)
-    
+    bvp_residual_bare!(bvp, outU, U, p, T)
     return out
 end
 
@@ -43,17 +37,23 @@ $(TYPEDSIGNATURES)
 Core shooting residual computation for DiscretizedBVP.
 This implements the same logic as BifurcationKit's po_residual_bare! for ShootingProblem.
 """
-@views function po_residual_bare!(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, outc, xc, pars, T)
+@views function bvp_residual_bare!(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, outc, xc, pars, T)
     model = get_model(bvp)
-    disc = get_discretizer(bvp)
-    n, M = size(xc)
-    dt = T / M
-    
-    for ii in 1:M
-        ip1 = (ii == M) ? 1 : ii+1
-        # Integrate from xc[:, ii] for time dt
-        u_final = integrate_shooting(model.F, xc[:, ii], pars, dt, disc.alg)
-        outc[:, ii] .= u_final .- xc[:, ip1]
+    sh = get_cache(bvp) # TODO this is a hack for now
+    M = sh.M
+    if ~isparallel(sh)
+        for ii in 1:M-1
+            ip1 = ii+1
+            outc[:, ii] .= BifurcationKit.evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
+        end
+        outc[:, M] .= model.g(xc[:, 1], BifurcationKit.evolve(sh.flow, xc[:, M], pars, sh.ds[M] * T).u, pars)
+    else
+        solOde = BifurcationKit.evolve(sh.flow, xc, pars, sh.ds .* T)
+        for ii in 1:M-1
+            ip1 = ii+1
+            outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]
+        end
+        outc[:, M] .= model.g(xc[:, 1], solOde[M][2], pars)
     end
 end
 
