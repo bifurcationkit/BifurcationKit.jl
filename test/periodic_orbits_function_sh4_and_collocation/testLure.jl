@@ -35,15 +35,6 @@ function recordPO(x, p; k...)
     return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
-function lur!(dz, u, p, t = 0)
-    (; α, β) = p
-    x, y, z = u
-    dz[1] = y
-    dz[2] = z
-    dz[3] = -α * z - β * y - x + x^2
-    dz
-end
-
 let
 prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 
@@ -109,7 +100,6 @@ for meshadapt in (false, true)
                 record_from_solution = recordPO,
                 plot_solution = plotPO,
                 normC = norminf)
-    show(br_po)
     @test br_po.specialpoint[1].param ≈  0.63031334 rtol = 1e-4
     @test br_po.specialpoint[2].param ≈ -0.63031334 rtol = 1e-4
 
