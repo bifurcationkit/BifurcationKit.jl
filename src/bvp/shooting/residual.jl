@@ -1,9 +1,7 @@
 # Shooting Residual Implementation
 # 
 # This file implements bvp_residual for Shooting discretization.
-# It reuses the existing po_residual_bare! from BifurcationKit's StandardShooting.
-
-import BifurcationKit: po_residual_bare!, get_mesh_size, isparallel, evolve
+# It reuses the existing po_residual_bare! from BK's StandardShooting.
 
 """
 $(TYPEDSIGNATURES)
@@ -41,14 +39,15 @@ This implements the same logic as BifurcationKit's po_residual_bare! for Shootin
     model = get_model(bvp)
     sh = get_cache(bvp) # TODO this is a hack for now
     M = sh.M
+    #TODO must use VI
     if ~isparallel(sh)
         for ii in 1:M-1
             ip1 = ii+1
-            outc[:, ii] .= BifurcationKit.evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
+            outc[:, ii] .= BK.evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
         end
-        outc[:, M] .= model.g(xc[:, 1], BifurcationKit.evolve(sh.flow, xc[:, M], pars, sh.ds[M] * T).u, pars)
+        outc[:, M] .= model.g(xc[:, 1], BK.evolve(sh.flow, xc[:, M], pars, sh.ds[M] * T).u, pars)
     else
-        solOde = BifurcationKit.evolve(sh.flow, xc, pars, sh.ds .* T)
+        solOde = BK.evolve(sh.flow, xc, pars, sh.ds .* T)
         for ii in 1:M-1
             ip1 = ii+1
             outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]

@@ -50,7 +50,7 @@ using LinearAlgebra
 using ForwardDiff
 using Accessors
 using PreallocationTools: DiffCache, get_tmp
-import BifurcationKit
+import BifurcationKit as BK
 
 # Core types
 include("BVPModel.jl")
@@ -70,7 +70,7 @@ include("integration.jl")
 
 # Exports - Core types
 export BVPModel, PeriodicOrbitModel
-export AbstractDiscretizer, Shooting, Trap, Collocation
+# export AbstractDiscretizer, Shooting, Trap, Collocation
 export DiscretizedBVP
 export discretize, generate_solution
 export bvp_residual, bvp_jacobian, jvp
