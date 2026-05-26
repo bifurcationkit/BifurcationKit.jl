@@ -59,7 +59,7 @@ optn = NewtonPar(tol = 1e-10, verbose=true)
 
 sol = BK.solve(prob, Newton(), optn)
 
-sol_bvp = BK._get_shooting_solution(d_bvp.cache, reshape(sol.u, 2, disc.M), 1,  prob.params)
+sol_bvp = BK.BVP.get_solution_bvp(d_bvp, sol.u, prob.params)
 
 plot(sol_bvp.t, sol_bvp.u[1,:])
 

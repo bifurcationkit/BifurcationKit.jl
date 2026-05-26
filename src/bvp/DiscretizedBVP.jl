@@ -94,11 +94,35 @@ get_cache(bvp::DiscretizedBVP) = bvp.cache
 # ============================================================================
 # Display
 # ============================================================================
-
 function Base.show(io::IO, bvp::DiscretizedBVP)
     println(io, "┌─ DiscretizedBVP")
     println(io, "├─ State dimension : ", state_dimension(bvp))
     println(io, "├─ Total unknowns  : ", length(bvp))
     println(io, "├─ Model           : BVPModel")
     print(io,   "└─ Discretizer     : ", typeof(bvp.discretizer).name.name)
+end
+# ============================================================================
+function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector) where {Tmodel}
+    coll = d_bvp.cache.po_coll
+    N, m, Ntst = size(coll)
+    BK.get_time_slices(u, N, m, Ntst)
+end
+# ============================================================================
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector, params) where {Tmodel}
+    sh = d_bvp.cache
+    N = state_dimension(d_bvp)
+    disc = get_discretizer(d_bvp)
+    um = get_time_slices(d_bvp, u)
+    t0, tf = get_time_interval(get_model(d_bvp))
+    return BK._get_shooting_solution(sh, um, tf - t0, params) # TODO must be a SolBVP
+end
+
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector, params) where {Tmodel}
+    t0, tf = get_time_interval(get_model(d_bvp))
+    T = tf - t0
+    coll = d_bvp.cache.po_coll
+    ts = BK.get_times(coll)
+    um = get_time_slices(d_bvp, u)
+    return BK.SolPeriodicOrbit(t = ts .* T, u = um) # TODO must be a SolBVP
+
 end

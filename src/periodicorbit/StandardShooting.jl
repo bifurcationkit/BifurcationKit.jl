@@ -342,9 +342,7 @@ function get_po_solution(sh::Shooting, x, pars; kode...)
     else # threaded version
         sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
-
     sol = (period = T, sol = sol_ode)
-
     return POSolution(sh, sol, pars)
 end
 

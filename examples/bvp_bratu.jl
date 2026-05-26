@@ -24,7 +24,6 @@ function Fbratu(x, p)
 end
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
-
 function gbratu(u0, uT, p)
     return [u0[1], uT[1]]
 end
@@ -43,8 +42,7 @@ bvp = BK.BVP.discretize(model, disc)
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (a = 0.5, b = 0., c = 0.)
 t_vals = LinRange(0, 1, 101)
-x0 = zeros(2 * (1 + disc.m * disc.Ntst))
-# x0[end] = 1.0 # Interval length T = 1.0
+x0 = BK.BVP.generate_solution(bvp, t-> 0.0t*(1-t)*[1,1])
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
