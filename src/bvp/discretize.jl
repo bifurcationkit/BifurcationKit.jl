@@ -42,7 +42,7 @@ function discretize end
 function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.EnsembleProblem, SciMLBase.DAEProblem}}, 
                     disc::Shooting; 
                     kwargsDE...)
-    cache = BifurcationKit.Shooting(mesh_size(disc), model.F, disc.alg; parallel = is_parallel(disc), kwargsDE...)
+    cache = BK.Shooting(mesh_size(disc), model.F, disc.alg; parallel = is_parallel(disc), kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
 # ============================================================================
@@ -58,7 +58,7 @@ function discretize(model::BVPModel, disc::Trap)
     # This is needed by PeriodicOrbitTrapProblem
     # Note: We use a dummy params/lens since these are handled by BVPBifProblem
     # record_from_solution is required to avoid errors
-    prob_vf = BifurcationKit.BifurcationProblem(
+    prob_vf = BK.BifurcationProblem(
         (u, p) -> model.F(u, p),    # Vector field
         zeros(n),                     # Dummy initial guess
         (dummy = 0.0,),               # Dummy params
@@ -72,7 +72,7 @@ function discretize(model::BVPModel, disc::Trap)
     ϕ = zeros(n * M)
     xπ = zeros(n * M)
 
-    po_trap = BifurcationKit.Trapeze(;
+    po_trap = BK.Trapeze(;
         prob_vf = prob_vf,
         ϕ = ϕ,
         xπ = xπ,

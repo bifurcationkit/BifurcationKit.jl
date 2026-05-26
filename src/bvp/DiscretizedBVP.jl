@@ -107,6 +107,13 @@ function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::Abstr
     N, m, Ntst = size(coll)
     BK.get_time_slices(u, N, m, Ntst)
 end
+
+function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector) where {Tmodel}
+    sh = d_bvp.cache
+    N = state_dimension(d_bvp)
+    M = mesh_size(get_discretizer(d_bvp))
+    reshape(u, N, M)
+end
 # ============================================================================
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector, params) where {Tmodel}
     sh = d_bvp.cache
@@ -124,5 +131,4 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::Abst
     ts = BK.get_times(coll)
     um = get_time_slices(d_bvp, u)
     return BK.SolPeriodicOrbit(t = ts .* T, u = um) # TODO must be a SolBVP
-
 end

@@ -14,18 +14,18 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     disc = get_discretizer(bvp)
     n = state_dimension(model)
     t0, tf = get_time_interval(model)
-    M = disc.M
+    M = mesh_size(disc)
 
     # Extract shooting points and period
-    U = reshape(@view(X[1:n*M]), n, M)
+    Xm = reshape(@view(X[1:n*M]), n, M)
     T = tf - t0
 
     # Allocate output
     out = similar(X)
-    outU = reshape(@view(out[1:n*M]), n, M)
+    outm = reshape(@view(out[1:n*M]), n, M)
     
     # Core residual computation using BVP-specific po_residual_bare!
-    bvp_residual_bare!(bvp, outU, U, p, T)
+    bvp_residual_bare!(bvp, outm, Xm, p, T)
     return out
 end
 
@@ -35,24 +35,24 @@ $(TYPEDSIGNATURES)
 Core shooting residual computation for DiscretizedBVP.
 This implements the same logic as BifurcationKit's po_residual_bare! for ShootingProblem.
 """
-@views function bvp_residual_bare!(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, outc, xc, pars, T)
+@views function bvp_residual_bare!(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, outm, xm, pars, T)
     model = get_model(bvp)
     sh = get_cache(bvp) # TODO this is a hack for now
     M = sh.M
     #TODO must use VI
-    if ~isparallel(sh)
+    if ~BK.isparallel(sh)
         for ii in 1:M-1
             ip1 = ii+1
-            outc[:, ii] .= BK.evolve(sh.flow, xc[:, ii], pars, sh.ds[ii] * T).u .- xc[:, ip1]
+            outm[:, ii] .= BK.evolve(sh.flow, xm[:, ii], pars, sh.ds[ii] * T).u .- xm[:, ip1]
         end
-        outc[:, M] .= model.g(xc[:, 1], BK.evolve(sh.flow, xc[:, M], pars, sh.ds[M] * T).u, pars)
+        outm[:, M] .= model.g(xm[:, 1], BK.evolve(sh.flow, xm[:, M], pars, sh.ds[M] * T).u, pars)
     else
-        solOde = BK.evolve(sh.flow, xc, pars, sh.ds .* T)
+        solOde = BK.evolve(sh.flow, xm, pars, sh.ds .* T)
         for ii in 1:M-1
             ip1 = ii+1
-            outc[:, ii] .= @views solOde[ii][2] .- xc[:, ip1]
+            outm[:, ii] .= @views solOde[ii][2] .- xm[:, ip1]
         end
-        outc[:, M] .= model.g(xc[:, 1], solOde[M][2], pars)
+        outm[:, M] .= model.g(xm[:, 1], solOde[M][2], pars)
     end
 end
 
