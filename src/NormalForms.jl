@@ -1241,7 +1241,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         amp = ampfactor
         ω = hp.ω
         pnew = hp.p + ds
-        Ψ001 = zero(hp.ζ)
+        Ψ001 = zero(hp.x0) # must be real
         Ψ110 = zero(hp.ζ)
         Ψ200 = zero(hp.ζ)
         dsfactor = 1
