@@ -68,8 +68,7 @@ Specialized implementations can be provided for each discretizer type.
 function bvp_jacobian end
 
 # Default implementation for AutoDiffDense - uses ForwardDiff
-import BifurcationKit: AutoDiffDense
-function bvp_jacobian(d_bvp::DiscretizedBVP, ::AutoDiffDense, x, p)
+function bvp_jacobian(d_bvp::DiscretizedBVP, ::BK.AutoDiffDense, x, p)
     ForwardDiff.jacobian(z -> bvp_residual(d_bvp, z, p), x)
 end
 # ============================================================================
