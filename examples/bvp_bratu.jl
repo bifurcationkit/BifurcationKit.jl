@@ -19,14 +19,10 @@ end
 
 # 1. Define the vector field (first-order form)
 # u'' + 10(a * exp(u₁) - 1 - b u₁²/2) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
-function Fbratu(x, p)
-    return [x[2], -10*(p.a * (exp(x[1]) - p.c - p.b * x[1]^2/2))]
-end
+Fbratu(x, p) = [x[2], -10*(p.a * (exp(x[1]) - p.c - p.b * x[1]^2/2))]
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
-function gbratu(u0, uT, p)
-    return [u0[1], uT[1]]
-end
+gbratu(u0, uT, p) = [u0[1], uT[1]]
 
 # 3. Create BVP Model
 # State dimension is 2 (u, u')

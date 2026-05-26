@@ -63,6 +63,7 @@ include("shooting/residual.jl")
 include("shooting/jacobian.jl")  # Shooting has specialized analytical jacobian
 include("trap/residual.jl")
 include("collocation/residual.jl")
+include("collocation/jacobian.jl")
 
 # Integration with BifurcationKit
 include("BVPBifProblem.jl")

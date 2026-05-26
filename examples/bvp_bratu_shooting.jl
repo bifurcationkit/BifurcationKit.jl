@@ -10,7 +10,6 @@ function record_from_solution(x, p; iter, k...)
 end
 
 function plot_solution(x, p; kwargs...)
-
     sol = BK._get_shooting_solution(d_bvp.cache, reshape(x, 2, disc.M), 1,  @set params.a = p)
     plot!(sol.t, sol.u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
 end
@@ -21,14 +20,10 @@ end
 
 # 1. Define the vector field (first-order form)
 # u'' + p₁ * exp(u) = 0  =>  u₁' = u₂, u₂' = -10(a * exp(u₁) - 1 - b u₁²/2)
-function Fbratu(x, p, t = 0)
-    return [x[2], -10*(p.a * (exp(x[1]) -0*x[1] - p.c - p.b * x[1]^2/2))]
-end
+Fbratu(x, p, t = 0) = [x[2], -10*(p.a * (exp(x[1]) -0*x[1] - p.c - p.b * x[1]^2/2))]
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
-function gbratu(u0, uT, p)
-    return [u0[1], uT[1]]
-end
+gbratu(u0, uT, p) = [u0[1], uT[1]]
 
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
@@ -39,7 +34,7 @@ model = BifurcationKit.BVP.BVPModel(odeprob, gbratu; n=2)
 
 # 4. Discretize using Collocation method
 # Using 201 points for better accuracy
-disc = BifurcationKit.BVP.Shooting(5, ODE.Vern9(), true)
+disc = BifurcationKit.BVP.Shooting(10, ODE.Vern9(), true)
 d_bvp = BifurcationKit.BVP.discretize(model, disc; abstol = 1e-12, reltol = 1e-10)
 
 # 5. Set up parameters and initial guess
@@ -86,15 +81,15 @@ br = continuation(prob, PALC(), optc;
 
 plot(br)
 plot(br, vars = (:param, :s))
-@test br.specialpoint[2].param ≈ pi^2/10 atol = 1e-4
+@test br.specialpoint[1].param ≈ pi^2/10 atol = 1e-4
 @test br.specialpoint[4].param ≈ 2^2*pi^2/10 atol = 1e-4
 @test br.specialpoint[6].param ≈ 3^2*pi^2/10 atol = 1e-4
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NORMAL FORM COMPUTATION
-get_normal_form(br, 2; autodiff=false)
+get_normal_form(br, 1; autodiff=false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # BRANCH SWITCHING
-br2 = continuation(br, 2, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
+br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
 plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
