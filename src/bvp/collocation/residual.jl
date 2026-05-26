@@ -42,7 +42,7 @@ function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     # Core residual computation from BifurcationKit
     # This writes to outc[:, 1:Ntst*m]
     #po_residual_bare!(po_coll, outc, Xc, p, 1)
-    po_residual_bare!(po_coll, outc, Xc, δT, BifurcationKit.get_Ls(po_coll), p; compute_phase = Val(false))
+    po_residual_bare!(po_coll, outc, Xc, δT, BK.get_Ls(po_coll), p; compute_phase = Val(false))
 
     # Boundary condition: g(u(0), u(T), p) = 0
     u0 = @view Xc[:, 1]

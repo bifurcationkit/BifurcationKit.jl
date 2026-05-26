@@ -4,15 +4,11 @@
 # for use with BifurcationKit's continuation and bifurcation algorithms.
 
 import BifurcationKit: AbstractBifurcationProblem, 
-                       save_solution_default, update_default,
+                       save_solution_default,
                        plot_solution, record_from_solution, save_solution, update!,
                        _getvectortype, getu0, getparams, getlens, getparam, setparam, _get,
                        is_symmetric, re_make, set,
-                       residual, jacobian, isinplace,
-                       AutoDiffDense
-
-using Accessors: Accessors
-
+                       residual, jacobian, isinplace
 """
 $(TYPEDEF)
 
@@ -39,7 +35,7 @@ $(TYPEDFIELDS)
 
 - `BVPBifProblem(d_bvp, u0, params, lens; kwargs...)` where `d_bvp` is a `DiscretizedBVP`
 """
-struct BVPBifProblem{Tbvp<:DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: AbstractBifurcationProblem
+struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: BK.AbstractBifurcationProblem
     "The discretized BVP"
     d_bvp::Tbvp
     "The jacobian (type or function)"
@@ -96,8 +92,8 @@ function BVPBifProblem(
     lens;
     jacobian = AutoDiffDense(),
     record_from_solution = (x, p; k...) -> (x = norm(x),),
-    plot_solution = (x, p; kwargs...) -> nothing,
-    update! = update_default
+    plot_solution = BK.plot_default,
+    update! = BK.update_default
 )
     return BVPBifProblem(
         d_bvp,
@@ -218,8 +214,8 @@ Get the underlying DiscretizedBVP from a BVPBifProblem.
 """
 get_bvp(prob::BVPBifProblem) = prob.d_bvp
 
-get_solution_bvp(br::BifurcationKit.AbstractBranchResult, ind::Int) = get_solution_bvp(BifurcationKit.getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
-get_solution_bvp(::BVPBifProblem, x, p) = x
+get_solution_bvp(br::BK.AbstractBranchResult, ind::Int) = get_solution_bvp(BK.getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
+get_solution_bvp(prob::BVPBifProblem, x, p) = get_solution_bvp(get_bvp(prob), x, p)
 # ============================================================================
 # save_solution functions specific to BVP problems
 # ============================================================================
@@ -227,10 +223,10 @@ save_solution(prob::BVPBifProblem, x, p) = save_solution(prob.d_bvp, x, p)
 save_solution(::DiscretizedBVP, x, _) = x
 
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars)
-    BifurcationKit.__save_solution_coll(bvp.cache.po_coll, x, pars)
+    BK.__save_solution_coll(bvp.cache.po_coll, x, pars)
 end
 
-function jacobian(prob::BVPBifProblem{Tbvp, <: BifurcationKit.DenseAnalytical}, u, pars) where {Tbvp}
+function BK.jacobian(prob::BVPBifProblem{Tbvp, <: BK.DenseAnalytical}, u, pars) where {Tbvp}
     d_bvp = prob.d_bvp
     disc = get_discretizer(d_bvp)
     model = get_model(d_bvp)
@@ -240,7 +236,7 @@ function jacobian(prob::BVPBifProblem{Tbvp, <: BifurcationKit.DenseAnalytical}, 
     n, m, Ntst = size(coll)
     uc = reshape(u, n, 1 + Ntst * m)
     period = one(𝒯)
-    BifurcationKit._po_analytical_jacobian!(Jcoll, 
+    BK._po_analytical_jacobian!(Jcoll, 
                                             coll, 
                                             u, 
                                             pars,

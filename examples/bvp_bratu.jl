@@ -24,6 +24,7 @@ function Fbratu(x, p)
 end
 
 # 2. Define boundary conditions: x₁(0) = 0, x₁(1) = 0
+
 function gbratu(u0, uT, p)
     return [u0[1], uT[1]]
 end

@@ -101,17 +101,17 @@ function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
     (;Ntst, m, K, meshadapt) = disc
 
     # Create a BifurcationProblem wrapper for the vector field
-    prob_vf = BifurcationKit.BifurcationProblem(
+    prob_vf = BK.BifurcationProblem(
         (u, p) -> model.F(u, p),
         zeros(0),
         nothing,
         (@optic _);
         inplace = false,
-        record_from_solution = BifurcationKit.record_sol_default
+        record_from_solution = BK.record_sol_default
     )
 
     # Create PeriodicOrbitOCollProblem
-    po_coll = BifurcationKit.Collocation(Ntst, m; N = n, prob_vf, meshadapt, K)
+    po_coll = BK.Collocation(Ntst, m; N = n, prob_vf, meshadapt, K)
 
     cache = (
         po_coll = po_coll,
@@ -176,7 +176,7 @@ function generate_solution(model::BVPModel, disc::Collocation, cache, orbit)
     coll = cache.po_coll # TODO: caca
     𝒯 = eltype(coll)
     n, _m, Ntst = size(coll)
-    ts = BifurcationKit.get_times(coll)
+    ts = BK.get_times(coll)
     Nt = length(ts)
     t0, tf = get_time_interval(model)
     ci = zeros(𝒯, n, Nt)
