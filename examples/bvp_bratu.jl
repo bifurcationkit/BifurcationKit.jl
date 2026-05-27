@@ -88,7 +88,6 @@ plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
 diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
-diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = true)
 plot(diagram, vars = (:param, :s), legend = false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # CODIMENSION 2

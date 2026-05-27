@@ -255,10 +255,10 @@ end
 
 # trivial constructor
 function Collocation(Ntst::Int,
-                                    m::Int,
-                                    𝒯 = Float64;
-                                    cache_In = false,
-                                    kwargs...)
+                    m::Int,
+                    𝒯 = Float64;
+                    cache_In = false,
+                    kwargs...)
     N = get(kwargs, :N, 1)
     coll = Collocation(; mesh_cache = MeshCollocationCache(Ntst, m, 𝒯),
                                     cache = POCollCache(𝒯, Ntst, N, m, cache_In),
@@ -415,7 +415,7 @@ function generate_ci_problem(_coll::Collocation,
     n_unknowns = N * n_mesh_pts(m, Ntst)
 
     params = sol_ode.prob.p
-    prob_vf = re_make(bifprob, params = params)
+    prob_vf = re_make(bifprob; params = params)
 
     coll = setproperties(_coll;
                             N,
