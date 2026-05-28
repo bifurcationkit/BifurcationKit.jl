@@ -1,25 +1,3 @@
-"""
-
-$(TYPEDEF)
-
-Structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps effectively yielding a `TimeMesh{Int64}`.
-"""
-struct TimeMesh{T}
-    ds::T
-end
-
-TimeMesh(M::Int64) = TimeMesh{Int64}(M)
-
-@inline can_adapt(ms::TimeMesh{Ti}) where Ti = !(Ti == Int64)
-Base.length(ms::TimeMesh{Ti}) where Ti = length(ms.ds)
-Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
-
-# access the time steps
-@inline get_time_step(ms, i::Int) = ms.ds[i]
-@inline get_time_step(ms::TimeMesh{Ti}, i::Int) where {Ti <: Int} = 1.0 / ms.ds
-
-Base.collect(ms::TimeMesh) = ms.ds
-Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([get_time_step(ms, 1)], ms.ds)
 ####################################################################################################
 const _trapezoid_jacobian_type = (Dense(),
                                     AutoDiffDense(),
@@ -289,7 +267,7 @@ This function implements the functional for finding periodic orbits based on fin
 end
 po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 
-@views function po_residual_bare!(trap::Trapeze, outc, uc, par, T)
+@views function po_residual_bare!(trap::Trapeze, outc, uc::AbstractMatrix, par, T)
     M, N = size(trap)
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop

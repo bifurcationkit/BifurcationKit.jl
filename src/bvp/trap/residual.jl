@@ -1,9 +1,11 @@
 # Trapezoid Residual Implementation
 #
-# This file implements bvp_residual for Trap discretization.
-# Uses BifurcationKit's optimized po_residual_bare! with topology correction.
+# This file implements bvp_residual for Trap discretization
+# in fixed-interval BVP form (no phase equation, no period in X).
+# Uses potrap_scheme! for the sequential trapezoid steps (same kernel as PO,
+# but driven sequentially u_1→u_2→⋯→u_M instead of cyclically).
 
-import BifurcationKit: po_residual_bare!, get_time_slices
+import BifurcationKit: potrap_scheme!, residual!, get_time_step
 
 """
 $(TYPEDSIGNATURES)
@@ -18,46 +20,35 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Trap}, X, p)
     n = state_dimension(model)
     M = disc.M
 
-    # Extract time slices and period
+    interval = get_time_interval(model)
+    δT = interval[2] - interval[1]
+
+    # Extract time slices
     Xc = reshape(@view(X[1:n*M]), n, M)
-    T = X[end]
-    
-    # Determine result type (promote X and p)
-    T_res = eltype(X)
-    if p isa NamedTuple
-        for v in values(p)
-            T_res = promote_type(T_res, eltype(v))
-        end
-    else
-        T_res = promote_type(T_res, eltype(p))
-    end
-    
-    # Get output buffer from cache
-    # Robust check: only use cache for Float64 to avoid chunk mismatch in Dual
-    out = similar(X, T_res)
+
+    # Get output buffer; element type follows X (covers Dual numbers in AD)
+    out = similar(X)
     outc = reshape(@view(out[1:n*M]), n, M)
-    
-    # Call BifurcationKit's optimized kernel
-    po_residual_bare!(po_trap, outc, Xc, p, T)
+
+    # Sequential trapezoid scheme for M-1 intervals using potrap_scheme!.
+    # M time points span [t0, tf] via M-1 intervals with normalized mesh weights.
+    # tmp is a dedicated buffer (separate from outc) holding F(u_i) across steps.
+    # potrap_scheme!(po_trap, dest, u_curr, u_prev, par, h/2, tmp)
+    #   requires tmp = F(u_prev) on entry, writes F(u_curr) into tmp on exit.
+    tmp = similar(X, n)
+    residual!(po_trap.prob_vf, tmp, @view(Xc[:, 1]), p)  # seed: F(u_1)
+
+    for i in 1:M-1
+        h_i = δT * get_time_step(disc.mesh, i)
+        potrap_scheme!(po_trap, @view(outc[:, i]), @view(Xc[:, i+1]), @view(Xc[:, i]), p, h_i/2, tmp)
+        # outc[:, i] = u_{i+1} - u_i - (h_i/2)*(F(u_i) + F(u_{i+1}))
+        # tmp now holds F(u_{i+1}) for the next iteration
+    end
 
     # Boundary condition: g(u(0), u(T), p) = 0
     u0 = @view Xc[:, 1]
     uT = @view Xc[:, M]
-    g_val = model.g(u0, uT, p)
-    outc[:, M] .= g_val
-    
-    # Phase condition (last scalar)
-    if has_phase_constraint(model)
-        out[end] = evaluate_phase(model, Xc[:, 1], p, T)
-    else
-        # Default: use BifurcationKit's phase condition vectors from cache
-        if iszero(po_trap.ϕ)
-             out[end] = Xc[1, 1] # Fallback for initialization
-        else
-             u_flat = vec(Xc)
-             out[end] = LinearAlgebra.dot(u_flat, po_trap.ϕ) - LinearAlgebra.dot(po_trap.xπ, po_trap.ϕ)
-        end
-    end
-    
+    outc[:, M] .= model.g(u0, uT, p)
+
     return out
 end

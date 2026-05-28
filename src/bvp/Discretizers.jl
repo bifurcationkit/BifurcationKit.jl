@@ -5,6 +5,7 @@
 # only method parameters.
 
 using DocStringExtensions
+import ..BifurcationKit: AutoDiffDense, TimeMesh, can_adapt
 
 """
 $(TYPEDEF)
@@ -44,10 +45,10 @@ disc = Shooting(M=4, alg=Tsit5())
 Base.@kwdef struct Shooting{Talg} <: AbstractDiscretizer
     "Number of shooting intervals"
     M::Int
-    
+
     "ODE solver algorithm (from OrdinaryDiffEq.jl)"
     alg::Talg
-    
+
     "Use parallel integration for multiple shooting"
     parallel::Bool
 end
@@ -76,10 +77,13 @@ $(TYPEDFIELDS)
 disc = Trap(M=100)
 ```
 """
-struct Trap{Tjac} <: AbstractDiscretizer
+struct Trap{Tjac, Tmesh} <: AbstractDiscretizer
     "Number of time slices"
     M::Int
-    
+
+    "Time mesh over M-1 intervals (normalized to sum to 1)"
+    mesh::Tmesh
+
     "Jacobian computation method (:auto, :dense, :sparse, :matrixfree)"
     jacobian::Tjac
 end
@@ -91,9 +95,42 @@ Create a trapezoidal discretizer.
 
 ## Keyword Arguments
 - `M::Int = 100`: Number of time slices
+- `mesh = nothing`: Optional normalized step vector over `M-1` intervals
 - `jacobian = :auto`: Jacobian computation method
 """
-Trap(; M::Int=100, jacobian = BifurcationKit.AutoDiffDense()) = Trap(M, jacobian)
+function Trap(; M::Int=100, mesh=TimeMesh(M - 1), jacobian = AutoDiffDense())
+    @assert M >= 2 "Trap requires at least M=2 time slices"
+
+    msh = if isnothing(mesh)
+        TimeMesh(M - 1)
+    elseif mesh isa TimeMesh
+        _validate_mesh(mesh, M - 1)
+        mesh
+    else
+        _mesh_from_steps(mesh, M - 1)
+    end
+
+    return Trap(M, msh, jacobian)
+end
+
+function _validate_mesh(mesh::TimeMesh{Ti}, n_intervals::Int) where {Ti <: Int}
+    @assert length(mesh) == n_intervals "Expected $n_intervals intervals, got $(length(mesh))"
+    return mesh
+end
+
+function _validate_mesh(mesh::TimeMesh, n_intervals::Int)
+    @assert length(mesh) == n_intervals "Expected $n_intervals intervals, got $(length(mesh))"
+    @assert all(mesh.ds .> 0) "Mesh steps must be strictly positive"
+    return mesh
+end
+
+function _mesh_from_steps(mesh_steps, n_intervals::Int)
+    @assert length(mesh_steps) == n_intervals "Expected $n_intervals intervals, got $(length(mesh_steps))"
+    steps = float.(collect(mesh_steps))
+    @assert all(steps .> 0) "Mesh steps must be strictly positive"
+    steps ./= sum(steps)
+    return TimeMesh(steps)
+end
 
 # ============================================================================
 # Collocation
@@ -118,13 +155,13 @@ disc = Collocation(Ntst=20, m=4)
 struct Collocation <: AbstractDiscretizer
     "Number of mesh intervals"
     Ntst::Int
-    
+
     "Polynomial degree"
     m::Int
 
     "Enable mesh adaptation"
     meshadapt::Bool
-    
+
     "Mesh adaptation parameter (max/min step ratio)"
     K::Float64
 end
@@ -141,7 +178,7 @@ Create a collocation discretizer.
 - `meshadapt::Bool = false`: Enable mesh adaptation
 - `K::Float64 = 100.0`: Mesh adaptation parameter
 """
-Collocation(; Ntst::Int=20, m::Int=4, meshadapt::Bool=false, K=100.0) = 
+Collocation(; Ntst::Int=20, m::Int=4, meshadapt::Bool=false, K=100.0) =
     Collocation(Ntst, m, meshadapt, K)
 
 # ============================================================================
@@ -179,6 +216,7 @@ end
 function Base.show(io::IO, d::Trap)
     println(io, "┌─ Trapezoid Discretizer")
     println(io, "├─ Time slices M : ", d.M)
+    println(io, "├─ Adaptive mesh : ", can_adapt(d.mesh))
     print(io,   "└─ Jacobian      : ", d.jacobian)
 end
 

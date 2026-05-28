@@ -77,6 +77,8 @@ module BifurcationKit
     include("codim2/NormalForms.jl")
     include("bifdiagram/BifurcationDiagram.jl")
 
+    include("TimeMesh.jl")
+
     # periodic orbit problems
     include("periodicorbit/Sections.jl")
     include("periodicorbit/PeriodicOrbits.jl")
