@@ -34,10 +34,10 @@ prob = BVPBifProblem(bvp, X0, params, (@optic _.μ))
 struct DiscretizedBVP{Tmodel<:BVPModel, Tdisc<:AbstractDiscretizer, Tcache}
     "Mathematical BVP model"
     model::Tmodel
-    
+
     "Discretization method"
     discretizer::Tdisc
-    
+
     "Pre-allocated workspace (for performance)"
     cache::Tcache
 end
@@ -113,6 +113,12 @@ function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::Abstract
     M = mesh_size(get_discretizer(d_bvp))
     reshape(u, N, M)
 end
+
+function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trap}, u::AbstractVector) where {Tmodel}
+    N = state_dimension(d_bvp)
+    M = mesh_size(get_discretizer(d_bvp))
+    reshape(u, N, M)
+end
 # ============================================================================
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector, params) where {Tmodel}
     sh = d_bvp.cache
@@ -130,4 +136,13 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::Abst
     ts = BK.get_times(coll)
     um = get_time_slices(d_bvp, u)
     return BK.SolPeriodicOrbit(t = ts .* T, u = um) # TODO must be a SolBVP
+end
+
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trap}, u::AbstractVector, params) where {Tmodel}
+    t0, tf = get_time_interval(get_model(d_bvp))
+    T = tf - t0
+    disc = get_discretizer(d_bvp)
+    ts = pushfirst!(cumsum(collect(disc.mesh)), zero(T))
+    um = get_time_slices(d_bvp, u)
+    return BK.SolPeriodicOrbit(t = t0 .+ T .* ts, u = um)
 end

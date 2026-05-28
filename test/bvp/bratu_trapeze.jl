@@ -1,4 +1,4 @@
-using BifurcationKit, LinearAlgebra
+using BifurcationKit, LinearAlgebra, ForwardDiff
 using Test
 
 # ==============================================================================
@@ -21,6 +21,18 @@ let
 # State dimension is 2 (u, u')
 # Fixed interval [0, 1]
 model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2)
+
+# Nonuniform mesh smoke test (M points -> M-1 interval weights)
+mesh_steps = [1.0 + 0.2 * sin(2pi * (i - 1) / 29) for i in 1:29]
+disc_nonuniform = BifurcationKit.BVP.Trap(M=30, mesh=mesh_steps)
+bvp_nonuniform = BifurcationKit.BVP.discretize(model, disc_nonuniform)
+x_nonuniform = zeros(2 * disc_nonuniform.M)
+p_nonuniform = (a = 0.5, b = 0.0)
+r_nonuniform = BifurcationKit.BVP.bvp_residual(bvp_nonuniform, x_nonuniform, p_nonuniform)
+@test all(isfinite, r_nonuniform)
+
+J_nonuniform = ForwardDiff.jacobian(z -> BifurcationKit.BVP.bvp_residual(bvp_nonuniform, z, p_nonuniform), x_nonuniform)
+@test all(isfinite, J_nonuniform)
 
 # 4. Discretize using Trapeze method
 disc = BifurcationKit.BVP.Trap(M=150)

@@ -77,7 +77,7 @@ function discretize(model::BVPModel, disc::Trap)
         ϕ = ϕ,
         xπ = xπ,
         M = M,
-        mesh = TimeMesh(M),
+        mesh = disc.mesh,
         N = n,
     )
 
