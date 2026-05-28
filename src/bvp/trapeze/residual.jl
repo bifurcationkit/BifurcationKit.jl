@@ -2,10 +2,10 @@
 #
 # This file implements bvp_residual for Trapeze discretization
 
-function bvp_residual(bvp::DiscretizedBVP{ <: BVPModel, <: Trapeze}, X, p)
-    model = bvp.model
-    disc = bvp.discretizer
-    po_trap = bvp.cache.po_trap
+function bvp_residual(d_bvp::DiscretizedBVP{ <: BVPModel, <: Trapeze}, X, p)
+    model = get_model(d_bvp)
+    disc = get_discretizer(d_bvp)
+    po_trap = d_bvp.cache.po_trap
     n = state_dimension(model)
     M = disc.M
 

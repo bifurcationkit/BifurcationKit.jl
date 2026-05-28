@@ -64,6 +64,7 @@ include("trapeze/residual.jl")
 include("collocation/residual.jl")
 include("collocation/jacobian.jl")
 include("trapeze/residual.jl")
+include("trapeze/jacobian.jl")
 
 # Integration with BifurcationKit
 include("BVPBifProblem.jl")
