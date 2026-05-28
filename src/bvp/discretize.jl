@@ -148,26 +148,28 @@ end
 function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
     n = state_dimension(model)
     M = disc.M
+    t0, tf = get_time_interval(model)
+    T = tf - t0
     # Sample at M shooting points
     X = zeros(n * M + 1)
     for i in 1:M
-        t = (i - 1) / M * period
+        t = (i - 1) / M * T
         X[(i-1)*n+1 : i*n] .= orbit(t)
     end
-    X[end] = period
     return X
 end
 
 function generate_solution(model::BVPModel, disc::Trapeze, cache, orbit)
     n = state_dimension(model)
     M = disc.M
+    t0, tf = get_time_interval(model)
+    T = tf - t0
     # Sample at M time slices
     X = zeros(n * M + 1)
     for i in 1:M
-        t = (i - 1) / (M - 1) * period
+        t = (i - 1) / (M - 1) * T
         X[(i-1)*n+1 : i*n] .= orbit(t)
     end
-    X[end] = period
     return X
 end
 

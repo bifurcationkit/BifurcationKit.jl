@@ -116,11 +116,11 @@ evaluate_g(model::BVPModel, u0, u1, p) = model.g(u0, u1, p)
 
 get_time_interval(model::BVPModel) = model.time_interval
 
-record_from_solution(model::BVPModel) = BK.record_sol_default
-record_from_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = record_from_solution(model.F)
+BK.record_from_solution(model::BVPModel) = BK.record_sol_default
+BK.record_from_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.record_from_solution(model.F)
 
-plot_solution(model::BVPModel) = BK.plot_default
-plot_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = plot_solution(model.F)
+BK.plot_solution(model::BVPModel) = BK.plot_default
+BK.plot_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.plot_solution(model.F)
 # ============================================================================
 # Display
 # ============================================================================

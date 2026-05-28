@@ -68,7 +68,7 @@ Create a `BVPBifProblem` from a discretized BVP.
 ## Keyword Arguments
 - `jacobian`: Jacobian type (default: `DenseAnalytical()`)
 - `record_from_solution`: Function to record from solution (default records period)
-- `plot_solution`: Function to plot solution (default: nothing)
+- `plot_solution`: Function to plot solution (default: Nothing)
 - `update!`: Function to update the problem (default: `update_default`)
 
 ## Example
@@ -91,8 +91,8 @@ function BVPBifProblem(
     params,
     lens;
     jacobian = AutoDiffDense(),
-    record_from_solution = missing, # default value used for dispatch
-    plot_solution = missing,
+    record_from_solution = nothing, # default value used for dispatch
+    plot_solution = nothing,
     update! = BK.update_default
 )
     return BVPBifProblem(
@@ -124,11 +124,11 @@ setparam(prob::BVPBifProblem, p0) = set(getparams(prob), getlens(prob), p0)
 isinplace(::BVPBifProblem) = false
 
 # Recording and plotting, based on dispatch
-plot_solution(prob::BVPBifProblem) = prob.plotSolution
-plot_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Missing}) where {Tbvp, Tjac, Tu, Tp, Tl} = plot_solution(get_bvp(prob))
+BK.plot_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot}) where {Tbvp, Tjac, Tu, Tp, Tl, Tplot} = prob.plotSolution
+BK.plot_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Nothing}) where {Tbvp, Tjac, Tu, Tp, Tl} = BK.plot_solution(get_bvp(prob))
 
-record_from_solution(prob::BVPBifProblem, x, p; k...) = prob.recordFromSolution(x, p; k...)
-record_from_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot, Missing}) where {Tbvp, Tjac, Tu, Tp, Tl, Tplot} = record_from_solution(get_bvp(prob))
+BK.record_from_solution(prob::BVPBifProblem, x, p; k...) = prob.recordFromSolution(x, p; k...)
+BK.record_from_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot, Nothing}) where {Tbvp, Tjac, Tu, Tp, Tl, Tplot} = BK.record_from_solution(get_bvp(prob))
 @inline update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(args...; kwargs...)
 
 # Residual - delegate to the DiscretizedBVP
