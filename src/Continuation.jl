@@ -643,9 +643,18 @@ Compute the continuation curve associated to the functional `F` which is stored 
     Just change the sign of `ds` in `ContinuationPar`.
 
 !!! tip "Debug mode"
-    Use debug mode to access more irformation about the progression of the continuation run, like iterative solvers convergence, problem update, ...
+    Use debug mode to access more information about the progression of the continuation run, like iterative solvers convergence, problem update, ...
 """
 function continuation(prob::AbstractBifurcationProblem,
+                      alg::AbstractContinuationAlgorithm,
+                      contparams::ContinuationPar;
+                      linear_algo = nothing,
+                      bothside::Bool = false,
+                      kwargs...)
+    _continuation(prob, alg, contparams; linear_algo, bothside, kwargs...)
+end
+
+function _continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       linear_algo = nothing,

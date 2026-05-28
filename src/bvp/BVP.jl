@@ -68,6 +68,7 @@ include("collocation/jacobian.jl")
 # Integration with BifurcationKit
 include("BVPBifProblem.jl")
 include("integration.jl")
+include("Continuation.jl")
 
 # Exports - Core types
 export BVPModel, PeriodicOrbitModel
