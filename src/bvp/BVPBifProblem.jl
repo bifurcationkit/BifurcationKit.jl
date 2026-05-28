@@ -142,15 +142,15 @@ getdelta(::BVPBifProblem) = 1e-8 # TODO remove this hack
 
 # Differentials (required for normal forms)
 function dF(prob::BVPBifProblem, x, p, dx)
-    ForwardDiff.derivative(t -> residual(prob, x .+ t .* dx, p), zero(eltype(x)))
+    FD.derivative(t -> residual(prob, x .+ t .* dx, p), zero(eltype(x)))
 end
 
 function d2F(prob::BVPBifProblem, x, p, dx1, dx2)
-    ForwardDiff.derivative(t -> dF(prob, x .+ t .* dx2, p, dx1), zero(eltype(x)))
+    FD.derivative(t -> dF(prob, x .+ t .* dx2, p, dx1), zero(eltype(x)))
 end
 
 function d3F(prob::BVPBifProblem, x, p, dx1, dx2, dx3)
-    ForwardDiff.derivative(t -> d2F(prob, x .+ t .* dx3, p, dx1, dx2), zero(eltype(x)))
+    FD.derivative(t -> d2F(prob, x .+ t .* dx3, p, dx1, dx2), zero(eltype(x)))
 end
 # Jacobian - dispatch on AutoDiffDense (default behavior)
 jacobian(prob::BVPBifProblem, x, p) = bvp_jacobian(get_bvp(prob), prob.jacobian, x, p)

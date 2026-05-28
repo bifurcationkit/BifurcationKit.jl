@@ -41,7 +41,7 @@ bvp = BK.BVP.discretize(model, disc)
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (a = 0.5, b = 0.)
-x0 = zeros(2 * disc.M)
+x0 = rand(2 * disc.M) .* 0.1
 
 # 6. Create BVPBifProblem
 prob = BK.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a);
