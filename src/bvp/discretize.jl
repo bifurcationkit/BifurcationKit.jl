@@ -62,7 +62,7 @@ function discretize(model::BVPModel, disc::Trapeze)
         (u, p) -> model.F(u, p),    # Vector field
         zeros(n),                     # Dummy initial guess
         (dummy = 0.0,),               # Dummy params
-        (@optic _.dummy);             # Dummy lens
+        (BK.@optic _.dummy);             # Dummy lens
         inplace = false,              # Must match the signature above
         record_from_solution = (x, p; k...) -> nothing
     )
@@ -105,7 +105,7 @@ function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
         (u, p) -> model.F(u, p),
         zeros(0),
         nothing,
-        (@optic _);
+        (BK.@optic _);
         inplace = false,
         record_from_solution = BK.record_sol_default
     )

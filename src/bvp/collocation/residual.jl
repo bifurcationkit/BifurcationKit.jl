@@ -1,17 +1,4 @@
-# Collocation Residual Implementation
-#
-# This file implements bvp_residual for Collocation discretization.
-# Uses BifurcationKit's optimized po_residual_bare! for collocation.
-
-import BifurcationKit: po_residual_bare!
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the residual for collocation discretization.
-Uses BifurcationKit's PeriodicOrbitOCollProblem for efficient computation.
-"""
-function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
+function bvp_residual(d_bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, X, p)
     model = get_model(d_bvp)
     disc = get_discretizer(d_bvp)
     po_coll = d_bvp.cache.po_coll
@@ -22,32 +9,22 @@ function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Collocation}, X, p)
     δT = interval[2] - interval[1]
 
     # Extract solution
-    Xc = reshape(@view(X[1:nf*N_total]), nf, N_total)
-
-    # Determine result type (promote X and p)
-    T_res = eltype(X)
-    if p isa NamedTuple
-        for v in values(p)
-            T_res = promote_type(T_res, eltype(v))
-        end
-    else
-        T_res = promote_type(T_res, eltype(p) )
-    end
+    Xm = reshape(@view(X[1:nf*N_total]), nf, N_total)
 
     # Get output buffer from cache
     # Robust check: only use cache for Float64 to avoid chunk mismatch in Dual
     out = similar(X)
-    outc = reshape(@view(out[1:nf*N_total]), nf, N_total)
+    outm = reshape(@view(out[1:nf*N_total]), nf, N_total)
 
     # Core residual computation from BifurcationKit
-    # This writes to outc[:, 1:Ntst*m]
-    #po_residual_bare!(po_coll, outc, Xc, p, 1)
-    po_residual_bare!(po_coll, outc, Xc, δT, BK.get_Ls(po_coll), p; compute_phase = Val(false))
+    # This writes to outm[:, 1:Ntst*m]
+    #po_residual_bare!(po_coll, outm, Xm, p, 1)
+    BK.po_residual_bare!(po_coll, outm, Xm, δT, BK.get_Ls(po_coll), p; compute_phase = Val(false))
 
     # Boundary condition: g(u(0), u(T), p) = 0
-    u0 = @view Xc[:, 1]
-    uT = @view Xc[:, end]
+    u0 = @view Xm[:, 1]
+    uT = @view Xm[:, end]
     g_val = model.g(u0, uT, p)
-    outc[:, end] .= g_val
+    outm[:, end] .= g_val
     return out
 end

@@ -1,17 +1,12 @@
-# Shooting Residual Implementation
-# 
-# This file implements bvp_residual for Shooting discretization.
-# It reuses the existing po_residual_bare! from BK's StandardShooting.
-
 """
 $(TYPEDSIGNATURES)
 
 Compute the residual for shooting discretization.
 Calls BifurcationKit's po_residual_bare! and adds phase condition.
 """
-function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
-    model = get_model(bvp)
-    disc = get_discretizer(bvp)
+function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
+    model = get_model(d_bvp)
+    disc = get_discretizer(d_bvp)
     n = state_dimension(model)
     t0, tf = get_time_interval(model)
     M = mesh_size(disc)
@@ -25,7 +20,7 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     outm = reshape(@view(out[1:n*M]), n, M)
     
     # Core residual computation using BVP-specific po_residual_bare!
-    bvp_residual_bare!(bvp, outm, Xm, p, T)
+    bvp_residual_bare!(d_bvp, outm, Xm, p, T)
     return out
 end
 

@@ -415,17 +415,17 @@ function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArr
 
     Iₙ = get_mass_matrix(trap)
 
-    u0c = get_time_slices(trap, u0)
-    outc = similar(u0c)
+    u0m = get_time_slices(trap, u0)
+    outc = similar(u0m)
 
-    tmpJ = @views jacobian(trap.prob_vf, u0c[:, 1], par)
+    tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
 
     h = T * get_time_step(trap, 1)
     Jn = Iₙ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
     # we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
-    Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0c[:, M-1], par)
+    Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 
     for ii in 2:M-1
@@ -433,7 +433,7 @@ function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArr
         Jn = -Iₙ - (h/2) .* tmpJ
         Jc[BA.Block(ii, ii-1)] = Jn
 
-        tmpJ = @views jacobian(trap.prob_vf, u0c[:, ii], par)
+        tmpJ = @views jacobian(trap.prob_vf, u0m[:, ii], par)
 
         Jn = Iₙ - (h/2) .* tmpJ
         Jc[BA.Block(ii, ii)] = Jn
@@ -481,17 +481,17 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
 
         Iₙ = get_mass_matrix(trap, ~(Tj <: SPA.SparseMatrixCSC))
 
-        u0c = get_time_slices(trap, u0)
-        outc = similar(u0c)
+        u0m = get_time_slices(trap, u0)
+        outc = similar(u0m)
 
-        tmpJ = jacobian(trap.prob_vf, u0c[:, 1], par)
+        tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
         h = T * get_time_step(trap, 1)
         Jn = Iₙ - (h/2) .* tmpJ
         # setblock!(Jc, Jn, 1, 1)
         J0[1:N, 1:N] .= Jn
 
-        Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0c[:, M-1], par)
+        Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
         # setblock!(Jc, Jn, 1, M-1)
         J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
@@ -502,7 +502,7 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
             # setblock!(Jc, Jn, ii, ii-1)
             J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
 
-            tmpJ .= jacobian(trap.prob_vf, u0c[:, ii], par)
+            tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)
 
             @. Jn = Iₙ - h/2 * tmpJ
             # setblock!(Jc, Jn, ii, ii)
@@ -532,10 +532,9 @@ end
 
     Iₙ = get_mass_matrix(trap)
 
-    u0c = get_time_slices(trap, u0)
-    outc = similar(u0c)
+    u0m = get_time_slices(trap, u0)
 
-    tmpJ = jacobian(trap.prob_vf, u0c[:, 1], par)
+    tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
     h = T * get_time_step(trap, 1)
     Jn = Iₙ - tmpJ * (h/2)
@@ -543,7 +542,7 @@ end
     # setblock!(Jc, Jn, 1, 1)
     J0.nzval[indx[1, 1]] .= Jn.nzval
 
-    Jn .= -Iₙ .- jacobian(trap.prob_vf, u0c[:, M-1], par) .* (h/2)
+    Jn .= -Iₙ .- jacobian(trap.prob_vf, u0m[:, M-1], par) .* (h/2)
     # setblock!(Jc, Jn, 1, M-1)
     J0.nzval[indx[1, M-1]] .= Jn.nzval
 
@@ -554,7 +553,7 @@ end
         # setblock!(Jc, Jn, ii, ii-1)
         J0.nzval[indx[ii, ii-1]] .= Jn.nzval
 
-        tmpJ .= jacobian(trap.prob_vf, u0c[:, ii], par)# * (h/2)
+        tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)# * (h/2)
 
         @. Jn = Iₙ -  tmpJ * (h/2)
         # setblock!(Jc, Jn, ii, ii)
@@ -601,7 +600,6 @@ function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     In = get_mass_matrix(trap)
 
     u0c = reshape(u0[begin:end-1], N, M)
-    outc = similar(u0c)
 
     h = T * get_time_step(trap, 1)
     @views Jn = In - h/2 .* jacobian(trap.prob_vf, u0c[:, 1], par)
