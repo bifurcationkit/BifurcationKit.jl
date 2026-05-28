@@ -90,6 +90,9 @@ get_discretizer(bvp::DiscretizedBVP) = bvp.discretizer
 """Get the cache."""
 get_cache(bvp::DiscretizedBVP) = bvp.cache
 
+record_from_solution(bvp::DiscretizedBVP) = record_from_solution(get_model(bvp))
+plot_solution(bvp::DiscretizedBVP) = plot_solution(get_model(bvp))
+
 # ============================================================================
 # Display
 # ============================================================================

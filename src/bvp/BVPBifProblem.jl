@@ -62,8 +62,8 @@ Create a `BVPBifProblem` from a discretized BVP.
 ## Arguments
 - `d_bvp::DiscretizedBVP`: The discretized BVP
 - `u0`: Initial guess for the solution
-- `params`: Parameters for the problem
-- `lens`: Optic for the continuation parameter (e.g., `@optic _.μ`)
+- `params`: [Optional] Parameters for the problem 
+- `lens`: [Optional] Optic for the continuation parameter (e.g., `@optic _.μ`)
 
 ## Keyword Arguments
 - `jacobian`: Jacobian type (default: `DenseAnalytical()`)
@@ -91,8 +91,8 @@ function BVPBifProblem(
     params,
     lens;
     jacobian = AutoDiffDense(),
-    record_from_solution = (x, p; k...) -> (x = norm(x),),
-    plot_solution = BK.plot_default,
+    record_from_solution = missing, # default value used for dispatch
+    plot_solution = missing,
     update! = BK.update_default
 )
     return BVPBifProblem(
@@ -116,15 +116,19 @@ _getvectortype(::BVPBifProblem{Tbvp, Tjac, Tu}) where {Tbvp, Tjac, Tu} = Tu
 # Accessor methods
 getu0(prob::BVPBifProblem) = prob.u0
 getparams(prob::BVPBifProblem) = prob.params
+getparams(prob::BVPBifProblem{Tbvp, Tjac, Tu, Nothing}) where {Tbvp, Tjac, Tu} = getparams(get_bvp(prob))
 getlens(prob::BVPBifProblem) = prob.lens
-getparam(prob::BVPBifProblem) = _get(prob.params, prob.lens)
-setparam(prob::BVPBifProblem, p0) = set(prob.params, prob.lens, p0)
+getlens(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Nothing}) where {Tbvp, Tjac, Tu, Tp} = getlens(get_bvp(prob))
+getparam(prob::BVPBifProblem) = _get(getparams(prob), getlens(prob))
+setparam(prob::BVPBifProblem, p0) = set(getparams(prob), getlens(prob), p0)
 isinplace(::BVPBifProblem) = false
 
-# Recording and plotting
+# Recording and plotting, based on dispatch
 plot_solution(prob::BVPBifProblem) = prob.plotSolution
-record_from_solution(prob::BVPBifProblem) = prob.recordFromSolution
+plot_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Missing}) where {Tbvp, Tjac, Tu, Tp, Tl} = plot_solution(get_bvp(prob))
+
 record_from_solution(prob::BVPBifProblem, x, p; k...) = prob.recordFromSolution(x, p; k...)
+record_from_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot, Missing}) where {Tbvp, Tjac, Tu, Tp, Tl, Tplot} = record_from_solution(get_bvp(prob))
 @inline update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(args...; kwargs...)
 
 # Residual - delegate to the DiscretizedBVP
@@ -148,34 +152,8 @@ end
 function d3F(prob::BVPBifProblem, x, p, dx1, dx2, dx3)
     ForwardDiff.derivative(t -> d2F(prob, x .+ t .* dx3, p, dx1, dx2), zero(eltype(x)))
 end
-
-# Bridge to BifFunction (needed for some internal BK methods like branch switching) # TODO: not sure!!
-function BifFunction(prob::BVPBifProblem)
-    return BifFunction(
-        (x, p) -> residual(prob, x, p),      # F
-        nothing,                             # F!
-        (x, p, dx) -> dF(prob, x, p, dx),    # dF
-        nothing,                             # dFad
-        (x, p) -> jacobian(prob, x, p),      # J
-        nothing,                             # Jᵗ
-        nothing,                             # J!
-        (x, p, dx1, dx2) -> d2F(prob, x, p, dx1, dx2), # d2F
-        (x, p, dx1, dx2, dx3) -> d3F(prob, x, p, dx1, dx2, dx3), # d3F
-        nothing,                             # d2Fc
-        nothing,                             # d3Fc
-        false,                               # isSymmetric
-        getdelta(prob),                      # δ
-        false,                               # inplace
-        nothing                              # jet
-    )
-end
-
-
 # Jacobian - dispatch on AutoDiffDense (default behavior)
 jacobian(prob::BVPBifProblem, x, p) = bvp_jacobian(prob.d_bvp, prob.jacobian, x, p)
-
-# Make the problem callable (required by BifurcationKit)  # TODO Remove?
-# (prob::BVPBifProblem)(x, p) = bvp_residual(prob.d_bvp, x, p)
 
 # is_symmetric defaults to false
 is_symmetric(::BVPBifProblem) = false
@@ -213,7 +191,6 @@ $(TYPEDSIGNATURES)
 Get the underlying DiscretizedBVP from a BVPBifProblem.
 """
 get_bvp(prob::BVPBifProblem) = prob.d_bvp
-
 get_solution_bvp(br::BK.AbstractBranchResult, ind::Int) = get_solution_bvp(BK.getprob(br), br.sol[ind].x, setparam(br, br.sol[ind].p))
 get_solution_bvp(prob::BVPBifProblem, x, p) = get_solution_bvp(get_bvp(prob), x, p)
 # ============================================================================

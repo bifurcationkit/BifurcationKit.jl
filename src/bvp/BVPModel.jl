@@ -116,17 +116,11 @@ evaluate_g(model::BVPModel, u0, u1, p) = model.g(u0, u1, p)
 
 get_time_interval(model::BVPModel) = model.time_interval
 
-"""Evaluate the phase constraint (if present)."""# TODO should remove
-function evaluate_phase(model::BVPModel, u, p, T)
-    isnothing(model.phase) && return zero(eltype(u))
-    # Support both (u, p) and (u, p, T) signatures
-    try
-        return model.phase(u, p, T)
-    catch
-        return model.phase(u, p)
-    end
-end
+record_from_solution(model::BVPModel) = BK.record_sol_default
+record_from_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = record_from_solution(model.F)
 
+plot_solution(model::BVPModel) = BK.plot_default
+plot_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = plot_solution(model.F)
 # ============================================================================
 # Display
 # ============================================================================
