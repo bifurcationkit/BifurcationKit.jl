@@ -7,7 +7,7 @@
     n, m, Ntst = size(coll)
     um = reshape(u, n, 1 + Ntst * m)
     period = one(𝒯)
-    BK._po_analytical_jacobian!(Jcoll, 
+    BK._collocation_analytical_jacobian!(Jcoll, 
                                 coll, 
                                 u, 
                                 pars,

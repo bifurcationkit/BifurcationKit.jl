@@ -649,11 +649,11 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
                                     pars; kw...) where {𝒯}
     uc = get_time_slices(coll, u)
     period = getperiod(coll, u, nothing)
-    _po_analytical_jacobian!(J, coll, u, pars, uc, period; kw...)
+    _collocation_analytical_jacobian!(J, coll, u, pars, uc, period; kw...)
     return J
 end
 
-@views function _po_analytical_jacobian!(J,
+@views function _collocation_analytical_jacobian!(J,
                                     coll::Collocation,
                                     u::AbstractVector{𝒯},
                                     pars,

@@ -409,18 +409,20 @@ end
 This function populates Jc with the cyclic matrix using the different Jacobians
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
+    period = _extract_period_fdtrap(trap, u0)
+    u0m = get_time_slices(trap, u0)
+    _trac_cylic_block!(trap, u0m, period, par, Jc)
+end
+
+function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
     # extraction of various constants
     M, N = size(trap)
-    T = _extract_period_fdtrap(trap, u0)
 
     Iₙ = get_mass_matrix(trap)
 
-    u0m = get_time_slices(trap, u0)
-    outc = similar(u0m)
-
     tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    h = T * get_time_step(trap, 1)
+    h = period * get_time_step(trap, 1)
     Jn = Iₙ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
@@ -429,7 +431,7 @@ function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArr
     Jc[BA.Block(1, M-1)] = Jn
 
     for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
+        h = period * get_time_step(trap, ii)
         Jn = -Iₙ - (h/2) .* tmpJ
         Jc[BA.Block(ii, ii-1)] = Jn
 
@@ -526,17 +528,37 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
         return J0
 end
 
-@views function po_jacobian_sparse!(trap::Trapeze, J0, u0::AbstractVector, par, indx; γ = 1, δ = getdelta(trap), updateborder::Bool = true)
-    M, N = size(trap)
-    T = _extract_period_fdtrap(trap, u0)
-
-    Iₙ = get_mass_matrix(trap)
-
+@views function po_jacobian_sparse!(trap::Trapeze,
+                            J0,
+                            u0::AbstractVector,
+                            par,
+                            indx; 
+                            updateborder::Val{_updateborder} = Val(true),
+                            δ = getdelta(trap), 
+                            kwargs...) where {_updateborder}
+    period = _extract_period_fdtrap(trap, u0)
     u0m = get_time_slices(trap, u0)
+    _trap_jacobian_sparse!(trap, J0, u0m, period, par, indx; kwargs...)
+    if _updateborder
+        # we now set up the last line / column
+        M, N = size(trap)
+        ∂TGpo = (po_residual(trap, vcat(u0[begin:end-1], period + δ), par) .- 
+                 po_residual(trap, u0, par)) ./ δ
+        J0[:, end] .= ∂TGpo
+
+        # the following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
+        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
+    end
+    return J0
+end
+
+@views function _trap_jacobian_sparse!(trap::Trapeze, J0, u0m::AbstractMatrix, period, par, indx; γ = 1)
+    M, N = size(trap)
+    Iₙ = get_mass_matrix(trap)
 
     tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    h = T * get_time_step(trap, 1)
+    h = period * get_time_step(trap, 1)
     Jn = Iₙ - tmpJ * (h/2)
 
     # setblock!(Jc, Jn, 1, 1)
@@ -547,7 +569,7 @@ end
     J0.nzval[indx[1, M-1]] .= Jn.nzval
 
     for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
+        h = period * get_time_step(trap, ii)
         @. Jn = -Iₙ - tmpJ * (h/2)
         # the next lines cost the most
         # setblock!(Jc, Jn, ii, ii-1)
@@ -566,15 +588,6 @@ end
     # setblock!(Aγ,  Iₙ,     M, M)
     # useless to update:
         # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
-
-    if updateborder
-        # we now set up the last line / column
-        ∂TGpo = (po_residual(trap, vcat(u0[begin:end-1], T + δ), par) .- po_residual(trap, u0, par)) ./ δ
-        J0[:, end] .= ∂TGpo
-
-        # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
-    end
 
     return J0
 end
@@ -695,7 +708,7 @@ end
 
 function (A::AγOperatorSparseInplace)(orbitguess::AbstractVector, par)
     # compute the cyclic matrix
-    po_jacobian_sparse!(A.prob, A.Jc, orbitguess, par, A.indx; updateborder = false)
+    po_jacobian_sparse!(A.prob, A.Jc, orbitguess, par, A.indx; updateborder = Val(false))
     # update the LU decomposition
     LA.lu!(A.Jcfact, A.Jc)
     return A
