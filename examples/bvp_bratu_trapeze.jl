@@ -4,13 +4,13 @@ using Test
 const BK = BifurcationKit
 
 function record_from_solution(x, p; k...)
-    u = reshape(x, 2, disc.M)
     return (max_u = norm(x, 2), s = sum(x))
 end
 
-function plot_solution(x, p; kwargs...)
-    u = reshape(x, 2, disc.M)
-    plot!(u[1, :]; ylabel="u(t)", title="Bratu Solution", kwargs...)
+function plot_solution(x, p; iter, kwargs...)
+    prob = BK.getprob(iter)
+    sol = BK.BVP.get_solution_bvp(prob, x, p)
+    plot!(sol.t, sol.u[1, :]; label="",  kwargs...)
 end
 
 # ==============================================================================
@@ -35,7 +35,7 @@ model = BK.BVP.BVPModel(Fbratu, gbratu; n=2)
 
 # 4. Discretize using Trapeze method
 # Using 201 points for better accuracy
-disc = BK.BVP.Trap(M=201)
+disc = BK.BVP.Trapeze(M=201)
 bvp = BK.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
@@ -70,8 +70,6 @@ br = continuation(prob, PALC(), optc;
     verbosity = 0,
     normC = norminf,
 )
-
-BK.BVP.get_solution_bvp(br, 1)
 
 plot(br)
 plot(br, vars = (:param, :s))

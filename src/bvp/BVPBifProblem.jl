@@ -132,7 +132,7 @@ record_from_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot, Missing}
 @inline update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(args...; kwargs...)
 
 # Residual - delegate to the DiscretizedBVP
-residual(prob::BVPBifProblem, x, p) = bvp_residual(prob.d_bvp, x, p)
+residual(prob::BVPBifProblem, x, p) = bvp_residual(get_bvp(prob), x, p)
 
 # Adjoint Support (required for branch switching and normal forms)
 # For now, we assume no easy adjoint is available for arbitrary BVPs
@@ -153,7 +153,7 @@ function d3F(prob::BVPBifProblem, x, p, dx1, dx2, dx3)
     ForwardDiff.derivative(t -> d2F(prob, x .+ t .* dx3, p, dx1, dx2), zero(eltype(x)))
 end
 # Jacobian - dispatch on AutoDiffDense (default behavior)
-jacobian(prob::BVPBifProblem, x, p) = bvp_jacobian(prob.d_bvp, prob.jacobian, x, p)
+jacobian(prob::BVPBifProblem, x, p) = bvp_jacobian(get_bvp(prob), prob.jacobian, x, p)
 
 # is_symmetric defaults to false
 is_symmetric(::BVPBifProblem) = false

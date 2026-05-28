@@ -34,7 +34,7 @@ function _get_periodic_orbit(disc::Shooting, X, n, T)
     return (t = collect(t), u = U, period = T)
 end
 
-function _get_periodic_orbit(disc::Trap, X, n, T)
+function _get_periodic_orbit(disc::Trapeze, X, n, T)
     M = disc.M
     U = reshape(@view(X[1:n*M]), n, M)
     t = LinRange(0, T, M)

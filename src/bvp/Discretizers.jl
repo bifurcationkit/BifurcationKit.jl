@@ -74,10 +74,10 @@ $(TYPEDFIELDS)
 
 ## Example
 ```julia
-disc = Trap(M=100)
+disc = Trapeze(M=100)
 ```
 """
-struct Trap{Tjac, Tmesh} <: AbstractDiscretizer
+struct Trapeze{Tjac, Tmesh} <: AbstractDiscretizer
     "Number of time slices"
     M::Int
 
@@ -98,8 +98,8 @@ Create a trapezoidal discretizer.
 - `mesh = nothing`: Optional normalized step vector over `M-1` intervals
 - `jacobian = :auto`: Jacobian computation method
 """
-function Trap(; M::Int=100, mesh=TimeMesh(M - 1), jacobian = AutoDiffDense())
-    @assert M >= 2 "Trap requires at least M=2 time slices"
+function Trapeze(; M::Int=100, mesh=TimeMesh(M - 1), jacobian = AutoDiffDense())
+    @assert M >= 2 "Trapeze requires at least M=2 time slices"
 
     msh = if isnothing(mesh)
         TimeMesh(M - 1)
@@ -110,7 +110,7 @@ function Trap(; M::Int=100, mesh=TimeMesh(M - 1), jacobian = AutoDiffDense())
         _mesh_from_steps(mesh, M - 1)
     end
 
-    return Trap(M, msh, jacobian)
+    return Trapeze(M, msh, jacobian)
 end
 
 function _validate_mesh(mesh::TimeMesh{Ti}, n_intervals::Int) where {Ti <: Int}
@@ -189,14 +189,14 @@ Collocation(; Ntst::Int=20, m::Int=4, meshadapt::Bool=false, K=100.0) =
 function mesh_size end
 
 mesh_size(d::Shooting) = d.M
-mesh_size(d::Trap) = d.M
+mesh_size(d::Trapeze) = d.M
 mesh_size(d::Collocation) = d.Ntst * d.m + 1
 
 """Dimension of the discretized solution vector (excluding period)."""
 function solution_dim end
 
 solution_dim(d::Shooting, n::Int) = n * d.M
-solution_dim(d::Trap, n::Int) = n * d.M
+solution_dim(d::Trapeze, n::Int) = n * d.M
 solution_dim(d::Collocation, n::Int) = n * (d.Ntst * d.m + 1)
 
 """Total dimension including period/parameter."""
@@ -213,7 +213,7 @@ function Base.show(io::IO, d::Shooting)
     print(io,   "└─ Parallel    : ", d.parallel)
 end
 
-function Base.show(io::IO, d::Trap)
+function Base.show(io::IO, d::Trapeze)
     println(io, "┌─ Trapezoid Discretizer")
     println(io, "├─ Time slices M : ", d.M)
     println(io, "├─ Adaptive mesh : ", can_adapt(d.mesh))

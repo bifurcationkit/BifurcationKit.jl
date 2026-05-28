@@ -1,19 +1,8 @@
 # Trapezoid Residual Implementation
 #
-# This file implements bvp_residual for Trap discretization
-# in fixed-interval BVP form (no phase equation, no period in X).
-# Uses potrap_scheme! for the sequential trapezoid steps (same kernel as PO,
-# but driven sequentially u_1→u_2→⋯→u_M instead of cyclically).
+# This file implements bvp_residual for Trapeze discretization
 
-import BifurcationKit: potrap_scheme!, residual!, get_time_step
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the residual for trapezoidal discretization.
-Uses BifurcationKit's PeriodicOrbitTrapProblem for efficient computation.
-"""
-function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Trap}, X, p)
+function bvp_residual(bvp::DiscretizedBVP{ <: BVPModel, <: Trapeze}, X, p)
     model = bvp.model
     disc = bvp.discretizer
     po_trap = bvp.cache.po_trap
@@ -36,11 +25,11 @@ function bvp_residual(bvp::DiscretizedBVP{<:BVPModel, <:Trap}, X, p)
     # potrap_scheme!(po_trap, dest, u_curr, u_prev, par, h/2, tmp)
     #   requires tmp = F(u_prev) on entry, writes F(u_curr) into tmp on exit.
     tmp = similar(X, n)
-    residual!(po_trap.prob_vf, tmp, @view(Xc[:, 1]), p)  # seed: F(u_1)
+    BK.residual!(po_trap.prob_vf, tmp, @view(Xc[:, 1]), p)  # seed: F(u_1)
 
     for i in 1:M-1
-        h_i = δT * get_time_step(disc.mesh, i)
-        potrap_scheme!(po_trap, @view(outc[:, i]), @view(Xc[:, i+1]), @view(Xc[:, i]), p, h_i/2, tmp)
+        h_i = δT * BK.get_time_step(disc.mesh, i)
+        BK.potrap_scheme!(po_trap, @view(outc[:, i]), @view(Xc[:, i+1]), @view(Xc[:, i]), p, h_i/2, tmp)
         # outc[:, i] = u_{i+1} - u_i - (h_i/2)*(F(u_i) + F(u_{i+1}))
         # tmp now holds F(u_{i+1}) for the next iteration
     end

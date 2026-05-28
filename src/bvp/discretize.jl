@@ -25,7 +25,7 @@ F(u, p) = [u[2], -p.ω² * u[1]]
 model = PeriodicOrbitModel(F; n=2)
 
 # Choose discretization
-disc = Trap(M=100)
+disc = Trapeze(M=100)
 
 # Create discretized problem
 bvp = discretize(model, disc)
@@ -48,7 +48,7 @@ end
 # ============================================================================
 # Trapezoid
 # ============================================================================
-function discretize(model::BVPModel, disc::Trap)
+function discretize(model::BVPModel, disc::Trapeze)
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
 
@@ -73,10 +73,10 @@ function discretize(model::BVPModel, disc::Trap)
     xπ = zeros(n * M)
 
     po_trap = BK.Trapeze(;
-        prob_vf = prob_vf,
-        ϕ = ϕ,
-        xπ = xπ,
-        M = M,
+        prob_vf,
+        ϕ,
+        xπ,
+        M,
         mesh = disc.mesh,
         N = n,
     )
@@ -158,7 +158,7 @@ function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
     return X
 end
 
-function generate_solution(model::BVPModel, disc::Trap, cache, orbit)
+function generate_solution(model::BVPModel, disc::Trapeze, cache, orbit)
     n = state_dimension(model)
     M = disc.M
     # Sample at M time slices

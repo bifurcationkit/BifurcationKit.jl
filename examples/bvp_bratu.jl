@@ -3,14 +3,14 @@ using BifurcationKit, LinearAlgebra, Plots
 using Test
 const BK = BifurcationKit
 
-function record_from_solution(x, p; k...)
-    u = BK.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
+function record_from_solution(x, p; iter, k...)
     return (max_u = norm(x, 2), s = sum(x))
 end
 
-function plot_solution(x, p; kwargs...)
-    u = BK.get_time_slices(x[1:end], 2, disc.m, disc.Ntst)
-    plot!(u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
+function plot_solution(x, p; iter, kwargs...)
+    prob = BK.getprob(iter)
+    sol = BK.BVP.get_solution_bvp(prob, x, p)
+    plot!(sol.t, sol.u[1, :]; label="",  kwargs...)
 end
 
 # ==============================================================================
@@ -36,16 +36,19 @@ bvp = BK.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
-params = (a = 0.5, b = 0., c = 0.)
+params = (a = 0.5, b = 0., c = 1.)
 t_vals = LinRange(0, 1, 101)
 x0 = BK.BVP.generate_solution(bvp, t-> 0.0t*(1-t)*[1,1])
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
-# we could also do x0 = BK.BVP.generate_solution(bvp, my_guess_function)
+# we could also do 
+# x0 = BK.BVP.generate_solution(bvp, identity)
 prob = BK.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a);
     record_from_solution,
-    plot_solution
+    plot_solution,
+    jacobian = BK.DenseAnalytical(),
+    # jacobian = BK.FullSparse(),
 )
 
 # 7. Setup Continuation Parameters

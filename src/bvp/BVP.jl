@@ -9,7 +9,7 @@ BVP - Boundary Value Problem Interface for BifurcationKit
 This module provides:
 - `BVPModel`: Mathematical formulation of a BVP
 - `PeriodicOrbitModel`: Convenience constructor for periodic orbits
-- `Shooting`, `Trap`, `Collocation`: Discretization methods
+- `Shooting`, `Trapeze`, `Collocation`: Discretization methods
 - `discretize`: Combine model + method into a solvable problem
 - `BVPBifProblem`: Bifurcation problem for periodic orbits
 
@@ -26,7 +26,7 @@ F(u, p) = [u[2], -p.ω² * u[1]]
 model = BK.PeriodicOrbitModel(F; n=2)
 
 # 3. Choose discretization
-disc = BK.Trap(M=100)
+disc = BK.Trapeze(M=100)
 
 # 4. Discretize
 bvp = BK.discretize(model, disc)
@@ -41,15 +41,14 @@ prob = BK.BVPBifProblem(bvp, x0, (ω=1.0,), (@optic _.ω))
 br = BK.continuation(prob, PALC(), ContinuationPar())
 ```
 
-See also: [`BVPModel`](@ref), [`discretize`](@ref), [`BVPBifProblem`](@ref), [`Shooting`](@ref), [`Trap`](@ref), [`Collocation`](@ref)
+See also: [`BVPModel`](@ref), [`discretize`](@ref), [`BVPBifProblem`](@ref), [`Shooting`](@ref), [`Trapeze`](@ref), [`Collocation`](@ref)
 """
 module BVP
 
 using DocStringExtensions
-using LinearAlgebra
-using ForwardDiff
-using Accessors
-using PreallocationTools: DiffCache, get_tmp
+import LinearAlgebra as LA
+import ForwardDiff as FD
+# using Accessors
 import BifurcationKit as BK
 
 # Core types
@@ -61,9 +60,10 @@ include("discretize.jl")
 # Residual/Jacobian implementations for each discretizer
 include("shooting/residual.jl")
 include("shooting/jacobian.jl")  # Shooting has specialized analytical jacobian
-include("trap/residual.jl")
+include("trapeze/residual.jl")
 include("collocation/residual.jl")
 include("collocation/jacobian.jl")
+include("trapeze/residual.jl")
 
 # Integration with BifurcationKit
 include("BVPBifProblem.jl")
@@ -71,7 +71,7 @@ include("integration.jl")
 
 # Exports - Core types
 export BVPModel, PeriodicOrbitModel
-# export AbstractDiscretizer, Shooting, Trap, Collocation
+# export AbstractDiscretizer, Shooting, Trapeze, Collocation
 export DiscretizedBVP
 export discretize, generate_solution
 export bvp_residual, bvp_jacobian, jvp

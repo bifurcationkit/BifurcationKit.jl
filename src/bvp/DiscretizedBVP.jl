@@ -21,7 +21,7 @@ $(TYPEDFIELDS)
 The DiscretizedBVP is callable:
 ```julia
 model = BVPModel(F, g; n=2)
-disc = Trap(M=100)
+disc = Trapeze(M=100)
 bvp = discretize(model, disc)
 
 # Evaluate residual
@@ -47,7 +47,7 @@ end
 # ============================================================================
 # These functions must be implemented for each discretizer type.
 # The implementations are in the discretizer-specific files:
-#   - trap/residual.jl, trap/jacobian.jl
+    #   - trapeze/residual.jl, trapeze/jacobian.jl
 #   - shooting/residual.jl, shooting/jacobian.jl
 #   - collocation/residual.jl, collocation/jacobian.jl
 
@@ -69,7 +69,7 @@ function bvp_jacobian end
 
 # Default implementation for AutoDiffDense - uses ForwardDiff
 function bvp_jacobian(d_bvp::DiscretizedBVP, ::BK.AutoDiffDense, x, p)
-    ForwardDiff.jacobian(z -> bvp_residual(d_bvp, z, p), x)
+    FD.jacobian(z -> bvp_residual(d_bvp, z, p), x)
 end
 # ============================================================================
 # Getters
@@ -117,7 +117,7 @@ function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::Abstract
     reshape(u, N, M)
 end
 
-function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trap}, u::AbstractVector) where {Tmodel}
+function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector) where {Tmodel}
     N = state_dimension(d_bvp)
     M = mesh_size(get_discretizer(d_bvp))
     reshape(u, N, M)
@@ -141,7 +141,7 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::Abst
     return BK.SolPeriodicOrbit(t = ts .* T, u = um) # TODO must be a SolBVP
 end
 
-function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trap}, u::AbstractVector, params) where {Tmodel}
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector, params) where {Tmodel}
     t0, tf = get_time_interval(get_model(d_bvp))
     T = tf - t0
     disc = get_discretizer(d_bvp)
