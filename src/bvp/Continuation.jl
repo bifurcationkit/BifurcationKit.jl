@@ -6,3 +6,10 @@ function BK.continuation(prob::BVPBifProblem,
                       kwargs...)
     BK._continuation(prob, alg, contparams; kind = BK.BoundaryValueProblemCont(), linear_algo, bothside, kwargs...)
 end
+
+function BK.continuation(prob::BVPBifProblem,
+                      alg::BK.DefCont,
+                      contparams::BK.ContinuationPar;
+                      kwargs...)
+    BK._deflated_continuation(prob, alg, contparams; kind = BK.BoundaryValueProblemCont(), kwargs...)
+end

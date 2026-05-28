@@ -77,16 +77,12 @@ bps = filter(sp -> sp.type == :bp, br.specialpoint)
 @test bps[1].param ≈ pi^2/10     atol = 1e-2
 @test bps[2].param ≈ 2^2*pi^2/10 atol = 1e-2
 @test bps[3].param ≈ 3^2*pi^2/10 atol = 1e-2
-
-bp_index = findfirst(sp -> sp.type == :bp, br.specialpoint)
-@assert !isnothing(bp_index) "No branch point detected in continuation."
-bp_index = bp_index::Int
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NORMAL FORM COMPUTATION
-get_normal_form(br, bp_index; autodiff=false)
+get_normal_form(br, 1; autodiff=false)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # BRANCH SWITCHING
-br2 = continuation(br, bp_index, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
+br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
 plot(br, br2, vars = (:param, :s))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
@@ -100,5 +96,3 @@ bp_codim = continuation(br, bp_index, (@optic _.b), ContinuationPar(optc, p_min 
             usehessian = false,        # not yet defined for BVPBifProblem
             )
 plot(bp_codim)
-
-println("\nExample complete!")

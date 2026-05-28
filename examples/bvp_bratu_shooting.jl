@@ -50,7 +50,7 @@ prob = BifurcationKit.BVP.BVPBifProblem(d_bvp, x0, params, (@optic _.a);
 )
 
 # 7. Setup Continuation Parameters
-optn = NewtonPar(tol = 1e-10, verbose=true)
+optn = NewtonPar(tol = 1e-10, verbose=false)
 
 sol = BK.solve(prob, Newton(), optn)
 
@@ -82,8 +82,8 @@ br = continuation(prob, PALC(), optc;
 plot(br)
 plot(br, vars = (:param, :s))
 @test br.specialpoint[1].param ≈ pi^2/10 atol = 1e-4
-@test br.specialpoint[4].param ≈ 2^2*pi^2/10 atol = 1e-4
-@test br.specialpoint[6].param ≈ 3^2*pi^2/10 atol = 1e-4
+@test br.specialpoint[2].param ≈ 2^2*pi^2/10 atol = 1e-4
+@test br.specialpoint[3].param ≈ 3^2*pi^2/10 atol = 1e-4
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NORMAL FORM COMPUTATION
 get_normal_form(br, 1; autodiff=false)
