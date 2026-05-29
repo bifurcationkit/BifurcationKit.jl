@@ -245,13 +245,6 @@ function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocati
         newsol = generate_solution(d_bvp, sol)
         old_bvp .= newsol
         success = true
-        # return (;success, newτsT, ϕ)
-    
-        # (;success) = BK.compute_error!(coll, old_bvp;
-        #             verbosity = disc.verbose_mesh_adapt,
-        #             K = coll.K,
-        #             par = BK.setparam(iter, BK.getp(state))
-        #             )
         if ~success # stop continuation if mesh adaptation fails
             return false
         end

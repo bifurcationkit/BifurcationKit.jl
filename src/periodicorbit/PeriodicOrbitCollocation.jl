@@ -1326,7 +1326,7 @@ function _compute_error!(coll::Collocation, sol, x::AbstractVector{𝒯}, ΔT;
     ############
     # modify meshes
     update_mesh!(coll, newmesh)
-    return (; newτsT, ϕ)
+    return (; newmesh, newτsT, ϕ)
 end
 ####################################################################################################
 function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
