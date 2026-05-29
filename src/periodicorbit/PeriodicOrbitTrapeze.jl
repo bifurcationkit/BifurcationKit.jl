@@ -640,7 +640,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
     M, N = size(trap)
     uv = u[begin:end-1]
     uc = reshape(uv, N, M)
-    return SolPeriodicOrbit(t = cumsum(T .* collect(trap.mesh)), u = uc)
+    return BVPSolution(t = cumsum(T .* collect(trap.mesh)), u = uc)
 end
 get_periodic_orbit(prob::AbstractFiniteDifferencesDiscretization, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 

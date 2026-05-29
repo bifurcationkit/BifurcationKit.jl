@@ -138,7 +138,7 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::Abst
     coll = d_bvp.cache.po_coll
     ts = BK.get_times(coll)
     um = get_time_slices(d_bvp, u)
-    return BK.SolPeriodicOrbit(t = ts .* T, u = um) # TODO must be a SolBVP
+    return BK.BVPSolution(t = ts .* T, u = um) # TODO must be a SolBVP
 end
 
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector, params) where {Tmodel}
@@ -147,5 +147,5 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::Abstract
     disc = get_discretizer(d_bvp)
     ts = pushfirst!(cumsum(collect(disc.mesh)), zero(T))
     um = get_time_slices(d_bvp, u)
-    return BK.SolPeriodicOrbit(t = t0 .+ T .* ts, u = um)
+    return BK.BVPSolution(t = t0 .+ T .* ts, u = um)
 end

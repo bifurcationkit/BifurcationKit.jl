@@ -908,7 +908,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
     T = getperiod(coll, u, p)
     ts = get_times(coll)
     um = get_time_slices(coll, u)
-    return SolPeriodicOrbit(t = ts .* T, u = um)
+    return BVPSolution(t = ts .* T, u = um)
 end
 
 # same function as above but for coping with mesh adaptation
@@ -919,7 +919,7 @@ end
     u = x.sol
     T = getperiod(coll, u, p)
     um = get_time_slices(coll, u)
-    return SolPeriodicOrbit(t = mesh .* T, u = um)
+    return BVPSolution(t = mesh .* T, u = um)
 end
 
 """

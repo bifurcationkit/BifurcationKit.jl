@@ -327,7 +327,7 @@ function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars;kode..
         append!(time, sol.u[ii].t .+ time[end])
         append!(u.u, sol.u[ii].u)
     end
-    return SolPeriodicOrbit(t = time, u = u)
+    return BVPSolution(t = time, u = u)
 end
 
 function get_po_solution(sh::Shooting, x, pars; kode...)

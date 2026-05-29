@@ -136,14 +136,14 @@ This struct allows to have a unified interface for periodic orbits methods to re
 # Internal fields
 $(TYPEDFIELDS)
 """
-@with_kw_noshow struct SolPeriodicOrbit{𝒯s, 𝒯u}
+@with_kw_noshow struct BVPSolution{𝒯s, 𝒯u}
     "Time mesh."
     t::𝒯s
     "Solution discretized on time mesh."
     u::𝒯u
 end
-Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
-Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
+Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
+Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
 ####################################################################################################
 function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)
