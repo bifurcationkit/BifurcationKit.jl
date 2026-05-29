@@ -129,16 +129,7 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::Abstrac
     disc = get_discretizer(d_bvp)
     um = get_time_slices(d_bvp, u)
     t0, tf = get_time_interval(get_model(d_bvp))
-    return BK._get_shooting_solution(sh, um, tf - t0, params) # TODO must be a SolBVP
-end
-
-function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector, params) where {Tmodel}
-    t0, tf = get_time_interval(get_model(d_bvp))
-    T = tf - t0
-    coll = d_bvp.cache.po_coll
-    ts = BK.get_times(coll)
-    um = get_time_slices(d_bvp, u)
-    return BK.BVPSolution(t = ts .* T, u = um) # TODO must be a SolBVP
+    return BK._get_shooting_solution(sh, um, tf - t0, params)
 end
 
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector, params) where {Tmodel}
@@ -148,4 +139,24 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::Abstract
     ts = pushfirst!(cumsum(collect(disc.mesh)), zero(T))
     um = get_time_slices(d_bvp, u)
     return BK.BVPSolution(t = t0 .+ T .* ts, u = um)
+end
+
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector, params) where {Tmodel}
+    t0, tf = get_time_interval(get_model(d_bvp))
+    T = tf - t0
+    coll = d_bvp.cache.po_coll # TODO: remove
+    ts = BK.get_times(coll)
+    um = get_time_slices(d_bvp, u)
+    return BK.BVPSolution(t = ts .* T, u = um)
+end
+
+function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, x::Tx, params) where {Tmodel, Tx <:  BK.BVPSavedSolutionAndState,}
+    t0, tf = get_time_interval(get_model(d_bvp))
+    T = tf - t0
+    coll = d_bvp.cache.po_coll # TODO: remove
+    ts = BK.get_times(coll)
+    mesh = x.mesh
+    u = BK._getsolution(x)
+    um = get_time_slices(d_bvp, u)
+    return BK.BVPSolution(t = mesh .* T, u = um)
 end

@@ -486,3 +486,30 @@ let
     J = BK.BVP.bvp_jacobian(bvp, BK.AutoDiffDense(), x0, p)
     @test size(J) == (length(bvp), length(bvp))
 end
+
+# ----- Collocation with meshadapt=true (basic smoke test) -----
+let
+    Fbratu(x, p) = [x[2], -10*(p.a * (exp(x[1]) - 1 - p.b * x[1]^2/2))]
+    gbratu(u0, uT, p) = [u0[1], uT[1]]
+    model = BK.BVP.BVPModel(Fbratu, gbratu; n=2)
+    disc = BK.BVP.Collocation(Ntst=5, m=3, meshadapt=true)
+    bvp = BK.BVP.discretize(model, disc)
+
+    params = (a=0.5, b=0.)
+    t_vals = LinRange(0, 1, 101)
+    n_state = BK.BVP.solution_dim(disc, BK.BVP.state_dimension(model))
+    x0 = zeros(n_state)
+
+    prob = BK.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))
+
+    optn = NewtonPar(tol=1e-10, verbose=false)
+    optc = ContinuationPar(
+        p_min=0.1, p_max=3.0, dsmax=0.1, ds=0.01,
+        detect_bifurcation=0, newton_options=optn,
+        max_steps=5, nev=5, n_inversion=4)
+
+    br = continuation(prob, PALC(), optc;
+        plot=false, verbosity=0, normC=norminf)
+    @test br isa BK.AbstractBranchResult
+    @test length(br) > 0
+end
