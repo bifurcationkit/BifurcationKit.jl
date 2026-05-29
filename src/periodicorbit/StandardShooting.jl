@@ -343,10 +343,10 @@ function get_po_solution(sh::Shooting, x, pars; kode...)
         sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
     sol = (period = T, sol = sol_ode)
-    return POSolution(sh, sol, pars)
+    return POInterpolation(sh, sol, pars)
 end
 
-function (sol::POSolution{ <: Shooting})(t)
+function (sol::POInterpolation{ <: Shooting})(t)
     T = sol.x.period
     t = mod(t, T)
     t0 = zero(t)

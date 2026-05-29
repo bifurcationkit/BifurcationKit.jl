@@ -186,7 +186,7 @@ Here are some useful methods you can apply to `coll::Collocation`:
 - `get_mesh_coll(coll)` returns the (static) mesh `-1 = σ₁ < ... < σₘ₊₁ = 1`.
 - `get_times(coll)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
 - `generate_solution(coll, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
-- `POSolution(coll, x)` return a function interpolating the solution `x` using a piecewise polynomials function.
+- `POInterpolation(coll, x)` return a function interpolating the solution `x` using a piecewise polynomials function.
 - `getperiod(coll po, p)` return the period of the periodic orbit `po`.
 
 # Orbit guess
@@ -1191,7 +1191,7 @@ end
 end
 ####################################################################################################
 # mesh adaptation method
-(sol::POSolution{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, sol.x, getperiod(sol.pb, sol.x, nothing))
+(sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, sol.x, getperiod(sol.pb, sol.x, nothing))
 
 @views function __interpolate_posolution(coll::Collocation, t0, x, period)
     n, m, Ntst = size(coll)

@@ -86,9 +86,9 @@ end
 """
 $(TYPEDEF)
 
-Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
+Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POInterpolation`, then one can call
 
-    sol = BifurcationKit.POSolution(prob_coll, x)
+    sol = BifurcationKit.POInterpolation(prob_coll, x)
     sol(t)
 
 on any time `t`.
@@ -96,12 +96,12 @@ on any time `t`.
 ## Fields
 $(TYPEDFIELDS)
 """
-struct POSolution{Tpb, Tx, Tp}
+struct POInterpolation{Tpb, Tx, Tp}
     pb::Tpb
     x::Tx
     pars::Tp
 end
-POSolution(prob::AbstractBoundaryValueDiscretization, x) = POSolution(prob, x, nothing)
+POInterpolation(prob::AbstractBoundaryValueDiscretization, x) = POInterpolation(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
