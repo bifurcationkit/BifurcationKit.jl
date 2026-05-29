@@ -202,3 +202,59 @@ save_solution(::DiscretizedBVP, x, _) = x
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars)
     BK.__save_solution_coll(bvp.cache.po_coll, x, pars)
 end
+# ============================================================================
+function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, iter, state; update_pred = true) where {Tmodel <: BVPModel}
+    d_bvp = get_bvp(prob)
+    disc = get_discretizer(d_bvp)
+    model = get_model(d_bvp)
+    interval = get_time_interval(model)
+    δT = interval[2] - interval[1]
+    coll = d_bvp.cache.po_coll
+    has_mesh_been_updated = false
+    if meshadapt(disc) == false
+        return true
+    end
+    update_every_step = disc.update_every_step
+    step = state.step
+    if BK.converged(state) &&
+            BK.in_bisection(state) == false &&
+            BK.mod_counter(step, update_every_step) == 1 &&
+            step > 2
+            @debug "[Collocation] update mesh"
+        has_mesh_been_updated = true
+        old_po = BK._copy(BK.getx(state)) # avoid possible overwrite in compute_error!
+        oldmesh = BK.get_times(coll) .* δT
+        ####################################
+        # get solution, we copy x because it is overwritten at the end of this function
+        sol = BK.BVPInterpolation(deepcopy(disc), copy(old_po), nothing)
+        sol(0.)
+        (; newτsT, ϕ) = BK._compute_error!(coll, sol, old_po, δT;
+                            verbosity = disc.verbose_mesh_adapt,
+                            K = coll.K,
+                            par = BK.setparam(iter, BK.getp(state)))
+        # update solution
+        newsol = generate_solution(coll, sol, δT)
+        x .= newsol
+        success = true
+        # return (;success, newτsT, ϕ)
+    
+        # (;success) = BK.compute_error!(coll, old_po;
+        #             verbosity = disc.verbose_mesh_adapt,
+        #             K = coll.K,
+        #             par = BK.setparam(iter, BK.getp(state))
+        #             )
+        if success # stop continuation if mesh adaptation fails
+            return false
+        end
+    end
+    if has_mesh_been_updated && update_pred
+        # we recompute the tangent predictor
+        @debug "[collocation] update predictor"
+        getpredictor!(state, iter)
+    end
+    return true
+end
+
+function (sol::BK.BVPInterpolation{ <:  DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
+    BK.__interpolate_posolution(sol.pb, t0, BK.getx(sol), BK.getperiod(BK.getprob(sol), BK.getx(sol), nothing))
+end

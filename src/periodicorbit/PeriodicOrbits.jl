@@ -83,50 +83,56 @@ function generate_solution(pb::AbstractBoundaryValueDiscretization, orbit, perio
     end
 end
 
-"""
-$(TYPEDEF)
+for PoType in (:POInterpolation, :BVPInterpolation)
+    ds = """
+    \$(TYPEDEF)
 
-Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POInterpolation`, then one can call
+    Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::$(string(PoType))`, then one can call
 
-    sol = BifurcationKit.POInterpolation(prob_coll, x)
-    sol(t)
+        sol = BifurcationKit.$(string(PoType))(prob_coll, x)
+        sol(t)
 
-on any time `t`.
+    on any time `t`.
 
-## Fields
-$(TYPEDFIELDS)
-"""
-struct POInterpolation{Tpb, Tx, Tp}
-    pb::Tpb
-    x::Tx
-    pars::Tp
+    ## Fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PoType{Tpb, Tx, Tp}
+            pb::Tpb
+            x::Tx
+            pars::Tp
+        end
+        $PoType(prob::AbstractBoundaryValueDiscretization, x) = $PoType(prob, x, nothing)
+        getx(interp::$PoType) = interp.x
+        getprob(interp::$PoType) = interp.pb
+    end
 end
-POInterpolation(prob::AbstractBoundaryValueDiscretization, x) = POInterpolation(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
-"""
-$(TYPEDEF)
+for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
+    ds = """
+    \$(TYPEDEF)
 
-Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
+    Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
 
-# Internal fields
-$(TYPEDFIELDS)
-"""
-struct POSavedSolutionAndState{T1, T2, T3, T4}
-    "Initial mesh."
-    mesh::T1
-    "Solution on time mesh."
-    sol::T2
-    "Adapted mesh."
-    _mesh::T3
-    "Phase condition."
-    ϕ::T4
+    # Internal fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PSType{T1, T2, T3, T4}
+            mesh::T1
+            sol::T2
+            _mesh::T3
+            ϕ::T4
+        end
+        @inline _getsolution(pb::$PSType) = pb.sol
+        minus(x::$PSType, y::$PSType) = minus(_getsolution(x), _getsolution(y))
+    end
 end
 @inline _getsolution(x) = x
-@inline _getsolution(pb::POSavedSolutionAndState) = pb.sol
-minus(x::POSavedSolutionAndState, y::POSavedSolutionAndState) = minus(_getsolution(x), _getsolution(y))
 ####################################################################################################
 """
 $(TYPEDEF)

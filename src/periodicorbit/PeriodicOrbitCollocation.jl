@@ -916,7 +916,7 @@ end
                 x::Tx,
                 p) where { Tx <: POSavedSolutionAndState}
     mesh = x.mesh
-    u = x.sol
+    u = _getsolution(x)
     T = getperiod(coll, u, p)
     um = get_time_slices(coll, u)
     return BVPSolution(t = mesh .* T, u = um)
@@ -964,10 +964,10 @@ end
 # for recording the solution in a branch
 function save_solution(wrap::PeriodicOrbitFunctionalColl, x, pars)
     coll = get_discretization(wrap)
-    return __save_solution_coll(coll::Collocation, x, pars)
+    return __save_po_solution_coll(coll::Collocation, x, pars)
 end
 
-function __save_solution_coll(coll::Collocation, x, pars)
+function __save_po_solution_coll(coll::Collocation, x, pars)
     if meshadapt(coll) # mildly type unstable but Union{T1, T2} handles it
         return POSavedSolutionAndState(copy(get_times(coll)),
                 x,
@@ -1190,19 +1190,23 @@ end
     return true
 end
 ####################################################################################################
-# mesh adaptation method
-(sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, sol.x, getperiod(sol.pb, sol.x, nothing))
+# interpolation method
+(sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, getx(sol), getperiod(getprob(sol), getx(sol), nothing))
 
-@views function __interpolate_posolution(coll::Collocation, t0, x, period)
+function __interpolate_posolution(coll::Collocation, t0, x::AbstractVector, period)
+    xm = get_time_slices(coll, x)
+    __interpolate_posolution(coll, t0, xm, period)
+end
+
+@views function __interpolate_posolution(coll::Collocation, t0, xm::AbstractMatrix, period)
     n, m, Ntst = size(coll)
-    xc = get_time_slices(coll, x)
     t = mod(t0, period) / period
     mesh = getmesh(coll)
     index_t = searchsortedfirst(mesh, t) - 1
     if index_t <= 0
-        return x[1:n]
+        return xm[:, 1]
     elseif index_t > Ntst
-        return xc[:, end]
+        return xm[:, end]
     end
     @assert mesh[index_t] <= t <= mesh[index_t+1] "Please open an issue on the website of BifurcationKit.jl"
     σ = σj(t, mesh, index_t)
@@ -1210,11 +1214,12 @@ end
     out = zeros(typeof(t), n)
     rg = (1:m+1) .+ (index_t - 1) * m
     for l in 1:m+1
-        out .+= xc[:, rg[l]] .* lagrange(l, σ, σs)
+        out .+= xm[:, rg[l]] .* lagrange(l, σ, σs)
     end
     out
 end
-
+####################################################################################################
+# mesh adaptation method
 """
 $(TYPEDSIGNATURES)
 
@@ -1225,25 +1230,34 @@ See page 367 of [1] and also [2].
 References:
 [1] Ascher, Uri M., Robert M. M. Mattheij, and Robert D. Russell. Numerical Solution of Boundary Value Problems for Ordinary Differential Equations. Society for Industrial and Applied Mathematics, 1995. https://doi.org/10.1137/1.9781611971231.
 
-[2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004.
+[2] R. D. Russell and J. Christiansen, “Adaptive Mesh Selection Strategies for Solving Boundary Value Problems,” SIAM Journal on Numerical Analysis 15, no. 1 (February 1978): 59–80, https://doi.org/10.1137/0715004. 
 """
-function compute_error!(coll::Collocation, x::AbstractVector{𝒯};
+function compute_error!(coll::Collocation, x::AbstractVector; kw...)
+    period = getperiod(coll, x, nothing)
+    # get solution, we copy x because it is overwritten at the end of this function
+    sol = POInterpolation(deepcopy(coll), copy(x))
+    (; newτsT, ϕ) = _compute_error!(coll, sol, x, period)
+    # update solution
+    newsol = generate_solution(coll, sol, period)
+    x .= newsol
+    success = true
+    return (;success, newτsT, ϕ)
+end
+
+function _compute_error!(coll::Collocation, sol, x::AbstractVector{𝒯}, ΔT;
                         normE = norminf,
                         verbosity::Bool = false,
                         K = 𝒯(Inf),
                         par = nothing,
                         kw...) where 𝒯
     n, m, Ntst = size(coll) # recall that m = ncol
-    period = getperiod(coll, x, nothing)
-    # get solution, we copy x because it is overwritten at the end of this function
-    sol = POSolution(deepcopy(coll), copy(x))
     # we need to estimate yᵐ⁺¹ where y is the true periodic orbit.
     # sol is the piecewise polynomial approximation of y.
     # However, sol is of degree m, hence ∂(sol, m+1) = 0
     # we thus estimate yᵐ⁺¹ using ∂(sol, m)
     dmsol = ∂(sol, Val(m))
     # we find the values of vm := ∂m(x) at the mid points
-    τsT = getmesh(coll) .* period
+    τsT = getmesh(coll) .* ΔT
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]
     ############
     # Approx. IA
@@ -1294,7 +1308,7 @@ function compute_error!(coll::Collocation, x::AbstractVector{𝒯};
         newτsT[i+1] = τsT[ind-1] + (θeq - θs[ind-1]) / α
         @assert newτsT[i+1] > newτsT[i] "Error. Please open an issue on the website of BifurcationKit.jl"
     end
-    newmesh = newτsT ./ period
+    newmesh = newτsT ./ ΔT
     newmesh[end] = 1
 
     if verbosity
@@ -1312,13 +1326,7 @@ function compute_error!(coll::Collocation, x::AbstractVector{𝒯};
     ############
     # modify meshes
     update_mesh!(coll, newmesh)
-    ############
-    # update solution
-    newsol = generate_solution(coll, sol, period)
-    x .= newsol
-
-    success = true
-    return (;success, newτsT, ϕ)
+    return (; newτsT, ϕ)
 end
 ####################################################################################################
 function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
