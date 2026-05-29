@@ -43,7 +43,7 @@ struct SHEigOp{Tsh <: SHLinearOp, Tσ, Tc} <: BK.AbstractEigenSolver
 end
 BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
 
-function SHLinearOp(Nx, lx::T, Ny, ly; AF = Array{T}) where T
+function SHLinearOp(Nx, lx::T, Ny, ly; AF = AbstractArray{T}) where T
     # AF is a type, it could be CuArray{TY} to run the following on GPU
     k1 = vcat(collect(0:div(Nx,2)), collect(div(Nx,2)+1:Nx-1) .- Nx)
     k2 = vcat(collect(0:div(Ny,2)), collect(div(Ny,2)+1:Ny-1) .- Ny)
@@ -71,11 +71,7 @@ ly = 2*2pi/sqrt(3) * 2
 X = -lx .+ 2lx/Nx * collect(0:Nx-1)
 Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
 
-sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y]
-sol0 .= sol0 .- minimum(vec(sol0))
-sol0 ./= maximum(vec(sol0))
-sol0 = sol0 .- 0.25
-sol0 .*= 1.7
+sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y] .* 0.5
 # heatmap(sol0, color=:viridis)
 
 function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = convert(T, 1e-8)) where {T}
@@ -100,7 +96,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     A = du -> sh(J, du; shift = σ)[1]
 
     # we adapt the krylov dimension as function of the requested eigenvalue number
-    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = 1e-10, maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(50, nev + 10))
+    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = TY(1e-8), maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(50, nev + 10))
     @show 1 ./vals .+ σ
     return 1 ./vals .+ σ, vec, true, info.numops
 end

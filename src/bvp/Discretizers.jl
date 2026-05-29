@@ -152,35 +152,28 @@ $(TYPEDFIELDS)
 disc = Collocation(Ntst=20, m=4)
 ```
 """
-struct Collocation <: AbstractDiscretizer
-    "Number of mesh intervals"
-    Ntst::Int
+Base.@kwdef struct Collocation <: AbstractDiscretizer
+    "Number of mesh intervals."
+    Ntst::Int = 0
 
-    "Polynomial degree"
-    m::Int
+    "Polynomial degree."
+    m::Int = 0
 
-    "Enable mesh adaptation"
-    meshadapt::Bool
+    "Enable mesh adaptation."
+    meshadapt::Bool = false
 
-    "Mesh adaptation parameter (max/min step ratio)"
-    K::Float64
+    "Mesh adaptation parameter (max/min step ratio)."
+    K::Float64 = 100.
+
+    "Update mesh update_every_step continuation step."
+    update_every_step::Int = 1
+
+    verbose_mesh_adapt::Bool = false
+
+
 end
 
-"""
-$(TYPEDSIGNATURES)
-
-Create a collocation discretizer.
-
-## Keyword Arguments
-- `Ntst::Int = 20`: Number of mesh intervals
-- `m::Int = 4`: Polynomial degree
-- `jacobian = :auto`: Jacobian computation method
-- `meshadapt::Bool = false`: Enable mesh adaptation
-- `K::Float64 = 100.0`: Mesh adaptation parameter
-"""
-Collocation(; Ntst::Int=20, m::Int=4, meshadapt::Bool=false, K=100.0) =
-    Collocation(Ntst, m, meshadapt, K)
-
+meshadapt(coll::Collocation) = coll.meshadapt
 # ============================================================================
 # Common Interface
 # ============================================================================
@@ -201,7 +194,6 @@ solution_dim(d::Collocation, n::Int) = n * (d.Ntst * d.m + 1)
 
 """Total dimension including period/parameter."""
 total_dim(d::AbstractDiscretizer, n::Int) = solution_dim(d, n) + 1
-
 # ============================================================================
 # Display
 # ============================================================================
