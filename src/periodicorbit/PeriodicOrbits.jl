@@ -109,12 +109,12 @@ save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 """
 $(TYPEDEF)
 
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
+Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
 
 # Internal fields
 $(TYPEDFIELDS)
 """
-struct POSolutionAndState{T1, T2, T3, T4}
+struct POSavedSolutionAndState{T1, T2, T3, T4}
     "Initial mesh."
     mesh::T1
     "Solution on time mesh."
@@ -125,13 +125,13 @@ struct POSolutionAndState{T1, T2, T3, T4}
     ϕ::T4
 end
 @inline _getsolution(x) = x
-@inline _getsolution(pb::POSolutionAndState) = pb.sol
-minus(x::POSolutionAndState, y::POSolutionAndState) = minus(_getsolution(x), _getsolution(y))
+@inline _getsolution(pb::POSavedSolutionAndState) = pb.sol
+minus(x::POSavedSolutionAndState, y::POSavedSolutionAndState) = minus(_getsolution(x), _getsolution(y))
 ####################################################################################################
 """
 $(TYPEDEF)
 
-This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
+This struct allows to have a unified interface for periodic orbits methods to record solutions and for plotting for example. This is returned by `get_periodic_orbit`.
 
 # Internal fields
 $(TYPEDFIELDS)

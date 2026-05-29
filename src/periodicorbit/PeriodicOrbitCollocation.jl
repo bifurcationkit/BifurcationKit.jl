@@ -316,7 +316,7 @@ get_Ls(coll::Collocation) = get_Ls(coll.mesh_cache)
 @inline setparam(coll::Collocation, p) = setparam(coll.prob_vf, p)
 
 @inline getperiod(::Collocation, x, par = nothing) = x[end]
-@inline getperiod(coll::Collocation, x::POSolutionAndState, par = nothing) = getperiod(coll, x.sol, par)
+@inline getperiod(coll::Collocation, x::POSavedSolutionAndState, par = nothing) = getperiod(coll, x.sol, par)
 
 # these functions extract the time slices components
 @inline get_time_slices(x::AbstractVector, N, degree, Ntst) = reshape(x, N, degree * Ntst + 1)
@@ -326,7 +326,7 @@ $(TYPEDSIGNATURES)
 The method returns an array of size N x (m * Ntst + 1)
 """
 get_time_slices(coll::Collocation, x) = @views get_time_slices(x[begin:end-1], size(coll)...) # array of size Ntst ⋅ (m+1) ⋅ n
-get_time_slices(coll::Collocation, x::POSolutionAndState) = get_time_slices(coll, x.sol)
+get_time_slices(coll::Collocation, x::POSavedSolutionAndState) = get_time_slices(coll, x.sol)
 get_times(coll::Collocation) = get_times(coll.mesh_cache)
 @inline get_gauss_nodes(coll::Collocation) = get_gauss_nodes(coll.mesh_cache)
 @inline get_gauss_weight(coll::Collocation) = get_gauss_weight(coll.mesh_cache)
@@ -914,7 +914,7 @@ end
 # same function as above but for coping with mesh adaptation
 @views function get_periodic_orbit(coll::Collocation,
                 x::Tx,
-                p) where { Tx <: POSolutionAndState}
+                p) where { Tx <: POSavedSolutionAndState}
     mesh = x.mesh
     u = x.sol
     T = getperiod(coll, u, p)
@@ -969,7 +969,7 @@ end
 
 function __save_solution_coll(coll::Collocation, x, pars)
     if meshadapt(coll) # mildly type unstable but Union{T1, T2} handles it
-        return POSolutionAndState(copy(get_times(coll)),
+        return POSavedSolutionAndState(copy(get_times(coll)),
                 x,
                 copy(getmesh(coll.mesh_cache)),
                 _copy(coll.ϕ),

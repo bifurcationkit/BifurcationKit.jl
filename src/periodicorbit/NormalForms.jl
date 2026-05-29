@@ -231,7 +231,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSolutionAndState
+    if bifpt.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
         coll = get_discretization(pbwrap)
@@ -558,7 +558,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSolutionAndState
+    if bifpt.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
         coll = get_discretization(pbwrap)
@@ -930,7 +930,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = abs(imag(λₙₛ))
 
-    if bifpt.x isa POSolutionAndState
+    if bifpt.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(pbwrap)
         update_mesh!(coll, bifpt.x._mesh )

@@ -34,7 +34,7 @@ for (fname, cdt, err_msg) in (
                 error($err_msg)
             end
             specialpoint = br.specialpoint[index]
-            if specialpoint.x isa POSolutionAndState
+            if specialpoint.x isa POSavedSolutionAndState
                 # the solution is mesh adapted, we need to restore the mesh.
                 pbwrap = deepcopy(getprob(br))
                 update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
@@ -52,7 +52,7 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     end
     specialpoint = br.specialpoint[index]
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
-    if specialpoint.x isa POSolutionAndState
+    if specialpoint.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         pbwrap = deepcopy(getprob(br))
         update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
@@ -108,7 +108,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
-    ϕ = bifpt.x isa POSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
+    ϕ = bifpt.x isa POSavedSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
     usehessian = get(kwargs, :usehessian, false)
     if ~usehessian
@@ -120,7 +120,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     coll = get_discretization(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
-    if bifpt.x isa POSolutionAndState
+    if bifpt.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         if meshadapt(coll)
             update_mesh!(get_discretization(pbwrap), bifpt.x._mesh )
@@ -180,7 +180,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     pbwrap = deepcopy(getprob(br))
 
     # if mesh adaptation, we need to extract the solution specifically
-    if bifpt.x isa POSolutionAndState
+    if bifpt.x isa POSavedSolutionAndState
         # the solution is mesh adapted, we need to restore the mesh.
         update_mesh!(get_discretization(pbwrap), bifpt.x._mesh)
         updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, par)
