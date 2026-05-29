@@ -36,9 +36,9 @@ bvp = BK.BVP.discretize(model, disc)
 
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
-params = (a = 0.5, b = 0., c = 1.)
+params = (a = 0.1, b = 0., c = .0)
 t_vals = LinRange(0, 1, 101)
-x0 = BK.BVP.generate_solution(bvp, t-> 0.0t*(1-t)*[1,1])
+x0 = BK.BVP.generate_solution(bvp, t-> .1t*(1-t)*[0,1])
 
 # 6. Create BVPBifProblem
 # We record max(u) to plot the bifurcation diagram
