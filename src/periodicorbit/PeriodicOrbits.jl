@@ -457,7 +457,7 @@ function _continuation(hopfpt::Hopf,
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
     end
 
-    if usedeflation
+    if usedeflation # TODO: this is a bit of a hack
         verbose &&
             println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         probPO isa PoincareShooting &&
@@ -514,7 +514,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Branch switching from the curve to Hopf bifurcation points to the curve of periodic orbits emanating from it.
+Branch switching from the curve of Hopf bifurcation points to the curve of periodic orbits emanating from it.
 
 # Arguments
 - `br_hopf` curve of kind `HopfCont` that is a curve of Hopf bifurcation points.
@@ -600,7 +600,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
+Branch switching at a bifurcation point of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
 # Arguments
 - `br` branch of periodic orbits

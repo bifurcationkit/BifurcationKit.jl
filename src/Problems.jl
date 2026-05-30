@@ -266,7 +266,7 @@ function R01!(::FiniteDifferences,
     # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
     ϵ = getdelta(prob)
     𝒯 = VI.scalartype(x)
-    _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ)))
+    _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ))) #TODO with VI??
     if isnothing(res_f)
         res_f = residual(prob, x, set(par, getlens(prob), p))
     end
