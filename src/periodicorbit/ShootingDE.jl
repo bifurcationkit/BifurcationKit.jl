@@ -146,7 +146,7 @@ function PoincareShooting(M::Int,
                     section = SectionPS(M),
                     lens = nothing,
                     updateSectionEveryStep = 0,
-                    jacobian = :autodiffDenseAnalytical,
+                    jacobian = AutoDiffDenseAnalytical(),
                     par = prob1.p,
                     kwargs...)
     kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShooting)]

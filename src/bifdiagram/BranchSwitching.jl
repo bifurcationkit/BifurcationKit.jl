@@ -71,7 +71,7 @@ Automatic branch switching at branch points based on a computation of the normal
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to decouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
 """
-function continuation(br::AbstractResult{EquilibriumCont, Tprob}, 
+function continuation(br::AbstractResult{Tkind, Tprob}, 
                       ind_bif::Int, 
                       options_cont::ContinuationPar = br.contparams,
                       Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -97,7 +97,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                       plot_solution = plot_solution(getprob(br)),
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
-                      kwargs...) where {Tprob, 𝒯eigvec}
+                      kwargs...) where {Tprob, 𝒯eigvec, Tkind <: Union{EquilibriumCont, BoundaryValueProblemCont}}
     # The usual branch switching algorithm is described in the work of Keller. 
     # "Numerical solution of bifurcation and nonlinear eigenvalue problems."
     # We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
@@ -192,6 +192,7 @@ function continuation(br::AbstractResult{EquilibriumCont, Tprob},
                             pred.x1, pred.p,  # second point on the branch
                             alg, getlens(br),
                             options_cont; 
+                            kind = getkind(br),
                             kwargs_cont...)
     return Branch(branch, bp)
 end
@@ -199,7 +200,7 @@ end
 # same but for a Branch
 continuation(br::AbstractBranchResult, 
             ind_bif::Int, 
-            options_cont::ContinuationPar = br.contparams ; 
+            options_cont::ContinuationPar = getcontparams(br) ; 
             kwargs...) = continuation(get_contresult(br), 
                                       ind_bif, 
                                       options_cont; 
@@ -261,6 +262,7 @@ function multicontinuation(br::AbstractBranchResult,
                             ampfactor,
                             verbosedeflation,
                             plot_solution,
+                            kind = getkind(br),
                             kwargs...)
 end
 

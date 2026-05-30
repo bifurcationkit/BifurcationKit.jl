@@ -1,25 +1,3 @@
-"""
-
-$(TYPEDEF)
-
-Structure to describe a (Time) mesh using the time steps t_{i+1} - t_{i}. If the time steps are constant, we do not record them but, instead, we save the number of time steps effectively yielding a `TimeMesh{Int64}`.
-"""
-struct TimeMesh{T}
-    ds::T
-end
-
-TimeMesh(M::Int64) = TimeMesh{Int64}(M)
-
-@inline can_adapt(ms::TimeMesh{Ti}) where Ti = !(Ti == Int64)
-Base.length(ms::TimeMesh{Ti}) where Ti = length(ms.ds)
-Base.length(ms::TimeMesh{Ti}) where {Ti <: Int} = ms.ds
-
-# access the time steps
-@inline get_time_step(ms, i::Int) = ms.ds[i]
-@inline get_time_step(ms::TimeMesh{Ti}, i::Int) where {Ti <: Int} = 1.0 / ms.ds
-
-Base.collect(ms::TimeMesh) = ms.ds
-Base.collect(ms::TimeMesh{Ti}) where {Ti <: Int} = repeat([get_time_step(ms, 1)], ms.ds)
 ####################################################################################################
 const _trapezoid_jacobian_type = (Dense(),
                                     AutoDiffDense(),
@@ -33,7 +11,7 @@ const _trapezoid_jacobian_type = (Dense(),
 
 const DocStrjacobianPOTrap = """
 Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_trapezoid_jacobian_type`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm.
+- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm. Can be used when the sparsity can change.
 - For `jacobian = FullSparseInplace()`, this is the same as for `FullLU()` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `FullLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = Dense()`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
 - For `jacobian = AutoDiffDense()`, evaluate the jacobian using ForwardDiff
@@ -176,9 +154,9 @@ Compute the period of the periodic orbit associated to `x`.
 function Trapeze(prob_vf,
                                     ϕ::vectype,
                                     xπ::vectype,
-                                    m::Union{Int, AbstractVector}, 
-                                    ls::AbstractLinearSolver = DefaultLS(); 
-                                    ongpu = false, 
+                                    m::Union{Int, AbstractVector},
+                                    ls::AbstractLinearSolver = DefaultLS();
+                                    ongpu = false,
                                     massmatrix = nothing) where {vectype}
     _length = ϕ isa AbstractVector ? length(ϕ) : 0
     M = m isa Number ? m : length(m) + 1
@@ -228,16 +206,16 @@ Trapeze(prob_vf,
 
 
 # do not type h::Number because this will annoy CUDA
-function potrap_scheme!(trap, 
-                        dest, 
-                        u1, u2, 
-                        du1, du2, 
-                        par, h, 
-                        tmp, 
-                        linear::Val{is_linear} = Val(true); 
+function potrap_scheme!(trap,
+                        dest,
+                        u1, u2,
+                        du1, du2,
+                        par, h,
+                        tmp,
+                        linear::Val{is_linear} = Val(true);
                         applyf::Val{is_applyf} = Val(true)) where {is_linear, is_applyf}
     # this function implements the basic implicit scheme used for the time integration
-    # because this function is called in a cyclic manner, we save the value of F(u2) 
+    # because this function is called in a cyclic manner, we save the value of F(u2)
     # in the variable tmp in order to avoid recomputing it in a subsequent call
     # basically tmp is F(u2)
     # applyf: if true use F and dF otherwise
@@ -289,7 +267,7 @@ This function implements the functional for finding periodic orbits based on fin
 end
 po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 
-@views function po_residual_bare!(trap::Trapeze, outc, uc, par, T)
+@views function po_residual_bare!(trap::Trapeze, outc, uc::AbstractMatrix, par, T)
     M, N = size(trap)
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop
@@ -431,31 +409,33 @@ end
 This function populates Jc with the cyclic matrix using the different Jacobians
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
+    period = _extract_period_fdtrap(trap, u0)
+    u0m = get_time_slices(trap, u0)
+    _trac_cylic_block!(trap, u0m, period, par, Jc)
+end
+
+function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
     # extraction of various constants
     M, N = size(trap)
-    T = _extract_period_fdtrap(trap, u0)
 
     Iₙ = get_mass_matrix(trap)
 
-    u0c = get_time_slices(trap, u0)
-    outc = similar(u0c)
+    tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    tmpJ = @views jacobian(trap.prob_vf, u0c[:, 1], par)
-
-    h = T * get_time_step(trap, 1)
+    h = period * get_time_step(trap, 1)
     Jn = Iₙ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
     # we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
-    Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0c[:, M-1], par)
+    Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 
     for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
+        h = period * get_time_step(trap, ii)
         Jn = -Iₙ - (h/2) .* tmpJ
         Jc[BA.Block(ii, ii-1)] = Jn
 
-        tmpJ = @views jacobian(trap.prob_vf, u0c[:, ii], par)
+        tmpJ = @views jacobian(trap.prob_vf, u0m[:, ii], par)
 
         Jn = Iₙ - (h/2) .* tmpJ
         Jc[BA.Block(ii, ii)] = Jn
@@ -503,17 +483,17 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
 
         Iₙ = get_mass_matrix(trap, ~(Tj <: SPA.SparseMatrixCSC))
 
-        u0c = get_time_slices(trap, u0)
-        outc = similar(u0c)
+        u0m = get_time_slices(trap, u0)
+        outc = similar(u0m)
 
-        tmpJ = jacobian(trap.prob_vf, u0c[:, 1], par)
+        tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
         h = T * get_time_step(trap, 1)
         Jn = Iₙ - (h/2) .* tmpJ
         # setblock!(Jc, Jn, 1, 1)
         J0[1:N, 1:N] .= Jn
 
-        Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0c[:, M-1], par)
+        Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
         # setblock!(Jc, Jn, 1, M-1)
         J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
@@ -524,7 +504,7 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
             # setblock!(Jc, Jn, ii, ii-1)
             J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
 
-            tmpJ .= jacobian(trap.prob_vf, u0c[:, ii], par)
+            tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)
 
             @. Jn = Iₙ - h/2 * tmpJ
             # setblock!(Jc, Jn, ii, ii)
@@ -548,35 +528,54 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
         return J0
 end
 
-@views function po_jacobian_sparse!(trap::Trapeze, J0, u0::AbstractVector, par, indx; γ = 1, δ = getdelta(trap), updateborder::Bool = true)
-    M, N = size(trap)
-    T = _extract_period_fdtrap(trap, u0)
+@views function po_jacobian_sparse!(trap::Trapeze,
+                            J0,
+                            u0::AbstractVector,
+                            par,
+                            indx; 
+                            updateborder::Val{_updateborder} = Val(true),
+                            δ = getdelta(trap), 
+                            kwargs...) where {_updateborder}
+    period = _extract_period_fdtrap(trap, u0)
+    u0m = get_time_slices(trap, u0)
+    _trap_jacobian_sparse!(trap, J0, u0m, period, par, indx; kwargs...)
+    if _updateborder
+        # we now set up the last line / column
+        M, N = size(trap)
+        ∂TGpo = (po_residual(trap, vcat(u0[begin:end-1], period + δ), par) .- 
+                 po_residual(trap, u0, par)) ./ δ
+        J0[:, end] .= ∂TGpo
 
+        # the following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
+        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
+    end
+    return J0
+end
+
+@views function _trap_jacobian_sparse!(trap::Trapeze, J0, u0m::AbstractMatrix, period, par, indx; γ = 1)
+    M, N = size(trap)
     Iₙ = get_mass_matrix(trap)
 
-    u0c = get_time_slices(trap, u0)
-    outc = similar(u0c)
+    tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    tmpJ = jacobian(trap.prob_vf, u0c[:, 1], par)
-
-    h = T * get_time_step(trap, 1)
+    h = period * get_time_step(trap, 1)
     Jn = Iₙ - tmpJ * (h/2)
 
     # setblock!(Jc, Jn, 1, 1)
     J0.nzval[indx[1, 1]] .= Jn.nzval
 
-    Jn .= -Iₙ .- jacobian(trap.prob_vf, u0c[:, M-1], par) .* (h/2)
+    Jn .= -Iₙ .- jacobian(trap.prob_vf, u0m[:, M-1], par) .* (h/2)
     # setblock!(Jc, Jn, 1, M-1)
     J0.nzval[indx[1, M-1]] .= Jn.nzval
 
     for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
+        h = period * get_time_step(trap, ii)
         @. Jn = -Iₙ - tmpJ * (h/2)
         # the next lines cost the most
         # setblock!(Jc, Jn, ii, ii-1)
         J0.nzval[indx[ii, ii-1]] .= Jn.nzval
 
-        tmpJ .= jacobian(trap.prob_vf, u0c[:, ii], par)# * (h/2)
+        tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)# * (h/2)
 
         @. Jn = Iₙ -  tmpJ * (h/2)
         # setblock!(Jc, Jn, ii, ii)
@@ -589,15 +588,6 @@ end
     # setblock!(Aγ,  Iₙ,     M, M)
     # useless to update:
         # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
-
-    if updateborder
-        # we now set up the last line / column
-        ∂TGpo = (po_residual(trap, vcat(u0[begin:end-1], T + δ), par) .- po_residual(trap, u0, par)) ./ δ
-        J0[:, end] .= ∂TGpo
-
-        # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
-    end
 
     return J0
 end
@@ -623,7 +613,6 @@ function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     In = get_mass_matrix(trap)
 
     u0c = reshape(u0[begin:end-1], N, M)
-    outc = similar(u0c)
 
     h = T * get_time_step(trap, 1)
     @views Jn = In - h/2 .* jacobian(trap.prob_vf, u0c[:, 1], par)
@@ -651,7 +640,7 @@ Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
     M, N = size(trap)
     uv = u[begin:end-1]
     uc = reshape(uv, N, M)
-    return SolPeriodicOrbit(t = cumsum(T .* collect(trap.mesh)), u = uc)
+    return BVPSolution(t = cumsum(T .* collect(trap.mesh)), u = uc)
 end
 get_periodic_orbit(prob::AbstractFiniteDifferencesDiscretization, x, p::Real) = get_periodic_orbit(prob, x, setparam(prob, p))
 
@@ -719,7 +708,7 @@ end
 
 function (A::AγOperatorSparseInplace)(orbitguess::AbstractVector, par)
     # compute the cyclic matrix
-    po_jacobian_sparse!(A.prob, A.Jc, orbitguess, par, A.indx; updateborder = false)
+    po_jacobian_sparse!(A.prob, A.Jc, orbitguess, par, A.indx; updateborder = Val(false))
     # update the LU decomposition
     LA.lu!(A.Jcfact, A.Jc)
     return A
@@ -781,8 +770,7 @@ end
 # this function is called whenever the jacobian of G has to be updated
 function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.scalartype(u0), getdelta(J.Aγ.prob)))
     T = _extract_period_fdtrap(J.Aγ.prob, u0)
-    # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!!
-    # TODO REMOVE vcat!!
+    # we compute the derivative of the problem w.r.t. the period TODO: remove this or improve!! # TODO REMOVE vcat!!
     @views J.∂TGpo .= (po_residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- po_residual(J.Aγ.prob, u0, par)) ./ δ
     # update Aγ
     J.Aγ(u0, par)
@@ -1052,12 +1040,12 @@ end
 
 ####################################################################################################
 # function needed for automatic Branch switching from Hopf bifurcation point
-function re_make(trap::Trapeze, 
+function re_make(trap::Trapeze,
                 prob_vf,
                 hopfpt,
                 ζr::AbstractVector,
                 orbitguess_a,
-                period; 
+                period;
                 kwargs...)
     M = length(orbitguess_a)
     N = length(ζr)
@@ -1098,9 +1086,9 @@ Generate a guess and a periodic orbit problem from a solution.
 - returns a `Trapeze` and an initial guess.
 """
 function generate_ci_problem(trap::Trapeze,
-                            bifprob::AbstractBifurcationProblem, 
+                            bifprob::AbstractBifurcationProblem,
                             sol::AbstractTimeseriesSolution,
-                            tspan::Tuple; 
+                            tspan::Tuple;
                             optimal_period::Bool = true,
                             ktrap...)
     u0 = sol(tspan[1])

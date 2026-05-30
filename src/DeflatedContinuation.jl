@@ -204,6 +204,21 @@ function continuation(prob::AbstractBifurcationProblem,
             filename = "branch-" * string(Dates.now()),
             normC = norm,
             kwcont...)
+    _deflated_continuation(prob, algdc, contParams; verbosity, plot, linear_algo, dot_palc, callback_newton, filename, normC, kwcont...)
+end
+
+
+function _deflated_continuation(prob::AbstractBifurcationProblem,
+            algdc::DefCont,
+            contParams::ContinuationPar;
+            verbosity::Int = 2,
+            plot::Bool = true,
+            linear_algo = BorderingBLS(contParams.newton_options.linsolver),
+            dot_palc = DotTheta(),
+            callback_newton = cb_default,
+            filename = "branch-" * string(Dates.now()),
+            normC = norm,
+            kwcont...)
 
     algdc = @set algdc.max_iter_defop = algdc.max_iter_defop * contParams.newton_options.max_iterations
     # allow to remove the corner case and associated specific return variables, type stable

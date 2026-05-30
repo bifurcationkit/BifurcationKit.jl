@@ -83,67 +83,73 @@ function generate_solution(pb::AbstractBoundaryValueDiscretization, orbit, perio
     end
 end
 
-"""
-$(TYPEDEF)
+for PoType in (:POInterpolation, :BVPInterpolation)
+    ds = """
+    \$(TYPEDEF)
 
-Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::POSolution`, then one can call
+    Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::$(string(PoType))`, then one can call
 
-    sol = BifurcationKit.POSolution(prob_coll, x)
-    sol(t)
+        sol = BifurcationKit.$(string(PoType))(prob_coll, x)
+        sol(t)
 
-on any time `t`.
+    on any time `t`.
 
-## Fields
-$(TYPEDFIELDS)
-"""
-struct POSolution{Tpb, Tx, Tp}
-    pb::Tpb
-    x::Tx
-    pars::Tp
+    ## Fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PoType{Tpb, Tx, Tp}
+            pb::Tpb
+            x::Tx
+            pars::Tp
+        end
+        $PoType(prob::AbstractBoundaryValueDiscretization, x) = $PoType(prob, x, nothing)
+        getx(interp::$PoType) = interp.x
+        getprob(interp::$PoType) = interp.pb
+    end
 end
-POSolution(prob::AbstractBoundaryValueDiscretization, x) = POSolution(prob, x, nothing)
 ####################################################################################################
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
-"""
-$(TYPEDEF)
+for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
+    ds = """
+    \$(TYPEDEF)
 
-Structure to save a solution from a PO functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
+    Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
 
-# Internal fields
-$(TYPEDFIELDS)
-"""
-struct POSolutionAndState{T1, T2, T3, T4}
-    "Initial mesh."
-    mesh::T1
-    "Solution on time mesh."
-    sol::T2
-    "Adapted mesh."
-    _mesh::T3
-    "Phase condition."
-    ϕ::T4
+    # Internal fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PSType{T1, T2, T3, T4}
+            mesh::T1
+            sol::T2
+            _mesh::T3
+            ϕ::T4
+        end
+        @inline _getsolution(pb::$PSType) = pb.sol
+        minus(x::$PSType, y::$PSType) = minus(_getsolution(x), _getsolution(y))
+    end
 end
 @inline _getsolution(x) = x
-@inline _getsolution(pb::POSolutionAndState) = pb.sol
-minus(x::POSolutionAndState, y::POSolutionAndState) = minus(_getsolution(x), _getsolution(y))
 ####################################################################################################
 """
 $(TYPEDEF)
 
-This struct allows to have a unified interface for periodic orbits methods to record solutions, useful for plotting for example. This is returned by `get_periodic_orbit`.
+This struct allows to have a unified interface for periodic orbits methods to record solutions and for plotting for example. This is returned by `get_periodic_orbit`.
 
 # Internal fields
 $(TYPEDFIELDS)
 """
-@with_kw_noshow struct SolPeriodicOrbit{𝒯s, 𝒯u}
+@with_kw_noshow struct BVPSolution{𝒯s, 𝒯u}
     "Time mesh."
     t::𝒯s
     "Solution discretized on time mesh."
     u::𝒯u
 end
-Base.getindex(sol::SolPeriodicOrbit, i...) = getindex(sol.u, i...)
-Base.axes(sol::SolPeriodicOrbit, i) = axes(sol.u, i)
+Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
+Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
 ####################################################################################################
 function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)
@@ -451,7 +457,7 @@ function _continuation(hopfpt::Hopf,
         _contParams = @set _contParams.newton_options.linsolver.N = length(orbitguess)
     end
 
-    if usedeflation
+    if usedeflation # TODO: this is a bit of a hack
         verbose &&
             println("\n├─ Attempt branch switching\n──> Compute point on the current branch...")
         probPO isa PoincareShooting &&
@@ -508,7 +514,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Branch switching from the curve to Hopf bifurcation points to the curve of periodic orbits emanating from it.
+Branch switching from the curve of Hopf bifurcation points to the curve of periodic orbits emanating from it.
 
 # Arguments
 - `br_hopf` curve of kind `HopfCont` that is a curve of Hopf bifurcation points.
@@ -594,7 +600,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Branch switching at a bifurcation point on a branch of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
+Branch switching at a bifurcation point of periodic orbits (PO) specified by a `br::AbstractBranchResult`. The functional for computing the PO is `getprob(br)`. A deflated Newton-Krylov solver can be used to improve the branch switching capabilities.
 
 # Arguments
 - `br` branch of periodic orbits

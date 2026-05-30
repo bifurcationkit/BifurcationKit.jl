@@ -20,7 +20,7 @@ function plot_branch_cont(contres::ContResult,
                 plotfold = false,
                 subplot = 1)
 
-    plotuserfunction(sol.u, sol.p; subplot = 3)
+    plotuserfunction(sol.u, sol.p; iter, state, subplot = 3)
 
     # put arrow to indicate the order of computation
     length(contres) > 1 && plot!([contres.branch[end-1:end].param], [getproperty(contres.branch,1)[end-1:end]], label = "", arrow = true, subplot = 1)
