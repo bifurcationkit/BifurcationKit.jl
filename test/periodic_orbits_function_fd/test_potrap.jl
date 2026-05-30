@@ -268,7 +268,7 @@ BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par, _indx)
 Jpo = BK.jacobian_cyclic_sparse(pbsp, orbitguess_f, par)
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
-BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par, _indx; updateborder = false)
+BK.po_jacobian_sparse!(pbsp, Jpo2, orbitguess_f, par, _indx; updateborder = Val(false))
 @test nnz(Jpo2 - Jpo) == 0
 
 ##########################
@@ -288,7 +288,7 @@ BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx)
 Jpo = BK.jacobian_cyclic_sparse(pbsp_mass, orbitguess_f, par)
 _indx = BK._get_blocks_from_sparse_matrix(Jpo, 2n, M-1)
 Jpo2 = copy(Jpo); Jpo2.nzval .*= 0
-BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx; updateborder = false)
+BK.po_jacobian_sparse!(pbsp_mass, Jpo2, orbitguess_f, par, _indx; updateborder = Val(false))
 @test nnz(Jpo2 - Jpo) == 0
 ####################################################################################################
 # test of the version with inhomogeneous time discretisation

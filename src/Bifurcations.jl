@@ -74,6 +74,15 @@ function get_bifurcation_type(it::ContIterable,
                                 status::Symbol, 
                                 interval::Tuple{T, T}, 
                                 eig::AbstractEigenSolver) where T
+    _get_bifurcation_type(it, state, status, interval, eig)
+end
+
+function _get_bifurcation_type(it::ContIterable, 
+                                state, 
+                                status::Symbol, 
+                                interval::Tuple{T, T}, 
+                                eig::AbstractEigenSolver) where T
+    
     # this boolean ensures that edge cases are handled
     known::Bool = false
 

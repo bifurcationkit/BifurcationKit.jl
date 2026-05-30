@@ -2,9 +2,7 @@ using Test, BifurcationKit
 const BK = BifurcationKit
 
 # Simple Test problem (Pitchfork bifurcation) to generate a ContResult and a Branch object
-function f(u, p)
-    return @. p.r * u - u^3
-end
+f(u, p) = @. p.r * u - u^3
 
 @testset "ContResult" begin
     prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))

@@ -310,6 +310,12 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
+    _get_shooting_solution(sh, xc, T, pars; kode...)
+end
+get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
+
+function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars;kode...)
+    M = get_mesh_size(sh)
     if ~isparallel(sh)
         sol = RecursiveArrayTools.VectorOfArray([evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M])
     else # threaded version
@@ -321,9 +327,8 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
         append!(time, sol.u[ii].t .+ time[end])
         append!(u.u, sol.u[ii].u)
     end
-    return SolPeriodicOrbit(t = time, u = u)
+    return BVPSolution(t = time, u = u)
 end
-get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
 function get_po_solution(sh::Shooting, x, pars; kode...)
     T = getperiod(sh, x)
@@ -337,13 +342,11 @@ function get_po_solution(sh::Shooting, x, pars; kode...)
     else # threaded version
         sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
-
     sol = (period = T, sol = sol_ode)
-
-    return POSolution(sh, sol, pars)
+    return POInterpolation(sh, sol, pars)
 end
 
-function (sol::POSolution{ <: Shooting})(t)
+function (sol::POInterpolation{ <: Shooting})(t)
     T = sol.x.period
     t = mod(t, T)
     t0 = zero(t)

@@ -118,6 +118,8 @@ Base.length(br::AbstractBranchResult) = length(br.branch)
 getalg(br::AbstractBranchResult) = br.alg
 get_solution(br::ContResult, i) = br.sol[i]
 @inline getcontparams(br::ContResult) = br.contparams
+getkind(br::ContResult) = br.kind
+getkind(br::AbstractVector{ <: ContResult}) = getkind(first(br))
 
 """
 $(TYPEDSIGNATURES)
@@ -363,6 +365,8 @@ Base.length(br::Branch) = length(br.γ)
 @inline kernel_dimension(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = kernel_dimension(br.γ, ind)
 get_solution(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = get_solution(br.γ, ind)
 getprob(br::Branch{Tk, Tp, T}) where {Tk, Tp, T <: ContResult} = getprob(br.γ)
+getkind(br::Branch) = getkind(br.γ)
+getcontparams(br::Branch) = getcontparams(br.γ)
 
 """
 $(TYPEDSIGNATURES)
