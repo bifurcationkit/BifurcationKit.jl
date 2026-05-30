@@ -95,8 +95,8 @@ F(u, p) = [p.μ*u[1] - u[2] - u[1]*(u[1]^2 + u[2]^2),
 model = PeriodicOrbitModel(F; n=2)
 ```
 """
-function PeriodicOrbitModel(F; n::Int=0, phase=nothing)
-    BVPModel(F, __g_periodic, n)
+function PeriodicOrbitModel(F; n::Int=0, phase=nothing, t0=0., tf=1.)
+    BVPModel(F, __g_periodic, n, (t0, tf))
 end
 
 __g_periodic(u0, u1, p) = u0 .- u1
