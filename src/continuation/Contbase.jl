@@ -47,7 +47,7 @@ update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 getbls(::AbstractContinuationAlgorithm) = MatrixBLS()
 
 # helper functions to update ::ContState when calling the corrector
-function _update_field_but_not_sol!(state::AbstractContinuationState,
+function _update_field_but_not_solution!(state::AbstractContinuationState,
                                     sol::NonLinearSolution)
     state.converged = sol.converged
     state.itnewton  = sol.itnewton

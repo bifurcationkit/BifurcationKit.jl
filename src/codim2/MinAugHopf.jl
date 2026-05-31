@@ -92,7 +92,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
     δ = getdelta(𝐇.prob_vf)
-    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
+    ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
     # TODO!! This is only finite differences
     # we can probably use R01 and R11

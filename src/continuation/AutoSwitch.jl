@@ -1,9 +1,9 @@
 """
 $(TYPEDEF)
 
-Continuation algorithm which switches automatically between Natural continuation and PALC (or other if specified) depending on the stiffness of the branch being continued. The formula for switching is:
+Continuation algorithm which switches automatically between `Natural` continuation and `PALC` (or other if specified) depending on the stiffness of the branch being continued. The formula for switching from `PALC` to `NATURAL` is:
 
-`(1-θ)*abs(τ.p) > tol_param`
+`(1 - θ) * abs(τ.p) > tol_param`
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -13,7 +13,7 @@ $(TYPEDFIELDS)
 
 """
 struct AutoSwitch{Talg, T} <: AbstractContinuationAlgorithm
-    "Continuation algorithm to switch to when Natural is discarded. Typically `PALC()`"
+    "Continuation algorithm to switch to when `Natural` is discarded. Typically `PALC()`"
     alg::Talg
     "tolerance for switching to PALC(), default value = 1//2"
     tol_param::T
@@ -69,7 +69,7 @@ function corrector!(state::AbstractContinuationState,
         @debug "[AutoSwitch corrector: NATURAL]" λ
         corrector!(state, it, Natural(); kwargs...)
     else
-        @debug "[AutoSwitch corrector: PALC]" λ
+        @debug "[AutoSwitch corrector: NOT-NATURAL]" λ
         corrector!(state, it, alg.alg; kwargs...)
     end
     return true

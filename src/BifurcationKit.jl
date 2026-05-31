@@ -54,8 +54,9 @@ module BifurcationKit
 
     # continuers
     include("continuation/Contbase.jl")
-    include("continuation/Natural.jl")
     include("continuation/Palc.jl")
+    include("continuation/Tangents.jl")
+    include("continuation/Natural.jl")
     include("continuation/Multiple.jl")
     include("continuation/MoorePenrose.jl")
     include("continuation/AutoSwitch.jl")

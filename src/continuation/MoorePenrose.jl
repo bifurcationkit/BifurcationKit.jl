@@ -92,7 +92,8 @@ initialize!(state::AbstractContinuationState,
 
 function getpredictor!(state::AbstractContinuationState,
                         iter::AbstractContinuationIterable,
-                         alg::MoorePenrose, nrm = false)
+                         alg::MoorePenrose, 
+                         nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
     getpredictor!(state, iter, alg.tangent, nrm)
@@ -115,7 +116,7 @@ function corrector!(state::AbstractContinuationState,
     sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callback_newton, kwargs...)
 
     # update fields
-    _update_field_but_not_sol!(state, sol)
+    _update_field_but_not_solution!(state, sol)
 
     # update solution
     if converged(sol)

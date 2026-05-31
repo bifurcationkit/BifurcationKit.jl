@@ -1,11 +1,12 @@
-struct ConstantPredictor <: AbstractTangentComputation end
-
 """
 Natural continuation algorithm. 
-The predictor is the constant predictor and the parameter is incremented by `ContinuationPar().ds` at each continuation step.
+The predictor is the constant predictor and the parameter is incremented by `ContinuationPar().ds` at each continuation step. The corrector is the regular newton algorithm.
 
 # Constructor(s)
 `Natural()`
+
+!!! tip "Different predictor"
+    If you want a different predictor with regular newton corrector, use `AutoSwitch(tol_param = 0)`
 """
 struct Natural <: AbstractContinuationAlgorithm
     bothside::Bool
@@ -15,9 +16,9 @@ Natural() = Natural(false)
 internal_adaptation!(::Natural, ::Bool) = nothing
 
 function initialize!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                        alg::Natural, 
-                        nrm = false)
+                     iter::AbstractContinuationIterable,
+                     alg::Natural, 
+                     nrm = false)
     # we want to start at (u0, p0), not at (u1, p1)
     _copyto!(state.z, state.z_old)
     getpredictor!(state, iter, alg)
@@ -45,7 +46,7 @@ function corrector!(state::AbstractContinuationState,
                 kwargs...)
 
     # update fields
-    _update_field_but_not_sol!(state, sol)
+    _update_field_but_not_solution!(state, sol)
 
     # update solution
     if converged(sol)

@@ -200,7 +200,7 @@ function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = VI.Zero()
                                  maxiter = l.maxiter, initially_zero = l.initially_zero,
                                  Pl = l.Pl, Pr = l.Pr, kwargs...)
     if res[2].isconverged == false
-        @debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n"
+        @debug "IterativeSolvers.gmres iterated maxiter = $(res[2].iters) times without achieving the desired tolerance.\n"
     end
     return res[1], res[2].isconverged, res[2].iters
 end
