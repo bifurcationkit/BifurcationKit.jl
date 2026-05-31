@@ -686,12 +686,13 @@ let
     @test _test_sorted(BK.DefaultGEig(; B)(J0, 10)[1])
 
     eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
-    geil = BK.convertToGEV(eil, Symmetric(@set B[end,end]=1e-6))
+    geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
     outkk = geil(Symmetric(J0), 10)
     @test _test_sorted(outkk[1])
     geteigenvector(eil, outkk[2], 2)
 
     eil = BK.EigArnoldiMethod(;x₀ = rand(n))
-    geil = BK.convertToGEV(eil, B)
+    geil = BK.convert_to_GEV(eil, B)
     outkk = geil(J0, 10)
+    @test _test_sorted(outkk[1])
 end

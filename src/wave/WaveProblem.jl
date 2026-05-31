@@ -238,6 +238,14 @@ function record_from_solution(iter::ContIterable{TravellingWaveCont},
     end
 end
 
+"""
+$(TYPEDEF)
+
+Specific continuation routine for wave problems.
+
+## Arguments
+- 
+"""
 function continuation(prob::TWModel,
                     orbitguess, 
                     alg::AbstractContinuationAlgorithm, 

@@ -4,20 +4,36 @@ abstract type AbstractGEigenSolver <: AbstractEigenSolver end
 abstract type AbstractMFGEigenSolver <: AbstractGEigenSolver end
 abstract type AbstractGFloquetSolver <: AbstractFloquetSolver end
 
-convertToGEV(l::AbstractGEigenSolver, B) = l
+convert_to_GEV(l::AbstractGEigenSolver, B) = l
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function gev(l::DefaultEig, A, B, nev; kwargs...)
+"""
+    gev(l, A, B, nev; kwargs...)
+
+Solve the generalized eigenvalue problem ``A x = \\lambda B x`` using `l`.
+
+# Arguments
+- `l::AbstractEigenSolver`: the eigensolver configuration (controls sorting via `l.which`).
+- `A`, `B`: the matrix (or operators) pair defining ``A x = \\lambda B x``.
+- `nev`: number of requested eigenvalues.
+"""
+function gev(eig::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
-    F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B))
-    return Complex.(F.values), Complex.(F.vectors)
+    F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B); sortby = eig.which)
+    return Complex.(F.values), Complex.(F.vectors), true, 1
 end
 
 # GEV, useful for computation of Floquet exponents based on collocation
 function gev(eig::EigArpack, A, B, nev; kwargs...)
     if A isa AbstractMatrix
-        λ, ϕ, ncv = Arpack.eigs(A, B; nev, sigma = eig.sigma, which = eig.which, eig.kwargs...)
+        λ, ϕ, ncv = Arpack.eigs(A, B; nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
     else
-        error("Not defined yet. Please open an issue or make a Pull Request")
+        if !(:v0 in keys(eig.kwargs))
+            error("The v0 argument must be provided in EigArpack for the matrix-free case")
+        end
+        N = length(eig.kwargs[:v0])
+        T = VI.scalartype(eig.kwargs[:v0])
+        Jmap = LinearMaps.LinearMap{T}(A, N, N; ismutating = false)
+        λ, ϕ, ncv, = Arpack.eigs(Jmap, B; nev = nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
     end
     return __sort_arpack(eig, λ, ϕ, ncv, nev)
 end
@@ -35,10 +51,15 @@ function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
                                                          eig.kwargs...)
         vals, ϕ = ArnoldiMethod.partialeigen(decomp)
         values = @. 1/vals + σ
+        Ind = sortperm(values; by = eig.by, rev = true)
+        ncv = length(values)
+        if ncv < nev
+            @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
+        end
     else
         throw("Not defined yet. Please open an issue or make a Pull Request")
     end
-    return Complex.(values), Complex.(ϕ), history.converged, 1
+    return Complex.(values[Ind]), Complex.(ϕ[:, Ind]), history.converged, 1
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -63,10 +84,8 @@ function (eigsolve::EigenMassMatrix)(J, nev; kwargs...)
 end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Solvers for default \ operator (backslash)
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-The struct `Default` is used to  provide the backslash operator to our Package
+Generalized eigen solver based on `LinearAlgebra.eigen`.
 """
 @with_kw struct DefaultGEig{T, Tb <: AbstractMatrix} <: AbstractGEigenSolver
     which::T = real # how do we sort the computed eigenvalues
@@ -83,7 +102,7 @@ function (l::DefaultGEig)(Jac, nev; kwargs...)
     return Complex.(F.values[I[J[begin:nev2]]]), Complex.(F.vectors[:, I[J[begin:nev2]]]), true, 1
 end
 
-convertToGEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B from sparse to Array
+convert_to_GEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B from sparse to Array
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # case of sparse matrices or matrix free method via Arpack.jl
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -99,41 +118,19 @@ More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgeb
 
 `EigArpack(sigma = nothing, which = :LR; kwargs...)`
 """
-struct GEigArpack{T, Tby, Tw, Tb} <: AbstractGEigenSolver
-    "Shift for Shift-Invert method with `(J - sigma⋅I)"
-    sigma::T
-
-    "Which eigen-element to extract :LR, :LM, ..."
-    which::Symbol
-
-    "Sorting function, default to real"
-    by::Tby
-
-    "Keyword arguments passed to EigArpack"
-    kwargs::Tw
+struct GEigArpack{T, Tb} <: AbstractGEigenSolver
+    "Arpack eigensolver."
+    eigensolver::T
 
     "Mass matrix"
     B::Tb
 end
 
-GEigArpack(sigma = nothing, which = :LR; kwargs...) = EigArpack(sigma, which, real, kwargs)
-convertToGEV(l::EigArpack, B) = GEigArpack(l.sigma, l.which, l.by, l.kwargs, B)
+GEigArpack(; kw...) = GEigArpack(EigArpack(;kw...), nothing)
+convert_to_GEV(eig::EigArpack, B) = GEigArpack(eig, B)
 
-function (l::GEigArpack)(J, nev; kwargs...)
-    if J isa AbstractMatrix
-        λ, ϕ, ncv = Arpack.eigs(J, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
-    else
-        if !(:v0 in keys(l.kwargs))
-            error("The v0 argument must be provided in EigArpack for the matrix-free case")
-        end
-        N = length(l.kwargs[:v0])
-        T = VI.scalartype(l.kwargs[:v0])
-        Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap, l.B; nev = nev, which = l.which, sigma = l.sigma, l.kwargs...)
-    end
-    Ind = sortperm(λ, by = l.by, rev = true)
-    ncv < nev && @warn "$ncv eigenvalues have converged using Arpack.eigs, you requested $nev"
-    return λ[Ind], ϕ[:, Ind], true, 1
+function (geig::GEigArpack)(J, nev; kw...)
+    gev(geig.eigensolver, J, geig.B, nev; kw...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # case of sparse matrices or matrix free method via KrylovKit.jl
@@ -157,7 +154,7 @@ $(TYPEDFIELDS)
     B::Tb
 end
 
-convertToGEV(l::EigKrylovKit, B) = GEigKrylovKit(l, B)
+convert_to_GEV(l::EigKrylovKit, B) = GEigKrylovKit(l, B)
 
 function (geig::GEigKrylovKit)(J, _nev; kwargs...)
     eig = geig.eigensolver
@@ -198,10 +195,10 @@ $(TYPEDFIELDS)
     "Eigensolver."
     eigensolver::T
 
-    "Mass matrix / operator"
+    "Mass matrix / operator."
     B::Tb
 end
-convertToGEV(l::EigArnoldiMethod, B) = GEigArnoldiMethod(l, B)
+convert_to_GEV(l::EigArnoldiMethod, B) = GEigArnoldiMethod(l, B)
 
 function (geig::GEigArnoldiMethod)(J, _nev; kw...)
     gev(geig.eigensolver, J, geig.B, _nev; kw...)
