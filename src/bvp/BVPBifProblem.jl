@@ -211,9 +211,26 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
         return x
     end
 end
-# ============================================================================
-function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, iter, state; update_pred = true) where {Tmodel <: BVPModel}
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function (sol::BK.BVPInterpolation{ <:  DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
+    d_bvp = sol.pb
+    model = get_model(d_bvp)
+    coll = d_bvp.cache.po_coll
+    interval = get_time_interval(model)
+    δT = interval[2] - interval[1]
+    xm = get_time_slices(d_bvp, BK.getx(sol))
+    BK.__interpolate_posolution(coll, t0, xm, δT)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, 
+                    x::BK.BVPSavedSolutionAndState) where {Tmodel <: BVPModel}
     d_bvp = get_bvp(prob)
+    coll = d_bvp.cache.po_coll
+    BK.update_mesh!(coll, x._mesh)
+    return true
+end
+
+function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, update_pred = true)
     disc = get_discretizer(d_bvp)
     model = get_model(d_bvp)
     interval = get_time_interval(model)
@@ -257,12 +274,23 @@ function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocati
     return true
 end
 
-function (sol::BK.BVPInterpolation{ <:  DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
-    d_bvp = sol.pb
-    model = get_model(d_bvp)
-    coll = d_bvp.cache.po_coll
-    interval = get_time_interval(model)
-    δT = interval[2] - interval[1]
-    xm = get_time_slices(d_bvp, BK.getx(sol))
-    BK.__interpolate_posolution(coll, t0, xm, δT)
+function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
+                    iter::BK.ContIterable{Tkind},
+                    state; 
+                    update_pred = true) where {Tmodel <: BVPModel, Tkind}
+    d_bvp = get_bvp(prob)
+    bvpsol = BK._copy(BK.getx(state))
+    __update_bvp_coll!(d_bvp, bvpsol, BK.setparam(iter, BK.getp(state)), iter, state)
+end
+
+function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
+                    iter::BK.ContIterable{Tkind},
+                    state; 
+                    update_pred = true) where {Tmodel <: BVPModel, Tkind <: BK.AbstractTwoParamCont}
+    d_bvp = get_bvp(prob)
+    Z = BK.getsolution(state)
+    params = BK.getparams(iter, state)
+    𝐌𝐚 = BK.get_formulation(BK.getprob(iter))
+    bvpsol = BK.getvec(Z.u, 𝐌𝐚)
+    __update_bvp_coll!(d_bvp, bvpsol, params, iter, state, false)
 end
