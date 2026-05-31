@@ -25,7 +25,7 @@ module PlotsExt
                            plot_DCont_branch,
                            BVPSolution,
                            hasbranch,
-                           TwoParamCont
+                           AbstractTwoParamCont
 
     include("RecipesPlots.jl")
     include("plot.jl")

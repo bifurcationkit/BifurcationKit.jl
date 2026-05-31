@@ -282,7 +282,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     println(io, prefix * "├─ Number of points: ", length(br.branch))
     print(io, prefix * "├─ Type of vectors: ")
     printstyled(io, _getvectortype(br), color=:cyan, bold = true)
-    if Kind <: TwoParamCont
+    if Kind <: AbstractTwoParamCont
         print(io, "\n" * prefix * "├─ Parameters ", map(get_lens_symbol, get_lenses(br)))
     end
     print(io, "\n" * prefix * "├─ Parameter ")

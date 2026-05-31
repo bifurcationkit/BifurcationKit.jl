@@ -56,7 +56,7 @@ end
 """
 For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonBT`.
 """
-function bt_point(br::AbstractResult{<: TwoParamCont, Tprob}, index::Int) where {Tprob}
+function bt_point(br::AbstractResult{<: AbstractTwoParamCont, Tprob}, index::Int) where {Tprob}
     bptype = br.specialpoint[index].type
     @assert bptype == :bt "This should be a BT point"
     specialpoint = br.specialpoint[index]

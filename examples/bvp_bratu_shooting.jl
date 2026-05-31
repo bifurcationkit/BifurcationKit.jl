@@ -100,7 +100,6 @@ plot(diagram, vars = (:param, :s), legend = false)
 # CODIMENSION 2
 bp_codim = continuation(br, 1, (@optic _.b), ContinuationPar(optc, p_min = -1.);
             verbosity = 0,
-            jacobian_ma = BK.MinAug(), # autodiff is too slow
             usehessian = false,        # not yet defined for BVPBifProblem
             )
 plot(bp_codim)

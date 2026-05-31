@@ -62,7 +62,7 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
 
     # stability linewidth
     linewidth = linewidthunstable
-    if Tkind <: TwoParamCont
+    if Tkind <: AbstractTwoParamCont
         linewidthstable = 1
     end
     indices = Int[sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]

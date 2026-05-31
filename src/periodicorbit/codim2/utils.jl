@@ -57,13 +57,13 @@ function __update_codim1_po!(𝐌𝐚,
 end
 
 function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, 
-                 iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
+                 iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont},
                  state)
     return __update_codim1_po!(𝐌𝐚, iter, state)
 end
 
 function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: PeriodicOrbitFunctionalColl},
-                iter::ContIterable{ <: TwoParamPeriodicOrbitCont},
+                iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont},
                 state)
     coll = get_discretization(𝐌𝐚.prob_vf)
     # state vector at bifurcation point

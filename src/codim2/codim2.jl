@@ -218,7 +218,7 @@ end
     return getlens(𝐌𝐚), getlens(𝐏𝐛)
 end
 
-@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
+@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: AbstractTwoParamCont
     return get_lenses(getprob(br))
 end
 
@@ -239,7 +239,7 @@ function myrecord(x,p;iter, state, k...)
 end
 ```
 """
-function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, 
+function getparams(iter::AbstractContinuationIterable{ <: AbstractTwoParamCont}, 
                     state::AbstractContinuationState)
     return getparams(getx(state), getp(state), getprob(iter))
 end
@@ -249,7 +249,7 @@ $(TYPEDSIGNATURES)
 
 Returns the parameters corresponding to the ind-th solution in `br.sol[ind]` where `br` is a two parameters branch of bifurcation points.
 """
-function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
+function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: AbstractTwoParamCont
     p1 = br.sol[ind].x.p1
     p2 = br.sol[ind].p
     return _set(getparams(br), get_lenses(br), (p1, p2))
@@ -446,7 +446,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         bdlinsolver_adjoint = bdlinsolver,
                         bdlinsolver_block = bdlinsolver,
-                        kwargs...) where {Tkind <: TwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+                        kwargs...) where {Tkind <: AbstractTwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)

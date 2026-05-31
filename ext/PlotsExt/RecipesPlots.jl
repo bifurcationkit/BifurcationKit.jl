@@ -232,7 +232,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
                                     plotcirclesbif = true,
                                     _basicplot = true,
                                     applytoY = identity,
-                                    applytoX = identity) where {Tk <: TwoParamCont, Tprob}
+                                    applytoX = identity) where {Tk <: AbstractTwoParamCont, Tprob}
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)

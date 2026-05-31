@@ -368,7 +368,7 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
 end
 
 function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
-                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+                              state::AbstractContinuationState) where {Tkind <: AbstractTwoParamCont}
     𝐏𝐛 = getprob(iter)
     𝐇 = get_formulation(𝐏𝐛)
     lens1, lens2 = get_lenses(𝐏𝐛)

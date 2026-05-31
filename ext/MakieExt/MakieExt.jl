@@ -1,7 +1,7 @@
 module MakieExt
     using Makie, BifurcationKit, DocStringExtensions
     import BifurcationKit: _plot_backend,
-                           TwoParamCont,
+                           AbstractTwoParamCont,
                            plot, 
                            plot!,
                            hasbranch,
