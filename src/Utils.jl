@@ -144,7 +144,7 @@ Same as `finite_differences` but with inplace `F`
     end
     return J
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function block_to_sparse(J::BA.AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
@@ -228,4 +228,4 @@ function detect_loop(br::ContResult, x, p::T; rtol = convert(T, 1e-3), verbose::
 end
 detect_loop(br::ContResult, u; kwargs...) = detect_loop(br, u.x, u.param; kwargs...)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

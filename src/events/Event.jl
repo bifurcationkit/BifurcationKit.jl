@@ -57,7 +57,7 @@ end
 # general condition for detecting a discrete event
 test_event(::AbstractDiscreteEvent, x, y) = x != y
 isonevent(::AbstractDiscreteEvent, x) = false
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # for AbstractContinuousEvent and AbstractDiscreteEvent
 # return type when calling eve.fct(iter, state)
 initialize(eve::AbstractContinuousEvent, 𝒯) = ntuple(x -> 𝒯(1), eve.nb)
@@ -65,7 +65,7 @@ initialize(eve::AbstractDiscreteEvent, 𝒯) = ntuple(x -> Int64(1), eve.nb)
 
 @inline convert_to_tuple_eve(x::Tuple) = x
 @inline convert_to_tuple_eve(x::Real) = (x,)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -118,7 +118,7 @@ end
 @inline length(eve::ContinuousEvent) = eve.nb
 @inline has_custom_labels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 finalise_event!(event_point, eve::ContinuousEvent, it, state, success) = eve.finaliser(event_point, it, state, success)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -182,7 +182,7 @@ function labels(eve::Union{ContinuousEvent{Tcb, Tl}, DiscreteEvent{Tcb, Tl}}, in
     end
     return mapreduce(x -> eve.labels[x], *, ind)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -227,7 +227,7 @@ function finalise_event!(event_point, eve::PairOfEvents, it, state, success)
     event_point = finalise_event!(event_point, eve.eventC, it, state, success)
     finalise_event!(event_point, eve.eventD, it, state, success)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 

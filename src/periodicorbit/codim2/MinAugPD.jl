@@ -30,7 +30,7 @@ function apply_jacobian_period_doubling(pb, x, par, dx, _transpose = false)
         end
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional
 function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Period-Doubling bifurcation point
@@ -57,7 +57,7 @@ function (𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation)(x, p::𝒯, par
     ~cv && @debug "[PD residual] Linear solver for J+I did not converge."
     return residual(𝐏𝐝.prob_vf, x, par), σ
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -115,7 +115,7 @@ function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulati
 
     return (;JPD, JPD★, dₚF, σₚ, δ, ϵₜ, ϵₓ, v, w, par0, dJvdp, itv, itw)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tprob}
     𝐏𝐝 = get_formulation(pdpb)
     x = @view X[begin:end-1]
@@ -138,7 +138,7 @@ function jacobian(pdpb::PDMAProblem{Tprob, MinAugMatrixBased}, X, par) where {Tp
 
     return [_Jpo dₚF ; vcat(σₓ, σₜ)' σₚ]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the pd MA problem.
 struct PDLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -196,11 +196,11 @@ function (::PDLinearSolverMinAug)(Jpd, rhs::BorderedArray{vectype, 𝒯}; kwargs
     # this type annotation enforces type stability
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 get_wrap_po(pb::PDMAProblem) = get_wrap_po(get_formulation(pb))
 @inline has_adjoint(pb::PDMAProblem) = has_adjoint(get_formulation(pb))
 @inline is_symmetric(pb::PDMAProblem) = is_symmetric(get_formulation(pb))
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(SIGNATURES)
 
@@ -254,7 +254,7 @@ function newton_pd(prob::AbstractBifurcationProblem,
     opt_pd = deepcopy(options)
     return newton(prob_ma, opt_pd; normN, kwargs...)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update!(𝐏𝐛::PDMAProblem, iter, state)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b

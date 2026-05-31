@@ -62,7 +62,7 @@ struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
 end
 @inline converged(sol::NonLinearSolution) = sol.converged
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar;
                     normN = norm,
                     callback = cb_default,

@@ -36,7 +36,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
 end
 
 update_bls(lbs::AbstractBorderedLinearSolver, ls) = error("update_bls not implemented for $(typeof(lbs))")
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -204,7 +204,7 @@ function solve_bls_block(lbs::BorderingBLS,
     end
     return u1, u2, cv, (its...)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -283,7 +283,7 @@ function solve_bls_block(::MatrixBLS,
     sol = A \ vcat(rhst, rhsb)
     return (@view sol[begin:end-n]), (@view sol[end-n+1:end]), true, 1
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -435,10 +435,10 @@ function solve_bls_block(lbs::MatrixFreeBLS,
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Linear Solvers based on a bordered solver
 # !!!! This one is used as a linear Solver, not as a Bordered one
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -473,7 +473,7 @@ function  (l::LSFromBLS)(J, rhs1, rhs2)
 
     return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 update_bls(lbs::BorderingBLS, ls) = (@set lbs.solver = ls)
 update_bls(lbs::MatrixBLS, ls) = (@set lbs.solver = ls)
 update_bls(lbs::MatrixFreeBLS, ls) = (@set lbs.solver = ls)

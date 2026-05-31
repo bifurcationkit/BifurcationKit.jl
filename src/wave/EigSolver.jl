@@ -7,9 +7,9 @@ abstract type AbstractGMFEigenSolver <: AbstractMFEigenSolver end
 abstract type AbstractGFloquetSolver <: AbstractFloquetSolver end
 
 convertToGEV(l::AbstractGEigenSolver, B) = l
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for default \ operator (backslash)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 The struct `Default` is used to  provide the backslash operator to our Package
 """
@@ -29,9 +29,9 @@ function (l::DefaultGEig)(Jac, nev; kwargs...)
 end
 
 convertToGEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B from sparse to Array
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # case of sparse matrices or matrix free method
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 

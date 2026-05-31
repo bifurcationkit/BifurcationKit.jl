@@ -1,4 +1,4 @@
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _trapezoid_jacobian_type = (Dense(),
                                     AutoDiffDense(),
                                     FullLU(),
@@ -330,7 +330,7 @@ end
 po_jvp(trap::Trapeze, u::AbstractVector, par, du) = po_jvp!(trap, similar(du), u, par, du)
 jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(wrap), u, par, du)
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Matrix free expression of matrices related to the Jacobian Matrix of the PO functional
 """
 Function to compute the Matrix-Free version of Aγ, see docs for its expression.
@@ -388,7 +388,7 @@ function Jc(trap::Trapeze, u0::AbstractVector, par, du::AbstractVector)
     tmp  = similar(view(outc, :, 1))
     return @views Jc(trap, outc, u0[begin:end-1-N], par, T, du, tmp)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
 """
@@ -628,7 +628,7 @@ function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     A_diag_sp = block_to_sparse(A_diagBlock) # most of the computing time is here!!
     return A_diag_sp
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Utils
 """
 $(TYPEDSIGNATURES)
@@ -666,7 +666,7 @@ This function updates the section during the continuation run.
     end
     return true
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Linear solvers for the jacobian of the functional G implemented by Trapeze
 # composite type to encode the Aγ Operator and its associated cyclic matrix
 abstract type AbstractPOTrapAγOperator end
@@ -760,7 +760,7 @@ end
     !flag && @warn "Sparse solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
     ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
@@ -790,7 +790,7 @@ end
     out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
     return vcat(out1, LA.dot(J.Aγ.prob.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # linear solver for the PO functional, akin to a bordered linear solver
 @with_kw struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
     linsolverbls::Tl = BorderingBLS(solver = AγLinearSolver(), check_precision = false)    # linear solver
@@ -918,7 +918,7 @@ newton(trap::Trapeze,
         options::NewtonPar;
         kwargs...) where {Tp, Tdot, T, vectype} = _newton_po_from_disc(trap, orbitguess, options; defOp, kwargs...)
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # continuation wrapper
 """
 $(TYPEDSIGNATURES)
@@ -1038,7 +1038,7 @@ function continuation(trap::Trapeze,
     return continuation_po(trap, orbitguess, alg, _contParams, _linear_algo; record_from_solution, kwargs...)
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # function needed for automatic Branch switching from Hopf bifurcation point
 function re_make(trap::Trapeze,
                 prob_vf,
@@ -1118,4 +1118,4 @@ function generate_ci_problem(trap::Trapeze,
 end
 
 generate_ci_problem(trap::Trapeze, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generate_ci_problem(trap, bifprob, sol, (zero(period), period); ktrap...)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -107,9 +107,9 @@ function BVPBifProblem(
     )
 end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Interface methods required by BifurcationKit
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # Get the vector type
 _getvectortype(::BVPBifProblem{Tbvp, Tjac, Tu}) where {Tbvp, Tjac, Tu} = Tu
@@ -181,9 +181,9 @@ function re_make(prob::BVPBifProblem;
     )
 end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Helper functions specific to BVP problems
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 """
 $(TYPEDSIGNATURES)
@@ -193,9 +193,9 @@ Get the underlying DiscretizedBVP from a BVPBifProblem.
 get_bvp(prob::BVPBifProblem) = prob.d_bvp
 get_solution_bvp(br::BK.AbstractBranchResult, ind::Int) = get_solution_bvp(BK.getprob(br), br.sol[ind].x, BK.setparam(br, br.sol[ind].p))
 get_solution_bvp(prob::BVPBifProblem, x, p) = get_solution_bvp(get_bvp(prob), x, p)
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # save_solution functions specific to BVP problems
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 save_solution(prob::BVPBifProblem, x, p) = save_solution(prob.d_bvp, x, p)
 save_solution(::DiscretizedBVP, x, _) = x
 

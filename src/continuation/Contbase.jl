@@ -57,7 +57,7 @@ function _update_field_but_not_sol!(state::AbstractContinuationState,
         _copyto!(state.z_old, state.z)
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function step_size_control!(state::AbstractContinuationState,
                             iter::AbstractContinuationIterable,
                             ::AbstractContinuationAlgorithm)

@@ -133,7 +133,7 @@ end
     N = div(length(x) - 1, M)
     return reshape(x[begin:end-1], N, M)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Standard shooting functional using AbstractVector, convenient for IterativeSolvers.
 @views function po_residual(sh::Shooting, x::AbstractVector, pars)
     T = getperiod(sh, x)
@@ -298,7 +298,7 @@ function po_residual!(pb::Shooting, out, x, p)
     _copyto!(out, po_residual(pb, x, p))
     out
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -364,7 +364,7 @@ function (sol::POInterpolation{ <: Shooting})(t)
     end
     sol.x.sol[ii](t - t0)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # functions needed for Branch switching from Hopf bifurcation point
 function re_make(sh::Shooting, prob_vf, hopfpt, ζr, orbitguess_a, period; k...)
     # append period at the end of the initial guess

@@ -128,7 +128,7 @@ function update_mesh!(cache::MeshCollocationCache, τs)
     cache.τs .= τs
     cache.full_mesh .= get_times(cache)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 Cache to remove allocations from Collocation
 """
@@ -159,7 +159,7 @@ function POCollCache(𝒯::Type, Ntst::Int, n::Int, m::Int, save_mem = false)
     In = Array(LA.I(save_mem ? 1 : n))
     return POCollCache(gj, gi, ∂gj, uj, vj, tmp, ∇phase, In)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _pocoll_jacobian_types = (AutoDiffDense(),
                                 DenseAnalytical(),
                                 FullSparse(),
@@ -1016,7 +1016,7 @@ function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{FullSparseInpl
     jacobian_poocoll_sparse_indx!(coll, _J, x, p, indx)
     return _J
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DocStringJacobianPOColl = """
 - `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
@@ -1189,7 +1189,7 @@ end
     @debug "[collocation] update section: done"
     return true
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # interpolation method
 (sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, getx(sol), getperiod(getprob(sol), getx(sol), nothing))
 
@@ -1218,7 +1218,7 @@ end
     end
     out
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # mesh adaptation method
 """
 $(TYPEDSIGNATURES)
@@ -1328,7 +1328,7 @@ function _compute_error!(coll::Collocation, sol, x::AbstractVector{𝒯}, ΔT;
     update_mesh!(coll, newmesh)
     return (; newmesh, newτsT, ϕ)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
     update_section_every_step = coll.update_section_every_step
     step = state.step
@@ -1369,7 +1369,8 @@ function update!(wrap::PeriodicOrbitFunctionalColl, iter, state)
     coll = get_discretization(wrap)
     return update_po_coll!(coll, getx(state), setparam(iter, getp(state)), iter, state)
 end
-####################################################################################################
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

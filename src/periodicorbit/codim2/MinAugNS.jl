@@ -26,7 +26,7 @@ function apply_jacobian_neimark_sacker(pb, x, par, ω, dx, _transpose = false)
         end
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 is_symmetric(::NSMAProblem) = false
 
 # test function for NS bifurcation
@@ -47,7 +47,7 @@ function (𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation)(x, p::𝒯, ω::
     σ1 = nstest(J, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)[2]
     return residual(𝐍𝐒.prob_vf, x, par), real(σ1), imag(σ1)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -112,7 +112,7 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulatio
 
     return (;JNS, JNS★, dₚF, σₚ, δ, ϵ2, ϵ3, v, w, par0, dJvdp, itv, itw, σω)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
     𝐍𝐒 = get_formulation(pdpb)
 
@@ -146,7 +146,7 @@ function jacobian(pdpb::NSMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector
     Jns = vcat(Jns, vcat(real(σx), real(σt), real(σₚ), real(σω))')
     Jns = vcat(Jns, vcat(imag(σx), imag(σt), imag(σₚ), imag(σω))')
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the ns MA problem.
 struct NSLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -229,11 +229,11 @@ function (::NSLinearSolverMinAug)(Jns, rhs::BorderedArray{vectype, 𝒯}; kwargs
     # this type annotation enforces type stability
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 get_wrap_po(pb::NSMAProblem) = get_wrap_po(get_formulation(pb))
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update!(𝐏𝐛::NSMAProblem, iter, state)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
@@ -290,7 +290,7 @@ function update!(𝐏𝐛::NSMAProblem, iter, state)
 
     return ~stop_R1 && isbif && final_result && ~pdjump
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function finalise_solution(iter::ContIterable{NSPeriodicOrbitCont}, 
                            state::AbstractContinuationState, 
                            contres)

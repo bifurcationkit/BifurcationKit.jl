@@ -5,7 +5,7 @@ abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
 abstract type AbstractBifurcationPointCodim2 <: AbstractBifurcationPoint end
 
 istranscritical(::AbstractBranchPoint) = false
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -150,7 +150,7 @@ end
 function is_bifurcation(sp::SpecialPoint)
     type(sp) in (:bp, :fold, :hopf, :nd, :cusp, :gh, :bt, :zh, :hh, :ns, :pd,)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # types for bifurcation point with 1d kernel for the jacobian
 
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
@@ -297,7 +297,7 @@ function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - 
     end
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # type for bifurcation point Nd kernel for the jacobian
 type(::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
@@ -309,7 +309,7 @@ function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
     println(io, prefix, "Normal form:")
     println(io, prefix, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 for (op, opt) in ((:Hopf, AbstractSimpleBranchPoint),
                   (:NeimarkSacker, AbstractSimpleBranchPointForMaps)
                 )

@@ -89,7 +89,7 @@ function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     end
     return ζs, ζ★s
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -527,7 +527,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
             amp = one(𝒯), 
             δp = pnew - bp.p)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Base.@kwdef struct NdBPNormalForm{T}
     a01::Array{T, 1}
     a02::Array{T, 1}
@@ -980,7 +980,7 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
     printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (reduced equation).\n    These need to be transformed as solutions of the full functional.\n")
     return (before = rootsNFm, after = rootsNFp)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @with_kw struct HopfNormalForm{𝒯, 𝒯a, 𝒯b}
     a::𝒯
     b::𝒯
@@ -1270,7 +1270,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
             p = pnew,
             dsfactor = dsfactor)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1360,7 +1360,7 @@ function predictor(pd::PeriodDoubling, δp; verbose::Bool = false, ampfactor = 1
     x1 = abs(sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)))
     return (;x0 = zero(x1), x1, δp)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1528,7 +1528,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     )
     return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed, autodiff)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

@@ -18,7 +18,7 @@ end
 
 # see https://discourse.julialang.org/t/uniform-scaling-inplace-addition-with-matrix/59928/5
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -83,7 +83,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Shooting
 # Matrix free monodromy operators
 function MonodromyQaD_matrix_free(sh::Shooting, x, p, du::AbstractVector)
@@ -190,7 +190,7 @@ end
     end
     return out_a
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PoincareShooting
 
 # matrix free evaluation of monodromy operator
@@ -278,7 +278,7 @@ end
     end
     return out_a
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Trapeze
 
 # Matrix-Free version of the monodromy operator
@@ -378,7 +378,7 @@ function MonodromyQaD(trap::Trapeze, J, u0, par)
     end
     return mono
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
  $(TYPEDEF)
 

@@ -631,7 +631,7 @@ function bogdanov_takens_normal_form(_prob,
                 bls,
                 bls_block)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function bautin_normal_form(_prob::HopfMAProblem,
                             br::AbstractBranchResult, ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -944,7 +944,7 @@ function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T;
             params = (@. par0 - 2l2 * α * ϵ^2),
             x0 = t -> x0)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function zero_hopf_normal_form(_prob,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -1296,7 +1296,7 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
             k = k
     )
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function hopf_hopf_normal_form(_prob,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);

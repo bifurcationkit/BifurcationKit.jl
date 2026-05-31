@@ -1,6 +1,6 @@
 abstract type AbstractBranchResult end
 abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # functions used in record_from_solution
 """
 [Internal] Transform the result of `record_from_solution` into a named tuple.
@@ -14,7 +14,7 @@ _namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x).
 [Internal] Merge the result of `record_from_solution` with a named tuple.
 """
 _mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Structure to hold continuation result
 """
 $(TYPEDEF)
@@ -343,7 +343,7 @@ Return the list of bifurcation points on a branch. It essentially filters the fi
 function bifurcation_points(br::AbstractBranchResult)
     [sp for sp in br.specialpoint if is_bifurcation(sp)]
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -394,7 +394,7 @@ function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: Abst
         show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing
 function _reverse(br0::ContResult)

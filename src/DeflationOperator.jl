@@ -222,7 +222,7 @@ function Base.show(io::IO, prob::DeflatedProblem; prefix = "")
     show(io, prob.M; prefix = "    ")
 end
 
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Implement the Jlinear solvers for the deflated problem
 abstract type AbstractLinearSolverForDeflation <: AbstractLinearSolver end
 
@@ -296,7 +296,7 @@ Full iterative linear solver for deflated problem.
 struct DefProbFullIterativeLinearSolver{T} <: AbstractLinearSolverForDeflation
     solver::T
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

@@ -193,7 +193,7 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
     end
     return J2
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
@@ -227,7 +227,7 @@ function newton(tw::TWModel,
     wrap = WrapTW(tw, jac, orbitguess, BifurcationKit.record_from_solution(tw.prob_vf), plot_solution(tw.prob_vf))
     return solve(wrap, Newton(), optn; kwargs...,)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function record_from_solution(iter::ContIterable{TravellingWaveCont},
                               state::AbstractContinuationState)
     probTW = getprob(iter)

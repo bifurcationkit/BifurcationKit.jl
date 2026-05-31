@@ -9,9 +9,9 @@ function get_vector_field(odeprob::Union{ODEProblem, DAEProblem})
     end
 end
 get_vector_field(pb::EnsembleProblem) = get_vector_field(pb.prob)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ###                                     STANDARD SHOOTING
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _sync_jacobian!(sh) = @reset sh.flow.jacobian = sh.jacobian
 
 # this constructor takes into account a parameter passed to the vector field
@@ -82,9 +82,9 @@ function Shooting(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractV
     # set jacobian for the flow too
     _sync_jacobian!(sh)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ###                                     POINCARE SHOOTING
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function PoincareShooting(prob::ODEProblem,
                                  alg,
                                  hyp::SectionPS;
@@ -221,7 +221,7 @@ function PoincareShooting(prob1::ODEProblem, alg1,
     # set jacobian for the flow too
     _sync_jacobian!(psh)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 using SciMLBase: AbstractTimeseriesSolution
 """
 $(TYPEDSIGNATURES)
