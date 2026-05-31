@@ -598,7 +598,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     𝒯 = eltype(coll)
 
     # identity matrix for collocation problem
-    Icoll = I(coll, _getsolution(pd.x0), par)
+    Icoll = I(coll, saved_solution(pd.x0), par)
 
     F(u, pars) = residual(coll.prob_vf, u, pars)
     # TODO: use R01
@@ -618,7 +618,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # we use an extended linear system for this
     #########
     # compute v1
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
@@ -645,7 +645,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     #########
     # compute v1★
     # TODO: extract from continuation_pd
-    J★ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    J★ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
@@ -690,7 +690,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
-    Jψ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    Jψ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -LA.I(N)
     Jψ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
@@ -726,7 +726,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                                     )
                             # _plot(vcat(vec(rhsₛ),1))
     # we could perhaps save the re-computation of J here and use the previous J
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
@@ -775,7 +775,7 @@ function period_doubling_normal_form_iooss(pbwrap,
         rhsₛ[:, i] .= ∂Fu₀ₛ[:, i] .- a₀₁ .* Fu₀ₛ[:, i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
@@ -1367,7 +1367,7 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
                     override = false)
     pbnew = deepcopy(nf.prob)
     N, m, Ntst = size(nf.prob)
-    orbitguess0 = _getsolution(nf.po)[begin:end-1]
+    orbitguess0 = saved_solution(nf.po)[begin:end-1]
 
     # we update the problem by doubling Ntst
     # we need to save the mesh for adaptation

@@ -156,7 +156,7 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, x::Tx, 
     coll = d_bvp.cache.po_coll # TODO: remove
     ts = BK.get_times(coll)
     mesh = x.mesh
-    u = BK._getsolution(x)
+    u = BK.saved_solution(x)
     um = get_time_slices(d_bvp, u)
     return BK.BVPSolution(t = mesh .* T, u = um)
 end

@@ -128,11 +128,11 @@ for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
             _mesh::T3
             ϕ::T4
         end
-        @inline _getsolution(pb::$PSType) = pb.sol
-        minus(x::$PSType, y::$PSType) = minus(_getsolution(x), _getsolution(y))
+        @inline saved_solution(pb::$PSType) = pb.sol
+        minus(x::$PSType, y::$PSType) = minus(saved_solution(x), saved_solution(y))
     end
 end
-@inline _getsolution(x) = x
+@inline saved_solution(x) = x
 ####################################################################################################
 """
 $(TYPEDEF)

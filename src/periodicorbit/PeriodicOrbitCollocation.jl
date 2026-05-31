@@ -916,7 +916,7 @@ end
                 x::Tx,
                 p) where { Tx <: POSavedSolutionAndState}
     mesh = x.mesh
-    u = _getsolution(x)
+    u = saved_solution(x)
     T = getperiod(coll, u, p)
     um = get_time_slices(coll, u)
     return BVPSolution(t = mesh .* T, u = um)
