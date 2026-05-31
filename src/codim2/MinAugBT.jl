@@ -60,7 +60,8 @@ function bt_point(br::AbstractResult{<: AbstractTwoParamCont, Tprob}, index::Int
     bptype = br.specialpoint[index].type
     @assert bptype == :bt "This should be a BT point"
     specialpoint = br.specialpoint[index]
-    return BorderedArray(_copy(specialpoint.x.x), [specialpoint.x.p1, specialpoint.param])
+    # specialpoint.x should be an AbstractMASolution
+    return BorderedArray(_copy(get_solution(specialpoint.x)), [specialpoint.x.p1, specialpoint.param])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 getvec(x, ::BTMinimallyAugmentedFormulation) = getvec(x)

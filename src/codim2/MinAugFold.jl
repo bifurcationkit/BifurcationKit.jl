@@ -9,7 +9,7 @@ function fold_point(br::AbstractBranchResult, index::Int)
         error("This should be a Fold / BP point.\nYou passed a $bptype point.")
     end
     specialpoint = br.specialpoint[index]
-    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+    return BorderedArray(_copy(saved_solution(specialpoint.x)), specialpoint.param)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
@@ -472,10 +472,14 @@ function continuation_fold(prob,
                 kwargs...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
 
     p = bifpt.param
     parbif = setparam(br, p)
+
+    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
 
     if start_with_eigen
         # jacobian at bifurcation point

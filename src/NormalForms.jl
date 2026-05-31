@@ -219,8 +219,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     options = br.contparams.newton_options
 
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, bifpt.x)
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     p = bifpt.param
     𝒯 = VI.scalartype(x0)
     δ = getdelta(prob)
@@ -683,11 +685,13 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     options = getcontparams(br).newton_options
     ls = options.linsolver
 
-    # bifurcation point
     if ~(bifpt.x isa 𝒯eigvec)
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
-    x0 = convert(𝒯eigvec, bifpt.x)
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     𝒯 = VI.scalartype(x0)
 
     # parameter for vector field
@@ -1117,7 +1121,13 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_hopf]
-    𝒯 = VI.scalartype(bifpt.x)
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    𝒯 = VI.scalartype(x0)
     eigRes = br.eig
 
     # eigenvalue
@@ -1127,7 +1137,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = setparam(br, p)
-    L = jacobian(prob, convert(𝒯eigvec, bifpt.x), parbif)
+    L = jacobian(prob, x0, parbif)
 
     # right eigenvector
     if ~haseigenvector(br)
@@ -1143,22 +1153,22 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     if ~detailed_type
-        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+        return Hopf(x0, bifpt.τ, bifpt.param,
                   ω,
                   parbif, lens,
                   ζ, zero(ζ),
-                  HopfNormalForm(a = missing, 
+                  HopfNormalForm(a = missing,
                                b = missing,
                                Ψ110 = missing,
                                Ψ001 = missing,
                                Ψ200 = missing
                         ),
                 Symbol("?")
-    )
+        )
     end
 
     # left eigen-elements
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(𝒯eigvec, bifpt.x), parbif) : adjoint(L)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     if start_with_eigen_type
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
     else
@@ -1179,18 +1189,18 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("Error of precision in normalization")
     end
 
-    hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
+    hopfpt = Hopf(x0, bifpt.τ, bifpt.param,
                   ω,
                   parbif, lens,
                   ζ, ζ★,
-                  HopfNormalForm(a = missing, 
+                  HopfNormalForm(a = missing,
                                b = missing,
                                Ψ110 = missing,
                                Ψ001 = missing,
                                Ψ200 = missing
                         ),
                 Symbol("?")
-    )
+        )
     return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 
@@ -1482,6 +1492,12 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_ns]
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(Teigvec, saved_solution(bifpt.x))
+
     eigRes = br.eig
 
     # eigenvalue
@@ -1491,7 +1507,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
-    L = jacobian(getprob(br), convert(Teigvec, bifpt.x), parbif)
+    L = jacobian(getprob(br), x0, parbif)
 
     # right eigenvector
     if haseigenvector(br) == false
@@ -1507,7 +1523,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
@@ -1519,11 +1535,11 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         error("Error of precision in normalization.")
     end
 
-    nspt = NeimarkSacker(bifpt.x, bifpt.τ, bifpt.param,
+    nspt = NeimarkSacker(x0, bifpt.τ, bifpt.param,
         ω,
         parbif, lens,
         ζ, ζ★,
-        (a = zero(Complex{VI.scalartype(bifpt.x)}), b = zero(Complex{VI.scalartype(bifpt.x)}) ),
+        (a = zero(Complex{VI.scalartype(x0)}), b = zero(Complex{VI.scalartype(x0)}) ),
         :SuperCritical
     )
     return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed, autodiff)

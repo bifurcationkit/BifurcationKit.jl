@@ -241,7 +241,8 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
-getparams(iter::AbstractContinuationIterable, state::AbstractContinuationState) = (@assert false; setparam(iter, getp(state)))
+# there is a dispatch for codim2:
+getparams(iter::AbstractContinuationIterable, state::AbstractContinuationState) = setparam(iter, getp(state))
 
 @inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################

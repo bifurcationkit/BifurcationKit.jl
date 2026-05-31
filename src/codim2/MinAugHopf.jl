@@ -10,7 +10,7 @@ function hopf_point(br::AbstractBranchResult, index::Int)
     specialpoint = br.specialpoint[index] # Hopf point
     p = specialpoint.param                # parameter value at the Hopf point
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) # frequency at the Hopf point
-    return BorderedArray(specialpoint.x, [p, ω] )
+    return BorderedArray(_copy(saved_solution(specialpoint.x)), [p, ω] )
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional
@@ -438,7 +438,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 compute_eigen_elements = false,
                 usehessian = true,
                 kind = HopfCont(),
-                massmatrix = LinearAlgebra.I,
+                massmatrix = LA.I,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
@@ -538,9 +538,8 @@ function continuation_hopf(prob,
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
 
-    if isnothing(br.eig) 
-        error("The branch contains no eigen elements.\nThis is strange because a Hopf point was detected.\nPlease open an issue on the website.")
-    end
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
 
     p = bifpt.param
     parbif = setparam(br, p)

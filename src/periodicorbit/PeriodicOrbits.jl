@@ -128,7 +128,7 @@ for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
             _mesh::T3
             ϕ::T4
         end
-        @inline saved_solution(pb::$PSType) = pb.sol
+        @inline saved_solution(saved_sol::$PSType) = saved_sol.sol
         minus(x::$PSType, y::$PSType) = minus(saved_solution(x), saved_solution(y))
     end
 end
@@ -151,6 +151,8 @@ end
 Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
 Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+update!(wrap::PeriodicOrbitFunctionalSh, x) = true
+
 function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)
     success = converged(state)

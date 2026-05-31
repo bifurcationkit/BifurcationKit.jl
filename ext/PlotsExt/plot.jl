@@ -4,9 +4,9 @@ $(SIGNATURES)
 Plot the branch of solutions during the continuation. It is called internally.
 """
 function plot_branch_cont(contres::ContResult, 
-                        state, 
-                        iter, 
-                        plotuserfunction)
+                          state, 
+                          iter, 
+                          plotuserfunction)
     sol = getsolution(state)
     l = compute_eigenelements(iter) ? Plots.@layout([a{0.5w} [b; c]; e{0.2h}]) : Plots.@layout([a{0.5w} [b; c]])
     Plots.plot(layout = l )

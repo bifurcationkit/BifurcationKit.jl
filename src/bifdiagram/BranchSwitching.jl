@@ -165,7 +165,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                                             "\n────▶ amplitude = ", pred.amp,
                                             "\n")
 
-    if pred.amp > 0.1
+    if pred.amp > 1//10
         @debug "The guess for the amplitude of the first periodic orbit on the bifurcated branch obtained by the predictor is not small: $(pred.amp). This may lead to convergence failure of the first newton step or select a branch far from the bifurcation point.\nYou can either decrease `ds` or `δp` (which is how far from the bifurcation point you want the branch of equilibria to start). Alternatively, you can specify a multiplicative factor `ampfactor` to be applied to the predictor amplitude."
     end
 
@@ -186,7 +186,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     end
 
     # perform continuation
-    kwargs_cont = _keep_opts_cont(values(kwargs))
+    kwargs_cont = _keep_continuation_options(values(kwargs))
     branch = continuation(re_make(getprob(br); plot_solution),
                             bp.x0, bp.params, # first point on the branch
                             pred.x1, pred.p,  # second point on the branch

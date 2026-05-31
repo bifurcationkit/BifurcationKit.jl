@@ -9,9 +9,9 @@ struct BK_Makie <: AbstractPlotBackend end
 
 """
 Internal function to select the keys out of nt that are valid for the continuation function below.
-Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
+Can be used like `foo(kw...) = _keep_continuation_options(values(nt))`
 """
-function _keep_opts_cont(nt) 
+function _keep_continuation_options(nt) 
     return NamedTuple{filter(in((:kind,
                             :filename,
                             :plot,

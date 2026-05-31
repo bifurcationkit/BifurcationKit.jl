@@ -231,7 +231,7 @@ function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocati
             step > 2
             @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
-        old_bvp = BK._copy(BK.getx(state)) # avoid possible overwrite in compute_error!
+        old_bvp = BK._copy(bvpsol) # avoid possible overwrite in compute_error!
         oldmesh = BK.get_times(coll) .* δT
         ####################################
         # get solution, we copy x because it is overwritten at the end of this function

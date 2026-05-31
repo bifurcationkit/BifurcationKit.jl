@@ -1370,6 +1370,16 @@ function update!(wrap::PeriodicOrbitFunctionalColl, iter, state)
     return update_po_coll!(coll, getx(state), setparam(iter, getp(state)), iter, state)
 end
 
+function update!(wrap::PeriodicOrbitFunctionalColl, x::POSavedSolutionAndState)
+    coll = get_discretization(wrap)
+    meshadapt(coll) && update_mesh!(coll, x._mesh)
+    updatesection!(coll, x.ϕ, nothing)
+    return true
+end
+
+function update!(wrap::PeriodicOrbitFunctionalColl, x::AbstractVector)
+    return true
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
