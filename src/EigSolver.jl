@@ -42,12 +42,6 @@ function (eig::DefaultEig)(J, nev; kwargs...)
     # change from Float to Complex along the branch, this would cause a bug
     return Complex.(F.values[end:-1:end-nev2+1]), Complex.(F.vectors[:, end:-1:end-nev2+1]), true, 1
 end
-
-function gev(l::DefaultEig, A, B, nev; kwargs...)
-    # we convert to Array so we can call it on small sparse matrices
-    F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B))
-    return Complex.(F.values), Complex.(F.vectors)
-end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for Arpack
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -92,16 +86,6 @@ function (eig::EigArpack)(J, nev; kwargs...)
         T = VI.scalartype(eig.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(J, N, N; ismutating = false)
         λ, ϕ, ncv, = Arpack.eigs(Jmap; nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
-    end
-    return __sort_arpack(eig, λ, ϕ, ncv, nev)
-end
-
-# GEV, useful for computation of Floquet exponents based on collocation
-function gev(eig::EigArpack, A, B, nev; kwargs...)
-    if A isa AbstractMatrix
-        λ, ϕ, ncv = Arpack.eigs(A, B; nev, sigma = eig.sigma, which = eig.which, eig.kwargs...)
-    else
-        error("Not defined yet. Please open an issue or make a Pull Request")
     end
     return __sort_arpack(eig, λ, ϕ, ncv, nev)
 end
@@ -244,25 +228,6 @@ function (eig::EigArnoldiMethod)(J, nev; kwargs...)
         @warn "$ncv eigenvalues have converged using ArnoldiMethod.partialschur, you requested $nev"
     return Complex.(λ[Ind]), Complex.(ϕ[:, Ind]), history.converged, 1
 end
-
-# GEV useful for computation of Floquet exponents based on collocation
-function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
-    if A isa AbstractMatrix
-        # Solve Ax = λBx using Shift-invert method 
-        # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
-        σ = isnothing(eig.sigma) ? 0 : eig.sigma
-        P = LA.lu(A - σ * B)
-        𝒯 = eltype(A)
-        L = LinearMaps.LinearMap{𝒯}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
-        decomp, history = ArnoldiMethod.partialschur(L; nev, which = eig.which,
-                                                         eig.kwargs...)
-        vals, ϕ = ArnoldiMethod.partialeigen(decomp)
-        values = @. 1/vals + σ
-    else
-        throw("Not defined yet. Please open an issue or make a Pull Request")
-    end
-    return Complex.(values), Complex.(ϕ), history.converged, 1
-end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
@@ -291,25 +256,4 @@ function (eig::ShiftInvert)(J, nev; kwargs...)
     end
     vals, vecs, cv, n = @time "SI-ev" eig.eig(Jmap, nev; kwargs...)
     return 1 ./vals .+ eig.sigma, vecs, cv, n
-end
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-$(TYPEDEF)
-
-Create an eigensolver for DAE, Basically a GEV with mass matrix.
-
-# Internal fields
-
-$(TYPEDFIELDS)
-"""
-struct EigenMassMatrix{Tb, Teig <: AbstractEigenSolver} <: AbstractEigenSolver
-    "Mass matrix"
-    B::Tb
-    "Eigen-solver"
-    eig::Teig
-end
-geteigenvector(eigsolve::EigenMassMatrix, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
-
-function (eigsolve::EigenMassMatrix)(J, nev; kwargs...)
-    return gev(eigsolve.eig, J, eigsolve.B, nev; kwargs...)
 end

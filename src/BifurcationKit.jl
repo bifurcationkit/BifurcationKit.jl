@@ -33,6 +33,7 @@ module BifurcationKit
     include("BorderedArrays.jl")
     include("LinearSolver.jl")
     include("EigSolver.jl")
+    include("GeneralizedEigenSolver.jl")
     include("LinearBorderSolver.jl")
     include("Preconditioner.jl")
     include("Newton.jl")
