@@ -441,8 +441,8 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 massmatrix = LinearAlgebra.I,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
-    @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getlens(prob_vf)
+    lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
+    lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1")
 
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options

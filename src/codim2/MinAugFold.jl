@@ -384,8 +384,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                            kind = FoldCont(),
                            record_from_solution = nothing,
                            kwargs...) where {𝒯, vectype}
-    @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getlens(prob)
+    lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
+    lens1 != getlens(prob) && error("lens1 must be the continuation parameter. You passed $lens1")
 
     if alg isa PALC && alg.tangent isa Bordered
         @warn "You selected the PALC continuation algorithm with Bordered predictor.\nThe jacobian being singular on Fold points, this could lead to bad prediction and convergence.\nIf you have issues, try a different tangent predictor like Secant for example, you can pass it using `alg = PALC()`."

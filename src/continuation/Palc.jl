@@ -31,7 +31,7 @@ DotTheta(dt) = DotTheta(dt, nothing)
 
 (dt::DotTheta)(a::BorderedArray{vec, T}, b::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, b.u, a.p, b.p, θ)
 (dt::DotTheta)(a::BorderedArray{vec, T}, θ::T) where {vec, T} = dt(a.u, a.p, θ)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # equation of the arc length constraint
 arc_length_eq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
 
@@ -46,7 +46,7 @@ function arc_length_eq(dt::DotTheta, u1, u2, p, du, dp, θ, ds)
            arc_length_eq(dt, u2, p, du, 0, θ, 0)
 
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 

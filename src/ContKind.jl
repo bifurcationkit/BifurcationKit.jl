@@ -1,21 +1,21 @@
 abstract type AbstractContinuationKind end
-abstract type OneParamCont <: AbstractContinuationKind end
-abstract type TwoParamCont <: AbstractContinuationKind end
-abstract type TwoParamPeriodicOrbitCont <: TwoParamCont end
+abstract type AbstractOneParamCont <: AbstractContinuationKind end
+abstract type AbstractTwoParamCont <: AbstractContinuationKind end
+abstract type AbstractTwoParamPeriodicOrbitCont <: AbstractTwoParamCont end
 
-struct EquilibriumCont <: OneParamCont end # TODO rename abstract
-struct PeriodicOrbitCont <: OneParamCont end
-struct BoundaryValueProblemCont <: OneParamCont end
-struct TravellingWaveCont <: OneParamCont end
+struct EquilibriumCont <: AbstractOneParamCont end
+struct PeriodicOrbitCont <: AbstractOneParamCont end
+struct BoundaryValueProblemCont <: AbstractOneParamCont end
+struct TravellingWaveCont <: AbstractOneParamCont end
 
-struct FoldCont <: TwoParamCont end
-struct HopfCont <: TwoParamCont end
-struct PDCont <: TwoParamCont end
-struct NSCont <: TwoParamCont end
+struct FoldCont <: AbstractTwoParamCont end
+struct HopfCont <: AbstractTwoParamCont end
+struct PDCont <: AbstractTwoParamCont end
+struct NSCont <: AbstractTwoParamCont end
 
-struct FoldPeriodicOrbitCont <: TwoParamPeriodicOrbitCont end
-struct PDPeriodicOrbitCont <: TwoParamPeriodicOrbitCont end
-struct NSPeriodicOrbitCont <: TwoParamPeriodicOrbitCont end
+struct FoldPeriodicOrbitCont <: AbstractTwoParamPeriodicOrbitCont end
+struct PDPeriodicOrbitCont <: AbstractTwoParamPeriodicOrbitCont end
+struct NSPeriodicOrbitCont <: AbstractTwoParamPeriodicOrbitCont end
 
 # these structs allow to wrap the discretization (shooting, collocation, etc) to the problem: 
 # computing periodic orbits, solving BVP, etc

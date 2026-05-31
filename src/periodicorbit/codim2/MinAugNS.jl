@@ -343,8 +343,8 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                         plot_solution = BifurcationKit.plot_solution(prob),
                         prm::Bool = prob isa PeriodicOrbitFunctionalSh,
                         kwargs...) where {𝒯b, vectype}
-    @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getlens(prob)
+    lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
+    lens1 != getlens(prob) && error("lens1 must be the continuation parameter. You only passed $lens1")
 
     # options for the Newton Solver inheritated from the ones the user provided
     newton_options = options_cont.newton_options

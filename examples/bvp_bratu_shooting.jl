@@ -9,8 +9,9 @@ function record_from_solution(x, p; iter, k...)
     return (max_u = norm(x, 2), s = sum(x))
 end
 
-function plot_solution(x, p; kwargs...)
-    sol = BK._get_shooting_solution(d_bvp.cache, reshape(x, 2, disc.M), 1,  @set params.a = p)
+function plot_solution(x, p; iter, state, kwargs...)
+    prob = BK.getprob(iter)
+    sol = BK.BVP.get_solution_bvp(prob, x, BK.getparams(iter, state))
     plot!(sol.t, sol.u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
 end
 
