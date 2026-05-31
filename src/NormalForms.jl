@@ -252,7 +252,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
             ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
         end
     end
-    VI.scale!(ζ, 1 / scaleζ(ζ))
+    ζ = VI.scale!!(ζ, 1 / scaleζ(ζ))
 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
     if Tevecs_ad == Nothing
@@ -273,7 +273,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if ~(abs(VI.inner(ζ, ζ★)) > 1e-10)
         error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
-    ζ★ ./= VI.inner(ζ, ζ★)
+    ζ★ = VI.scale!!(ζ★, 1 / VI.inner(ζ, ζ★))
     ζ★ = convert(𝒯eigvec, real(ζ★))
 
     # differentials and projector on Range(L), there are real valued
@@ -399,6 +399,8 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     # we solve b11 * ds + b20 * amp / 2 = 0
     amp = -2ds * b11 / b20 * ampfactor
     dsfactor = one(𝒯)
+    Tx0 = typeof(bp.x0)
+    # we enforce ::Tx0 because for StaticArrays, xm1 could be SizedArray as Ψ01 is a view(SArray)
 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
@@ -420,9 +422,9 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     end
 
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0,
-             x1,
-             xm1,
+    return (;x0 = convert(Tx0, x0),
+             x1 = convert(Tx0, x1),
+             xm1 = convert(Tx0, xm1),
              p = pnew,
              pm1 = bp.p - ds,
              dsfactor,
@@ -473,8 +475,9 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
         @warn "Singular normal form (`amp = 0`)!! Defaulting to `amp = $amp`."
     end
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+    x1 = bp.x0 .+ amp .* real.(bp.ζ)
     return (;x0 = bp.x0, 
-             x1 = bp.x0 .+ amp .* real.(bp.ζ), 
+             x1 = x1, 
              p = pnew, 
              dsfactor, 
              amp, 
@@ -516,9 +519,10 @@ function _predictor(bp::AbstractSimpleBranchPoint,
     dotps = [VI.inner(τ.u, bp.ζ) * sol[1] + sol[2] * τ.p for sol in solutions]
     I = argmin(abs.(dotps))
     pnew = bp.p + solutions[I][2]
+    x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ)
 
     return (;x0 = bp.x0, 
-            x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ), 
+            x1, 
             p = pnew, dsfactor, 
             amp = one(𝒯), 
             δp = pnew - bp.p)

@@ -122,7 +122,6 @@ Mutable structure containing the state of the continuation procedure. The fields
 
 $(TYPEDFIELDS)
 
-
 # Useful functions
 - `copy(state)` returns a copy of `state`.
 - `copyto!(dest, state)`  copy `state` into `dest`.
