@@ -170,7 +170,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
 end
 
 ####################################################################################################
-RecipesBase.@recipe function Plots(sol::SolPeriodicOrbit;
+RecipesBase.@recipe function Plots(sol::BVPSolution;
                                     indx = nothing
                                     )
     @assert indx isa Int || indx isa Nothing

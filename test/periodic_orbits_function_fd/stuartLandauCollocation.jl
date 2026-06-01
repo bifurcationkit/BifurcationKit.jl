@@ -80,7 +80,7 @@ let
     BK.get_time_slices(coll, _ci)
 
     # interpolate solution
-    sol = BK.POSolution(coll, _ci)
+    sol = BK.POInterpolation(coll, _ci)
     sol(rand())
 end
 ####################################################################################################
@@ -88,7 +88,7 @@ let
     coll = Collocation(200, 5, prob_vf = probsl, N = 1000)
     _ci = BK.generate_solution(coll, t -> cos(t) .* ones(1000), 2pi)
     BK.get_times(coll)
-    sol = BK.POSolution(coll, _ci)
+    sol = BK.POInterpolation(coll, _ci)
     @test sol(0.1) ≈ cos(0.1) .* ones(1000)
     for (i,t) in pairs(BK.get_times(coll))
         @test sol(t)[1] ≈ cos(t)
@@ -225,7 +225,7 @@ let
     sol_po = newton(coll2, _ci, optcontpo.newton_options);
 
     # test solution
-    solc = BK.POSolution(coll2, sol_po.u)
+    solc = BK.POInterpolation(coll2, sol_po.u)
     # plot([t for t in LinRange(0,2pi,100)], [solc(t)[1] for t in LinRange(0,2pi,100)])
     let
         mesh = BK.getmesh(coll2)

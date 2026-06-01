@@ -75,18 +75,18 @@ end
 
 Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T
 # getters
-@inline getlens(it::ContIterable) = getlens(it.prob)
-@inline getalg(it::ContIterable) = it.alg
 @inline getprob(it::ContIterable) = it.prob
+@inline getlens(it::ContIterable) = getlens(getprob(it))
+@inline getalg(it::ContIterable) = it.alg
 @inline callback(it::ContIterable) = it.callback_newton
-record_from_solution(it::ContIterable) = record_from_solution(it.prob)
-plot_solution(it::ContIterable) = plot_solution(it.prob)
+record_from_solution(it::ContIterable) = record_from_solution(getprob(it))
+plot_solution(it::ContIterable) = plot_solution(getprob(it))
 setparam(iter::ContIterable, p0) = setparam(getprob(iter), p0)
 
 @inline get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
 
 # get the linear solver for Continuation
-getlinsolver(iter::ContIterable) = getlinsolver(iter.alg)
+getlinsolver(iter::ContIterable) = getlinsolver(getalg(iter))
 
 @inline is_event_active(it::ContIterable) = !isnothing(it.event) && it.contparams.detect_event > 0
 @inline compute_eigenelements(it::ContIterable) = compute_eigenelements(it.contparams) || (is_event_active(it) && compute_eigenelements(it.event))
@@ -643,9 +643,18 @@ Compute the continuation curve associated to the functional `F` which is stored 
     Just change the sign of `ds` in `ContinuationPar`.
 
 !!! tip "Debug mode"
-    Use debug mode to access more irformation about the progression of the continuation run, like iterative solvers convergence, problem update, ...
+    Use debug mode to access more information about the progression of the continuation run, like iterative solvers convergence, problem update, ...
 """
 function continuation(prob::AbstractBifurcationProblem,
+                      alg::AbstractContinuationAlgorithm,
+                      contparams::ContinuationPar;
+                      linear_algo = nothing,
+                      bothside::Bool = false,
+                      kwargs...)
+    _continuation(prob, alg, contparams; linear_algo, bothside, kwargs...)
+end
+
+function _continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       linear_algo = nothing,

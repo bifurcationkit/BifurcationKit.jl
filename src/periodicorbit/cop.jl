@@ -4,7 +4,7 @@ $(TYPEDEF)
 Cache for the linear solver based on condensation of parameters (COP) [1].
 
 !!! danger "`dim` type parameter"
-    When using the cache solve a linear problem associated to a matrix `A`, the type parameter `dim` is such that `length(coll) + 1 + dim = size(A, 1)`
+    When using the cache to solve a linear problem associated to a matrix `A`, the type parameter `dim` is such that `length(coll) + 1 + dim = size(A, 1)` i.e. it includes the additional equations on top of the "time-discretization + phase equations". 
 
 # Internal fields
 

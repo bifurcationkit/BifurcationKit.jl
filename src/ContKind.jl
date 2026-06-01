@@ -5,6 +5,7 @@ abstract type TwoParamPeriodicOrbitCont <: TwoParamCont end
 
 struct EquilibriumCont <: OneParamCont end # TODO rename abstract
 struct PeriodicOrbitCont <: OneParamCont end
+struct BoundaryValueProblemCont <: OneParamCont end
 struct TravellingWaveCont <: OneParamCont end
 
 struct FoldCont <: TwoParamCont end

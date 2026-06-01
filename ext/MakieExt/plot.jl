@@ -170,7 +170,7 @@ function plot_branch_cont(contres::ContResult,
 
     if isnothing(plotuserfunction) == false
         ax_perso = fig[2, 2] = Axis(fig, tellheight = true)
-        plotuserfunction(ax_perso, sol.u, sol.p; ax1 = ax1)
+        plotuserfunction(ax_perso, sol.u, sol.p; ax1, iter, state)
     end
 
     display(fig)

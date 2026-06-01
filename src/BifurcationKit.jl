@@ -71,10 +71,13 @@ module BifurcationKit
     include("BifurcationPoints.jl")
 
     include("bifdiagram/BranchSwitching.jl")
+    normal_form(args...; kwargs...) = get_normal_form(args...; kwargs...)
     include("NormalForms.jl")
     include("codim2/BifurcationPoints.jl")
     include("codim2/NormalForms.jl")
     include("bifdiagram/BifurcationDiagram.jl")
+
+    include("TimeMesh.jl")
 
     # periodic orbit problems
     include("periodicorbit/Sections.jl")
@@ -109,6 +112,9 @@ module BifurcationKit
     include("wave/WaveProblem.jl")
     include("wave/EigSolver.jl")
 
+    # BVP problem
+    include("bvp/BVP.jl")
+
     # plotting
     include("plotting/Utils.jl")
 
@@ -119,7 +125,7 @@ module BifurcationKit
 
     # linear solvers
     export norminf
-    
+
     export DefaultLS, GMRESIterativeSolvers, GMRESKrylovKit, KrylovLS, KrylovLSInplace
     export DefaultEig, EigArpack, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
@@ -162,7 +168,7 @@ module BifurcationKit
     export HopfPoint, HopfLinearSolverMinAug
 
     # normal form
-    export get_normal_form, hopf_normal_form, predictor
+    export get_normal_form, hopf_normal_form, predictor, normal_form
 
     # automatic bifurcation diagram
     export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP

@@ -23,7 +23,7 @@ module PlotsExt
                            BK_NoPlot, BK_Plots,
                            plotAllDCBranch,
                            plot_DCont_branch,
-                           SolPeriodicOrbit,
+                           BVPSolution,
                            hasbranch,
                            TwoParamCont
 

@@ -228,3 +228,11 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     end
     return node
 end
+
+function bifurcationdiagram!(prob::AbstractBifurcationProblem,
+                              node::BifDiagNode,
+                              maxlevel::Int,
+                              options::ContinuationPar;
+                              kwargs...)
+    bifurcationdiagram!(prob, node, maxlevel, (args...) -> options; kwargs...)
+end
