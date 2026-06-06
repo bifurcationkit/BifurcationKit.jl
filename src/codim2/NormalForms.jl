@@ -648,6 +648,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
 
     # get the MA problem
     𝐌𝐚 = get_formulation(_prob)
+    prob_ma = 𝐌𝐚
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
@@ -711,205 +712,984 @@ function bautin_normal_form(_prob::HopfMAProblem,
     ζ★ ./= LA.dot(ζ, ζ★)
     @assert LA.dot(ζ, ζ★) ≈ 1
 
-    # second order differential, to be in agreement with Kuznetsov et al.
-    B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
-    C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
-
     q0 = ζ
     p0 = ζ★
     cq0 = conj(q0)
 
-    # normal form computation based on 
-    # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
+    # Define the list of property names you need as Symbols
+    required_fields = [
+        :R20, :R30, :R40, :R50, :R60, :R70,
+        :R01, :R11, :R21, :R31, :R41, :R51,
+        :R02, :R12, :R22, :R32, 
+        :R03, :R13, :R33
+    ]
 
-    # formula (7.2) in REF1
-    H20, cv, it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
-    ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
+    # Check if jet exists AND has all the required fields
+    # The `&&` is "short-circuiting", so if `jet` is nothing, the second part won't even run.
+    if prob_vf.VF.jet !== nothing && all(f -> hasproperty(prob_vf.VF.jet, f), required_fields)
+        @info "━"^53*"\n──▶ Bautin Normal form higher order computation"
+        #Setting all necessary derivatives for the higher order computation
 
-    # formula (7.3) in REF1
-    H11, cv, it = ls(L, -B(q0, cq0))
-    ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
+        B(v1,v2) = prob_vf.VF.jet.R20(x0,parbif,v1,v2)
+        C(v1, v2, v3) = prob_vf.VF.jet.R30(x0,parbif, v1, v2, v3)
+        D40(v1, v2, v3, v4) = prob_vf.VF.jet.R40(x0,parbif, v1, v2, v3, v4)   #UndefVarError: `D` not defined in local scope
+        D50(v1, v2, v3, v4, v5) = prob_vf.VF.jet.R50(x0,parbif, v1, v2, v3, v4, v5)  #E was already defined somewhere..
+        K(v1, v2, v3, v4, v5, v6) = prob_vf.VF.jet.R60(x0,parbif, v1, v2, v3, v4, v5, v6)
+        dL(v1, v2, v3, v4, v5, v6, v7) = prob_vf.VF.jet.R70(x0,parbif, v1, v2, v3, v4, v5, v6, v7)  #L is already used as A
 
-    # formula (7.4) in REF1
-    H30, cv, it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
-    ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
+        J₁ = prob_vf.VF.jet.R01(x0,parbif)
+        A₁(v1, p1) = prob_vf.VF.jet.R11(x0,parbif, v1, p1)
+        B₁(v1, v2, p1) = prob_vf.VF.jet.R21(x0,parbif, v1, v2, p1)
+        C₁(v1, v2, v3, p1) = prob_vf.VF.jet.R31(x0,parbif, v1, v2, v3, p1)
+        D₁(v1, v2, v3, v4, p1) = prob_vf.VF.jet.R41(x0,parbif, v1, v2, v3, v4, p1)
+        E₁(v1, v2, v3, v4, v5, p1) = prob_vf.VF.jet.R51(x0,parbif, v1, v2, v3, v4, v5, p1)
 
-    # formula (7.5) in REF1
-    h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
-    G21 = LA.dot(p0, h21)      # (7.6)
-    h21 .= G21 .* q0 .- h21 # (7.7)
+        J₂(p1, p2) = prob_vf.VF.jet.R02(x0,parbif, p1, p2)
+        A₂(v1, p1, p2) = prob_vf.VF.jet.R12(x0,parbif, v1, p1, p2)
+        B₂(v1, v2, p1, p2) = prob_vf.VF.jet.R22(x0,parbif, v1, v2, p1, p2)
+        C₂(v1, v2, v3, p1, p2) = prob_vf.VF.jet.R32(x0,parbif, v1, v2, v3, p1, p2)
 
-    # formula (7.7) in REF1
-    H21, _, cv, it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
-    ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
+        J₃(p1, p2, p3) = prob_vf.VF.jet.R03(x0,parbif, p1, p2, p3)
+        A₃(v1, p1, p2, p3) = prob_vf.VF.jet.R13(x0,parbif, v1, p1, p2, p3)
+        B₃(v1, v2, p1, p2, p3) = prob_vf.VF.jet.R32(x0,parbif, v1, v2, p1, p2, p3)
+        C₃(v1, v2, v3, p1, p2, p3) = prob_vf.VF.jet.R33(x0,parbif, v1, v2, v3, p1, p2, p3)
+        # normal form computation up to third lyapunov coefficient based on
+        # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
-    # 4-th order coefficient
-    d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ .* dx4, parbif, dx1, dx2, dx3) .-
-                                   d3F(prob_vf, x0 .- ϵ .* dx4, parbif, dx1, dx2, dx3)) ./(2ϵ)
+        # formula (7.2) in REF1
+        H2000,cv,it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H2000] Linear solver for J did not converge. it = $it"
 
-    # implement 4th order differential with finite differences
-    function D(x0, dx1, dx2, dx3, dx4)
-        dx4r = real.(dx4); dx4i = imag.(dx4);
-        # C(dx, dx4r) + i * C(dx, dx4i)
-        trilin_r = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4r) )
-        out1 = trilin_r(dx1, dx2, dx3)
-        trilin_i = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4i) )
-        out2 = trilin_i(dx1, dx2, dx3)
-        return out1 .+ im .* out2
-    end
+        # formula (7.3) in REF1
+        H1100,cv,it = ls(L, B(q0, cq0);a₀ = Complex(0, 0), a₁ = -1)
+        ~cv && @debug "[Bautin H1100] Linear solver for J did not converge. it = $it"
 
-    # h40 is not needed, so we compute the next formula on page 1114 in REF1
-    h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
-    h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
-    H31, cv, it = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
-    ~cv && @debug "[Bautin H31] Linear solver for J did not converge. it = $it"
+        # formula (7.4) in REF1
+        H3000,cv,it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H2000); a₀ = Complex(0, 3ω), a₁ = -1)
+        ~cv && @debug "[Bautin H3000] Linear solver for J did not converge. it = $it"
 
-    h22 = D(x0, q0, q0, cq0, cq0) .+
-        4 .* C(q0, cq0, H11) .+ C(cq0, cq0, H20) .+ C(q0, q0, conj.(H20)) .+
-        2 .* B(H11, H11) .+ 2 .* B(q0, conj.(H21)) .+ 2 .* B(cq0, H21) .+ B(conj.(H20), H20) .-
-        (2G21 + 2conj(G21)) .* H11
-    H22, cv, it = ls(L, h22)
-    ~cv && @debug "[Bautin H22] Linear solver for J did not converge. it = $it"
-    H22 .*= -1
+        # formula (7.5) in REF1
+        h2100 = C(q0, q0, cq0) .+ B(cq0, H2000) .+ 2 .* B(q0, H1100)
+        G21 = LA.dot(p0, h2100)      # (7.6)
+        h2100 .= G21 .* q0 .- h2100 # (7.7)
 
-    # 5-th order coefficient
-    # implement 5th order differential with finite differences
-    function E(dx1, dx2, dx3, dx4, dx5)
-        dx5r = real.(dx5); dx5i = imag.(dx5);
-        out1 = (D(x0 .+ ϵ .* dx5r, dx1, dx2, dx3, dx4) .-
-                D(x0 .- ϵ .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ)
-        out2 = (D(x0 .+ ϵ .* dx5i, dx1, dx2, dx3, dx4) .-
-                D(x0 .- ϵ .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ)
-        return out1 .+ im .* out2
-    end
+        c1 = G21 / 2
+        l1 = real(c1) / ω
 
-    G32 = LA.dot(p0, E(q0, q0, q0, cq0, cq0))
-    G32 += LA.dot(p0, D(x0, q0, q0, q0, conj.(H20))) +
-          3LA.dot(p0, D(x0, q0, cq0, cq0, H20)) +
-          6LA.dot(p0, D(x0, q0, q0, cq0, H11))
 
-    G32 += LA.dot(p0, C(cq0, cq0, H30)) +
-          3LA.dot(p0, C(q0, q0, conj.(H21))) +
-          6LA.dot(p0, C(q0, cq0, H21)) +
-          3LA.dot(p0, C(q0, conj.(H20), H20)) +
-          6LA.dot(p0, C(q0, H11, H11)) +
-          6LA.dot(p0, C(cq0, H20, H11))
+        # formula (7.7) in REF1
+        H2100,_,cv,it = bls(L, q0, p0, zero(𝒯), h2100, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+        ~cv && @debug "[Bautin H2100] Bordered linear solver for J did not converge. it = $it"
 
-    G32 += 2LA.dot(p0, B(cq0, H31)) +
-           3LA.dot(p0, B(q0, H22)) +
-            LA.dot(p0, B(conj(H20), H30)) +
-           3LA.dot(p0, B(conj(H21), H20)) +
-           6LA.dot(p0, B(H11, H21))
 
-    # second Lyapunov coefficient
-    l2 = real(G32) / 12
+        # h40 is not needed for the second Lyapunov coefficient l2, so we compute the next formula on page 1114 in REF1
+        h3100 = D40(q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H1100) .+ 3 .* C(q0, cq0, H2000) .+ 3 .* B(H2000, H1100)
+        h3100 .+= B(cq0, H3000) .+ 3 .* B(q0, H2100) .- (3 * G21) .* H2000
+        H3100, cv, it = ls(L, h3100; a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H3100] Linear solver for J did not converge. it = $it"
 
-    pt = Bautin(
+        h2200 = D40(q0, q0, cq0, cq0) .+
+        4 .* C(q0, cq0, H1100) .+ C(cq0, cq0, H2000) .+ C(q0, q0, conj.(H2000)) .+
+        2 .* B(H1100, H1100) .+ 2 .* B(q0, conj.(H2100)) .+ 2 .* B(cq0, H2100) .+ B(conj.(H2000), H2000) .-
+        (2G21 + 2conj(G21)) .* H1100
+        H2200, cv, it = ls(L, h2200)
+        ~cv && @debug "[Bautin H2200] Linear solver for J did not converge. it = $it"
+        H2200 .*= -1
+
+
+        G32 = LA.dot(p0, D50(q0, q0, q0, cq0, cq0))
+        G32 += (LA.dot(p0, D40(q0, q0, q0, conj.(H2000))) +
+        3*LA.dot(p0, D40(q0, cq0, cq0, H2000)) +
+        6*LA.dot(p0, D40(q0, q0, cq0, H1100)))
+
+        G32 += (LA.dot(p0, C(cq0, cq0, H3000)) +
+        3*LA.dot(p0, C(q0, q0, conj.(H2100))) +
+        6*LA.dot(p0, C(q0, cq0, H2100)) +
+        3*LA.dot(p0, C(q0, conj.(H2000), H2000)) +
+        6*LA.dot(p0, C(q0, H1100, H1100)) +
+        6*LA.dot(p0, C(cq0, H2000, H1100)))
+
+        G32 += (2*LA.dot(p0, B(cq0, H3100)) +
+        3*LA.dot(p0, B(q0, H2200)) +
+        LA.dot(p0, B(conj(H2000), H3000)) +
+        3*LA.dot(p0, B(conj(H2100), H2000)) +
+        6*LA.dot(p0, B(H1100, H2100)))
+
+        # second Lyapunov coefficient
+        c2 = G32 / 12
+        l2 = real(c2) / ω
+
+        # For the higher order computation we need the seventh order normal form coefficient, i.e. the third Lyapunov coefficient. 
+        # This was first derived in
+        # REF3:  "Bifurcation Analysis of the Watt Governor System" https://doi.org/10.48550/arXiv.math/0606230, 
+        # and rederived in 
+        # REF4: “Bifurcation Analysis of Generalized Hopf Bifurcation in Ordinary and Delay Differential Equiations", 2025 (to be published)
+        # Where a correction was made for H3300 which was missing the term D(cq0, cq0, cq0, H3000) in REF 3
+
+        # H4000: formula (33) from REF3
+        h4000 = 4*B(q0, H3000) + 3*B(H2000, H2000) + 6*C(q0, q0, H2000) + D40(q0, q0, q0, q0)
+        H4000, cv, it = ls(L, h4000; a₀ = Complex(0, 4ω), a₁ = -1)
+        ~cv && @debug "[Bautin H4000] Linear solver for J did not converge. it = $it"
+
+        #function solving the bordered matrix system defined as (4.12) from REF4 for (w,s) 
+        # ┌                      ┐┌ ┐   ┌ ┐
+        # │ (λI - L)     q0      ││w│ = │v│
+        # │   p0'        0       ││s│   │0│
+
+        AInv(v) = bls(-L, q0, p0, zero(𝒯), v, zero(𝒯); shift = λ)
+
+        # H3200: formula (40) from REF3
+        h3200 = (2*B(cq0, H3100) + 3*B(q0, H2200) + B(conj(H2000), H3000) + 6*B(H1100, H2100) + 3*B(conj(H2100), H2000)
+                + 6*C(cq0, H2000, H1100) + 6*C(q0, cq0, H2100) + C(cq0, cq0, H3000) + 3*C(q0, q0, conj(H2100))
+                + 3*C(q0, H2000, conj(H2000)) + 6*C(q0, H1100, H1100) + 6*D40(q0, q0, cq0, H1100) + 3*D40(q0, cq0, cq0, H2000)
+                + D40(q0, q0, q0, conj(H2000)) + D50(q0, q0, q0, cq0, cq0)
+                )
+        h3200 = h3200 - 6 * G21 * H2100 - 3 * conj(G21) * H2100 - G32 * q0
+        H3200,_,cv,it = AInv(h3200)
+        ~cv && @debug "[Bautin H3200] Bordered linear solver for J did not converge. it = $it"
+
+        # H4100: formula (41) from REF3
+        h4100 = (4*B(q0, H3100) + B(cq0, H4000) + 4*B(H1100, H3000) + 6*B(H2000, H2100) + 6*C(q0, q0, H2100)
+                + 4*C(q0, cq0, H3000) + 12*C(q0, H1100, H2000) + 3*C(cq0, H2000, H2000) + 4*D40(q0, q0, q0, H1100)
+                + 6*D40(q0, q0, cq0, H2000) + D50(q0, q0, q0, q0, cq0) 
+                - 6 * G21 * H3000
+                )
+        H4100, cv, it = ls(L, h4100; a₀ = Complex(0, 3ω), a₁ = -1)
+        ~cv && @debug "[Bautin H4100] Linear solver for J did not converge. it = $it"
+
+
+        # H4200: formula (42) from REF3
+        h4200 = (4*B(q0, H3200) + 2*B(cq0, H4100) + B(conj(H2000), H4000) + 8*B(H1100, H3100) + 4*B(conj(H2100), H3000)
+                + 6*B(H2000, H2200) + 6*B(H2100, H2100) + 6*C(q0, q0, H2200) + 8*C(q0, cq0, H3100) + 4*C(q0, conj(H2000), H3000)
+                + 24*C(q0, H1100, H2100) + 12*C(q0, conj(H2100), H2000) + C(cq0, cq0, H4000) + 8*C(cq0, H1100, H3000)
+                + 12*C(cq0, H2000, H2100) + 3*C(conj(H2000), H2000, H2000) + 12*C(H1100, H1100, H2000) + 4*D40(q0, q0, q0, conj(H2100))
+                + 12*D40(q0, q0, cq0, H2100) + 6*D40(q0, q0, conj(H2000), H2000) + 12*D40(q0, q0, H1100, H1100) + 4*D40(q0, cq0, cq0, H3000)
+                + 24*D40(q0, cq0, H1100, H2000) + 3*D40(cq0, cq0, H2000, H2000) + D50(q0, q0, q0, q0, conj(H2000))
+                + 8*D50(q0, q0, q0, cq0, H1100) + 6*D50(q0, q0, cq0, cq0, H2000) + K(q0, q0, q0, q0, cq0, cq0)
+                - 
+                4 * ( G32 * H2000 + (3 * G21 + conj(G21)) * H3100))
+        H4200, cv, it = ls(L, h4200; a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H4200] Linear solver for J did not converge. it = $it"
+
+        # H3300: corrected version of formula (43) from REF3, i.e. including the term D(cq0, cq0, cq0, H3000)
+        h3300 = (3*B(q0, conj(H3200)) + 3*B(cq0, H3200) + 3*B(conj(H2000), H3100) + B(conj(H3000), H3000)
+                + 9*B(H1100, H2200) + 9*B(H2100, conj(H2100)) + 3*B(conj(H3100), H2000) + 3*C(q0, q0, conj(H3100))
+                + 9*C(q0, cq0, H2200) + 9*C(q0, conj(H2000), H2100) + 3*C(q0, conj(H3000), H2000) + 18*C(q0, H1100, conj(H2100))
+                + 3*C(cq0, cq0, H3100) + 3*C(cq0, conj(H2000), H3000) + 18*C(cq0, H1100, H2100)
+                + 9*C(cq0, conj(H2100), H2000) + 9*C(conj(H2000), H1100, H2000) + 6*C(H1100, H1100, H1100)
+                + D40(q0, q0, q0, conj(H3000)) + 9*D40(q0, q0, cq0, conj(H2100)) + 9*D40(q0, q0, conj(H2000), H1100)
+                + 9*D40(q0, cq0, cq0, H2100) + 9*D40(q0, cq0, conj(H2000), H2000) + 18*D40(q0, cq0, H1100, H1100)
+                + D40(cq0, cq0, cq0, H3000) + 9*D40(cq0, cq0, H1100, H2000) + 3*D50(q0, q0, q0, cq0, conj(H2000))
+                + 9*D50(q0, q0, cq0, cq0, H1100) + 3*D50(q0, cq0, cq0, cq0, H2000)
+                + K(q0, q0, q0, cq0, cq0, cq0)
+                - 6* real(G32) * H1100)
+        H3300, cv, it = ls(L, h3300; a₀ = Complex(0, 0), a₁ = -1)
+        ~cv && @debug "[Bautin H4200] Linear solver for J did not converge. it = $it"
+
+
+        # l3: formula (47) from REF3
+        h4300 = (4*B(q0, H3300) + 3*B(cq0, H4200) + 3*B(conj(H2000), H4100) + B(conj(H3000), H4000) + 12*B(H1100, H3200)
+                + 12*B(conj(H2100), H3100) + 4*B(conj(H3100), H3000) + 6*B(H2000, conj(H3200)) + 18*B(H2100, H2200) + 6*C(q0, q0, conj(H3200))
+                + 12*C(q0, cq0, H3200) + 12*C(q0, conj(H2000), H3100) + 4*C(q0, conj(H3000), H3000) + 36*C(q0, H1100, H2200)
+                + 36*C(q0, conj(H2100), H2100) + 12*C(q0, conj(H3100), H2000) + 3*C(cq0, cq0, H4100) + 3*C(cq0, conj(H2000), H4000)
+                + 24*C(cq0, H1100, H3100) + 12*C(cq0, conj(H2100), H3000) + 18*C(cq0, H2000, H2200) + 18*C(cq0, H2100, H2100)
+                + 12*C(conj(H2000), H1100, H3000) + 18*C(conj(H2000), H2000, H2100) + 3*C(conj(H3000), H2000, H2000) + 36*C(H1100, H1100, H2100)
+                + 36*C(H1100, conj(H2100), H2000) + 4*D40(q0, q0, q0, conj(H3100)) + 18*D40(q0, q0, cq0, H2200) + 18*D40(q0, q0, conj(H2000), H2100)
+                + 6*D40(q0, q0, conj(H3000), H2000) + 36*D40(q0, q0, H1100, conj(H2100)) + 12*D40(q0, cq0, cq0, H3100)
+                + 12*D40(q0, cq0, conj(H2000), H3000) + 72*D40(q0, cq0, H1100, H2100) + 36*D40(q0, cq0, conj(H2100), H2000)
+                + 36*D40(q0, conj(H2000), H1100, H2000) + 24*D40(q0, H1100, H1100, H1100) + D40(cq0, cq0, cq0, H4000)
+                + 12*D40(cq0, cq0, H1100, H3000) + 18*D40(cq0, cq0, H2000, H2100) + 9*D40(cq0, conj(H2000), H2000, H2000)
+                + 36*D40(cq0, H1100, H1100, H2000) + D50(q0, q0, q0, q0, conj(H3000)) + 12*D50(q0, q0, q0, cq0, conj(H2100))
+                + 12*D50(q0, q0, q0, conj(H2000), H1100) + 18*D50(q0, q0, cq0, cq0, H2100) + 18*D50(q0, q0, cq0, conj(H2000), H2000)
+                + 36*D50(q0, q0, cq0, H1100, H1100) + 4*D50(q0, cq0, cq0, cq0, H3000) + 36*D50(q0, cq0, cq0, H1100, H2000)
+                + 3*D50(cq0, cq0, cq0, H2000, H2000) + 3*K(q0, q0, q0, q0, cq0, conj(H2000)) + 12*K(q0, q0, q0, cq0, cq0, H1100)
+                + 6*K(q0, q0, cq0, cq0, cq0, H2000) + dL(q0, q0, q0, q0, cq0, cq0, cq0)
+                )
+        G43 = LA.dot(p0, h4300)
+        c3 = G43 / 144
+        l3 = real(c3) / ω
+
+        #Now we compute some additional center manifold coefficients that are needed
+        #for the higher order orbit approximation following REF4. 
+        #To keep the notation from REF4 we define
+        c₁ = (1/2) * G21
+        c₂ = (1/12) * G32
+        c₃ = (1/144) * G43
+        #The equations are presented in the same order as in the supplementary material SM2.3 of REF4
+
+        #H5000
+        h5000 = (5*B(q0, H4000) + 10*B(H2000, H3000) + 10*C(q0, q0, H3000) 
+                + 15*C(q0, H2000, H2000) + 10*D40(q0, q0, q0, H2000) + D50(q0, q0, q0, q0, q0)
+                )
+        H5000, cv, it = ls(L, h5000; a₀ = Complex(0, 5ω), a₁ = -1)
+        ~cv && @debug "[Bautin H5000] Linear solver for J did not converge. it = $it"
+
+        #H6000
+        h6000 = (6*B(q0, H5000) + 15*B(H2000, H4000) + 10*B(H3000, H3000) 
+                + 15*C(q0, q0, H4000) + 60*C(q0, H2000, H3000) + 15*C(H2000, H2000, H2000) 
+                + 20*D40(q0, q0, q0, H3000) + 45*D40(q0, q0, H2000, H2000) + 15*D50(q0, q0, q0, q0, H2000) 
+                + K(q0, q0, q0, q0, q0, q0)
+                )
+        H6000, cv, it = ls(L, h6000; a₀ = Complex(0, 6ω), a₁ = -1)
+        ~cv && @debug "[Bautin H6000] Linear solver for J did not converge. it = $it"
+
+        #H5100
+        h5100 = (5*B(q0, H4100) + B(cq0, H5000) + 5*B(H1100, H4000) 
+                + 10*B(H2000, H3100) + 10*B(H2100, H3000) + 10*C(q0, q0, H3100) + 5*C(q0, cq0, H4000) 
+                + 20*C(q0, H1100, H3000) + 30*C(q0, H2000, H2100) + 10*C(cq0, H2000, H3000)
+                + 15*C(H1100, H2000, H2000) + 10*D40(q0, q0, q0, H2100) + 10*D40(q0, q0, cq0, H3000) 
+                + 30*D40(q0, q0, H1100, H2000) + 15*D40(q0, cq0, H2000, H2000) + 5*D50(q0, q0, q0, q0, H1100) 
+                + 10*D50(q0, q0, q0, cq0, H2000) + K(q0, q0, q0, q0, q0, cq0)
+                -
+                20 * c₁ * H4000)
+        H5100, cv, it = ls(L, h5100; a₀ = Complex(0, 4ω), a₁ = -1)
+        ~cv && @debug "[Bautin H5100] Linear solver for J did not converge. it = $it"
+
+        #H7000
+        h7000 = (7*B(q0, H6000) + 21*B(H2000, H5000) + 35*B(H3000, H4000) 
+                + 21*C(q0, q0, H5000) + 105*C(q0, H2000, H4000) + 70*C(q0, H3000, H3000) 
+                + 105*C(H2000, H2000, H3000) + 35*D40(q0, q0, q0, H4000) 
+                + 210*D40(q0, q0, H2000, H3000) + 105*D40(q0, H2000, H2000, H2000) 
+                + 35*D50(q0, q0, q0, q0, H3000) + 105*D50(q0, q0, q0, H2000, H2000) 
+                + 21*K(q0, q0, q0, q0, q0, H2000) + dL(q0, q0, q0, q0, q0, q0, q0)
+                )
+        H7000, cv, it = ls(L, h7000; a₀ = Complex(0, 7ω), a₁ = -1)
+        ~cv && @debug "[Bautin H7000] Linear solver for J did not converge. it = $it"
+
+        #H6100
+        h6100 = (6*B(q0, H5100) + B(cq0, H6000) + 6*B(H1100, H5000) 
+                + 15*B(H2000, H4100) + 15*B(H2100, H4000) + 20*B(H3000, H3100) 
+                + 15*C(q0, q0, H4100) + 6*C(q0, cq0, H5000) + 30*C(q0, H1100, H4000)
+                + 60*C(q0, H2000, H3100) + 60*C(q0, H2100, H3000) + 15*C(cq0, H2000, H4000) 
+                + 10*C(cq0, H3000, H3000) + 60*C(H1100, H2000, H3000) 
+                + 45*C(H2000, H2000, H2100) + 20*D40(q0, q0, q0, H3100) + 15*D40(q0, q0, cq0, H4000) 
+                + 60*D40(q0, q0, H1100, H3000) + 90*D40(q0, q0, H2000, H2100) 
+                + 60*D40(q0, cq0, H2000, H3000) + 90*D40(q0, H1100, H2000, H2000) 
+                + 15*D40(cq0, H2000, H2000, H2000) + 15*D50(q0, q0, q0, q0, H2100) 
+                + 20*D50(q0, q0, q0, cq0, H3000) + 60*D50(q0, q0, q0, H1100, H2000) 
+                + 45*D50(q0, q0, cq0, H2000, H2000) + 6*K(q0, q0, q0, q0, q0, H1100) 
+                + 15*K(q0, q0, q0, q0, cq0, H2000) + dL(q0, q0, q0, q0, q0, q0, cq0)
+                -
+                30 * c₁ * H5000)
+        H6100, cv, it = ls(L, h6100; a₀ = Complex(0, 5ω), a₁ = -1)
+        ~cv && @debug "[Bautin H6100] Linear solver for J did not converge. it = $it"
+
+        #H5200
+        h5200 = (5*B(q0, H4200) + 2*B(cq0, H5100) 
+                + B(cq0, H5000) + 10*B(H1100, H4100) + 5*B(cq0, H4000) 
+                + 10*B(H2000, H3200) + 20*B(H2100, H3100) + 10*B(H2200, H3000) 
+                + 10*C(q0, q0, H3200) + 10*C(q0, cq0, H4100) + 5*C(q0, cq0, H4000) 
+                + 40*C(q0, H1100, H3100) + 20*C(q0, cq0, H3000) 
+                + 30*C(q0, H2000, H2200) + 30*C(q0, H2100, H2100) + C(cq0, cq0, H5000) 
+                + 10*C(cq0, H1100, H4000) + 20*C(cq0, H2000, H3100) + 20*C(cq0, H2100, H3000) 
+                + 10*C(cq0, H2000, H3000) + 20*C(H1100, H1100, H3000) 
+                + 60*C(H1100, H2000, H2100) + 15*C(cq0, H2100, H2000) 
+                + 10*D40(q0, q0, q0, H2200) + 20*D40(q0, q0, cq0, H3100) + 10*D40(q0, q0, cq0, H3000) 
+                + 60*D40(q0, q0, H1100, H2100) + 30*D40(q0, q0, cq0, H2000) 
+                + 5*D40(q0, cq0, cq0, H4000) + 40*D40(q0, cq0, H1100, H3000) + 60*D40(q0, cq0, H2000, H2100) 
+                + 15*D40(q0, cq0, H2000, H2000) + 60*D40(q0, H1100, H1100, H2000) 
+                + 10*D40(cq0, cq0, H2000, H3000) + 30*D40(cq0, H1100, H2000, H2000) 
+                + 5*D50(q0, q0, q0, q0, cq0) + 20*D50(q0, q0, q0, cq0, H2100) + 10*D50(q0, q0, q0, cq0, H2000) 
+                + 20*D50(q0, q0, q0, H1100, H1100) + 10*D50(q0, q0, cq0, cq0, H3000) 
+                + 60*D50(q0, q0, cq0, H1100, H2000) + 15*D50(q0, cq0, cq0, H2000, H2000) 
+                + K(q0, q0, q0, q0, q0, cq0) + 10*K(q0, q0, q0, q0, cq0, H1100) + 10*K(q0, q0, q0, cq0, cq0, H2000) 
+                + dL(q0, q0, q0, q0, q0, cq0, cq0)
+                -
+                (120 * c₂ * H3000 + (40 * c₁ + 10 * conj(c₁)) * H4100))
+        H5200, cv, it = ls(L, h5200; a₀ = Complex(0, 3ω), a₁ = -1)
+        ~cv && @debug "[Bautin H5200] Linear solver for J did not converge. it = $it"
+
+        #H4300
+        h4300 = h4300 - (144 * c₃ * q0 + 72 * (2 * c₂ +  conj(c₂)) * H2100 + 12 * im * imag(c₁) * H3200 )
+        H4300,_,cv,it = AInv(h4300)
+        ~cv && @debug "[Bautin H4300] Bordered linear solver for J did not converge. it = $it"
+
+
+        ##########################
+        pt = Bautin(
         x0, parbif,
         (getlens(𝐌𝐚), lens),
         ζ, ζ★,
-        (;ω, G21, G32, l2),
+        (;ω, G21, G32, l2, l3),
         :none
-    )
+        )
 
-    # case of simplified normal form
-    if detailed == false
+        # case of simplified normal form
+        if detailed == false
         return pt
+        end
+
+        ###########################
+        # computation of the higher order unfolding are taken from
+        # REF4: “Bifurcation Analysis of Generalized Hopf Bifurcation in Ordinary and Delay Differential Equiations", 2025 (to be published)
+        #probeer first ∘ AInv
+        # this part is for branching to Fold of periodic orbits
+        VF = prob_ma.prob_vf
+
+        Δ(λ) = λ * LA.I - L
+        # define border inverse
+        function Aᴵᴺⱽ(lhs)
+            h = [Δ(λ) q0; [p0' 0]] \ [lhs; 0]
+            h[1:end-1]
+        end
+
+        e₁ = [1.0; 0.0]
+        e₂ = [0.0; 1.0]
+
+        #formula (4.27) in REF4
+        Γ₁(u) = A₁(u, e₁) + B(u, Δ(0) \ (J₁ * e₁))
+        Γ₂(u) = A₁(u, e₂) + B(u, Δ(0) \ (J₁ * e₂))
+
+        #formulas (4.35 - 4.36) in REF4
+        Λ₁(u, v, w) = Γ₁(u) + 2B(v, Aᴵᴺⱽ(Γ₁(w))) + B₁(v, w, e₁) + C(v, w, Δ(0) \ (J₁ * e₁))
+        Λ₂(u, v, w) = Γ₂(u) + 2B(v, Aᴵᴺⱽ(Γ₂(w))) + B₁(v, w, e₂) + C(v, w, Δ(0) \ (J₁ * e₂))
+        Π₁(u, v, w) = Γ₁(u) + 2real(B(v, Aᴵᴺⱽ(Γ₁(w)))) + B₁(v, w, e₁) + C(v, w, Δ(0) \ (J₁ * e₁))
+        Π₂(u, v, w) = Γ₂(u) + 2real(B(v, Aᴵᴺⱽ(Γ₂(w)))) + B₁(v, w, e₂) + C(v, w, Δ(0) \ (J₁ * e₂))
+
+        #formula (4.39) for calculating K10 and K01
+        P11 = real(p0' * Γ₁(q0))
+        P12 = real(p0' * Γ₂(q0))
+        P21 = 0.5 * real(p0' * (Γ₁(H2100) + 2B(q0, Δ(0) \ Π₁(H1100, cq0, q0)) + B(cq0, Δ(2λ) \ Λ₁(H2000, q0, q0))
+                                + B(H2000, conj(Aᴵᴺⱽ(Γ₁(q0)))) + 2B(H1100, Aᴵᴺⱽ(Γ₁(q0))) + 2B₁(q0, H1100, e₁) + B₁(cq0, H2000, e₁)
+                                + C(q0, q0, conj(Aᴵᴺⱽ(Γ₁(q0)))) + 2C(q0, cq0, Aᴵᴺⱽ(Γ₁(q0))) + 2C(q0, H1100, Δ(0) \ (J₁ * e₁))
+                                + C(cq0, H2000, Δ(0) \ (J₁ * e₁)) + C₁(q0, q0, cq0, e₁) + D40(q0, q0, cq0, Δ(0) \ (J₁ * e₁))
+                                -
+                                2 * im * imag(p0' * Γ₁(q0)) * B(cq0, Δ(2λ) \ H2000)))
+        P22 = 0.5 * real(p0' * (Γ₂(H2100) + 2B(q0, Δ(0) \ Π₂(H1100, cq0, q0)) + B(cq0, Δ(2λ) \ Λ₂(H2000, q0, q0))
+                                + B(H2000, conj(Aᴵᴺⱽ(Γ₂(q0)))) + 2B(H1100, Aᴵᴺⱽ(Γ₂(q0))) + 2B₁(q0, H1100, e₂) + B₁(cq0, H2000, e₂)
+                                + C(q0, q0, conj(Aᴵᴺⱽ(Γ₂(q0)))) + 2C(q0, cq0, Aᴵᴺⱽ(Γ₂(q0))) + 2C(q0, H1100, Δ(0) \ (J₁ * e₂))
+                                + C(cq0, H2000, Δ(0) \ (J₁ * e₂)) + C₁(q0, q0, cq0, e₂) + D40(q0, q0, cq0, Δ(0) \ (J₁ * e₂))
+                                -
+                                2 * im * imag(p0' * Γ₂(q0)) * B(cq0, Δ(2λ) \ H2000)))
+        P = [P11 P12; P21 P22]
+
+        Q210 = 0.5 * real(p0' * (4B(q0, Δ(0) \ H1100) + 2B(cq0, Δ(2λ) \ H2000)))
+        Q10 = [1; Q210]
+        Q01 = [0; 1]
+        K10, = ls(P, Q10)
+        K01, = ls(P, Q01)
+
+        # formula (4.23) in REF4
+        H0010, = ls(L, (J₁ * K10); a₀ = Complex(0, 0), a₁ = -1)
+        H0001, = ls(L, (J₁ * K01); a₀ = Complex(0, 0), a₁ = -1)
+
+        b110 = imag(LA.dot(p0, A₁(q0, K10) + B(q0, H0010)))
+        b101 = imag(LA.dot(p0, A₁(q0, K01) + B(q0, H0001)))
+
+        # formula (4.27) in REF4
+        H1010, = AInv(A₁(q0, K10) + B(q0, H0010) - (1 + im * b110) * q0)
+        H1001, = AInv(A₁(q0, K01) + B(q0, H0001) - im * b101 * q0 )
+
+        # formulas (4.34) in REF5
+        h2010 = A₁(H2000, K10) + 2B(q0, H1010) + B(H2000, H0010) + B₁(q0, q0, K10) + C(q0, q0, H0010) - 2 * (1 + im * b110) * H2000
+        H2010, cv, it = ls(L, h2010; a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H2010] Linear solver for J did not converge. it = $it"
+
+        h2001 = (A₁(H2000, K01) + 2B(q0, H1001) + B(H2000, H0001) + B₁(q0, q0, K01) + C(q0, q0, H0001) - 2 * (im * b101) * H2000)
+        H2001, cv, it = ls(L, h2001; a₀ = Complex(0, 2ω), a₁ = -1 )
+        ~cv && @debug "[Bautin H2001] Linear solver for J did not converge. it = $it"
+
+        # formulas (4.35) in REF4
+        h1110 = (A₁(H1100, K10) + 2real(B(cq0, H1010)) + B(H1100, H0010) + B₁(q0, cq0, K10) + C(q0, cq0, H0010) - 2 * H1100)
+        H1110, cv, it = ls(L, h1110; a₀ = Complex(0, 0), a₁ = -1)
+        ~cv && @debug "[Bautin H1110] Linear solver for J did not converge. it = $it"
+
+        h1101 = (A₁(H1100, K01) + 2real(B(cq0, H1001)) + B(H1100, H0001) + B₁(q0, cq0, K01) + C(q0, cq0, H0001))
+        H1101, cv, it = ls(L, h1101; a₀ = Complex(0, 0), a₁ = -1)
+        ~cv && @debug "[Bautin H1101] Linear solver for J did not converge. it = $it"
+
+
+        # formulas (4.39) in REF4
+        r2110 = (A₁(H2100, K10) + 2B(q0, H1110) + B(cq0, H2010) + B(H0010, H2100) + B(conj(H1010), H2000)
+                + 2B(H1010, H1100) + 2B₁(q0, H1100, K10) + B₁(cq0, H2000, K10) + C(q0, q0, conj(H1010)) + 2C(q0, cq0, H1010)
+                + 2C(q0, H0010, H1100) + C(cq0, H0010, H2000) + C₁(q0, q0, cq0, K10) + D40(q0, q0, cq0, H0010))
+
+        r2101 = (A₁(H2100, K01) + 2B(q0, H1101) + B(cq0, H2001) + B(H0001, H2100) + B(conj(H1001), H2000)
+                + 2B(H1001, H1100) + 2B₁(q0, H1100, K01) + B₁(cq0, H2000, K01) + C(q0, q0, conj(H1001)) + 2C(q0, cq0, H1001)
+                + 2C(q0, H0001, H1100) + C(cq0, H0001, H2000) + C₁(q0, q0, cq0, K01) + D40(q0, q0, cq0, H0001))
+
+
+        b210 = imag(LA.dot(p0, r2110))/2
+        b201 = imag(LA.dot(p0, r2101))/2
+
+        #H2110 
+        h2110 = r2110 - (2 * im * b210 * q0 + (3 + im * b110) * H2100 + 2 * c₁ * H1010)
+        H2110, = AInv(h2110)
+
+        #H2101
+        h2101 = r2101 - (2 * (1 + im * b201) * q0 + im * b101 * H2100 + 2 * c₁ * H1001)
+        H2101, = AInv(h2101)
+
+        #H3010 
+        h3010 = (A₁(H3000, K10) + 3B(q0, H2010) + B(H0010, H3000) + 3B(H1010, H2000) + 3B₁(q0, H2000, K10) + 3C(q0, q0, H1010)
+        + 3C(q0, H0010, H2000) + C₁(q0, q0, q0, K10) + D40(q0, q0, q0, H0010) - 3 * (1 + im * b110) * H3000)
+        H3010, = ls(L, h3010; a₀ = Complex(0, 3ω), a₁ = -1)
+
+        #H3001 
+        h3001 = (A₁(H3000, K01) + 3B(q0, H2001) + B(H0001, H3000) + 3B(H1001, H2000) + 3B₁(q0, H2000, K01) + 3C(q0, q0, H1001)
+        + 3C(q0, H0001, H2000) + C₁(q0, q0, q0, K01) + D40(q0, q0, q0, H0001) - 3 * im * b101 * H3000)
+        H3001, = ls(L, h3001; a₀ = Complex(0, 3ω), a₁ = -1)
+
+        #H4001
+        h4001 = (A₁(H4000, K01) + 4B(q0, H3001) + B(H0001, H4000) 
+                + 4B(H1001, H3000) + 6B(H2000, H2001) + 4B₁(q0, H3000, K01) 
+                + 3B₁(H2000, H2000, K01) + 6C(q0, q0, H2001) + 4C(q0, H0001, H3000) 
+                + 12C(q0, H1001, H2000) + 3C(H0001, H2000, H2000) 
+                + 6C₁(q0, q0, H2000, K01) + 4D40(q0, q0, q0, H1001) + 6D40(q0, q0, H0001, H2000) 
+                + D₁(q0, q0, q0, q0, K01) + D50(q0, q0, q0, q0, H0001)
+                -
+                4 * im * b101 * H4000)
+        H4001, = ls(L, h4001; a₀ = Complex(0, 4ω), a₁ = -1)
+
+        #H3101
+        h3101 = (A₁(H3100, K01) + 3B(q0, H2101) + B(cq0, H3001) + B(H0001, H3100) + B(conj(H1001), H3000) + 3B(H1001, H2100)
+                + 3B(H1100, H2001) + 3B(H1101, H2000) + 3B₁(q0, H2100, K01) + B₁(cq0, H3000, K01) + 3B₁(H1100, H2000, K01)
+                + 3C(q0, q0, H1101) + 3C(q0, cq0, H2001) + 3C(q0, H0001, H2100) + 3C(q0, conj(H1001), H2000) + 6C(q0, H1001, H1100)
+                + C(cq0, H0001, H3000) + 3C(cq0, H1001, H2000) + 3C(H0001, H1100, H2000) + 3C₁(q0, q0, H1100, K01)
+                + 3C₁(q0, cq0, H2000, K01) + D40(q0, q0, q0, conj(H1001)) + 3D40(q0, q0, cq0, H1001) + 3D40(q0, q0, H0001, H1100)
+                + 3D40(q0, cq0, H0001, H2000) + D₁(q0, q0, q0, cq0, K01) + D50(q0, q0, q0, cq0, H0001)
+        - 
+        (6 * (1 + im * b201) * H2000 + 6 * c₁ * H2001 + 2 * im * b101 * H3100))
+        H3101, = ls(L, h3101; a₀ = Complex(0, 2ω), a₁ = -1)
+
+        #H2201
+        h2201 = (A₁(H2200, K01) + 2B(q0, conj(H2101)) + 2B(cq0, H2101) + B(H0001, H2200)
+                + 2B(conj(H1001), H2100) + B(conj(H2000), H2001) + B(conj(H2001), H2000)
+                + 2B(H1001, conj(H2100)) + 4B(H1100, H1101) + 2B₁(q0, conj(H2100), K01)
+                + B₁(conj(H2000), H2000, K01) + 2B₁(H1100, H1100, K01) + 2B₁(cq0, H2100, K01)
+                + C(q0, q0, conj(H2001)) + 4C(q0, cq0, H1101) + 2C(q0, H0001, conj(H2100))
+                + 4C(q0, conj(H1001), H1100) + 2C(q0, conj(H2000), H1001) + C(cq0, cq0, H2001)
+                + 2C(cq0, H0001, H2100) + 2C(cq0, conj(H1001), H2000) + 4C(cq0, H1001, H1100)
+                + C(H0001, conj(H2000), H2000) + 2C(H0001, H1100, H1100) + C₁(q0, q0, conj(H2000), K01)
+                + 4C₁(q0, cq0, H1100, K01) + C₁(cq0, cq0, H2000, K01)
+                + 2D40(q0, q0, cq0, conj(H1001)) + D40(q0, q0, H0001, conj(H2000)) + 2D40(q0, cq0, cq0, H1001)
+                + 4D40(q0, cq0, H0001, H1100) + D40(cq0, cq0, H0001, H2000) + D₁(q0, q0, cq0, cq0, K01)
+                + D50(q0, q0, cq0, cq0, H0001)
+                - 8 * H1100)
+        H2201, = ls(L, h2201; a₀ = Complex(0, 0), a₁ = -1)
+
+        #parameter dependent normal form coefficient a3201
+        r3201 = (A₁(H3200, K01) + 3B(q0, H2201) + 2B(cq0, H3101) + B(H0001, H3200)
+                + 2B(conj(H1001), H3100) + B(conj(H2000), H3001) + B(conj(H2001), H3000)
+                + 3B(H1001, H2200) + 6B(H1100, H2101) + 6B(H1101, H2100)
+                + 3B(conj(H2100), H2001) + 3B(conj(H2101), H2000) + 3B₁(q0, H2200, K01)
+                + 2B₁(cq0, H3100, K01) + B₁(conj(H2000), H3000, K01) + 6B₁(H1100, H2100, K01)
+                + 3B₁(conj(H2100), H2000, K01) + 3C(q0, q0, conj(H2101)) + 6C(q0, cq0, H2101)
+                + 3C(q0, H0001, H2200) + 6C(q0, conj(H1001), H2100) + 3C(q0, conj(H2000), H2001)
+                + 3C(q0, conj(H2001), H2000) + 6C(q0, H1001, conj(H2100)) + 12C(q0, H1100, H1101)
+                + C(cq0, cq0, H3001) + 2C(cq0, H0001, H3100) + 2C(cq0, conj(H1001), H3000)
+                + 6C(cq0, H1001, H2100) + 6C(cq0, H1100, H2001) + 6C(cq0, H1101, H2000)
+                + C(H0001, conj(H2000), H3000) + 6C(H0001, H1100, H2100) + 3C(H0001, conj(H2100), H2000)
+                + 6C(conj(H1001), H1100, H2000) + 3C(conj(H2000), H1001, H2000)
+                + 6C(H1001, H1100, H1100) + 3C₁(q0, q0, conj(H2100), K01) + 6C₁(q0, cq0, H2100, K01)
+                + 3C₁(q0, conj(H2000), H2000, K01) + 6C₁(q0, H1100, H1100, K01) + C₁(cq0, cq0, H3000, K01)
+                + 6C₁(cq0, H1100, H2000, K01) + D40(q0, q0, q0, conj(H2001)) + 6D40(q0, q0, cq0, H1101)
+                + 3D40(q0, q0, H0001, conj(H2100)) + 6D40(q0, q0, conj(H1001), H1100) + 3D40(q0, q0, conj(H2000), H1001)
+                + 3D40(q0, cq0, cq0, H2001) + 6D40(q0, cq0, H0001, H2100) + 6D40(q0, cq0, conj(H1001), H2000)
+                + 12D40(q0, cq0, H1001, H1100) + 3D40(q0, H0001, conj(H2000), H2000)
+                + 6D40(q0, H0001, H1100, H1100) + D40(cq0, cq0, H0001, H3000) + 3D40(cq0, cq0, H1001, H2000)
+                + 6D40(cq0, H0001, H1100, H2000) + D₁(q0, q0, q0, conj(H2000), K01) + 6D₁(q0, q0, cq0, H1100, K01)
+                + 3D₁(q0, cq0, cq0, H2000, K01) + 2D50(q0, q0, q0, cq0, conj(H1001)) + D50(q0, q0, q0, H0001, conj(H2000))
+                + 3D50(q0, q0, cq0, cq0, H1001) + 6D50(q0, q0, cq0, H0001, H1100) + 3D50(q0, cq0, cq0, H0001, H2000)
+                + E₁(q0, q0, q0, cq0, cq0, K01) + K(q0, q0, q0, cq0, cq0, H0001))
+
+        g3201 = (1//12) * LA.dot(p0, r3201)
+        a3201 = real(g3201)
+
+        #H3201
+        h3201 = (r3201 - (12 * g3201 * q0 + 12 * c₂ * H1001 + (18 + 6 * im * b201) * H2100 
+        + 6 * im * imag(c₁) * H2101 + im * b101 * H3200))
+        H3201, = AInv(h3201)
+
+        #H5001
+        h5001 = (A₁(H5000, K01) + 5B(q0, H4001) + B(H0001, H5000)
+                + 5B(H1001, H4000) + 10B(H2000, H3001) + 10B(H2001, H3000)
+                + 5B₁(q0, H4000, K01) + 10B₁(H2000, H3000, K01) + 10C(q0, q0, H3001)
+                + 5C(q0, H0001, H4000) + 20C(q0, H1001, H3000) + 30C(q0, H2000, H2001)
+                + 10C(H0001, H2000, H3000) + 15C(H1001, H2000, H2000)
+                + 10C₁(q0, q0, H3000, K01) + 15C₁(q0, H2000, H2000, K01)
+                + 10D40(q0, q0, q0, H2001) + 10D40(q0, q0, H0001, H3000) + 30D40(q0, q0, H1001, H2000)
+                + 15D40(q0, H0001, H2000, H2000) + 10D₁(q0, q0, q0, H2000, K01)
+                + 5D50(q0, q0, q0, q0, H1001) + 10D50(q0, q0, q0, H0001, H2000)
+                + E₁(q0, q0, q0, q0, q0, K01) + K(q0, q0, q0, q0, q0, H0001)
+                -
+                5 * im * b101 * H5000)
+        H5001, = ls(L, h5001; a₀ = Complex(0, 5ω), a₁ = -1)
+
+        #H4101
+        h4101 = (A₁(H4100, K01) + 4B(q0, H3101) + B(cq0, H4001)
+                + B(H0001, H4100) + B(cq0, H4000) + 4B(H1001, H3100)
+                + 4B(H1100, H3001) + 4B(H1101, H3000) + 6B(H2000, H2101)
+                + 6B(H2001, H2100) + 4B₁(q0, H3100, K01) + B₁(cq0, H4000, K01)
+                + 4B₁(H1100, H3000, K01) + 6B₁(H2000, H2100, K01) + 6C(q0, q0, H2101)
+                + 4C(q0, cq0, H3001) + 4C(q0, H0001, H3100) + 4C(q0, cq0, H3000)
+                + 12C(q0, H1001, H2100) + 12C(q0, H1100, H2001) + 12C(q0, H1101, H2000)
+                + C(cq0, H0001, H4000) + 4C(cq0, H1001, H3000) + 6C(cq0, H2000, H2001)
+                + 4C(H0001, H1100, H3000) + 6C(H0001, H2000, H2100)
+                + 3C(cq0, H1001, H2000) + 12C(H1001, H1100, H2000)
+                + 6C₁(q0, q0, H2100, K01) + 4C₁(q0, cq0, H3000, K01)
+                + 12C₁(q0, H1100, H2000, K01) + 3C₁(cq0, H2000, H2000, K01)
+                + 4D40(q0, q0, q0, H1101) + 6D40(q0, q0, cq0, H2001) + 6D40(q0, q0, H0001, H2100)
+                + 6D40(q0, q0, cq0, H2000) + 12D40(q0, q0, H1001, H1100)
+                + 4D40(q0, cq0, H0001, H3000) + 12D40(q0, cq0, H1001, H2000)
+                + 12D40(q0, H0001, H1100, H2000) + 3D40(cq0, H0001, H2000, H2000)
+                + 4D₁(q0, q0, q0, H1100, K01) + 6D₁(q0, q0, cq0, H2000, K01)
+                + D50(q0, q0, q0, q0, cq0) + 4D50(q0, q0, q0, cq0, H1001) + 4D50(q0, q0, q0, H0001, H1100)
+                + 6D50(q0, q0, cq0, H0001, H2000) + E₁(q0, q0, q0, q0, cq0, K01) 
+                + K(q0, q0, q0, q0, cq0, H0001)
+                -
+                (12 * (1 + im * b201) * H3000 + 12 * c₁ * H3001 + 3 * im * b101 * H4100))
+        H4101, = ls(L, h4101; a₀ = Complex(0, 3ω), a₁ = -1)
+
+        #K02
+        r0002 = (2A₁(H0001, K01) + B(H0001, H0001) + J₂(K01, K01))
+        r1002 = (2A₁(H1001, K01) + 2B(H0001, H1001) + A₂(q0, K01, K01) + 2B₁(q0, H0001, K01) + C(q0, H0001, H0001)
+                - 2 * b101 * im * H1001)
+        𝓇1002 = (B(q0, Δ(0) \ (r0002)) + r1002)
+        r2002 = (2A₁(H2001, K01) + 2B(H0001, H2001) + 2B(H1001, H1001) + A₂(H2000, K01, K01) + 4B₁(q0, H1001, K01)
+                + 2B₁(H0001, H2000, K01) + 4C(q0, H0001, H1001) + C(H0001, H0001, H2000) + B₂(q0, q0, K01, K01) + 2C₁(q0, q0, H0001, K01)
+                + D40(q0, q0, H0001, H0001)
+                - 4 * im * b101 * H2001)
+        r1102 = (2A₁(H1101, K01) + 2B(H0001, H1101) + 2B(conj(H1001), H1001) + A₂(H1100, K01, K01) + 4real(B₁(cq0, H1001, K01))
+                + 2B₁(H0001, H1100, K01) + 4real(C(cq0, H0001, H1001)) + C(H0001, H0001, H1100) + B₂(q0, cq0, K01, K01)
+                + 2C₁(q0, cq0, H0001, K01) + D40(q0, cq0, H0001, H0001))
+
+        𝓇2002 = (r2002 + 2B(q0, Aᴵᴺⱽ(𝓇1002)) + B(H2000, Δ(0) \ r0002) + C(q0, q0, Δ(0) \ r0002))
+        𝓇1102 = (r1102 + 2real(B(cq0, Aᴵᴺⱽ(𝓇1002))) + B(H1100, Δ(0) \ r0002) + C(q0, cq0, Δ(0) \ r0002))
+
+        r2102 = (2A₁(H2101, K01) + 2B(H0001, H2101) + 2B(conj(H1001), H2001) + 4B(H1001, H1101) + A₂(H2100, K01, K01)
+                + 4B₁(q0, H1101, K01) + 2B₁(cq0, H2001, K01) + 2B₁(H0001, H2100, K01) + 2B₁(conj(H1001), H2000, K01)
+                + 4B₁(H1001, H1100, K01) + 4C(q0, H0001, H1101) + 4C(q0, conj(H1001), H1001) + 2C(cq0, H0001, H2001)
+                + 2C(cq0, H1001, H1001) + C(H0001, H0001, H2100) + 2C(H0001, conj(H1001), H2000) + 4C(H0001, H1001, H1100)
+                + 2B₂(q0, H1100, K01, K01) + B₂(cq0, H2000, K01, K01) + 2C₁(q0, q0, conj(H1001), K01) + 4C₁(q0, cq0, H1001, K01)
+                + 4C₁(q0, H0001, H1100, K01) + 2C₁(cq0, H0001, H2000, K01) + 2D40(q0, q0, H0001, conj(H1001)) + 4D40(q0, cq0, H0001, H1001)
+                + 2D40(q0, H0001, H0001, H1100) + D40(cq0, H2000, H0001, H0001) + C₂(q0, q0, cq0, K01, K01) + 2D₁(q0, q0, cq0, H0001, K01)
+                + D50(q0, q0, cq0, H0001, H0001)
+                - (4 * (1 + im * b201) * H1001 + 2 * im * b101 * H2101))
+
+        Q102 = -real(p0' * 𝓇1002)
+        Q202 = 0.5 * real(p0' * (2 * im * imag(p0' * 𝓇1002) * B(cq0, Δ(2λ) \ H2000) - (2B(q0, Δ(0) \ 𝓇1102) + B(cq0, Δ(2λ) \ 𝓇2002)
+                                                                                    + B(H2100, Δ(0) \ r0002) + B(H2000, conj(Aᴵᴺⱽ(𝓇1002))) + 2B(H1100, Aᴵᴺⱽ(𝓇1002)) + C(q0, q0, conj(Aᴵᴺⱽ(𝓇1002)))
+                                                                                    + 2C(q0, cq0, Aᴵᴺⱽ(𝓇1002)) + 2C(q0, H1100, Δ(0) \ r0002) + C(cq0, H2000, Δ(0) \ r0002) + D40(q0, q0, cq0, Δ(0) \ r0002)
+                                                                                    + r2102)))
+
+        Q02 = [Q102; Q202]  
+
+        K02, = ls(P, Q02)
+
+        #H0002
+        h0002 = J₁ * K02 + r0002
+        H0002, = ls(L, h0002; a₀ = Complex(0, 0), a₁ = -1)
+
+        #b102 
+        b102 = imag(p0' * (A₁(q0, K02) + B(q0, H0002) + r1002))
+
+        #H1002 
+        h1002 = A₁(q0, K02) + B(q0, H0002) + r1002 - b102 * im * q0 
+        H1002, = AInv(h1002)
+
+        #H2002
+        h2002 = (A₁(H2000, K02) + 2B(q0, H1002) + B(H0002, H2000) + B₁(q0, q0, K02) + C(q0, q0, H0002)
+                + r2002 
+                - 2 * b102 * im * H2000)
+        H2002, = ls(L, h2002; a₀ = Complex(0, 2ω), a₁ = -1)
+
+        #H1102 
+        h1102 = (A₁(H1100, K02) + 2real(B(cq0, H1002)) + B(H0002, H1100) + B₁(q0, cq0, K02) + C(q0, cq0, H0002) + r1102)
+        H1102, = ls(L, h1102; a₀ = Complex(0, 0), a₁ = -1)
+
+        #H2102
+        R2102 = (A₁(H2100, K02) + 2B(q0, H1102) + B(cq0, H2002) + B(H0002, H2100) + B(conj(H1002), H2000) + 2B(H1002, H1100)
+                + 2B₁(q0, H1100, K02) + B₁(cq0, H2000, K02) + C(q0, q0, conj(H1002)) + 2C(q0, cq0, H1002) + 2C(q0, H0002, H1100)
+                + C(cq0, H0002, H2000) + C₁(q0, q0, cq0, K02) + D40(q0, q0, cq0, H0002) + r2102)
+
+
+        b202 = 0.5 * imag(p0' * R2102)
+
+        h2102 = R2102 - (2 * im * b202 * q0 + im * b102 * H2100 + 2 * c₁ * H1002)
+        H2102, = AInv(h2102)
+
+        #H3002
+        h3002 = (2A₁(H3001, K01) + A₁(H3000, K02) + 3B(q0, H2002)
+                + 2B(H0001, H3001) + B(H0002, H3000) + 6B(H1001, H2001)
+                + 3B(H1002, H2000) + A₂(H3000, K01, K01) + 6B₁(q0, H2001, K01)
+                + 3B₁(q0, H2000, K02) + 2B₁(H0001, H3000, K01) + 6B₁(H1001, H2000, K01)
+                + 3C(q0, q0, H1002) + 6C(q0, H0001, H2001) + 3C(q0, H0002, H2000)
+                + 6C(q0, H1001, H1001) + C(H0001, H0001, H3000)
+                + 6C(H0001, H1001, H2000) + 3B₂(q0, H2000, K01, K01) + C₁(q0, q0, q0, K02)
+                + 6C₁(q0, q0, H1001, K01) + 6C₁(q0, H0001, H2000, K01) + D40(q0, q0, q0, H0002)
+                + 6D40(q0, q0, H0001, H1001) + 3D40(q0, H0001, H0001, H2000)
+                + C₂(q0, q0, q0, K01, K01) + 2D₁(q0, q0, q0, H0001, K01)
+                + D50(q0, q0, q0, H0001, H0001)
+                - (3 * im * b102 * H3000 + 6 * im * b101 * H3001))
+        H3002, = ls(L, h3002; a₀ = Complex(0, 3ω), a₁ = -1)
+
+        #K11
+        r0011 = (A₁(H0010,K01) + A₁(H0001,K10) + B(H0001, H0010) + J₂(K01, K10))
+        r1011 = (A₁(H1010, K01) + A₁(H1001, K10) + B(H0001, H1010) 
+                + B(H0010, H1001) + A₂(q0, K01, K10) + B₁(q0, H0010, K01)
+                + B₁(q0, H0001, K10) + C(q0, H0001, H0010)
+                - ((1 + im * b110) * H1001 + im * b101 * H1010))
+        𝓇1011 = (B(q0, Δ(0) \ (r0011)) + r1011)
+        r2011 = (A₁(H2010, K01) + A₁(H2001, K10) + B(H0001, H2010) 
+                + B(H0010, H2001) + 2B(H1001, H1010) + A₂(H2000, K01, K10) 
+                + 2B₁(q0, H1010, K01) + 2B₁(q0, H1001, K10) + B₁(H0010, H2000, K01) 
+                + B₁(H0001, H2000, K10) + 2C(q0, H0001, H1010) + 2C(q0, H0010, H1001) 
+                + C(H0001, H0010, H2000) + B₂(q0, q0, K10, K01) + C₁(q0, q0, H0010, K01) 
+                + C₁(q0, q0, H0001, K10) + D40(q0, q0, H0001, H0010)
+                - (2 * (1 + im * b110) * H2001 + 2 * im * b101 * H2010))
+        r1111 = (A₁(H1110, K01) + A₁(H1101, K10) + B(H0001, H1110) 
+                + B(H0010, H1101) + 2*real(B(conj(H1001), H1010)) + A₂(H1100, K01, K10) 
+                + 2*real(B₁(cq0, H1010, K01)) + 2*real(B₁(cq0, H1001, K10)) + B₁(H0010, H1100, K01) 
+                + B₁(H0001, H1100, K10) + 2*real(C(cq0, H0001, H1010)) + 2*real(C(cq0, H0010, H1001)) 
+                + C(H0001, H0010, H1100) + B₂(q0, cq0, K01, K10) + C₁(q0, cq0, H0010, K01) 
+                + C₁(q0, cq0, H0001, K10) + D40(q0, cq0, H0001, H0010) 
+                - 2*H1101)
+
+        𝓇2011 = (r2011 + 2B(q0, Aᴵᴺⱽ(𝓇1011)) + B(H2000, Δ(0) \ r0011) + C(q0, q0, Δ(0) \ r0011))
+        𝓇1111 = (r1111 + 2real(B(cq0, Aᴵᴺⱽ(𝓇1011))) + B(H1100, Δ(0) \ r0011) + C(q0, cq0, Δ(0) \ r0011))
+
+        r2111 = (A₁(H2110, K01) + A₁(H2101, K10) + B(H0001, H2110) + B(H0010, H2101) 
+                + B(conj(H1001), H2010) + B(conj(H1010), H2001) + 2B(H1001, H1110) + 2B(H1010, H1101) 
+                + A₂(H2100, K01, K10) + 2B₁(q0, H1110, K01) + 2B₁(q0, H1101, K10) + B₁(cq0, H2010, K01) 
+                + B₁(cq0, H2001, K10) + B₁(H0010, H2100, K01) + B₁(conj(H1010), H2000, K01) + 2B₁(H1010, H1100, K01) 
+                + B₁(H0001, H2100, K10) + B₁(conj(H1001), H2000, K10) + 2B₁(H1001, H1100, K10) + 2C(q0, H0001, H1110) 
+                + 2C(q0, H0010, H1101) + 2C(q0, conj(H1001), H1010) + 2C(q0, conj(H1010), H1001) + C(cq0, H0001, H2010) 
+                + C(cq0, H0010, H2001) + 2C(cq0, H1001, H1010) + C(H0001, H0010, H2100) + C(H0001, conj(H1010), H2000) 
+                + 2C(H0001, H1010, H1100) + C(H0010, conj(H1001), H2000) + 2C(H0010, H1001, H1100) 
+                + 2B₂(q0, H1100, K01, K10) + B₂(cq0, H2000, K01, K10) + C₁(q0, q0, conj(H1010), K01) + C₁(q0, q0, conj(H1001), K10) 
+                + 2C₁(q0, cq0, H1010, K01) + 2C₁(q0, cq0, H1001, K10) + 2C₁(q0, H0010, H1100, K01) 
+                + 2C₁(q0, H0001, H1100, K10) + C₁(cq0, H0010, H2000, K01) + C₁(cq0, H0001, H2000, K10) 
+                + D40(q0, q0, H0001, conj(H1010)) + D40(q0, q0, H0010, conj(H1001)) + 2D40(q0, cq0, H0001, H1010) 
+                + 2D40(q0, cq0, H0010, H1001) + 2D40(q0, H0001, H0010, H1100) + D40(cq0, H0001, H0010, H2000) 
+                + C₂(q0, q0, cq0, K01, K10) + D₁(q0, q0, cq0, H0010, K01) + D₁(q0, q0, cq0, H0001, K10) + D50(q0, q0, cq0, H0001, H0010)
+                -(2 * im * b210 * H1001 + 2 * (1 + im * b201) * H1010 + (3 + im * b110) * H2101 + im * b101 * H2110)
+        )
+
+
+        Q111 = -real(LA.dot(p0,𝓇1011))
+        Q211 = 0.5 * real(p0' * (2 * im * imag(p0' * 𝓇1011) * B(cq0, Δ(2λ) \ H2000) - (2B(q0, Δ(0) \ 𝓇1111) + B(cq0, Δ(2λ) \ 𝓇2011)
+                                                                                    + B(H2100, Δ(0) \ r0011) + B(H2000, conj(Aᴵᴺⱽ(𝓇1011))) + 2B(H1100, Aᴵᴺⱽ(𝓇1011)) + C(q0, q0, conj(Aᴵᴺⱽ(𝓇1011)))
+                                                                                    + 2C(q0, cq0, Aᴵᴺⱽ(𝓇1011)) + 2C(q0, H1100, Δ(0) \ r0011) + C(cq0, H2000, Δ(0) \ r0011) + D40(q0, q0, cq0, Δ(0) \ r0011)
+                                                                                    + r2111)))
+        Q11 = [Q111; Q211]
+        
+        K11, = ls(P, Q11)
+
+        #H0011
+        h0011 = J₁ * K11 + r0011
+        H0011, = ls(L, h0011; a₀ = Complex(0, 0), a₁ = -1)
+
+        #b111
+        b111 = imag(p0' * (A₁(q0, K11) + B(q0, H0011) + r1011))
+
+        #H1011
+        h1011 = A₁(q0, K11) + B(q0, H0011) + r1011 - b111 * im * q0
+        H1011, = AInv(h1011)
+
+        #K03
+        r0003 = (3A₁(H0002,K01) + 3A₁(H0001,K02) + 3B(H0001, H0002) 
+                + 3J₂(K01, K02) + 3A₂(H0001,K01, K01) + 3B₁(H0001, H0001,K01) 
+                + J₃(K01, K01, K01) + C(H0001, H0001, H0001))
+
+        r1003 = (3A₁(H1002, K01) + 3A₁(H1001, K02) + 3B(H0001, H1002) 
+                + 3B(H0002, H1001) + 3A₂(q0, K01, K02) + 3A₂(H1001, K01, K01) 
+                + 3B₁(q0, H0002, K01) + 3B₁(q0, H0001, K02) + 6B₁(H0001, H1001, K01) 
+                + 3C(q0, H0001, H0002) + 3C(H0001, H0001, H1001) + A₃(q0, K01, K01, K01) 
+                + 3B₂(q0, H0001, K01, K01) + 3C₁(q0, H0001, H0001, K01) 
+                + D40(q0, H0001, H0001, H0001)
+                -
+                (3 * im * b102 * H1001 + 3 * im * b101 * H1002))
+
+        𝓇1003 = (B(q0, Δ(0) \ (r0003)) + r1003)
+        r2003 = (3*A₁(H2002, K01) + 3*A₁(H2001, K02) + 3*B(H0001, H2002) + 3*B(H0002, H2001)
+                + 6*B(H1001, H1002) + 3*A₂(H2001, K01, K01) + 3*A₂(H2000, K01, K02)
+                + 6*B₁(q0, H1002, K01) + 6*B₁(q0, H1001, K02) + 6*B₁(H0001, H2001, K01)
+                + 3*B₁(H0002, H2000, K01) + 6*B₁(H1001, H1001, K01) + 3*B₁(H0001, H2000, K02)
+                + 6*C(q0, H0001, H1002) + 6*C(q0, H0002, H1001) + 3*C(H0001, H0001, H2001)
+                + 3*C(H0001, H0002, H2000) + 6*C(H0001, H1001, H1001) + A₃(H2000, K01, K01, K01)
+                + 3*B₂(q0, q0, K01, K02) + 6*B₂(q0, H1001, K01, K01) + 3*B₂(H0001, H2000, K01, K01)
+                + 3*C₁(q0, q0, H0002, K01) + 3*C₁(q0, q0, H0001, K02) + 12*C₁(q0, H0001, H1001, K01)
+                + 3*C₁(H0001, H0001, H2000, K01) + 3*D40(q0, q0, H0001, H0002) + 6*D40(q0, H0001, H0001, H1001)
+                + D40(H0001, H0001, H0001, H2000) + B₃(q0, q0, K01, K01, K01) + 3*C₂(q0, q0, H0001, K01, K01)
+                + 3*D₁(q0, q0, H0001, H0001, K01) + D50(q0, q0, H0001, H0001, H0001)
+                -
+                (6 * im * b102 * H2001 + 6 * im * b101 * H2002))
+        r1103 = (3*A₁(H1102, K01) + 3*A₁(H1101, K02) + 3*B(H0001, H1102) + 3*B(H0002, H1101)
+                + 3*B(conj(H1001), H1002) + 3*B(conj(H1002), H1001) + 3*A₂(H1101, K01, K01)
+                + 3*A₂(H1100, K01, K02) + 6*real(B₁(cq0, H1002, K01)) + 6*real(B₁(cq0, H1001, K02))
+                + 6*B₁(H0001, H1101, K01) + 3*B₁(H0002, H1100, K01) + 6*B₁(conj(H1001), H1001, K01)
+                + 3*B₁(H0001, H1100, K02) + 6*real(C(cq0, H0001, H1002)) + 6*real(C(cq0, H0002, H1001))
+                + 3*C(H0001, H0001, H1101) + 3*C(H0001, H0002, H1100) + 6*C(H0001, conj(H1001), H1001)
+                + A₃(H1100, K01, K01, K01) + 3*B₂(q0, cq0, K01, K02) + 6*real(B₂(cq0, H1001, K01, K01))
+                + 3*B₂(H0001, H1100, K01, K01) + 3*C₁(q0, cq0, H0002, K01) + 3*C₁(q0, cq0, H0001, K02)
+                + 12*real(C₁(cq0, H0001, H1001, K01)) + 3*C₁(H0001, H0001, H1100, K01)
+                + 3*D40(q0, cq0, H0001, H0002) + 6*real(D40(cq0, H0001, H0001, H1001)) + D40(H0001, H0001, H0001, H1100)
+                + B₃(q0, cq0, K01, K01, K01) + 3*C₂(q0, cq0, H0001, K01, K01) + 3*D₁(q0, cq0, H0001, H0001, K01)
+                + D50(q0, cq0, H0001, H0001, H0001))
+        
+
+        𝓇2003 = (r2003 + 2B(q0, Aᴵᴺⱽ(𝓇1003)) + B(H2000, Δ(0) \ r0003) + C(q0, q0, Δ(0) \ r0003))
+        𝓇1103 = (r1103 + 2real(B(cq0, Aᴵᴺⱽ(𝓇1003))) + B(H1100, Δ(0) \ r0003) + C(q0, cq0, Δ(0) \ r0003))
+
+        r2103 = (3A₁(H2102, K01) + 3A₁(H2101, K02) + 3B(H0001, H2102) + 3B(H0002, H2101) + 3B(conj(H1001), H2002) 
+                + 3B(conj(H1002), H2001) + 6B(H1001, H1102) + 6B(H1002, H1101) + 3A₂(H2101, K01, K01) 
+                + 3A₂(H2100, K01, K02) + 6B₁(q0, H1102, K01) + 6B₁(q0, H1101, K02) + 3B₁(cq0, H2002, K01) 
+                + 3B₁(cq0, H2001, K02) + 6B₁(H0001, H2101, K01) + 3B₁(H0002, H2100, K01) + 6B₁(conj(H1001), H2001, K01) 
+                + 3B₁(conj(H1002), H2000, K01) + 12B₁(H1001, H1101, K01) + 6B₁(H1002, H1100, K01) 
+                + 3B₁(H0001, H2100, K02) + 3B₁(conj(H1001), H2000, K02) + 6B₁(H1001, H1100, K02) 
+                + 6C(q0, H0001, H1102) + 6C(q0, H0002, H1101) + 6C(q0, conj(H1001), H1002) + 6C(q0, conj(H1002), H1001) 
+                + 3C(cq0, H0001, H2002) + 3C(cq0, H0002, H2001) + 6C(cq0, H1001, H1002) + 3C(H0001, H0001, H2101) 
+                + 3C(H0001, H0002, H2100) + 6C(H0001, conj(H1001), H2001) + 3C(H0001, conj(H1002), H2000) 
+                + 12C(H0001, H1001, H1101) + 6C(H0001, H1002, H1100) + 3C(H0002, conj(H1001), H2000) 
+                + 6C(H0002, H1001, H1100) + 6C(conj(H1001), H1001, H1001) + A₃(H2100, K01, K01, K01)
+                + 6B₂(q0, H1101, K01, K01) + 6B₂(q0, H1100, K01, K02) + 3B₂(cq0, H2001, K01, K01) 
+                + 3B₂(cq0, H2000, K01, K02) + 3B₂(H0001, H2100, K01, K01) + 3B₂(conj(H1001), H2000, K01, K01) 
+                + 6B₂(H1001, H1100, K01, K01) + 3C₁(q0, q0, conj(H1002), K01) + 3C₁(q0, q0, conj(H1001), K02) 
+                + 6C₁(q0, cq0, H1002, K01) + 6C₁(q0, cq0, H1001, K02) + 12C₁(q0, H0001, H1101, K01) 
+                + 6C₁(q0, H0002, H1100, K01) + 12C₁(q0, conj(H1001), H1001, K01) + 6C₁(q0, H0001, H1100, K02) 
+                + 6C₁(cq0, H0001, H2001, K01) + 3C₁(cq0, H0002, H2000, K01) + 6C₁(cq0, H1001, H1001, K01) 
+                + 3C₁(cq0, H0001, H2000, K02) + 3C₁(H0001, H0001, H2100, K01) + 6C₁(H0001, conj(H1001), H2000, K01)
+                + 12C₁(H0001, H1001, H1100, K01) + 3D40(q0, q0, H0001, conj(H1002)) + 3D40(q0, q0, H0002, conj(H1001)) 
+                + 6D40(q0, cq0, H0001, H1002) + 6D40(q0, cq0, H0002, H1001) + 6D40(q0, H0001, H0001, H1101) 
+                + 6D40(q0, H0001, H0002, H1100) + 12D40(q0, H0001, conj(H1001), H1001) + 3D40(cq0, H0001, H0001, H2001) 
+                + 3D40(cq0, H0001, H0002, H2000) + 6D40(cq0, H0001, H1001, H1001) + D40(H0001, H0001, H0001, H2100) 
+                + 3D40(H0001, H0001, conj(H1001), H2000) + 6D40(H0001, H0001, H1001, H1100)
+                + 2B₃(q0, H1100, K01, K01, K01) + B₃(cq0, H2000, K01, K01, K01) + 3C₂(q0, q0, cq0, K01, K02) 
+                + 3C₂(q0, q0, conj(H1001), K01, K01) + 6C₂(q0, cq0, H1001, K01, K01) + 6C₂(q0, H0001, H1100, K01, K01) 
+                + 3C₂(cq0, H0001, H2000, K01, K01) + 3D₁(q0, q0, cq0, H0002, K01) + 3D₁(q0, q0, cq0, H0001, K02) 
+                + 6D₁(q0, q0, H0001, conj(H1001), K01) + 12D₁(q0, cq0, H0001, H1001, K01) + 6D₁(q0, H0001, H0001, H1100, K01) 
+                + 3D₁(cq0, H0001, H0001, H2000, K01) + 3D50(q0, q0, cq0, H0001, H0002) + 3D50(q0, q0, H0001, H0001, conj(H1001)) 
+                + 6D50(q0, cq0, H0001, H0001, H1001) + 2D50(q0, H0001, H0001, H0001, H1100) 
+                + D50(cq0, H0001, H0001, H0001, H2000) + C₃(q0, q0, cq0, K01, K01, K01) 
+                + 3E₁(q0, q0, cq0, H0001, H0001, K01) + K(q0, q0, cq0, H0001, H0001, H0001)
+                -
+                (6 * im * b202 * H1001 + 6 * (1 + im * b201) * H1002 + 3 * im * b102 * H2101 + 3 * im * b101 * H2102)
+        )
+
+        Q103 = -real(LA.dot(p0,𝓇1003))
+        Q203 = 0.5 * real(p0' * (2 * im * imag(p0' * 𝓇1003) * B(cq0, Δ(2λ) \ H2000) - (2B(q0, Δ(0) \ 𝓇1103) + B(cq0, Δ(2λ) \ 𝓇2003)
+                                                                                    + B(H2100, Δ(0) \ r0003) + B(H2000, conj(Aᴵᴺⱽ(𝓇1003))) + 2B(H1100, Aᴵᴺⱽ(𝓇1003)) + C(q0, q0, conj(Aᴵᴺⱽ(𝓇1003)))
+                                                                                    + 2C(q0, cq0, Aᴵᴺⱽ(𝓇1003)) + 2C(q0, H1100, Δ(0) \ r0003) + C(cq0, H2000, Δ(0) \ r0003) + D40(q0, q0, cq0, Δ(0) \ r0003)
+                                                                                    + r2103)))
+
+        Q03 = [Q103; Q203]
+        K03, = ls(P, Q03)
+
+        #H0003
+        h0003 = J₁ * K03 + r0003
+        H0003, = ls(L, h0003; a₀ = Complex(0, 0), a₁ = -1)
+
+        #b103
+        b103 = imag(p0' * (A₁(q0, K03) + B(q0, H0003) + r1003))
+
+        #H1003
+        h1003 = A₁(q0, K03) + B(q0, H0003) + r1003 - b103 * im * q0
+        H1003, = AInv(h1003)
+
+        println(l1, l2, l3, K10, K01, K02, K11, K03, a3201)
+
+        @set pt.nf = (;ω, K10, K01, K02, K11, K03, c₁, c₂, c₃, l1, l2, l3, a3201, p0, q0, b110, b101, b201, b102, H2000, H1100, H2100, H3000, H2200, H3100, H3200, H4000, H4100, H4200, H3300, H4300, H5000, H6000, H5100, H7000, H6100, H5200, H0010, H0001, H0002, H1010, H1001, H1002, H1011, H2010, H2001, H2002, H1110, H1101, H1102, H2101, H2110, H2102, H0011, H3010, H3001, H3101, H3201, H4001, H2201, H5001, H4101, H3002, H0003, H1003 )
+    else
+        @debug "Jet is not available or is missing required derivatives. Using fallback."
+        # second order differential, to be in agreement with Kuznetsov et al.
+        B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
+        C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
+
+        # normal form computation based on 
+        # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
+
+        # formula (7.2) in REF1
+        H20,cv,it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
+
+        # formula (7.3) in REF1
+        H11,cv,it = ls(L, -B(q0, cq0))
+        ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
+
+        # formula (7.4) in REF1
+        H30,cv,it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+        ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
+
+        # formula (7.5) in REF1
+        h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
+        G21 = LA.dot(p0, h21)      # (7.6)
+        h21 .= G21 .* q0 .- h21 # (7.7)
+
+        # formula (7.7) in REF1
+        H21,_,cv,it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+        ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
+
+        # 4-th order coefficient
+        d4F(x0, dx1, dx2, dx3, dx4) = (d3F(prob_vf, x0 .+ ϵ .* dx4, parbif, dx1, dx2, dx3) .-
+                                    d3F(prob_vf, x0 .- ϵ .* dx4, parbif, dx1, dx2, dx3)) ./(2ϵ)
+
+        # implement 4th order differential with finite differences
+        function D(x0, dx1, dx2, dx3, dx4)
+            dx4r = real.(dx4); dx4i = imag.(dx4);
+            # C(dx, dx4r) + i * C(dx, dx4i)
+            trilin_r = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4r) )
+            out1 = trilin_r(dx1, dx2, dx3)
+            trilin_i = TrilinearMap((_dx1, _dx2, _dx3) -> d4F(x0, _dx1, _dx2, _dx3, dx4i) )
+            out2 = trilin_i(dx1, dx2, dx3)
+            return out1 .+ im .* out2
+        end
+
+        # h40 is not needed, so we compute the next formula on page 1114 in REF1
+        h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
+        h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
+        H31, cv, it = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
+        ~cv && @debug "[Bautin H31] Linear solver for J did not converge. it = $it"
+
+        h22 = D(x0, q0, q0, cq0, cq0) .+
+            4 .* C(q0, cq0, H11) .+ C(cq0, cq0, H20) .+ C(q0, q0, conj.(H20)) .+
+            2 .* B(H11, H11) .+ 2 .* B(q0, conj.(H21)) .+ 2 .* B(cq0, H21) .+ B(conj.(H20), H20) .-
+            (2G21 + 2conj(G21)) .* H11
+        H22, cv, it = ls(L, h22)
+        ~cv && @debug "[Bautin H22] Linear solver for J did not converge. it = $it"
+        H22 .*= -1
+
+        # 5-th order coefficient
+        # implement 5th order differential with finite differences
+        function E(dx1, dx2, dx3, dx4, dx5)
+            dx5r = real.(dx5); dx5i = imag.(dx5);
+            out1 = (D(x0 .+ ϵ .* dx5r, dx1, dx2, dx3, dx4) .-
+                    D(x0 .- ϵ .* dx5r, dx1, dx2, dx3, dx4)) ./(2ϵ)
+            out2 = (D(x0 .+ ϵ .* dx5i, dx1, dx2, dx3, dx4) .-
+                    D(x0 .- ϵ .* dx5i, dx1, dx2, dx3, dx4)) ./(2ϵ)
+            return out1 .+ im .* out2
+        end
+
+        G32 = LA.dot(p0, E(q0, q0, q0, cq0, cq0))
+        G32 += LA.dot(p0, D(x0, q0, q0, q0, conj.(H20))) +
+            3*LA.dot(p0, D(x0, q0, cq0, cq0, H20)) +
+            6*LA.dot(p0, D(x0, q0, q0, cq0, H11))
+
+        G32 += LA.dot(p0, C(cq0, cq0, H30)) +
+            3*LA.dot(p0, C(q0, q0, conj.(H21))) +
+            6*LA.dot(p0, C(q0, cq0, H21)) +
+            3*LA.dot(p0, C(q0, conj.(H20), H20)) +
+            6*LA.dot(p0, C(q0, H11, H11)) +
+            6*LA.dot(p0, C(cq0, H20, H11))
+
+        G32 += 2*LA.dot(p0, B(cq0, H31)) +
+            3*LA.dot(p0, B(q0, H22)) +
+                LA.dot(p0, B(conj(H20), H30)) +
+            3*LA.dot(p0, B(conj(H21), H20)) +
+            6*LA.dot(p0, B(H11, H21))
+
+        # second Lyapunov coefficient
+        l2 = real(G32) / 12
+
+        pt = Bautin(
+            x0, parbif,
+            (getlens(prob_ma), lens),
+            ζ, ζ★,
+            (;ω, G21, G32, l2),
+            :none
+        )
+
+        # case of simplified normal form
+        if detailed == false
+            return pt
+        end
+
+        ###########################
+        # computation of the unfolding
+        # the unfolding are in 
+        # REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
+
+        # this part is for branching to Fold of periodic orbits
+        VF = prob_ma.prob_vf
+        F(x, p) = residual(prob_vf, x, p)
+
+        lens1, lens2 = pt.lens
+        _getp(l::AllOpticTypes) = _get(parbif, l)
+        _setp(l::AllOpticTypes, p::Number) = set(parbif, l, p)
+        _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
+        _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
+                        apply_jacobian(VF, x0, parbif, q)) ./ϵ
+        A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
+        A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
+        Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
+        B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
+        J1(lens) = F(x0, _setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
+
+        # formula 17 in REF2
+        h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
+        h₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₁ .*= -1
+        γ₁₁₀ = LA.dot(p0, A1(q0, lens1) + B(q0, h₀₀₁₀))
+        γ₁₀₁ = LA.dot(p0, A1(q0, lens2) + B(q0, h₀₀₀₁))
+
+        # compute the lyapunov coefficient l1, conform to notations from above paper
+        # formulas (15a - 15c) in REF2
+        h₂₀₀₀ = H20
+        h₁₁₀₀ = H11
+        l1 = G21/2
+        h₂₁₀₀ = H21
+
+        # formula (19) in REF2
+        Ainv(dx) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); shift = -λ)
+        h₁₀₁₀, = Ainv(γ₁₁₀ .* q0 .- A1(q0, lens1) .- B(q0, h₀₀₁₀) )
+        h₁₀₀₁, = Ainv(γ₁₀₁ .* q0 .- A1(q0, lens2) .- B(q0, h₀₀₀₁) )
+
+        # formula (20a) in REF2
+        tmp2010 = (2γ₁₁₀) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₁₀) .+ 2 .* B(q0, h₁₀₁₀) .+ B(h₂₀₀₀, h₀₀₁₀) .+ B1(q0, q0, lens1) .+ A1(h₂₀₀₀, lens1))
+        h₂₀₁₀, = ls(L, tmp2010; a₀ = Complex(0, -2ω) )
+
+        # formula (20a) in REF2
+        tmp2001 = (2γ₁₀₁) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₀₁) .+ 2 .* B(q0, h₁₀₀₁) .+ B(h₂₀₀₀, h₀₀₀₁) .+ B1(q0, q0, lens2) .+ A1(h₂₀₀₀, lens2))
+        h₂₀₀₁, = ls(L, tmp2001; a₀ = Complex(0, -2ω) )
+
+        # formula (20b) in REF2
+        tmp1110 = 2real(γ₁₁₀) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₁₀) .+ B(h₁₁₀₀, h₀₀₁₀) .+ 2 .* real(B(cq0, h₁₀₁₀)) .+ B1(q0, cq0, lens1) .+ A1(h₁₁₀₀, lens1))
+        h₁₁₁₀, = ls(L, tmp1110)
+
+        # formula (20b) in REF2
+        tmp1101 = 2real(γ₁₀₁) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₀₁) .+ B(h₁₁₀₀, h₀₀₀₁) .+ 2 .* real(B(cq0, h₁₀₀₁)) .+ B1(q0, cq0, lens2) .+ A1(h₁₁₀₀, lens2))
+        h₁₁₀₁, = ls(L, tmp1101)
+
+        _C1(pars) = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, pars, dx1, dx2, dx3) )
+        C1(dx1, dx2, dx3, l) = (_C1(_setp(l, _getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
+
+        # formula (21) in REF2
+        tmp2110 = D(x0, q0, q0, cq0, h₀₀₁₀) .+
+                2 .* C(q0, h₁₁₀₀, h₀₀₁₀) .+
+                2 .* C(q0, cq0, h₁₀₁₀) .+
+                C(q0, q0, conj(h₁₀₁₀)) .+
+                C(h₂₀₀₀, cq0, h₀₀₁₀) .+
+                2 .* B(q0, h₁₁₁₀) .+
+                2 .* B(h₁₁₀₀, h₁₀₁₀) .+
+                B(h₂₀₀₀, conj(h₁₀₁₀)) .+
+                B(h₂₁₀₀, h₀₀₁₀) .+
+                B(h₂₀₁₀, cq0) .+
+                C1(q0, q0, cq0, lens1) .+
+                2 .* B1(h₁₁₀₀, q0, lens1) .+ B1(h₂₀₀₀, cq0, lens1) .+ A1(h₂₁₀₀, lens1)
+
+        # formula (21) in REF2
+        tmp2101 = D(x0, q0, q0, cq0, h₀₀₀₁) .+
+                2 .* C(q0, h₁₁₀₀, h₀₀₀₁) .+
+                2 .* C(q0, cq0, h₁₀₀₁) .+
+                C(q0, q0, conj(h₁₀₀₁)) .+
+                C(h₂₀₀₀, cq0, h₀₀₀₁) .+
+                2 .* B(q0, h₁₁₀₁) .+
+                2 .* B(h₁₁₀₀, h₁₀₀₁) .+
+                B(h₂₀₀₀, conj(h₁₀₀₁)) .+
+                B(h₂₁₀₀, h₀₀₀₁) .+
+                B(h₂₀₀₁, cq0) .+
+                C1(q0, q0, cq0, lens2) .+
+                2 .* B1(h₁₁₀₀, q0, lens2) .+ B1(h₂₀₀₀, cq0, lens2) .+ A1(h₂₁₀₀, lens2)
+        
+        γ₂₁₀ = LA.dot(p0, tmp2110)/2
+        γ₂₀₁ = LA.dot(p0, tmp2101)/2
+
+        # formula (22)
+        α = real.([γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]) \ [0, 1]
+
+        @set pt.nf = (;ω, G21, G32, l2, l1, h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, α )
+    
     end
 
-    ###########################
-    # computation of the unfolding
-    # the unfolding are in 
-    # REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
-
-    # this part is for branching to Fold of periodic orbits
-    VF = 𝐌𝐚.prob_vf
-    F(x, p) = residual(prob_vf, x, p)
-
-    lens1, lens2 = pt.lens
-    _getp(l::AllOpticTypes) = _get(parbif, l)
-    _setp(l::AllOpticTypes, p::Number) = set(parbif, l, p)
-    _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    _A1(q, lens) = (apply_jacobian(VF, x0, _setp(lens, _get(parbif, lens) + ϵ), q) .-
-                       apply_jacobian(VF, x0, parbif, q)) ./ϵ
-    A1(q, lens) = _A1(real(q), lens) .+ im .* _A1(imag(q), lens)
-    A1(q::T, lens) where {T <: AbstractArray{<: Real}} = _A1(q, lens)
-    Bp(pars) = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, pars, dx1, dx2) )
-    B1(q, p, l) = (Bp(_setp(l, _getp(l) + ϵ))(q, p) .- B(q, p)) ./ ϵ
-    J1(lens) = F(x0, _setp(lens, _get(parbif, lens) + ϵ)) ./ ϵ
-
-    # formula 17 in REF2
-    h₀₀₁₀, = ls(L, J1(lens1)); h₀₀₁₀ .*= -1
-    h₀₀₀₁, = ls(L, J1(lens2)); h₀₀₀₁ .*= -1
-    γ₁₁₀ = LA.dot(p0, A1(q0, lens1) + B(q0, h₀₀₁₀))
-    γ₁₀₁ = LA.dot(p0, A1(q0, lens2) + B(q0, h₀₀₀₁))
-
-    # compute the lyapunov coefficient l1, conform to notations from above paper
-    # formulas (15a - 15c) in REF2
-    h₂₀₀₀ = H20
-    h₁₁₀₀ = H11
-    l1 = G21/2
-    h₂₁₀₀ = H21
-
-    # formula (19) in REF2
-    Ainv(dx) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); shift = -λ)
-    h₁₀₁₀, = Ainv(γ₁₁₀ .* q0 .- A1(q0, lens1) .- B(q0, h₀₀₁₀) )
-    h₁₀₀₁, = Ainv(γ₁₀₁ .* q0 .- A1(q0, lens2) .- B(q0, h₀₀₀₁) )
-
-    # formula (20a) in REF2
-    tmp2010 = (2γ₁₁₀) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₁₀) .+ 2 .* B(q0, h₁₀₁₀) .+ B(h₂₀₀₀, h₀₀₁₀) .+ B1(q0, q0, lens1) .+ A1(h₂₀₀₀, lens1))
-    h₂₀₁₀, = ls(L, tmp2010; a₀ = Complex(0, -2ω) )
-
-    # formula (20a) in REF2
-    tmp2001 = (2γ₁₀₁) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₀₁) .+ 2 .* B(q0, h₁₀₀₁) .+ B(h₂₀₀₀, h₀₀₀₁) .+ B1(q0, q0, lens2) .+ A1(h₂₀₀₀, lens2))
-    h₂₀₀₁, = ls(L, tmp2001; a₀ = Complex(0, -2ω) )
-
-    # formula (20b) in REF2
-    tmp1110 = 2real(γ₁₁₀) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₁₀) .+ B(h₁₁₀₀, h₀₀₁₀) .+ 2 .* real(B(cq0, h₁₀₁₀)) .+ B1(q0, cq0, lens1) .+ A1(h₁₁₀₀, lens1))
-    h₁₁₁₀, = ls(L, tmp1110)
-
-    # formula (20b) in REF2
-    tmp1101 = 2real(γ₁₀₁) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₀₁) .+ B(h₁₁₀₀, h₀₀₀₁) .+ 2 .* real(B(cq0, h₁₀₀₁)) .+ B1(q0, cq0, lens2) .+ A1(h₁₁₀₀, lens2))
-    h₁₁₀₁, = ls(L, tmp1101)
-
-    _C1(pars) = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, pars, dx1, dx2, dx3) )
-    C1(dx1, dx2, dx3, l) = (_C1(_setp(l, _getp(l) + ϵ))(dx1, dx2, dx3) .- C(dx1, dx2, dx3)) ./ ϵ 
-
-    # formula (21) in REF2
-    tmp2110 = D(x0, q0, q0, cq0, h₀₀₁₀) .+
-            2 .* C(q0, h₁₁₀₀, h₀₀₁₀) .+
-            2 .* C(q0, cq0, h₁₀₁₀) .+
-            C(q0, q0, conj(h₁₀₁₀)) .+
-            C(h₂₀₀₀, cq0, h₀₀₁₀) .+
-            2 .* B(q0, h₁₁₁₀) .+
-            2 .* B(h₁₁₀₀, h₁₀₁₀) .+
-            B(h₂₀₀₀, conj(h₁₀₁₀)) .+
-            B(h₂₁₀₀, h₀₀₁₀) .+
-            B(h₂₀₁₀, cq0) .+
-            C1(q0, q0, cq0, lens1) .+
-            2 .* B1(h₁₁₀₀, q0, lens1) .+ B1(h₂₀₀₀, cq0, lens1) .+ A1(h₂₁₀₀, lens1)
-
-    # formula (21) in REF2
-    tmp2101 = D(x0, q0, q0, cq0, h₀₀₀₁) .+
-            2 .* C(q0, h₁₁₀₀, h₀₀₀₁) .+
-            2 .* C(q0, cq0, h₁₀₀₁) .+
-            C(q0, q0, conj(h₁₀₀₁)) .+
-            C(h₂₀₀₀, cq0, h₀₀₀₁) .+
-            2 .* B(q0, h₁₁₀₁) .+
-            2 .* B(h₁₁₀₀, h₁₀₀₁) .+
-            B(h₂₀₀₀, conj(h₁₀₀₁)) .+
-            B(h₂₁₀₀, h₀₀₀₁) .+
-            B(h₂₀₀₁, cq0) .+
-            C1(q0, q0, cq0, lens2) .+
-            2 .* B1(h₁₁₀₀, q0, lens2) .+ B1(h₂₀₀₀, cq0, lens2) .+ A1(h₂₁₀₀, lens2)
-    
-    γ₂₁₀ = LA.dot(p0, tmp2110) / 2
-    γ₂₀₁ = LA.dot(p0, tmp2101) / 2
-
-    # formula (22)
-    α = real.([γ₁₁₀ γ₁₀₁; γ₂₁₀ γ₂₀₁]) \ [0, 1]
-
-    @set pt.nf = (;ω, G21, G32, l2, l1, h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, α )
 end
 
 """
@@ -923,26 +1703,74 @@ Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to 
 """
 function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T; 
                     verbose = false, 
-                    ampfactor = one(T)) where T
-    (;h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁) = gh.nf
-    lens1, lens2 = gh.lens
-    p1 = _get(gh.params, lens1)
-    p2 = _get(gh.params, lens2)
-    par0 = [p1, p2]
-    
-    # periodic orbit on the fold
-    # formula in section "2.3.1. Generalized Hopf"
-    x0 = @. gh.x0 + ϵ^2 * real(h₁₁₀₀ - 2l2 * (h₀₀₁₀ * α[1] + h₀₀₀₁ * α[2]))
-    q0 = gh.ζ
+                    ampfactor = T(1)) where T
+    #Main.@infiltrate
+    if length(gh.nf) === 14
+        (;h₂₀₀₀, h₁₁₀₀, h₀₀₁₀, h₀₀₀₁, α, l1, l2, ω, γ₁₁₀, γ₁₀₁) = gh.nf
+        lens1, lens2 = gh.lens
+        p1 = _get(gh.params, lens1)
+        p2 = _get(gh.params, lens2)
+        par0 = [p1, p2]
+        
+        # periodic orbit on the fold
+        # formula in section "2.3.1. Generalized Hopf"
+        x0 = @. gh.x0 + ϵ^2 * real(h₁₁₀₀ - 2l2 * (h₀₀₁₀ * α[1] + h₀₀₀₁ * α[2]))
+        q0 = gh.ζ
 
-    function FoldPO(θ)
-        @. x0 + 2ϵ * real(q0 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))
+        function FoldPO(θ)
+            @. x0 + 2ϵ * real(q0 * cis(θ)) + 2ϵ^2 * real(h₂₀₀₀ * cis(2θ))
+        end
+
+        return (orbit = t -> FoldPO(t),
+                ω = ω + (-2l2 * imag(α[1] * γ₁₁₀ + α[2] * γ₁₀₁) + imag(l1)) * ϵ^2,
+                params = (@. par0 - 2l2 * α * ϵ^2),
+                x0 = t -> x0)
+    elseif length(gh.nf) > 14  # === length gh.nf
+        (;ω, K10, K01, K02, K11, K03, c₁, c₂, c₃, l1, l2, l3, a3201, p0, q0, b110, b101, b201, b102, H2000, H1100, H2100, H3000, H2200, H3100, H3200, H4000, H4100, H4200, H3300, H4300, H5000, H6000, H5100, H7000, H6100, H5200, H0010, H0001, H0002, H1010, H1001, H1002, H1011, H2010, H2001, H2002, H1110, H1101, H1102, H2101, H2110, H2102, H0011, H1011, H3010, H3001, H3101, H3201, H4001, H2201, H5001, H4101, H3002, H0003, H1003) = gh.nf
+        lens1, lens2 = gh.lens
+        p1 = _get(gh.params, lens1)
+        p2 = _get(gh.params, lens2)
+            
+        par0 = [p1, p2]
+
+        #parameter approximation on the normal form
+        β₁ = real(c₂) * ϵ^4 + 2(real(c₃) - a3201 * real(c₂)) * ϵ^6
+        β₂ = -2real(c₂) * ϵ^2 + (4a3201 * real(c₂) - 3 * real(c₃)) * ϵ^4
+
+        # periodic orbit on the fold
+        # formula in section "2.3.1. Generalized Hopf"
+        q0 = gh.ζ
+
+
+        function FoldPO_higher_order(θ)
+            @. (gh.x0 +  2ϵ * real(q0 * cis(θ)) + H0010 * β₁ + H0001 * β₂ + (1 / 2) * β₂^2 * H0002 + β₁ * β₂ * H0011 + (1 / 6) * H0003 * β₂^3 
+            + 2real(H1010 * cis(θ)) * ϵ * β₁ + real(H2010 * cis(2θ)) * ϵ^2 * β₁ + real(H1110) * ϵ^2 * β₁
+            + 2real(H1002 * cis(θ)) * ϵ * β₂^2 * (1 / 2) + real(H2002 * cis(2θ)) * ϵ^2 * β₂^2 * (1 / 2) + real(H1102) * ϵ^2 * β₂^2 * (1 / 2)
+            + 2real(H1011 * cis(θ)) * ϵ *  β₁ * β₂ + 2real(H1003 * cis(θ)) * ϵ * β₂^3  * (1 / 6)
+            + 2real(H1001 * cis(θ)) * ϵ * β₂ + real(H2001 * cis(2θ)) * ϵ^2 * β₂
+            + real(H1101) * ϵ^2 * β₂ + (2 / 6)real(H3001* cis(3θ)) * ϵ^3 * β₂ + real(H2101 * cis(θ)) * ϵ^3 * β₂
+            + (2 / 24)real(H4001 * cis(4θ)) * ϵ^4 * β₂ + (2 / 6)real(H3101 * cis(2θ)) * ϵ^4 * β₂ + (1 / 4) * real(H2201) * ϵ^4 * β₂
+            + (2 / 120)real(H5001 * cis(5θ)) * ϵ^5 * β₂ + (2 / 24)real(H4101 * cis(3θ)) * ϵ^5 * β₂ + (2 / 12)real(H3201 * cis(θ)) * ϵ^5 * β₂
+            + real(H2000 * cis(2θ)) * ϵ^2 + real(H1100) * ϵ^2
+            + (2 / 6)real(H3000 * cis(3θ)) * ϵ^3 + real(H2100 * cis(θ)) * ϵ^3
+            + (2 / 24)real(H4000 * cis(4θ)) * ϵ^4 + (2 / 6)real(H3100 * cis(2θ)) * ϵ^4 + (1 / 4) * real(H2200) * ϵ^4
+            + (2 / 120)real(H5000 * cis(5θ)) * ϵ^5 + (2 / 24)real(H4100 * cis(3θ)) * ϵ^5 + (2 / 12)real(H3200 * cis(θ)) * ϵ^5
+            + (2 / 720)real(H6000 * cis(6θ)) * ϵ^6 + (2 / 120)real(H5100 * cis(4θ)) * ϵ^6 + (2 / 48)real(H4200 * cis(2θ)) * ϵ^6 + (1 / 36)real(H3300) * ϵ^6
+            + (2 / 5040)real(H7000 * cis(7θ)) * ϵ^7 + (2 / 720)real(H6100 * cis(5θ)) * ϵ^7 + (2 / 240)real(H5200 * cis(3θ)) * ϵ^7 + (2 / 144)real(H4300 * cis(θ)) * ϵ^7)
+        end
+
+
+
+        params = (@. par0 + K01 * β₂ + K10 * β₁ + (1/2) * K02 * β₂^2 + K11 * β₁ * β₂ + (1/6) * K03 * β₂^3)
+
+        #period approximation 
+        ω = ω + (imag(c₁) - 2real(c₂) * b101) * ϵ^2 + (real(c₂) * b110 + (4a3201 * real(c₂) - 3 * real(c₃)) * b101 + 2 * (real(c₂))^2 * b102 - 2real(c₂) * b201 + imag(c₂)) * ϵ^4
+
+        return (orbit = t -> FoldPO_higher_order(t),
+        ω,
+        params,
+        x0 = t -> x0)
     end
-
-    return (orbit = t -> FoldPO(t),
-            ω = ω + (-2l2 * imag(α[1] * γ₁₁₀ + α[2] * γ₁₀₁) + imag(l1)) * ϵ^2,
-            params = (@. par0 - 2l2 * α * ϵ^2),
-            x0 = t -> x0)
 end
 ####################################################################################################
 function zero_hopf_normal_form(_prob,
