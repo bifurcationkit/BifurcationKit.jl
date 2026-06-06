@@ -235,3 +235,111 @@ println("✓ Higher-order terms significantly affect parameter predictions!")
 println("\n" * "="^80)
 println("All tests passed! Higher-order Bautin normal form is working correctly.")
 println("="^80)
+
+# Same Bautin point, now in 3D to check we are not stuck with planar systems.
+# We pad the 2D Stuart-Landau system with a damped direction z3 and rotate the
+# R^3 field by Q in the (1, 3) plane: F(x) = Q * Fdec(Q' * x). A rotation keeps the
+# inner product, so ‖q‖ = 1 and ⟨q, p⟩ = 1 are unchanged and l2, l3 stay at the 2D
+# values 4*c5 and 8*c7. The rotation mixes z1 into z3, so the eigenvector picks up a
+# non-zero third component and the computation really runs in 3D.
+
+# fixed rotation in the (1, 3) plane (orthogonal, so Q' = inv(Q))
+const θrot = 0.6
+const Qrot = [cos(θrot) 0.0 -sin(θrot); 0.0 1.0 0.0; sin(θrot) 0.0 cos(θrot)]
+
+# decoupled field: Stuart-Landau in (z1, z2), linear damping in z3
+function Fdec(z, α)
+    z1, z2, z3 = z
+    r, c3 = α
+    μ = 0.0
+    ν = 1.0
+    c5 = 0.3
+    c7 = 1.2
+    ua = z1^2 + z2^2
+    return [
+        r * z1 - ν * z2 + ua * (c3 * z1 - μ * z2) + c5 * ua^2 * z1 + c7 * ua^3 * z1,
+        r * z2 + ν * z1 + ua * (c3 * z2 + μ * z1) + c5 * ua^2 * z2 + c7 * ua^3 * z2,
+        -z3,
+    ]
+end
+
+Fsl3_symbolic(x, α) = Qrot * Fdec(Qrot' * x, α)
+
+function Fsl3!(f, u, p, t = 0)
+    (;r, μ, ν, c3, c5, c7) = p
+    z = Qrot' * u
+    z1, z2 = z[1], z[2]
+    ua = z1^2 + z2^2
+    g = similar(u)
+    g[1] = r * z1 - ν * z2 + ua * (c3 * z1 - μ * z2) + c5 * ua^2 * z1 + c7 * ua^3 * z1
+    g[2] = r * z2 + ν * z1 + ua * (c3 * z2 + μ * z1) + c5 * ua^2 * z2 + c7 * ua^3 * z2
+    g[3] = -z[3]
+    f .= Qrot * g
+    return f
+end
+
+println("\n" * "="^80)
+println("Generating jet derivatives for the 3D embedding...")
+println("="^80)
+
+jet3 = getJet(Fsl3_symbolic, 3)
+
+prob_with_jet3 = BK.BifurcationProblem(
+    Fsl3!, [0.01, 0.01, 0.0], par_sl, (@optic _.r);
+    jet3...
+)
+
+opts_br3 = BK.setproperties(opts_br; nev = 3)
+
+println("Running continuation (3D)...")
+br3 = BK.continuation(prob_with_jet3, BK.PALC(), opts_br3)
+
+println("Running codim-2 continuation for the Bautin point (3D)...")
+hopf_codim2_3 = BK.continuation(br3, 1, (@optic _.c3),
+    BK.ContinuationPar(opts_br3, detect_bifurcation = 0, save_sol_every_step = 1,
+                    max_steps = 15, p_min = -2., p_max = 2., ds = -0.001);
+    detect_codim2_bifurcation = 2,
+    start_with_eigen = true,
+    update_minaug_every_step = 1,
+    bdlinsolver = BK.MatrixBLS(),
+)
+
+@test hopf_codim2_3.specialpoint[1].type == :gh
+
+bautin_ho3 = BK.get_normal_form(hopf_codim2_3, 1; nev = 3)
+
+println("\n3D embedding results:")
+println("Number of normal form coefficients: $(length(bautin_ho3.nf))")
+@test length(bautin_ho3.nf) > 14
+println("✓ Higher-order path was used (length > 14)")
+
+println("\nl2 = $(bautin_ho3.nf.l2), expected $(par_sl.c5 * 4)")
+@test bautin_ho3.nf.l2 ≈ par_sl.c5 * 4 atol = 1e-6
+println("✓ l2 matches the 2D value")
+
+println("\nl3 = $(bautin_ho3.nf.l3), expected $(8 * par_sl.c7)")
+@test bautin_ho3.nf.l3 ≈ 8 * par_sl.c7 atol = 1e-6
+println("✓ l3 matches the 2D value")
+
+# check the third coordinate is really used, not just zero-padded
+println("\n|ζ[3]| = $(abs(bautin_ho3.ζ[3]))")
+@test abs(bautin_ho3.ζ[3]) > 1e-6
+println("✓ The eigenvector has a non-zero third component")
+
+pred3_with_c3 = BK.predictor(bautin_ho3, Val(:FoldPeriodicOrbitCont), ϵ_test)
+
+nf3_without_c3 = merge(bautin_ho3.nf, (c₃ = 0.0 + 0.0im, l3 = 0.0))
+bautin3_without_c3 = BK.Bautin(
+    bautin_ho3.x0, bautin_ho3.params, bautin_ho3.lens,
+    bautin_ho3.ζ, bautin_ho3.ζ★, nf3_without_c3, bautin_ho3.type,
+)
+pred3_without_c3 = BK.predictor(bautin3_without_c3, Val(:FoldPeriodicOrbitCont), ϵ_test)
+
+Δparams3 = norm(pred3_with_c3.params .- pred3_without_c3.params)
+println("\n‖Δparams‖ (with vs without c₃) = $Δparams3")
+@test Δparams3 > 1e-10
+println("✓ The predictor uses c₃ in 3D as well")
+
+println("\n" * "="^80)
+println("3D embedding passed! Higher-order Bautin normal form also works beyond 2D.")
+println("="^80)
