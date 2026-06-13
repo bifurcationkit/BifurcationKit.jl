@@ -34,13 +34,10 @@ for (fname, cdt, err_msg) in (
                 error($err_msg)
             end
             specialpoint = br.specialpoint[index]
-            if specialpoint.x isa POSavedSolutionAndState
-                # the solution is mesh adapted, we need to restore the mesh.
-                pbwrap = deepcopy(getprob(br))
-                update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
-                specialpoint = @set specialpoint.x = specialpoint.x.sol
-            end
-            return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+            pbwrap = deepcopy(getprob(br))
+            # we put the problem back to the state it was
+            update!(pbwrap, specialpoint.x)
+            return BorderedArray(_copy(saved_solution(specialpoint.x)), specialpoint.param)
         end
     end
 end
@@ -52,13 +49,10 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     end
     specialpoint = br.specialpoint[index]
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
-    if specialpoint.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(getprob(br))
-        update_mesh!(get_discretization(pbwrap), specialpoint.x._mesh )
-        specialpoint = @set specialpoint.x = specialpoint.x.sol
-    end
-    return BorderedArray(_copy(specialpoint.x), [specialpoint.param, ω])
+    pbwrap = deepcopy(getprob(br))
+    # we put the problem back to the state it was
+    update!(pbwrap, specialpoint.x)
+    return BorderedArray(_copy(saved_solution(specialpoint.x)), [specialpoint.param, ω])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function continuation(br::AbstractResult{Tkind, Tprob},
@@ -108,7 +102,6 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
-    ϕ = bifpt.x isa POSavedSolutionAndState ? copy(bifpt.x.ϕ) : copy(bifpt.x)
 
     usehessian = get(kwargs, :usehessian, false)
     if ~usehessian
@@ -117,23 +110,13 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
-    coll = get_discretization(getprob(br))
+    coll = get_discretization(pbwrap)
 
-    # if mesh adaptation, we need to extract the solution specifically
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        if meshadapt(coll)
-            update_mesh!(get_discretization(pbwrap), bifpt.x._mesh )
-        end
-        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, nothing)
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-
-    # THIS IS A HACK, SHOULD BE SAVED FOR PROPER BRANCHING ETC
-    # updatesection!(coll, ϕ, nothing)
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
 
     # this updates the section
-    coll = deepcopy(get_discretization(pbwrap))
+    coll = deepcopy(coll)
 
     options_foldpo = options_cont
 
@@ -179,13 +162,8 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
 
-    # if mesh adaptation, we need to extract the solution specifically
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        update_mesh!(get_discretization(pbwrap), bifpt.x._mesh)
-        updatesection!(get_discretization(pbwrap), bifpt.x.ϕ, par)
-        pdpointguess.u .= bifpt.x.sol
-    end
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
 
     # we copy the problem for not mutating the one passed by the user
     coll = deepcopy(get_discretization(pbwrap))

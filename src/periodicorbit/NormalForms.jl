@@ -231,15 +231,12 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        coll = get_discretization(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh)
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    
-    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
@@ -558,14 +555,12 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        coll = get_discretization(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh )
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    pd0 = PeriodDoubling(x0, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type
         # method based on Iooss method
         return period_doubling_normal_form_iooss(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
@@ -922,24 +917,24 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     coll = get_discretization(pbwrap)
     N, m, Ntst = size(coll)
     bifpt = br.specialpoint[ind_bif]
+
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
     par = setparam(br, bifpt.param)
-    period = getperiod(coll, bifpt.x, par)
+    period = getperiod(coll, x0, par)
 
     # get the eigenvalue
     eigRes = br.eig
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = abs(imag(λₙₛ))
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh )
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
+    ns0 = NeimarkSacker(x0, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed_type
-        return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
+        return NeimarkSackerPO(x0, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
     end
 
     if prm_type # method based on Poincare Return Map (PRM)

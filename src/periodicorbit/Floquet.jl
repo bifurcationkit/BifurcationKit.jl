@@ -65,7 +65,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
         J = jacobian(wrap, u0, par) # TODO must not be computed, cf TRAP
         monodromy = MonodromyQaD(get_discretization(wrap), J, u0, par)
     end
-    vals, vecs, cv, info = fl.eigsolver(monodromy, nev; k...)
+    vals, vecs, cv, info = fl.eigsolver(monodromy, nev; iter, state, k...)
 
     if Inf in vals
         @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients."
@@ -439,7 +439,7 @@ function compute_eigenvalues(eig::FloquetGEV, iter::ContIterable{Tkind}, state, 
     wrappo = getprob(iter)
     disc = get_discretization(wrappo)
     J = jacobian(wrappo, u0, par)
-    eig(disc, J, nev; k...)
+    eig(disc, J, nev; iter, state, k...)
 end
 
 @views function (fl::FloquetGEV)(coll::Collocation, _J::AbstractMatrix, nev; k...)
@@ -548,7 +548,7 @@ function compute_eigenvalues(eig::FloquetColl, iter::ContIterable{Tkind}, state,
     wrapcoll = get_wrap_po(iter)
     coll = get_discretization(wrapcoll)
     J = jacobian(wrapcoll, u0, par)
-    eig(coll, J, nev; k...)
+    eig(coll, J, nev; iter, state, k...)
 end
 
 function (eig::FloquetColl)(coll, J, nev; kwargs...)

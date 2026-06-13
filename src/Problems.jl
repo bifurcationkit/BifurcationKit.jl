@@ -270,7 +270,8 @@ function R01!(::FiniteDifferences,
     if isnothing(res_f)
         res_f = residual(prob, x, set(par, getlens(prob), p))
     end
-    minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = minus!!(dFdp, res_f)
+    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
 const _dict_doc_string_prob = Dict(
