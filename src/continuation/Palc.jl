@@ -1,3 +1,8 @@
+struct NormalisedDot{Tdot}
+    dot::Tdot
+end
+(dt::NormalisedDot)(x, y) = dt.dot(x, y) / length(x)
+
 """
 $(TYPEDEF)
 
@@ -20,7 +25,7 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( (x, y) -> VI.inner(x, y) / length(x), x -> VI.scale!(x, 1/length(x))   )
+DotTheta() = DotTheta( NormalisedDot(VI.inner), x -> x = VI.scale!!(x, 1/length(x))   )
 DotTheta(dt) = DotTheta(dt, nothing)
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
