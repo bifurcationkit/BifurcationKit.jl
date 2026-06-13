@@ -20,7 +20,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                         R, n::𝒯; 
                         shift::𝒯s = nothing,
                         dotp = getdot(iter).dot,
-                        applyξu! = getdot(iter).apply!) where {𝒯, 𝒯s}
+                        applyξu! = _get_apply_dot(getdot(iter))) where {𝒯, 𝒯s}
     # the following parameters are used for the pseudo arc length continuation
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ

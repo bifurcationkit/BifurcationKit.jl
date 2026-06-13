@@ -25,8 +25,9 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( NormalisedDot(VI.inner), x -> x = VI.scale!!(x, 1/length(x))   )
+DotTheta() = DotTheta( NormalisedDot(VI.inner), x -> x = VI.scale!(x, 1/length(x))   )
 DotTheta(dt) = DotTheta(dt, nothing)
+_get_apply_dot(dt::DotTheta) = dt.apply!
 
 # we restrict the type of the parameters because for complex problems, we still want the parameter to be real
 (dt::DotTheta)(u1, u2, p1::T, p2, θ, θₚ = one(T) - θ) where {T <: Real} = real(dt.dot(u1, u2) * θ + p1 * p2 * θₚ)
@@ -224,7 +225,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
     dFdp = minus!!(dFdp, res_f) # dFdp = dFdp - res_f
-    VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
 
     res       = normAC(res_f, res_n)
     residuals = [res]
@@ -239,7 +240,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     while (step < max_iterations) && (res > tol) && line_step && compute
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+        dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -281,7 +282,7 @@ function newton_palc(iter::AbstractContinuationIterable,
             # we put back the initial value
             α = α0
         else
-            minus!!(x, u)
+            x = minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
             _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)

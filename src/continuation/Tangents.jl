@@ -20,7 +20,7 @@ function _secant_tangent!(τ::M,
     _copyto!(τ, z₁)
     minus!!(τ, z₀)
     α = sign(ds) / dotθ(τ, θ)
-    τ = VI.scale!!(τ, α)
+    VI.scale!(τ, α)
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Secant, ::Bool) = nothing
