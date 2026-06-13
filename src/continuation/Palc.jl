@@ -123,11 +123,10 @@ We perform z_pred = z + ds * τ
 function addtangent!(state::AbstractContinuationState, nrm = false)
     # we perform z_pred = z + ds * τ
     # note that state.z contains the last converged state
-    __setproperty!!(state, :z_pred, state.z)
+    _copyto!(state.z_pred, state.z)
     ds = state.ds
     ρ = nrm ? ds / state.τ.p : ds
-    z_pred = VI.add!!(state.z_pred, state.τ, ρ)
-    __setproperty!!(state, :z_pred, z_pred)
+    VI.add!(state.z_pred, state.τ, ρ)
 end
 
 function getpredictor!(state::AbstractContinuationState,
