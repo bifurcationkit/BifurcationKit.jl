@@ -81,7 +81,6 @@ prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@optic _.r); J = 
 
 eigls = EigArpack(1.0, :LM)
 eigls = DefaultEig()
-# eigls = eig_MF_KrylovKit(tol = 1e-8, dim = 60, x₀ = rand(ComplexF64, Nx*Ny), verbose = 1)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
 out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
 
@@ -132,65 +131,96 @@ uold = copy(orbitguess2[1][1:2n])
 # plot(uold[1:end-1]; linewidth = 5)
 
 # we create a TW problem
-TWmodel = BK.TWModel(prob, par_cgl.Db, copy(uold))
-BK.residual(BK.TravellingWave(TWmodel), vcat(uold,.1), par_cgl)
-show(TWmodel)
+TWmodel = BK.TWModel(re_make(prob, params = (par_cgl..., r = r_hopf - 0.01)), par_cgl.Db, copy(uold))
 
-# we test the sparse formulation of the problem jacobian
-_sol0 = rand(2n+1)
-_J1 = FD.jacobian(z->BK.residual(BK.TravellingWave(TWmodel), z, par_cgl), _sol0) |> sparse
-_J0 = TWmodel(Val(:JacFullSparse), _sol0, par_cgl)
-@test _J1 ≈ _J0
+let
+    BK.residual(BK.TravellingWave(TWmodel), vcat(uold,.1), par_cgl)
+    show(TWmodel)
 
-# we test the matrix-free formulation of the problem jacobian
-_sol0 = rand(2n+1)
-_dsol0 = rand(2n+1)
-_out1 = FD.derivative(t -> BK.residual(BK.TravellingWave(TWmodel), _sol0 .+ t .* _dsol0, par_cgl), 0)
-_out0 = TWmodel(_sol0, par_cgl, _dsol0)
-@test _out0 ≈ _out1
+    # we test the sparse formulation of the problem jacobian
+    _sol0 = rand(2n+1)
+    _J1 = FD.jacobian(z->BK.residual(BK.TravellingWave(TWmodel), z, par_cgl), _sol0) |> sparse
+    _J0 = TWmodel(Val(:JacFullSparse), _sol0, par_cgl)
+    @test _J1 ≈ _J0
 
-BK.VFtw(TWmodel, uold, (user=par_cgl, s=Tuple(0.,)))
+    # we test the matrix-free formulation of the problem jacobian
+    _sol0 = rand(2n+1)
+    _dsol0 = rand(2n+1)
+    _out1 = FD.derivative(t -> BK.residual(BK.TravellingWave(TWmodel), _sol0 .+ t .* _dsol0, par_cgl), 0)
+    _out0 = TWmodel(_sol0, par_cgl, _dsol0)
+    @test _out0 ≈ _out1
 
-# we test the ∂
-BK.applyD(TWmodel, rand(2n))
+    BK.VFtw(TWmodel, uold, (user=par_cgl, s=Tuple(0.,)))
 
-# we test update section
-BK.updatesection!(TWmodel, TWmodel.u₀)
+    # we test the ∂
+    BK.applyD(TWmodel, rand(2n))
+
+    # we test update section
+    BK.updatesection!(TWmodel, TWmodel.u₀)
+end
 ####################################################################################################
-# test newton method, not meant to converge
+# test newton method
 let
     sol = BK.newton(TWmodel, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
     @test BK.converged(sol)
     BK.is_symmetric(sol.prob)
-    sol = newton((@set TWmodel.jacobian = BK.FullLU()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
+
+    sol = newton((@set TWmodel.jacobian = BK.FullLU()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-11))
     @test BK.converged(sol)
-    sol = newton((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
+
+    Pl = lu(blockdiag(BK.getparams(TWmodel).Δ, sparse(I(1))))
+    sol = newton((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-11, linsolver = GMRESKrylovKit(;Pl)))
     @test BK.converged(sol)
-    sol = newton((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5, linsolver = GMRESKrylovKit()))
+
+    sol = newton((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-10, linsolver = GMRESKrylovKit(;Pl)))
     @test BK.converged(sol)
 end
 ####################################################################################################
 # test continuation method with different Generalised eigensolvers
 let
+    record_from_solution = (x, p; k...) -> (u∞ = maximum(x[1:n]), s = x[end],)
+    wave0 = vcat(uold,.1)
     optn = NewtonPar(tol = 1e-8)
-    opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 3, detect_bifurcation = 2)
-    continuation((@set TWmodel.jacobian = BK.FullLU()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    opt_cont_br = ContinuationPar(p_min = -1., p_max = 1., newton_options = optn, max_steps = 30, detect_bifurcation = 2, ds= -0.001)
+    continuation((@set TWmodel.jacobian = BK.FullLU()), wave0, PALC(), opt_cont_br; verbosity = 0, record_from_solution)
+    continuation((@set TWmodel.jacobian = BK.FiniteDifferences()), wave0, PALC(), opt_cont_br; verbosity = 0, record_from_solution)
+
 
     @reset opt_cont_br.newton_options.eigsolver = BK.DefaultGEig(B = diagm(0=>vcat(ones(2n),0)))
-    continuation((@set TWmodel.jacobian = BK.FullLU()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    continuation((@set TWmodel.jacobian = BK.FullLU()), wave0, PALC(), opt_cont_br; verbosity = 0)
 
     BK.GEigArpack(nothing, :LR)
     @reset opt_cont_br.newton_options.eigsolver = EigArpack(nev = 5, which = :LM, sigma = 0.2, v0 = rand(2n+1))
-    continuation(TWmodel, vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    continuation(TWmodel, wave0, PALC(), opt_cont_br; verbosity = 0)
 
+    continuation(TWmodel, wave0, PALC(), opt_cont_br; verbosity = 0, eigsolver = BK.GEigenWave())
+    continuation(TWmodel, wave0, PALC(), opt_cont_br; verbosity = 0, eigsolver = BK.EigenWave(EigArpack(nev = 5, which = :LM, sigma = 0.2), false))
+
+    # full matrix-free
     @reset opt_cont_br.newton_options.linsolver = GMRESIterativeSolvers(N = 2n+1)
-    @reset opt_cont_br.newton_options.eigsolver = EigArpack(sigma = 0.1, nev = 4, ncv = 2n+1, tol = 1e-3, v0 = rand(2n+1))
-    @reset opt_cont_br.detect_bifurcation = 1
-    try
-        continuation((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 1)
-    catch
-    end
-    @reset opt_cont_br.detect_bifurcation = 0
-    continuation((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
-    continuation((@set TWmodel.jacobian = BK.FiniteDifferences()), vcat(uold,.1), PALC(), opt_cont_br; verbosity = 0)
+    @reset opt_cont_br.newton_options.eigsolver = EigKrylovKit(x₀ = rand(2n))
+    br_tw = continuation((@set TWmodel.jacobian = BK.AutoDiffMF()), wave0, PALC(), opt_cont_br; verbosity = 0, eigsolver = BK.EigenWave(nothing, true), linear_algo = BorderingBLS(solver = GMRESIterativeSolvers(N = 2n+2)), record_from_solution)
+    br_tw = continuation((@set TWmodel.jacobian = BK.MatrixFree()), wave0, PALC(), opt_cont_br; verbosity = 0, linear_algo = BorderingBLS(solver = GMRESIterativeSolvers(N = 2n+2)), record_from_solution, eigsolver = BK.EigenWave(nothing, true))
+    # plot(br, br_tw, label = "2") |> display
+end
+####################################################################################################
+# test _jvp_for_eigenwave
+let
+    nc = TWmodel.nc
+    N = 2n
+    x = vcat(rand(N), rand(nc))
+    du = rand(N)
+
+    # compare with the first N components of the full JVP (with zero speed direction)
+    jvp_eigen = BK._jvp_for_eigenwave(TWmodel, x, par_cgl, du)
+    jvp_full = TWmodel(x, par_cgl, vcat(du, zeros(nc)))
+    @test jvp_eigen ≈ jvp_full[1:N]
+
+    # compare with finite differences of the residual (first N components)
+    jvp_fd = FD.derivative(t -> BK.residual(BK.TravellingWave(TWmodel), x .+ t .* vcat(du, zeros(nc)), par_cgl)[1:N], 0)
+    @test jvp_eigen ≈ jvp_fd
+
+    # compare with the sparse jacobian
+    J_full = TWmodel(Val(:JacFullSparse), x, par_cgl)
+    @test jvp_eigen ≈ J_full[1:N, 1:N] * du
 end
