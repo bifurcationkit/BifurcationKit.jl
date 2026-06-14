@@ -96,14 +96,14 @@ $(TYPEDSIGNATURES)
 - `ss` tuple of speeds
 - `D` tuple of Lie generators
 """
-function applyD(pb::TWModel, out, ss, u)
+function applyD!(pb::TWModel, out, ss, u)
     for (D, s) in zip(pb.∂, ss)
         # out .-=  s .* (D * u)
         LA.mul!(out, D, u, -s, 1)
     end
     out
 end
-applyD(pb::TWModel, u) = applyD(pb, zero(u), 1, u)
+applyD(pb::TWModel, u) = applyD!(pb, zero(u), 1, u)
 
 """
 Return `F(u, p) - s * D * u` where `s` is the speed.
@@ -112,7 +112,7 @@ Return `F(u, p) - s * D * u` where `s` is the speed.
     # apply the vector field
     out = residual(pb.prob_vf, u, pars)
     # we add the freezing, it can be done now since out is filled by the previous call!!
-    applyD(pb, out, s, u)
+    applyD!(pb, out, s, u)
     return out
 end
 
@@ -131,10 +131,10 @@ function _jvp_VF_plus_D!(pb,
                         pars,
                         ::Val{add_ds} = Val(true)) where {add_ds}
     J = jacobian(pb.prob_vf, u, pars)
-    apply!(out, J, du)
-    applyD(pb, out, s, du)
+    out .= apply(J, du)
+    applyD!(pb, out, s, du)
     if add_ds
-        applyD(pb, out, ds, u)
+        applyD!(pb, out, ds, u)
     end
     return out
 end
