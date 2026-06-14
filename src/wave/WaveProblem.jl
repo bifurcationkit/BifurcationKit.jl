@@ -279,7 +279,7 @@ function continuation(prob::TWModel,
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convert_to_wave_eigen_solver(eigsolver, old_eigsolver, B)
     # this is to remove this part from the arguments passed to continuation
-    jac = _generate_jacobian(prob.jacobian, jacobianTW, orbitguess, getparams(prob); δ)
+    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, plot_solution, record_from_solution)
     # call continuation
     return continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)

@@ -291,7 +291,7 @@ end
 
     # time step
     h =  T * get_time_step(trap, 1)
-    Typeh = typeof(h)
+    𝒯 = typeof(h)
 
     out = copy(du)
 
@@ -299,14 +299,15 @@ end
 
     out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, M-1], par), out)
     # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, 1])) \ out
-    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+
+    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = one(𝒯), a₁ = -h/2)
     out .= res
 
     for ii in 2:M-1
         h =  T * get_time_step(trap, ii)
         out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, ii-1], par), out)
         # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, ii])) \ out
-        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = one(𝒯), a₁ = -h/2)
         out .= res
     end
 

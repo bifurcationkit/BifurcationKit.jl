@@ -197,12 +197,12 @@ function Trapeze(prob_vf,
 end
 
 Trapeze(prob_vf,
-                        m::Union{Int, AbstractVector},
-                        N::Int,
-                        ls::AbstractLinearSolver = DefaultLS();
-                        ongpu = false,
-                        adaptmesh = false,
-                        massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
+        m::Union{Int, AbstractVector},
+        N::Int,
+        ls::AbstractLinearSolver = DefaultLS();
+        ongpu = false,
+        adaptmesh = false,
+        massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
 
 
 # do not type h::Number because this will annoy CUDA
