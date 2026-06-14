@@ -272,20 +272,15 @@ function continuation(prob::TWModel,
                     plot_solution = plot_solution(prob.prob_vf),
                     δ = convert(VI.scalartype(orbitguess), getdelta(prob)),
                     kwargs...)
-    jacobianTW = prob.jacobian
-    @assert jacobianTW in (MatrixFree(), AutoDiffMF(), AutoDiff(), FullLU(), FiniteDifferences())
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
     B = SPA.spdiagm(vcat(ones(N-1), 0))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convert_to_wave_eigen_solver(eigsolver, old_eigsolver, B)
-    # update record function
     # this is to remove this part from the arguments passed to continuation
-    jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
+    jac = _generate_jacobian(prob.jacobian, jacobianTW, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, plot_solution, record_from_solution)
-
     # call continuation
-    branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
-    return branch
+    return continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
 end
