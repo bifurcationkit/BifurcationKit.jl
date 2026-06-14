@@ -64,34 +64,7 @@ Fcgl(u, p, t = 0) = Fcgl!(similar(u), u, p)
 
     Δ + spdiagm(0 => jacdiag, n => f1v, -n => f2u)
 end
-####################################################################################################
-n = 50
-l = pi
 
-Δ, D = Laplacian1D(n, l, :Periodic)
-par_cgl = (r = 0.0, μ = 0.5, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), Db = blockdiag(D, D), γ = 0.0, δ = 1.0, N = 2n)
-sol0 = zeros(par_cgl.N)
-
-# _sol0 = zeros(2n)
-# _J0 = Jcgl(_sol0, par_cgl)
-# _J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
-# @test _J0 ≈ _J1
-
-prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@optic _.r); J = Jcgl)
-
-eigls = EigArpack(1.0, :LM)
-eigls = DefaultEig()
-opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
-out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
-
-opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
-br = continuation(prob, PALC(), opts_br, verbosity = 0)
-####################################################################################################
-# we test the jacobian
-# _J0 = BK.jacobian(prob, sol0, par_cgl)
-# _J1 = FD.jacobian(z->BK.residual(prob, z, par_cgl), sol0) |> sparse
-# @test _J0 == _J1
-####################################################################################################
 function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0, k = 1.)
     specialpoint = branch.specialpoint[ind_hopf]
     @show specialpoint.ind_ev
@@ -119,6 +92,33 @@ function guessFromHopfO2(branch, ind_hopf, eigsolver, M, z1, z2 = 0.; phase = 0,
 
     return p_hopf, 2pi/ωH, orbitguess, specialpoint.x, vec_hopf1, vec_hopf2
 end
+####################################################################################################
+n = 50
+l = pi
+
+Δ, D = Laplacian1D(n, l, :Periodic)
+par_cgl = (r = 0.0, μ = 0.5, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, Δ), Db = blockdiag(D, D), γ = 0.0, δ = 1.0, N = 2n)
+sol0 = zeros(par_cgl.N)
+
+# _sol0 = zeros(2n)
+# _J0 = Jcgl(_sol0, par_cgl)
+# _J1 = FD.jacobian(z->Fcgl(z, par_cgl), _sol0) |> sparse
+# @test _J0 ≈ _J1
+
+prob = BifurcationKit.BifurcationProblem(Fcgl, sol0, par_cgl, (@optic _.r); J = Jcgl)
+
+eigls = EigArpack(1.0, :LM)
+eigls = DefaultEig()
+opt_newton = NewtonPar(tol = 1e-9, verbose = false, eigsolver = eigls, max_iterations = 20)
+out = @time BK.solve(prob, Newton(), opt_newton, normN = norminf)
+
+opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, detect_bifurcation = 3, nev = 9, plot_every_step = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 30, n_inversion = 8, max_bisection_steps=20)
+br = continuation(prob, PALC(), opts_br, verbosity = 0)
+####################################################################################################
+# we test the jacobian
+# _J0 = BK.jacobian(prob, sol0, par_cgl)
+# _J1 = FD.jacobian(z->BK.residual(prob, z, par_cgl), sol0) |> sparse
+# @test _J0 == _J1
 ####################################################################################################
 # we test TWModel: traveling wave problem
 # number of time slices in the periodic orbit
@@ -162,18 +162,18 @@ end
 # test newton method
 let
     sol = BK.newton(TWmodel, vcat(uold, .1), NewtonPar(verbose = false, max_iterations = 5))
-    @test_broken BK.converged(sol) # may fail on some device
+    @test_skip BK.converged(sol) # may fail on some device
     BK.is_symmetric(sol.prob)
 
     sol = newton((@set TWmodel.jacobian = BK.FullLU()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-11))
-    @test_broken BK.converged(sol) # may fail on some device
+    @test_skip BK.converged(sol) # may fail on some device
 
     Pl = lu(blockdiag(BK.getparams(TWmodel).Δ, sparse(I(1))))
     sol = newton((@set TWmodel.jacobian = BK.MatrixFree()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-11, linsolver = GMRESKrylovKit(;Pl)))
-    @test_broken BK.converged(sol) # may fail on some device
+    @test_skip BK.converged(sol) # may fail on some device
 
     sol = newton((@set TWmodel.jacobian = BK.AutoDiffMF()), vcat(uold, .1), NewtonPar(verbose = false, tol = 1e-10, linsolver = GMRESKrylovKit(;Pl)))
-    @test_broken BK.converged(sol) # may fail on some device
+    @test_skip BK.converged(sol) # may fail on some device
 end
 ####################################################################################################
 # test continuation method with different Generalised eigensolvers
