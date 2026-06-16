@@ -13,7 +13,6 @@ steps:
           codecov: true
           julia_args: "--threads=auto"
     agents:
-      queue: "juliagpu"
-      cuda: "*"
+      queue: "cuda"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 120
