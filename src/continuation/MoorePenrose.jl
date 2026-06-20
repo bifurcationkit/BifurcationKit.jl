@@ -25,7 +25,7 @@ struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgor
     tangent::T
     "Moore Penrose linear solver. Can be `BifurcationKit.direct`, `BifurcationKit.pInv` or `BifurcationKit.iterative`."
     method::MoorePenroseLS
-    "(Bordered) linear solver."
+    "(Bordered) linear solver used to invert the jacobian of the (bordered) problem during moore-penrose iterations. It is also used to compute the tangent for the predictor `Bordered()`."
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
@@ -220,7 +220,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         end
 
         p = clamp(p, p_min, p_max)
-        res_f .= residual(prob, x, set(par, paramlens, p))
+        _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
         res = normN(res_f)
 
         if method === iterative

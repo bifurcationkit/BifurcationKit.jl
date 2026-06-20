@@ -104,7 +104,7 @@ let
 end
 ####################################################################################################
 let
-    # test of the linear  solvers
+    # test of the linear solvers
     J0 = rand(100, 100) * 0.1 - I
     rhs = rand(100)
     sol_explicit = J0 \ rhs
@@ -677,6 +677,31 @@ let
 end
 ####################################################################################################
 # test generalised eigensolvers
+
+let
+    n = 100
+    x0 = rand(n)
+    J0 = I + sprand(n,n,0.1)
+    B = diagm(0 => vcat(ones(n)))
+
+    geil = BK.EigenMassMatrix(B, BK.DefaultEig())
+    outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
+    @test _test_sorted(outkk[1])
+
+    eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
+    outkk = geil(Symmetric(J0), 10)
+    @test _test_sorted(outkk[1])
+    geteigenvector(eil, outkk[2], 1:2)
+
+    eil = BK.EigArnoldiMethod(;x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, B)
+    outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
+    @test _test_sorted(outkk[1])
+end
+
 let
     n = 100
     x0 = rand(n)
@@ -696,5 +721,6 @@ let
     eil = BK.EigArnoldiMethod(;x₀ = rand(n))
     geil = BK.convert_to_GEV(eil, B)
     outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
     @test _test_sorted(outkk[1])
 end

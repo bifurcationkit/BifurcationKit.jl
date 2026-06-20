@@ -1,4 +1,6 @@
 """
+$(TYPEDSIGNATURES)
+
 This function only mutates z_pred. The `nrm` argument allows to just the increment z_pred.p by ds.
 
 We perform z_pred = z + ds * τ

@@ -19,7 +19,8 @@ Solve the generalized eigenvalue problem ``A x = \\lambda B x`` using `l`.
 function gev(eig::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
     F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B); sortby = eig.which)
-    return Complex.(F.values), Complex.(F.vectors), true, 1
+    nev2 = min(nev, length(F.values))
+    return Complex.(F.values[end:-1:end-nev2+1]), Complex.(F.vectors[:, end:-1:end-nev2+1]), true, 1
 end
 
 # GEV, useful for computation of Floquet exponents based on collocation
@@ -37,7 +38,7 @@ function gev(eig::EigArpack, A, B, nev; kwargs...)
     end
     return __sort_arpack(eig, λ, ϕ, ncv, nev)
 end
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # GEV useful for computation of Floquet exponents based on collocation
 function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
     if A isa AbstractMatrix
@@ -63,28 +64,6 @@ function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-$(TYPEDEF)
-
-Create an eigensolver for DAE, Basically a GEV with mass matrix.
-
-# Internal fields
-
-$(TYPEDFIELDS)
-"""
-struct EigenMassMatrix{Tb, Teig <: AbstractEigenSolver} <: AbstractEigenSolver
-    "Mass matrix"
-    B::Tb
-    "Eigen-solver"
-    eig::Teig
-end
-geteigenvector(eigsolve::EigenMassMatrix, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
-
-function (eigsolve::EigenMassMatrix)(J, nev; kwargs...)
-    return gev(eigsolve.eig, J, eigsolve.B, nev; kwargs...)
-end
-
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
 Generalized eigen solver based on `LinearAlgebra.eigen`.
 """
 @with_kw struct DefaultGEig{T, Tb <: AbstractMatrix} <: AbstractGEigenSolver
@@ -94,12 +73,7 @@ end
 
 function (l::DefaultGEig)(Jac, nev; kwargs...)
     # I put Array so we can call it on small sparse matrices
-    F = LA.eigen(Array(Jac), l.B)
-    I = sortperm(F.values, by = l.which, rev = true)
-    nev2 = min(nev, length(I))
-    J = findall( abs.(F.values[I]) .< 100000)
-    # we perform a conversion to Complex numbers here as the type can change from Float to Complex along the branch, this would cause a bug
-    return Complex.(F.values[I[J[begin:nev2]]]), Complex.(F.vectors[:, I[J[begin:nev2]]]), true, 1
+    return gev(DefaultEig(l.which), Array(Jac), l.B, nev; kwargs...)
 end
 
 convert_to_GEV(l::DefaultEig, B) = DefaultGEig(l.which, Array(B)) # we convert B from sparse to Array
@@ -130,7 +104,7 @@ GEigArpack(; kw...) = GEigArpack(EigArpack(;kw...), nothing)
 convert_to_GEV(eig::EigArpack, B) = GEigArpack(eig, B)
 
 function (geig::GEigArpack)(J, nev; kw...)
-    gev(geig.eigensolver, J, geig.B, nev; kw...)
+    return gev(geig.eigensolver, J, geig.B, nev; kw...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # case of sparse matrices or matrix free method via KrylovKit.jl
@@ -155,6 +129,7 @@ $(TYPEDFIELDS)
 end
 
 convert_to_GEV(l::EigKrylovKit, B) = GEigKrylovKit(l, B)
+geteigenvector(::GEigKrylovKit, vecs, n::Union{Int, AbstractVector{Int64}}) = vecs[n]
 
 function (geig::GEigKrylovKit)(J, _nev; kwargs...)
     eig = geig.eigensolver
@@ -201,5 +176,26 @@ end
 convert_to_GEV(l::EigArnoldiMethod, B) = GEigArnoldiMethod(l, B)
 
 function (geig::GEigArnoldiMethod)(J, _nev; kw...)
-    gev(geig.eigensolver, J, geig.B, _nev; kw...)
+    return gev(geig.eigensolver, J, geig.B, _nev; kw...)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDEF)
+
+Create an eigensolver for DAE, Basically a GEV with mass matrix.
+
+# Internal fields
+
+$(TYPEDFIELDS)
+"""
+struct EigenMassMatrix{Tb, Teig <: AbstractEigenSolver} <: AbstractEigenSolver
+    "Mass matrix"
+    B::Tb
+    "Eigen-solver"
+    eig::Teig
+end
+geteigenvector(eigsolve::EigenMassMatrix, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
+
+function (eigsolve::EigenMassMatrix)(J, nev; kwargs...)
+    return gev(eigsolve.eig, J, eigsolve.B, nev; kwargs...)
 end
