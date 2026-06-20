@@ -58,7 +58,7 @@ function MoorePenrose(;tangent = PALC(),
 end
 
 getpredictor(alg::MoorePenrose) = getpredictor(alg.tangent)
-getlinsolver(alg::MoorePenrose) = getlinsolver(alg.tangent)
+get_bordered_linsolver(alg::MoorePenrose) = get_bordered_linsolver(alg.tangent)
 
 function Base.empty!(alg::MoorePenrose)
     empty!(alg.tangent)

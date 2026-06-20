@@ -4,6 +4,8 @@ struct ConstantPredictor <: AbstractTangentComputation end
     Secant Tangent predictor
 """
 struct Secant <: AbstractTangentComputation end
+# important for bisection algorithm, switch on / off internal adaptive behavior
+internal_adaptation!(::Secant, ::Bool) = nothing
 _shortname(::PALC{Secant}) = "PALC [Secant]"
 
 # This function is used for initialization in iterate_from_two_points
@@ -22,8 +24,6 @@ function _secant_tangent!(τ::M,
     α = sign(ds) / dotθ(τ, θ)
     VI.scale!(τ, α)
 end
-# important for bisection algorithm, switch on / off internal adaptive behavior
-internal_adaptation!(::Secant, ::Bool) = nothing
 
 gettangent!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable,
@@ -53,28 +53,29 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 # └                           ┘└  ┘   └   ┘
 # it is updated inplace
 function gettangent!(state::AbstractContinuationState,
-                    it::AbstractContinuationIterable,
+                    iter::AbstractContinuationIterable,
                     ::Bordered, 
                     dotθ)
-    (it.verbosity > 0) && println("Predictor: Bordered")
-    ϵ = getdelta(it.prob)
+    (iter.verbosity > 0) && println("Predictor: Bordered")
+    ϵ = getdelta(iter.prob)
     τ = state.τ
-    θ = getθ(it)
-    T = eltype(it)
+    θ = getθ(iter)
+    T = eltype(iter)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(it.prob, state.z.u, setparam(it, state.z.p + ϵ))
-    dFdl = minus!!(dFdl, residual(it.prob, state.z.u, setparam(it, state.z.p)))
+    dFdl = residual(iter.prob, state.z.u, setparam(iter, state.z.p + ϵ))
+    dFdl = minus!!(dFdl, residual(iter.prob, state.z.u, setparam(iter, state.z.p)))
     dFdl = VI.scale!!(dFdl, 1/ϵ)
 
     # compute jacobian at the current solution
-    J = jacobian(it.prob, state.z.u, setparam(it, state.z.p))
+    J = jacobian(iter.prob, state.z.u, setparam(iter, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
-    τu, τp, flag, itl = solve_bls_palc(getlinsolver(it),
-                                        it, state,
+    τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),
+                                        iter, state,
                                         J, dFdl,
-                                        VI.zerovector(state.z.u), one(T)) # Right-hand side
+                                        VI.zerovector(state.z.u), 
+                                        one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1

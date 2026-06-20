@@ -86,7 +86,7 @@ setparam(iter::ContIterable, p0) = setparam(getprob(iter), p0)
 @inline get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
 
 # get the linear solver for Continuation
-getlinsolver(iter::ContIterable) = getlinsolver(getalg(iter))
+get_bordered_linsolver(iter::ContIterable) = get_bordered_linsolver(getalg(iter))
 
 @inline is_event_active(it::ContIterable) = !isnothing(it.event) && it.contparams.detect_event > 0
 @inline compute_eigenelements(it::ContIterable) = compute_eigenelements(it.contparams) || (is_event_active(it) && compute_eigenelements(it.event))

@@ -42,7 +42,7 @@ end
 Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, T(0)), α, nb)
 Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
-getlinsolver(alg::Multiple) = getlinsolver(alg.alg)
+get_bordered_linsolver(alg::Multiple) = get_bordered_linsolver(alg.alg)
 getdot(alg::Multiple) = getdot(alg.alg)
 # important for bisection algorithm
 internal_adaptation!(alg::Multiple, onoroff::Bool) = internal_adaptation!(alg.alg, onoroff)

@@ -80,7 +80,7 @@ $(TYPEDFIELDS)
     @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
 end
-getlinsolver(alg::PALC) = alg.bls
+get_bordered_linsolver(alg::PALC) = alg.bls
 getdot(alg::PALC) = alg.dotθ
 getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
@@ -209,7 +209,7 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     (;tol, max_iterations, verbose, α, αmin, linesearch) = contparams.newton_options
     (;p_min, p_max) = contparams
-    linsolver = getlinsolver(iter)
+    linsolver = get_bordered_linsolver(iter)
 
     # record the damping parameter
     α0 = α

@@ -24,7 +24,7 @@ AutoSwitch(;alg = PALC(tangent = Bordered()), tol_param = 1//2) = AutoSwitch(alg
 Base.empty!(alg::AutoSwitch) = empty!(alg.alg)
 getθ(alg::AutoSwitch) = getθ(alg.alg)
 getdot(alg::AutoSwitch) = getdot(alg.alg)
-getlinsolver(alg::AutoSwitch) = getlinsolver(alg.alg)
+get_bordered_linsolver(alg::AutoSwitch) = get_bordered_linsolver(alg.alg)
 internal_adaptation!(alg::AutoSwitch, onoroff::Bool) = internal_adaptation!(alg.alg, onoroff)
 getbls(alg::AutoSwitch) = getbls(alg.alg)
 
