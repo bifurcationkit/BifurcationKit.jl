@@ -113,7 +113,8 @@ function cusp_normal_form(_prob,
     c /= 6
 
     pt = Cusp(
-        x0, parbif,
+        x0, nothing, nothing, 
+        parbif,
         (getlens(𝐌𝐚), lens),
         ζ, ζ★,
         (c = c, ),
@@ -622,7 +623,9 @@ function bogdanov_takens_normal_form(_prob,
     p0 ./= ν
 
     pt = BogdanovTakens(
-        x0, parbif, (getlens(𝐌𝐚), lens),
+        x0, 
+        nothing, nothing,
+        parbif, (getlens(𝐌𝐚), lens),
         (;q0, q1), (;p0, p1),
         (a = zero(𝒯), b = zero(𝒯) ),
         (K2 = zero(𝒯),),
@@ -814,7 +817,8 @@ function bautin_normal_form(_prob::HopfMAProblem,
     l2 = real(G32) / 12
 
     pt = Bautin(
-        x0, parbif,
+        x0, nothing, nothing,
+        parbif,
         (getlens(𝐌𝐚), lens),
         ζ, ζ★,
         (;ω, G21, G32, l2),
@@ -1081,7 +1085,8 @@ function zero_hopf_normal_form(_prob,
     dFp = [LA.dot(p0, Jp(p10, lens1)) LA.dot(p0, Jp(p20, lens2)); LA.dot(p1, Jp(p10, lens1)) LA.dot(p1, Jp(p20, lens2))]
 
     pt = ZeroHopf(
-        x0, parbif,
+        x0, nothing, nothing,
+        parbif,
         lenses,
         (;q0, q1), (;p0, p1),
         (;ω = λI, λ0 = _λ[_ind0], dFp),
@@ -1440,7 +1445,8 @@ function hopf_hopf_normal_form(_prob,
     end
 
     pt = HopfHopf(
-        x0, parbif,
+        x0, nothing, nothing,
+        parbif,
         lenses,
         (;q1, q2), (;p1, p2),
         (;λ1, λ2),

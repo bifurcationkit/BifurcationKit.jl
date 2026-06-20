@@ -152,7 +152,6 @@ function is_bifurcation(sp::SpecialPoint)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # types for bifurcation point with 1d kernel for the jacobian
-
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
                   (:Fold, AbstractSimpleBranchPoint),
                   (:Pitchfork, AbstractSimpleBranchPoint),
@@ -162,6 +161,11 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
                   (:PitchforkMap, AbstractSimpleBranchPointForMaps),
                   (:TranscriticalMap, AbstractSimpleBranchPointForMaps),
                   (:NdBranchPoint, AbstractBranchPoint),
+                  (:Cusp, AbstractBifurcationPointCodim2),
+                  (:Bautin, AbstractBifurcationPointCodim2),
+                  (:ZeroHopf, AbstractBifurcationPointCodim2),
+                  (:HopfHopf, AbstractBifurcationPointCodim2),
+                  (:BogdanovTakens, AbstractBifurcationPoint)
                   )
     @eval begin
         """
@@ -184,7 +188,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 
         - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string."
         """
-        mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
+        @with_kw_noshow mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
 

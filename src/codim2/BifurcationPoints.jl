@@ -1,42 +1,18 @@
-for op in (:Cusp, :Bautin, :ZeroHopf, :HopfHopf)
-    @eval begin
-        """
-        $(TYPEDEF)
+type(::Cusp) = :Cusp
+type(::Bautin) = :Bautin
+type(::ZeroHopf) = :ZeroHopf
+type(::HopfHopf) = :HopfHopf
+type(bp::BogdanovTakens) = :BogdanovTakens
 
-        # Internal fields
-        $(TYPEDFIELDS)
-
-        """
-        mutable struct $op{Tv, Tpar, Tlens, Tevr, Tevl, Tnf} <: AbstractBifurcationPointCodim2
-            "Bifurcation point"
-            x0::Tv
-
-            "Parameters used by the vector field."
-            params::Tpar
-
-            "Parameter axis used to compute the branch on which this cusp point was detected."
-            lens::Tlens
-
-            "Right eigenvector"
-            ζ::Tevr
-
-            "Left eigenvector"
-            ζ★::Tevl
-
-            "Normal form coefficients"
-            nf::Tnf
-
-            "Type of bifurcation"
-            type::Symbol
-        end
-        type(bp::$op) = $op
-    end
-end
-
-function Base.show(io::IO, bp::Cusp)
+function __get_lenses_and_params_codim2(bp)
     lens1, lens2 = bp.lens
     p1 = _get(bp.params, lens1)
     p2 = _get(bp.params, lens2)
+    return lens1, lens2, p1, p2
+end
+
+function Base.show(io::IO, bp::Cusp)
+    lens1, lens2, p1, p2 = __get_lenses_and_params_codim2(bp)
     printstyled(io, "Cusp", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     # avoid aliasing with user defined parameters
@@ -48,9 +24,7 @@ function Base.show(io::IO, bp::Cusp)
 end
 
 function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)
-    lens1, lens2 = bp.lens
-    p1 = _get(bp.params, lens1)
-    p2 = _get(bp.params, lens2)
+    lens1, lens2, p1, p2 = __get_lenses_and_params_codim2(bp)
     printstyled(io, "Bautin", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     println(io, prefix*"ω = ", bp.nf.ω)
@@ -62,9 +36,7 @@ function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)
 end
 
 function Base.show(io::IO, bp::ZeroHopf)
-    lens1, lens2 = bp.lens
-    p1 = _get(bp.params, lens1)
-    p2 = _get(bp.params, lens2)
+    lens1, lens2, p1, p2 = __get_lenses_and_params_codim2(bp)
     printstyled(io, "Zero-Hopf", color=:cyan, bold = true)
     print(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).\n")
     println(io, "null eigenvalue ≈ ", bp.nf.λ0)
@@ -76,53 +48,15 @@ function Base.show(io::IO, bp::ZeroHopf)
 end
 
 function Base.show(io::IO, bp::HopfHopf)
-    lens1, lens2 = bp.lens
-    p1 = _get(bp.params, lens1)
-    p2 = _get(bp.params, lens2)
+    lens1, lens2, p1, p2 = __get_lenses_and_params_codim2(bp)
     printstyled(io, "Hopf-Hopf", color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).")
     println(io, "Eigenvalues:\nλ1 = ", bp.nf.λ1, "\nλ2 = ", bp.nf.λ2)
     println(io, bp.nf)
 end
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-$(TYPEDEF)
-
-$(TYPEDFIELDS)
-
-"""
-@with_kw_noshow mutable struct BogdanovTakens{Tv, Tpar, Tlens, Tevr, Tevl, Tnf, Tnf2} <: AbstractBifurcationPoint
-    "Bogdanov-Takens point"
-    x0::Tv
-
-    "Parameters used by the vector field."
-    params::Tpar
-
-    "Parameter axis used to compute the branch on which this BT point was detected."
-    lens::Tlens
-
-    "Right eigenvectors"
-    ζ::Tevr
-
-    "Left eigenvectors"
-    ζ★::Tevl
-
-    "Normal form coefficients (basic)"
-    nf::Tnf
-
-    "Normal form coefficients (detailed)"
-    nfsupp::Tnf2
-
-    "Type of bifurcation"
-    type::Symbol
-end
-
-type(bp::BogdanovTakens) = :BogdanovTakens
 
 function Base.show(io::IO, bp::BogdanovTakens)
-    lens1, lens2 = bp.lens
-    p1 = _get(bp.params, lens1)
-    p2 = _get(bp.params, lens2)
+    lens1, lens2, p1, p2 = __get_lenses_and_params_codim2(bp)
     printstyled(io, "Bogdanov-Takens", color=:cyan, bold = true)
     println(io, " bifurcation point at ", get_lens_symbol(lens1, lens2)," ≈ ($p1, $p2).")
     # avoid aliasing with user defined parameters
