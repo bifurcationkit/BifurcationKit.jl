@@ -122,21 +122,15 @@ function initialize!(state::AbstractContinuationState,
     addtangent!(state, nrm)
 end
 
-"""
-This function only mutates z_pred. The `nrm` argument allows to just the increment z_pred.p by ds.
-
-We perform z_pred = z + ds * τ
-"""
-function addtangent!(state::AbstractContinuationState, nrm = false)
-    # we perform z_pred = z + ds * τ
-    # note that state.z contains the last converged state
-    _copyto!(state.z_pred, state.z)
-    ds = state.ds
-    ρ = nrm ? ds / state.τ.p : ds
-    VI.add!(state.z_pred, state.τ, ρ)
+function getpredictor!(state::AbstractContinuationState,
+                       iter::AbstractContinuationIterable,
+                       alg::PALC,
+                       nrm = false)
+    _getpredictor_palc!(state, iter, alg, nrm)
 end
 
-function getpredictor!(state::AbstractContinuationState,
+# this function can also be called by Natural
+function _getpredictor_palc!(state::AbstractContinuationState,
                        iter::AbstractContinuationIterable,
                        alg::PALC,
                        nrm = false)
