@@ -1,4 +1,4 @@
-struct ConstantPredictor <: AbstractTangentComputation end
+struct Constant <: AbstractTangentComputation end
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     Secant Tangent predictor

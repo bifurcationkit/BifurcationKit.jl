@@ -162,7 +162,7 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
 
 # get the bordered linear solver used for the branch
-getbls(br::AbstractBranchResult) = getbls(getalg(br))
+get_bordered_linsolver(br::AbstractBranchResult) = get_bordered_linsolver(getalg(br))
 
 """
     setparam(br, p0)

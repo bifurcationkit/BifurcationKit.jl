@@ -33,7 +33,7 @@ end
 internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
 @inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
-getbls(alg::MoorePenrose) = alg.ls
+get_bordered_linsolver(alg::MoorePenrose) = alg.ls
 
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
 
@@ -91,24 +91,24 @@ initialize!(state::AbstractContinuationState,
               alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
 
 function getpredictor!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                         alg::MoorePenrose, 
-                         nrm = false)
+                       iter::AbstractContinuationIterable,
+                       alg::MoorePenrose, 
+                       nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
     getpredictor!(state, iter, alg.tangent, nrm)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                   iter::AbstractContinuationIterable,
-                    alg::MoorePenrose,
-                    nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
+                  iter::AbstractContinuationIterable,
+                  alg::MoorePenrose,
+                  nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
 
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,
-                       it::AbstractContinuationIterable,
-                     algo::MoorePenrose;
-                     kwargs...)
+                    it::AbstractContinuationIterable,
+                    algo::MoorePenrose;
+                    kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)

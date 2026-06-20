@@ -26,7 +26,7 @@ getθ(alg::AutoSwitch) = getθ(alg.alg)
 getdot(alg::AutoSwitch) = getdot(alg.alg)
 get_bordered_linsolver(alg::AutoSwitch) = get_bordered_linsolver(alg.alg)
 internal_adaptation!(alg::AutoSwitch, onoroff::Bool) = internal_adaptation!(alg.alg, onoroff)
-getbls(alg::AutoSwitch) = getbls(alg.alg)
+get_bordered_linsolver(alg::AutoSwitch) = get_bordered_linsolver(alg.alg)
 
 function update(alg::AutoSwitch, contParams::ContinuationPar, linear_algo) 
     alg2 = update(alg.alg, contParams, linear_algo)

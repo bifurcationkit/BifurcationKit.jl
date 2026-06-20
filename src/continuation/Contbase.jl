@@ -1,5 +1,5 @@
-abstract type AbstractPredictor end
 abstract type AbstractTangentComputation end
+abstract type AbstractPredictor end
 
 initialize!(state::AbstractContinuationState,
                 iter::AbstractContinuationIterable) = initialize!(state, iter, getalg(iter))
@@ -43,8 +43,6 @@ end
 # this is called during initialization of the continuation method. Can be used to adjust the algo.
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
-# get the bordered linear solver used for the continuation algorithm
-getbls(::AbstractContinuationAlgorithm) = MatrixBLS()
 
 # helper functions to update ::ContState when calling the corrector
 function _update_field_but_not_solution!(state::AbstractContinuationState,

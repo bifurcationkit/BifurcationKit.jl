@@ -3,6 +3,8 @@ struct NormalisedDot{Tdot}
 end
 (dt::NormalisedDot)(x, y) = dt.dot(x, y) / length(x)
 
+__scaling_function_dot_palc(x) = VI.scale!(x, 1/length(x))
+
 """
 $(TYPEDEF)
 
@@ -25,7 +27,7 @@ struct DotTheta{Tdot, Ta}
     apply!::Ta
 end
 
-DotTheta() = DotTheta( NormalisedDot(VI.inner), x -> x = VI.scale!(x, 1/length(x))   )
+DotTheta() = DotTheta( NormalisedDot(VI.inner), __scaling_function_dot_palc)
 DotTheta(dt) = DotTheta(dt, nothing)
 _get_apply_dot(dt::DotTheta) = dt.apply!
 
@@ -66,18 +68,18 @@ $(TYPEDFIELDS)
 
 """
 @with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot} <: AbstractContinuationAlgorithm
-    "Tangent predictor, must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, "
+    "Tangent (predictor), must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, etc."
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
     θ::T = 0.5
-    "[internal], "
+    "[internal], not yet used."
     _bothside::Bool = false
     "Bordered linear solver used to invert the jacobian of the bordered problem during newton iterations. It is also used to compute the tangent for the predictor `Bordered()`, "
     bls::Tbls = MatrixBLS()
     "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...) or when a specific (FEM) dot product is provided."
     dotθ::Tdot = DotTheta()
 
-    @assert ~(predictor isa ConstantPredictor) "You cannot use a constant predictor with PALC"
+    @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
 end
 get_bordered_linsolver(alg::PALC) = alg.bls
@@ -86,7 +88,6 @@ getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
 getdot(it::ContIterable) = getdot(it.alg)
 getθ(it::ContIterable) = getθ(it.alg)
-getbls(alg::PALC) = alg.bls
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)

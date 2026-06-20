@@ -81,7 +81,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       δp = nothing, 
                       ampfactor::Real = 1,
                       use_normal_form = true,
-                      bls = getbls(br),
+                      bls = get_bordered_linsolver(br),
                       bls_block = bls,
 
 
