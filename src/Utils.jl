@@ -62,6 +62,8 @@ end
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # these are very useful methods than can be used with dispatch to specialize the eigensolver to the model
+# indeed, something, we need to apply the eigensolver to a modified getx(state) (for example Floquet exponents)
+# and the following method is very handy
 function compute_eigenvalues(eigsolver::AbstractEigenSolver, 
                              iter::ContIterable,
                              state,

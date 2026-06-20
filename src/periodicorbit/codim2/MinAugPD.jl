@@ -441,7 +441,7 @@ function compute_eigenvalues(eig::FoldEig,
                             state,
                             u0,
                             par,
-                            nev = iter.contparams.nev; k...)
+                            nev = getcontparams(iter).nev; k...)
     𝐏𝐛 = getprob(iter)
     lens1, lens2 = get_lenses(𝐏𝐛)
     x = getvec(u0)

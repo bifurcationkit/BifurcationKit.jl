@@ -747,7 +747,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     # formula (7.5) in REF1
     h21 = C(q0, q0, cq0) .+ B(cq0, H20) .+ 2 .* B(q0, H11)
     G21 = LA.dot(p0, h21)      # (7.6)
-    h21 .= G21 .* q0 .- h21 # (7.7)
+    h21 .= G21 .* q0 .- h21    # (7.7)
 
     # formula (7.7) in REF1
     H21, _, cv, it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
@@ -793,10 +793,10 @@ function bautin_normal_form(_prob::HopfMAProblem,
         return out1 .+ im .* out2
     end
 
-    G32 = LA.dot(p0, E(q0, q0, q0, cq0, cq0))
-    G32 += LA.dot(p0, D(x0, q0, q0, q0, conj.(H20))) +
+    G32 = LA.dot(p0,  E(q0, q0,  q0, cq0, cq0))
+    G32 += LA.dot(p0, D(x0, q0,  q0,  q0, conj.(H20))) +
           3LA.dot(p0, D(x0, q0, cq0, cq0, H20)) +
-          6LA.dot(p0, D(x0, q0, q0, cq0, H11))
+          6LA.dot(p0, D(x0, q0,  q0, cq0, H11))
 
     G32 += LA.dot(p0, C(cq0, cq0, H30)) +
           3LA.dot(p0, C(q0, q0, conj.(H21))) +
