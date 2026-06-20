@@ -445,13 +445,13 @@ end
 
 @views function (fl::FloquetGEV)(coll::Collocation, _J::AbstractMatrix, nev; k...)
     n = get_state_dim(coll)
-    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
+    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver, so we make a copy
     # case of v(0)
     J[end-n+1:end, 1:n] .= LA.I(n)
     # case of v(1)
     J[end-n+1:end, end-n+1:end] .= (-1) .* J[end-n+1:end, 1:n]
-    # solve generalized eigenvalue problem
-    values, vecs = gev(fl.eigsolver, J, fl.B, nev)
+    # solve generalized eigenvalue problem, we compute all eigenvalues because they are already sorted
+    values, vecs = gev(fl.eigsolver, J, fl.B, size(J, 1))
     # remove infinite eigenvalues
     indvalid = findall(x -> abs(x) < 1e9, values)
     vals = values[indvalid]

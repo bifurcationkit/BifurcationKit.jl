@@ -10,53 +10,65 @@ F0_simple(x, p) = p[1] .* x
 F_simple(x, p; k = 2) = @. p[1] * x + x^(k+1)/(k+1) + 0.01
 Jac_simple(x, p; k = 2) = diagm(0 => p[1] .+ x.^k)
 ####################################################################################################
-BK.get_lens_symbol(@optic _.a)
-BK.get_lens_symbol(@optic _.a.a)
-BK.get_lens_symbol(IndexLens{Tuple{Int64}}((2,)))
-BK.get_lens_symbol(nothing)
+let 
+    BK.get_lens_symbol(@optic _.a)
+    BK.get_lens_symbol(@optic _.a.a)
+    BK.get_lens_symbol(IndexLens{Tuple{Int64}}((2,)))
+    BK.get_lens_symbol(nothing)
+end
 ####################################################################################################
 # test creation of specific scalar product
-BK.DotTheta(dot)
-BK.DotTheta()
-# tests for the predictors
-BK._mergewithrecordfromuser(1., (a = 1,))
-BK._mergewithrecordfromuser(rand(2), (a = 1,))
-BK._mergewithrecordfromuser((1, 2), (a = 1,))
+let
+    BK.DotTheta(dot)
+    BK.DotTheta()
+    # tests for the predictors
+    BK._mergewithrecordfromuser(1., (a = 1,))
+    BK._mergewithrecordfromuser(rand(2), (a = 1,))
+    BK._mergewithrecordfromuser((1, 2), (a = 1,))
 
-BK._reverse!(rand(2))
-BK._reverse!(nothing)
-BK._append!(rand(2),rand(2))
-BK._append!(rand(2),nothing)
+    BK._reverse!(rand(2))
+    BK._reverse!(nothing)
+    BK._append!(rand(2),rand(2))
+    BK._append!(rand(2),nothing)
 
-BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2), 1., :fold) |> BK.type
-BK._print_line(1, 1, (1, 1))
-BK._print_line(1, nothing, (1, 1))
-BK.converged(nothing)
-BK.in_bisection(nothing)
-BK._empty(nothing)
+    BK.Fold(rand(2), nothing, 0.1, 0.1, (@optic _.p), rand(2), rand(2), 1., :fold) |> BK.type
+    BK._print_line(1, 1, (1, 1))
+    BK._print_line(1, nothing, (1, 1))
+    BK.converged(nothing)
+    BK.in_bisection(nothing)
+    BK._empty(nothing)
+end
 ####################################################################################################
 # test branch kinds
-BK.FoldCont()
-BK.HopfCont()
-BK.PDCont()
+let
+    BK.FoldCont()
+    BK.HopfCont()
+    BK.PDCont()
 
-# Codim2 periodic orbit
-BK.FoldPeriodicOrbitCont()
-BK.PDPeriodicOrbitCont()
-BK.NSPeriodicOrbitCont()
+    # Codim2 periodic orbit
+    BK.FoldPeriodicOrbitCont()
+    BK.PDPeriodicOrbitCont()
+    BK.NSPeriodicOrbitCont()
+end
 ####################################################################################################
+let
 BK.SpecialPoint(param=0., interval=(0.,0.), x=zeros(2), norm=0., τ=BorderedArray(rand(20),2.), precision=0.1) |> BK.type
+end
 ####################################################################################################
 # test continuation algorithm
+let
 BK.empty(Natural())
 BK.empty(PALC())
 BK.empty(PALC(tangent = Bordered()))
 BK.empty(BK.MoorePenrose(predictor = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
+end
 ####################################################################################################
 # test the update functionalities of the AbstractContinuationAlgorithm
+let
 BK.update(PALC(), ContinuationPar(), MatrixBLS())
 BK.update(PALC(bls=MatrixBLS(nothing)), ContinuationPar(), nothing).bls.solver == ContinuationPar().newton_options.linsolver
+end
 ####################################################################################################
 # test the PALC linear solver interface
 let

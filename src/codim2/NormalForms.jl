@@ -186,7 +186,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
     b = 2LA.dot(ζs0, R20) + 2LA.dot(ζs1, R2(ζ0, ζ1))
 
     # return the normal form coefficients
-    pt.nf = (; a, b)
+    @reset pt.nf = (; a, b)
     if detailed_type == false # TODO! THIS MAKES IT TYPE UNSTABLE
         return pt
     end
@@ -331,7 +331,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
          b * LA.dot(p1, H0101) - LA.dot(p1, H1100) - LA.dot(p1, H2001)
 
     verbose && println(pt.nf)
-    return @set pt.nfsupp = (; γ, c, K10, K11, K2, d, e, a1, b1, H0001, H0010, H0002, H1001, H2000)
+    return @set pt.nf = (;pt.nf..., γ, c, K10, K11, K2, d, e, a1, b1, H0001, H0010, H0002, H1001, H2000)
 end
 
 """
@@ -348,8 +348,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
     # the fold curve is β1 / a < 0 with x± := ±√(-β1/a)v
     # the Hopf curve is 0 = -x*b - β2, -x⋅a > 0
     # ie β2 = -bx with ±b√(-β1/a)
-    (;a, b) = bt.nf
-    (;K10, K11, K2) = bt.nfsupp
+    (;a, b, K10, K11, K2) = bt.nf
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
     p2 = _get(bt.params, lens2)
@@ -366,7 +365,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T;
         end
         β2 = -b * x
         ω = sqrt(-2x*a)
-        return (pars = par0 .+ K10 .* β1 .+ K11 .* β2 .+ K2 .* (β2^2/2), ω = ω)
+        return (;pars = par0 .+ K10 .* β1 .+ K11 .* β2 .+ K2 .* (β2^2/2), ω)
     end
 
     # compute eigenvector corresponding to the Hopf branch
@@ -415,7 +414,7 @@ function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T;
     # the Hopf curve is 0 = -x*b - β2, x⋅a > 0
     # ie β2 = -bx with ±b√(-β1/a)
     (;a, b) = bt.nf
-    (; K10, K11, K2) = bt.nfsupp
+    (; K10, K11, K2) = bt.nf
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
     p2 = _get(bt.params, lens2)
@@ -447,8 +446,8 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T;
                     verbose = false, 
                     ampfactor = one(T)) where T
     (;a, b) = bt.nf
-    (;K10, K11, K2, b1, e, d, a1) = bt.nfsupp
-    (;H0001, H0010, H0002, H1001, H2000) = bt.nfsupp
+    (;K10, K11, K2, b1, e, d, a1) = bt.nf
+    (;H0001, H0010, H0002, H1001, H2000) = bt.nf
 
     lens1, lens2 = bt.lens
     p1 = _get(bt.params, lens1)
@@ -627,8 +626,7 @@ function bogdanov_takens_normal_form(_prob,
         nothing, nothing,
         parbif, (getlens(𝐌𝐚), lens),
         (;q0, q1), (;p0, p1),
-        (a = zero(𝒯), b = zero(𝒯) ),
-        (K2 = zero(𝒯),),
+        (a = zero(𝒯), b = zero(𝒯), K2 = zero(𝒯), ),
         :none
     )
 

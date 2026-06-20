@@ -466,7 +466,7 @@ function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCon
     lens1, lens2 = get_lenses(𝐏𝐛)
     x = getvec(u0, get_formulation(𝐏𝐛))        # ns point
     p1, ω = getp(u0, get_formulation(𝐏𝐛))      # first parameter
-    p2 = getp(state.z)                             # second parameter
+    p2 = getp(state.z)                         # second parameter
     par = getparams(𝐏𝐛)
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)

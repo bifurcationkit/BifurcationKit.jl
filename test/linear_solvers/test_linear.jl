@@ -1,7 +1,7 @@
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack, Random
 const BK = BifurcationKit
 Random.seed!(1234)
-# test that the top eigenvalues are sorted by decrasing real part
+# test that the top eigenvalues are sorted by decreasing real part
 _test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
 BK.closesttozero(rand(10))
@@ -623,7 +623,7 @@ let
     B = sparse(I(length(x0)))
     out = Arpack.eigs(J0, nev = 20, which = :LR)
     resgev = BK.gev(DefaultEig(), J0, B, 10)
-    @test issorted(resgev[1], by = real)
+    @test _test_sorted(resgev[1])
 
     eil = BK.EigKrylovKit(tol = 1e-9)
     outkk = eil(J0, 20)

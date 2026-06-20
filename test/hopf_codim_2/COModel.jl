@@ -69,11 +69,11 @@ bt = get_normal_form(sn_codim2, 2; autodiff = true)
 
 @test bt.nf.a |> abs ≈ 0.083784 rtol = 1e-4
 @test bt.nf.b |> abs ≈ 2.1363 rtol = 1e-4
-@test bt.nfsupp.K2 ≈ [-13.1155, 51.17] atol = 1e-1
-@test bt.nfsupp.d ≈ -0.1778 atol = 1e-3
-@test bt.nfsupp.e ≈ -7.1422 rtol = 1e-4
-@test abs(bt.nfsupp.a1) ≈ abs( -0.8618 ) rtol = 1e-3
-@test abs(bt.nfsupp.b1) ≈ abs( -7.1176 ) rtol = 1e-3
+@test bt.nf.K2 ≈ [-13.1155, 51.17] atol = 1e-1
+@test bt.nf.d ≈ -0.1778 atol = 1e-3
+@test bt.nf.e ≈ -7.1422 rtol = 1e-4
+@test abs(bt.nf.a1) ≈ abs( -0.8618 ) rtol = 1e-3
+@test abs(bt.nf.b1) ≈ abs( -7.1176 ) rtol = 1e-3
 
 # very close to BT, stop event location at 1e-12
 brh = (@set br.alg.tangent = Bordered())

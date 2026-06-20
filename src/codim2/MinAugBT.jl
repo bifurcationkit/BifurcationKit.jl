@@ -337,9 +337,9 @@ function newton_bt(prob::AbstractBifurcationProblem,
         x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), 
         ζ = 𝐁𝐓.b, 
         ζ★ = 𝐁𝐓.a, 
-        nf = (a = missing, b = missing ),
+        nf = (a = missing, b = missing, K2 = zero(Ty) ),
         type = :none, 
-        nfsupp = (K2 = zero(Ty),))
+    )
     return @set sol.u = bt
 end
 

@@ -52,7 +52,7 @@ $(TYPEDFIELDS)
     param::T = 0.
 
     "Norm of the equilibrium at the special point."
-    norm::T  = 0.
+    norm::T = 0.
 
     "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)."
     printsol::Tp = 0.
@@ -193,13 +193,13 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
             x0::Tv
 
             "Tangent of the curve at the bifurcation point."
-            τ::Tτ
+            τ::Tτ = missing
 
             "Parameter value at the bifurcation point."
-            p::T
+            p::T = missing
 
             "Parameters used by the vector field."
-            params::Tpar
+            params::Tpar = missing
 
             "Parameter axis used to compute the branch on which this bifurcation point was detected."
             lens::Tlens
@@ -214,7 +214,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
             nf::Tnf
 
             "Type of bifurcation point"
-            type::Symbol
+            type::Symbol = :NA
         end
     end
 end

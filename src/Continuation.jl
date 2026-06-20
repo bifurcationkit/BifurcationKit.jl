@@ -138,47 +138,51 @@ $(TYPEDFIELDS)
 - `getparams(iter, state)` return the current parameter set.
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
-    "predictor"
+    "predictor."
     z_pred::Tv
-    "tangent to the curve, predictor"
+    "tangent to the curve."
     τ::Tv
-    "current solution"
+    "current solution."
     z::Tv
-    "previous solution"
+    "previous solution."
     z_old::Tv
 
-    "Boolean for newton correction"
-    converged::Bool
-    "Number of newton iteration (in corrector)"
+    "Boolean for newton correction."
+    converged::Bool = false
+    "Number of newton iteration (in corrector)."
     itnewton::Int64 = 0
-    "number of linear iteration (in newton corrector)"
+    "number of linear iteration (in newton corrector)."
     itlinear::Int64 = 0
-    "current continuation step"
+    "current continuation step."
     step::Int64 = 0
-    "current step size"
-    ds::T
-    "boolean to stop continuation"
+    "current step size."
+    ds::T = missing
+    "boolean to stop continuation."
     stopcontinuation::Bool = false
-    "perform step size adaptation"
+    "perform step size adaptation."
     stepsizecontrol::Bool = true
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
-    "number of unstable eigenvalues (current, previous)"
+    "number of unstable eigenvalues (current, previous)."
     n_unstable::Tuple{Int64, Int64}  = (-1, -1)
-    "number of unstable complex eigenvalues (current, previous)"
+    "number of unstable complex eigenvalues (current, previous)."
     n_imag::Tuple{Int64, Int64}      = (-1, -1)
-    "boolean for eigen solver computation"
+    "boolean for eigen solver computation."
     convergedEig::Bool               = true
 
-    "current eigenvalues"
+    "current eigenvalues."
     eigvals::Teigvals = nothing
-    "current eigenvectors"
+    "current eigenvectors."
     eigvecs::Teigvec  = nothing
-    "store the current event values"
+    "store the current event values."
     eventValue::Tcb = nothing
-    "whether the state is in bisection for locating special points"
+    "whether the state is in bisection for locating special points."
     in_bisection::Bool = false
+end
+
+function EmptyContState(z::Tvec) where {Tvec} 
+    ContState{Union{Missing, Tvec}, Missing, Nothing, Nothing, Nothing}(;z, τ=missing, z_pred=missing, z_old=missing)
 end
 
 function Base.copy(state::ContState)
@@ -345,14 +349,14 @@ end
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     # the keyword argument is to overwrite verbosity behaviour, like when locating bifurcations
     verbose = min(it.verbosity, _verbosity) > 0
-    prob = it.prob
+    prob = getprob(it)
     p₀ = getparam(prob)
 
     algo_string = typeof(getalg(it)).name.name; lalgo = 54-length(algo_string|>string)-2
     verbose && printstyled("━"^54*"\n"*"─"^(lalgo÷2)*" ", algo_string, " "*"─"^(lalgo÷2)*"\n\n", bold = true, color = :red)
 
     # newton parameters
-    (;p_min, p_max, max_steps, newton_options, η, ds) = it.contparams
+    (;p_min, p_max, max_steps, newton_options, η, ds) = getcontparams(it)
 
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
@@ -407,11 +411,11 @@ function iterate_from_two_points(it::ContIterable,
                                     _verbosity = it.verbosity) where {T}
     ds = it.contparams.ds
     z = BorderedArray(_copy(u₁), p₁)
-    # Compute eigenvalues to get the eigenvecs type. Necessary for creating a ContResult.
+    # Compute eigenvalues to get the eigenvecs type. Required for creating a ContResult.
     eigvals = eigvecs = nothing
     cveig::Bool = true
     if compute_eigenelements(it)
-        eigvals, eigvecs, cveig, = compute_eigenvalues(it, (z = z,), u₀, getparams(it.prob), it.contparams.nev)
+        eigvals, eigvecs, cveig, = compute_eigenvalues(it, EmptyContState(z), u₀, getparams(getprob(it)), getcontparams(it).nev)
     end
 
     # compute event value and store it into state
