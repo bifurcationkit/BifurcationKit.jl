@@ -18,8 +18,8 @@ This operator allows to handle the following situation. Assume you want to solve
 
 where ``||u||₂² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
-!!! tip "Accumulator"
-    You can use a different accumulator than `Πᵢ`, for example `mean`.
+!!! danger "Accumulator"
+    You can use a different accumulator than `Πᵢ`, for example `mean`. This is important because if you have many roots `αⁿ` can be smaller than machine precision. `mean` resolves this issue.
 
 # Internal fields
 

@@ -21,56 +21,53 @@ Available linear solvers for `method`:
 $(TYPEDFIELDS)
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
-    "Tangent predictor, for example `PALC()`."
-    tangent::T
+    "Tangent predictor, for example `PALC()`, `Natural()`, etc." # we could have passed an AbstractTangentComputation directly but that would mean duplicating the architecture of PALC. So we use an AbstractContinuationAlgorithm as a predictor with some abuse of notation.
+    predictor::T
     "Moore Penrose linear solver. Can be `BifurcationKit.direct`, `BifurcationKit.pInv` or `BifurcationKit.iterative`."
     method::MoorePenroseLS
     "(Bordered) linear solver used to invert the jacobian of the (bordered) problem during moore-penrose iterations. It is also used to compute the tangent for the predictor `Bordered()`."
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
-@inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
-@inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
+internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.predictor, swch)
+@inline getdot(alg::MoorePenrose) = getdot(alg.predictor)
+@inline getθ(alg::MoorePenrose) = getθ(alg.predictor)
 get_bordered_linsolver(alg::MoorePenrose) = alg.ls
 
-_shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
+_shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.predictor)))"
 
 """
 $(TYPEDSIGNATURES)
 
 Constructor for the `MoorePenrose` continuation algorithm.
 """
-function MoorePenrose(;tangent = PALC(),
+function MoorePenrose(;predictor = PALC(),
                         method = direct,
                         ls = nothing)
     if method != iterative
         ls = DefaultLS()
     else
         if isnothing(ls)
-            if tangent isa PALC
-                ls = get_bordered_linsolver(tangent)
+            if predictor isa PALC
+                ls = get_bordered_linsolver(predictor)
             else
                 ls = MatrixBLS()
             end
         end
     end
-    return MoorePenrose(tangent, method, ls)
+    return MoorePenrose(predictor, method, ls)
 end
 
-getpredictor(alg::MoorePenrose) = getpredictor(alg.tangent)
-get_bordered_linsolver(alg::MoorePenrose) = get_bordered_linsolver(alg.tangent)
-
 function Base.empty!(alg::MoorePenrose)
-    empty!(alg.tangent)
+    empty!(alg.predictor)
     alg
 end
 
 function update(alg_mp::MoorePenrose,
                 contParams::ContinuationPar,
                 linear_algo::Tla) where {Tla} #TODO type unstable
-    tangent = update(alg_mp.tangent, contParams, linear_algo)
-    alg = @set alg_mp.tangent = tangent
+    tangent = update(alg_mp.predictor, contParams, linear_algo)
+    alg = @set alg_mp.predictor = tangent
 
     # for direct methods, we need a direct solver
     if alg.method != iterative && alg.ls isa AbstractBorderedLinearSolver
@@ -91,7 +88,7 @@ end
 
 initialize!(state::AbstractContinuationState,
              iter::AbstractContinuationIterable,
-              alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
+              alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.predictor, nrm)
 
 function getpredictor!(state::AbstractContinuationState,
                        iter::AbstractContinuationIterable,
@@ -99,13 +96,13 @@ function getpredictor!(state::AbstractContinuationState,
                        nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
-    getpredictor!(state, iter, alg.tangent, nrm)
+    getpredictor!(state, iter, alg.predictor, nrm)
 end
 
 update_predictor!(state::AbstractContinuationState,
                   iter::AbstractContinuationIterable,
                   alg::MoorePenrose,
-                  nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
+                  nrm = false) = update_predictor!(state, iter, alg.predictor, nrm)
 
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,

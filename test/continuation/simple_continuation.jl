@@ -51,7 +51,7 @@ BK.SpecialPoint(param=0., interval=(0.,0.), x=zeros(2), norm=0., τ=BorderedArra
 BK.empty(Natural())
 BK.empty(PALC())
 BK.empty(PALC(tangent = Bordered()))
-BK.empty(BK.MoorePenrose(tangent = PALC(tangent = Bordered())))
+BK.empty(BK.MoorePenrose(predictor = PALC(tangent = Bordered())))
 BK.empty(PALC(tangent = Polynomial(Bordered(), 2, 6, rand(1))))
 ####################################################################################################
 # test the update functionalities of the AbstractContinuationAlgorithm
