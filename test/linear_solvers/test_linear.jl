@@ -667,11 +667,13 @@ let
     eig = BifurcationKit.ShiftInvert(0.1, DefaultLS(), EigArnoldiMethod(x₀=rand(10)))
     J = I + 0.1rand(10,10)
     res1 = eig(J, 10)
-    res1[1]
-    @test norminf(eigvals(J, sortby = real) - res1[1])<1e-9
+    res0 = sort(eigvals(J), by =  x -> (real(x), imag(x)), rev = true)
+    @test _test_sorted(res0)
+    @test _test_sorted(res1[1])
+    @test norminf(res0 .- res1[1]) < 1e-9
 
     eig = BK.EigenMassMatrix([1. 0; 0 0], DefaultEig())
-    eig(rand(2, 2), 2)
+    res2 = eig(rand(2, 2), 2)
 end
 ####################################################################################################
 # test generalised eigensolvers

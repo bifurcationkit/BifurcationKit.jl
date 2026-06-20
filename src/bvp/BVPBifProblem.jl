@@ -115,9 +115,9 @@ end
 _getvectortype(::BVPBifProblem{Tbvp, Tjac, Tu}) where {Tbvp, Tjac, Tu} = Tu
 # Accessor methods
 getu0(prob::BVPBifProblem) = prob.u0
-getparams(prob::BVPBifProblem) = prob.params
+getparams(prob::BVPBifProblem{Tbvp, Tjac, Tu}) where {Tbvp, Tjac, Tu} = prob.params # Careful: specific type definition suggested by Aqua.jl to avoid ambiguities
 getparams(prob::BVPBifProblem{Tbvp, Tjac, Tu, Nothing}) where {Tbvp, Tjac, Tu} = getparams(get_bvp(prob))
-getlens(prob::BVPBifProblem) = prob.lens
+getlens(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp}) where {Tbvp, Tjac, Tu, Tp} = prob.lens # Careful: specific type definition suggested by Aqua.jl to avoid ambiguities
 getlens(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Nothing}) where {Tbvp, Tjac, Tu, Tp} = getlens(get_bvp(prob))
 getparam(prob::BVPBifProblem) = _get(getparams(prob), getlens(prob))
 setparam(prob::BVPBifProblem, p0) = set(getparams(prob), getlens(prob), p0)

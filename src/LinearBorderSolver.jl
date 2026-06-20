@@ -305,17 +305,6 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
     dot::Td # possibly custom dot product
 end
 
-function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
-    out = VI.zerovector(x)
-    _copyto!(out.u, apply(lbmap.J, x.u))
-    VI.add!(out.u, lbmap.a, x.p)
-    if isnothing(lbmap.shift) == false
-        VI.add!(out.u, x.u, lbmap.shift)
-    end
-    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
-    return out
-end
-
 function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     # This implements the case where Tc is a number, ie there is one scalar constraint in the
     # bordered linear system
@@ -333,6 +322,7 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 end
 
 # case matrix by blocks
+# Careful: specific type definition suggested by Aqua.jl to avoid ambiguities
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
     out = VI.zerovector(x)
     _copyto!(out.u, apply(lbmap.J, x.u))
@@ -346,6 +336,17 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <
     for ii in eachindex(lbmap.b)
         out.p[ii] += lbmap.dot(lbmap.b[ii], x.u)
     end
+    return out
+end
+
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray{Tv, Tp}) where {Tj, Ta <: Tuple, Tb <: Tuple, Tv, Tp <: Number}
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
+    VI.add!(out.u, lbmap.a, x.p)
+    if isnothing(lbmap.shift) == false
+        VI.add!(out.u, x.u, lbmap.shift)
+    end
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
 

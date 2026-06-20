@@ -31,7 +31,7 @@ res = bvp_residual(bvp, X, params)
 prob = BVPBifProblem(bvp, X0, params, (@optic _.μ))
 ```
 """
-struct DiscretizedBVP{Tmodel<:BVPModel, Tdisc<:AbstractDiscretizer, Tcache}
+struct DiscretizedBVP{Tmodel <: BVPModel, Tdisc <: AbstractDiscretizer, Tcache}
     "Mathematical BVP model"
     model::Tmodel
 

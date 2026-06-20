@@ -12,6 +12,11 @@ abstract type AbstractFloquetSolver <: AbstractEigenSolver end
 geteigenvector(::ES, vecs, n::Union{Int, AbstractVector{Int64}}) where {ES <: AbstractEigenSolver} = vecs[:, n]
 
 getsolver(eig::AbstractEigenSolver) = eig
+
+function __sort_spectrum(eig, λ, ϕ; by = real, rev = true)
+    Ind = sortperm(λ; by, rev)
+    return Complex.(λ[Ind]), geteigenvector(eig, ϕ, Ind)
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Default Solvers
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -138,7 +143,7 @@ Just pass the above fields like `EigKrylovKit(;dim=2)`
     x₀::vectype = nothing
 end
 
-function (eig::EigKrylovKit{T, vectype})(J, _nev; kwargs...) where {T, vectype}
+function (eig::EigKrylovKit)(J, _nev; kwargs...) 
     # note that there is no need to order the eigen-elements. KrylovKit does it
     # with the option `which`, by decreasing order.
     kw = (verbosity = eig.verbose,
@@ -249,11 +254,13 @@ end
 
 geteigenvector(eigsolve::ShiftInvert, vecs, n::Union{Int, AbstractVector{Int64}}) = geteigenvector(eigsolve.eig, vecs, n)
 
-function (eig::ShiftInvert)(J, nev; kwargs...)
+function (eig_si::ShiftInvert)(J, nev; kwargs...)
     # (a₀ * I + a₁ * J) * x = rhs
     function Jmap(rhs)
-        eig.ls(J, rhs; a₀ = -eig.sigma , a₁ = 1)[1]
+        eig_si.ls(J, rhs; a₀ = -eig_si.sigma , a₁ = 1)[1]
     end
-    vals, vecs, cv, n = @time "SI-ev" eig.eig(Jmap, nev; kwargs...)
-    return 1 ./vals .+ eig.sigma, vecs, cv, n
+    vals, vecs, cv, n = @time "SI-ev" eig_si.eig(Jmap, nev; kwargs...)
+    rescaled_vals = 1 ./vals .+ eig_si.sigma
+    λ, ϕ = __sort_spectrum(eig_si.eig, rescaled_vals, vecs)
+    return λ, ϕ, cv, n
 end

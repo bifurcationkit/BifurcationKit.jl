@@ -134,7 +134,7 @@ uold = copy(orbitguess2[1][1:2n])
 tw_model = BK.TWModel(re_make(prob, params = (par_cgl..., r = r_hopf - 0.01)), par_cgl.Db, copy(uold))
 
 let
-    BK.residual(BK.TravellingWave(tw_model), vcat(uold,.1), par_cgl)
+    BK.residual(BK.TravellingWave(tw_model), vcat(uold, -.9), par_cgl)
     show(tw_model)
 
     # we test the sparse formulation of the problem jacobian
@@ -144,7 +144,7 @@ let
     @test _J1 ≈ _J0
 
     # we test the matrix-free formulation of the problem jacobian
-    _sol0 = rand(2n+1)
+    _sol0  = rand(2n+1)
     _dsol0 = rand(2n+1)
     _out1 = FD.derivative(t -> BK.residual(BK.TravellingWave(tw_model), _sol0 .+ t .* _dsol0, par_cgl), 0)
     _out0 = tw_model(_sol0, par_cgl, _dsol0)

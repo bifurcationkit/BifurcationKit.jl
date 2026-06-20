@@ -761,7 +761,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     cs = zeros(𝒯, 2, 2)
     # bls(z) = (ls(L, z)[1], 0, true,1)
     bls(z) = solve_bls_block(bls_block, L, as, bs, cs, z, zeros(𝒯, 2))
-    # projector on Range(L)
 
     # eigenvector eltype
     𝒯vec = VI.scalartype(ζs[1])
