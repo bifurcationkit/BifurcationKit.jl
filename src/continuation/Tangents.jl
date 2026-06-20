@@ -1,3 +1,17 @@
+"""
+This function only mutates z_pred. The `nrm` argument allows to just the increment z_pred.p by ds.
+
+We perform z_pred = z + ds * τ
+"""
+function addtangent!(state::AbstractContinuationState, nrm = false)
+    # we perform z_pred = z + ds * τ
+    # note that state.z contains the last converged state
+    _copyto!(state.z_pred, state.z)
+    ds = state.ds
+    ρ = nrm ? ds / state.τ.p : ds
+    VI.add!(state.z_pred, state.τ, ρ)
+end
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 struct Constant <: AbstractTangentComputation end
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
