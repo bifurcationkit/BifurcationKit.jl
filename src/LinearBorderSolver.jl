@@ -322,6 +322,18 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 end
 
 # case matrix by blocks
+
+function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
+    VI.add!(out.u, lbmap.a, x.p)
+    if isnothing(lbmap.shift) == false
+        VI.add!(out.u, x.u, lbmap.shift)
+    end
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
+    return out
+end
+
 # Careful: specific type definition suggested by Aqua.jl to avoid ambiguities
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
     out = VI.zerovector(x)
