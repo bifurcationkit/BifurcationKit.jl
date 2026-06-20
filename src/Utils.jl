@@ -61,33 +61,28 @@ end
 @inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# this is very useful methods than can be used with dispatch to specialize the eigensolver to the model
+# these are very useful methods than can be used with dispatch to specialize the eigensolver to the model
 function compute_eigenvalues(eigsolver::AbstractEigenSolver, 
                              iter::ContIterable,
                              state,
                              u0,
                              par,
-                             nev = iter.contparams.nev; kwargs...)
+                             nev = getcontparams(iter).nev; kwargs...)
     eigsolver(jacobian(getprob(iter), u0, par), nev; iter, state, kwargs...)
 end
 
-function compute_eigenvalues(iter::ContIterable,
-                             state,
-                             u0,
-                             par,
-                             nev = iter.contparams.nev; kwargs...)
-    compute_eigenvalues(iter.contparams.newton_options.eigsolver, iter, state, u0, par, nev; kwargs...)
+function compute_eigenvalues(eigsolver::AbstractEigenSolver, iter::ContIterable, state::ContState; kwargs...)
+    # we compute more eigenvalues than the number of unstable eigenvalues in the previous step
+    n = state.n_unstable[2]
+    nev_ = max(n + 5, getcontparams(iter).nev)
+    @debug "Computing spectrum..."
+    eiginfo = compute_eigenvalues(eigsolver, iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
+    (; isstable, n_unstable, n_imag) = is_stable(getcontparams(iter), eiginfo[1])
+    return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
-    # we compute the eigen-elements
-    # we compute more eigenvalues than the number of unstable eigenvalues in the previous step
-    n = state.n_unstable[2]
-    nev_ = max(n + 5, iter.contparams.nev)
-    @debug "Computing spectrum..."
-    eiginfo = compute_eigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
-    (; isstable, n_unstable, n_imag) = is_stable(getcontparams(iter), eiginfo[1])
-    return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
+    compute_eigenvalues(getcontparams(iter).newton_options.eigsolver, iter, state; kwargs...)
 end
 
 # same as previous but we save the eigen-elements in `state`

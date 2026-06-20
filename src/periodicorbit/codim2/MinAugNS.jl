@@ -461,13 +461,14 @@ function test_for_ns_ch(iter, state)
     return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
 end
 
-function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = iter.contparams.nev; k...)
+function compute_eigenvalues(eig::HopfEig, iter::ContIterable{NSPeriodicOrbitCont}, state, u0, par, nev = getcontparams(iter).nev; k...)
     𝐏𝐛 = getprob(iter)
     lens1, lens2 = get_lenses(𝐏𝐛)
     x = getvec(u0, get_formulation(𝐏𝐛))        # ns point
     p1, ω = getp(u0, get_formulation(𝐏𝐛))      # first parameter
     p2 = getp(state.z)                         # second parameter
     par = getparams(𝐏𝐛)
+    # u0 === getx(state): this should be true
     newpar = _set(par, (lens1, lens2), (p1, p2))
     compute_eigenvalues(eig.eigsolver, iter, state, x, newpar, nev; k...)
 end

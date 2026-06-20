@@ -6,6 +6,7 @@ abstract type AbstractBifurcationPointCodim2 <: AbstractBifurcationPoint end
 
 istranscritical(::AbstractBranchPoint) = false
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TODO: we should probably use PointTypes as in Bifurcations.jl
 """
 $(TYPEDEF)
 

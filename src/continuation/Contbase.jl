@@ -1,23 +1,33 @@
 abstract type AbstractTangentComputation end
 abstract type AbstractPredictor end
 
+"""
+$(TYPEDSIGNATURES)
+
+The state is initialized in iterate_from_two_points with state.z = z1 and state.z_old = z0
+the following function computes the tangent, update the predictor state.z_pred and
+put back z0 as current solution state.z <- z0
+"""
 initialize!(state::AbstractContinuationState,
-                iter::AbstractContinuationIterable) = initialize!(state, iter, getalg(iter))
+            iter::AbstractContinuationIterable) = initialize!(state, iter, getalg(iter))
 
-# compute the predictor given the tangent already contained in state
+# compute the tangent state.τ using the state.z (mostly PALC)
+# then computes z_pred = z + ds * τ.
+# called at every continuation step after convergence
+# basically computes and update state.z_pred
 getpredictor!(state::AbstractContinuationState,
-                iter::AbstractContinuationIterable) = getpredictor!(state, iter, getalg(iter))
+              iter::AbstractContinuationIterable) = getpredictor!(state, iter, getalg(iter))
 
-# update the predictor given the tangent already contained in state
-# this is used in Bifurcation / Event detection using bisection
-# basically a dispatch to next method
+# update the predictor given that the tangent already computed in state.τ
+# used essentially for PALC
+# basically z_pred = z + ds ⋅ τ without recomputing the tangent.
+# this is used in Bifurcation / Event detection during bisection: it is used to recompute z_pred (without tangent recomputation) after z has been modified by event/bifurcation detection
 update_predictor!(state::AbstractContinuationState,
-                iter::AbstractContinuationIterable) = update_predictor!(state, iter, getalg(iter))
+                  iter::AbstractContinuationIterable) = update_predictor!(state, iter, getalg(iter))
 
-# default method
 update_predictor!(state::AbstractContinuationState,
-                iter::AbstractContinuationIterable,
-                alg::AbstractContinuationAlgorithm) = getpredictor!(state, iter, alg)
+                  iter::AbstractContinuationIterable,
+                  alg::AbstractContinuationAlgorithm) = getpredictor!(state, iter, alg)
 
 corrector!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable; kwargs...) = corrector!(state, iter, getalg(iter); kwargs...)
