@@ -230,7 +230,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
 
         # the eigenelements have been computed/stored in state during the call iterate(iter, state)
         push!(nunstbls, state.n_unstable[1])
-        push!(nimags, state.n_imag[1])
+        push!(nimags,   state.n_imag[1])
 
         if nunstbls[end] == nunstbls[end-1]
             # bifurcation point still after current state, keep going

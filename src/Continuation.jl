@@ -410,20 +410,26 @@ function iterate_from_two_points(it::ContIterable,
                                     u₁, p₁::T; 
                                     _verbosity = it.verbosity) where {T}
     ds = it.contparams.ds
-    z = BorderedArray(_copy(u₁), p₁)
-    # Compute eigenvalues to get the eigenvecs type. Required for creating a ContResult.
+    z0 = BorderedArray(_copy(u₀), p₀)
+    z1 = BorderedArray(_copy(u₁), p₁)
+    # Compute the eigenvalues to get the type of eigenvecs type. Required for creating a ContResult.
     eigvals = eigvecs = nothing
-    cveig::Bool = true
+    converged_eig::Bool = true
+    # we try to get the types returned by the eigenvalue solver. 
+    # we perform the computations at z0 as state will be initialized after the call initialize!
     if compute_eigenelements(it)
-        eigvals, eigvecs, cveig, = compute_eigenvalues(it, EmptyContState(z), u₀, getparams(getprob(it)), getcontparams(it).nev)
+        eiginfo, _, n_unstable, n_imag, converged_eig = compute_eigenvalues(it, EmptyContState(z0))
+        eigvals, eigvecs, _, _ = eiginfo
     end
 
     # compute event value and store it into state
     cbval = is_event_active(it) ? initialize(it.event, T) : nothing
-    state = ContState(;z_pred = BorderedArray(_copy(u₀), p₀),
-                        τ = BorderedArray(VI.scale(u₁, 0), zero(p₁)),
-                        z,
-                        z_old = BorderedArray(_copy(u₀), p₀),
+    # we create a continuation state, its current solution is z1, and z_old = z0.
+    # this allows to compute the tangent. Then z0 -> state.z
+    state = ContState(;z_pred = VI.zerovector(z1),
+                        τ = VI.zerovector(z1),
+                        z = z1, # current solution
+                        z_old = z0,
                         converged = true,
                         ds = it.contparams.ds,
                         eigvals,
@@ -431,14 +437,17 @@ function iterate_from_two_points(it::ContIterable,
                         eventValue = (cbval, cbval)
                     )
 
-    # initialize the state for the continuation algorithm
-    # at this stage, the tangent is set up
+    # initialize the state for the continuation algorithm, at this stage, the tangent is set up
+    # state was initialized above with state.z = z1 and state.z_old = z0
+    # we did this to allow the computation of the tangent by Secant
+    # initialize! thus computes the tangent, update the predictor state.z_pred and
+    # put back z0 as current solution state.z <- z0
     initialize!(state, it)
 
     # update stability
     if compute_eigenelements(it)
         (;n_unstable, n_imag) = is_stable(getcontparams(it), eigvals)
-        update_stability!(state, n_unstable, n_imag, cveig)
+        update_stability!(state, n_unstable, n_imag, converged_eig)
     end
 
     # we update the event function result
@@ -447,8 +456,8 @@ function iterate_from_two_points(it::ContIterable,
 end
 
 function Base.iterate(it::ContIterable,
-                        state::ContState; 
-                        _verbosity = it.verbosity)
+                      state::ContState; 
+                      _verbosity = it.verbosity)
     if !done(it, state) return nothing end
     # the next line is to overwrite verbosity behaviour, for example when locating bifurcations
     verbosity = min(it.verbosity, _verbosity)
