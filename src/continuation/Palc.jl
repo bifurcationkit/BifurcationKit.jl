@@ -261,7 +261,7 @@ function newton_palc(iter::AbstractContinuationIterable,
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
-                _copyto!(x_pred, x); VI.add!(x_pred, u, -α)
+                _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
