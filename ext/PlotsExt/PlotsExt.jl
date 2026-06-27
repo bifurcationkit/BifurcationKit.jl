@@ -26,9 +26,9 @@ module PlotsExt
                            BVPSolution,
                            hasbranch,
                            AbstractTwoParamCont,
-                           NSCont,
-                           HopfCont
-                           is_supercritical
+                            NSCont,
+                            HopfCont,
+                            is_supercritical
 
     include("RecipesPlots.jl")
     include("plot.jl")

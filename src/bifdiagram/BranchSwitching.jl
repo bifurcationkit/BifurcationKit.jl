@@ -418,7 +418,8 @@ function multicontinuation(br::Tbr0,
     prob = getprob(br)
 
     # compute the different branches
-    function _continue(_sol, _dp, _ds)::Tbr0
+    # one cannot ::Tbr0 because alg can be passed by the user to multicontinuation
+    function _continue(_sol, _dp, _ds)
         # needed to reset the tangent algorithm in case fields are used
         println("━"^50)
         continuation(prob,
