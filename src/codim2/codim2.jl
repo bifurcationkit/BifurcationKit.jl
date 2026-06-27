@@ -576,3 +576,7 @@ function _correct_event_labels(contres::ContResult)
     end
     return contres
 end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int)
+    real(br.l1[ind]) < 0
+end

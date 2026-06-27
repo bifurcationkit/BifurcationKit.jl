@@ -12,14 +12,20 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
                             plotcirclesbif = true,
+                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
                             applytoY = identity,
                             applytoX = identity)
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
-        if _hasstability(contres) && plotstability
-            linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
+        if _hasstability(contres) && plotstability 
+            if isnothing(unstable_plot_type)
+                linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
+            else
+                linestyle --> map(x -> isodd(x) ? :solid : unstable_plot_type, contres.stable)
+                linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
+            end
         end
         xguide --> xlab
         yguide --> ylab
@@ -76,6 +82,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
                             branchlabel = fill("", length(brs)),
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
+                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
                             plotcirclesbif = true,
                             applytoY = identity,
                             applytoX = identity)
@@ -117,6 +124,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
             branchlabel --> branchlabel[id]
             linewidthunstable --> linewidthunstable
             linewidthstable --> linewidthstable
+            unstable_plot_type --> unstable_plot_type
             applytoX --> applytoX
             applytoY --> applytoY
             vars --> vars
@@ -149,6 +157,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
                             branchlabel = "",
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
+                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
                             plotcirclesbif = false,
                             applytoY = identity,
                             applytoX = identity)
@@ -161,6 +170,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
             branchlabel --> branchlabel
             linewidthunstable --> linewidthunstable
             linewidthstable --> linewidthstable
+            unstable_plot_type --> unstable_plot_type
             applytoX --> applytoX
             applytoY --> applytoY
             vars --> vars
@@ -229,6 +239,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
                                     branchlabel = "",
                                     linewidthunstable = 1.0,
                                     linewidthstable = 2linewidthunstable,
+                                    unstable_plot_type::Union{Nothing, Symbol} = :dot,
                                     plotcirclesbif = true,
                                     _basicplot = true,
                                     applytoY = identity,
@@ -237,8 +248,14 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
-        if _hasstability(contres) && false
-            linewidth --> map(x -> isodd(x) ? linewidthstable : linewidthunstable, contres.stable)
+        if Tk == NSCont || Tk == HopfCont
+            if isnothing(unstable_plot_type)
+                linewidth --> map(ind -> is_supercritical(contres, ind) ? linewidthstable : linewidthunstable, eachindex(contres.param))
+            else
+
+                linestyle --> map(ind -> is_supercritical(contres, ind) ? :solid : unstable_plot_type, eachindex(contres.param))
+                linewidth --> map(ind -> is_supercritical(contres, ind) ? linewidthstable : linewidthunstable, eachindex(contres.param))
+            end
         end
         xguide --> xlab
         yguide --> ylab
