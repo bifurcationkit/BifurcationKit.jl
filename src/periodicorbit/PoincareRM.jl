@@ -138,7 +138,8 @@ function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, solΠ, par)
     # we get the return point
     M = get_mesh_size(sh)
     if M == 1
-        xᵣ = evolve(sh.flow, xₛ, par, tₘ * T⁰).u
+        xs = copy(BifurcationKit.get_time_slices(sh, Π.po)[:, 1])
+        xᵣ = evolve(sh.flow, xs, par, tₘ * T⁰).u
     elseif ~isparallel(sh)
         xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰).u
     else
