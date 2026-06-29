@@ -27,7 +27,10 @@ module MakieExt
                            BK_Makie,
                            plotAllDCBranch,
                            plot_DCont_branch,
-                           AbstractResult
+                           AbstractResult,
+                           NSCont,
+                           HopfCont,
+                           is_supercritical
     include("plot.jl")
 
 function __init__()
