@@ -1163,11 +1163,11 @@ end
     ϕ = coll.ϕ
     L, ∂L = get_Ls(coll.mesh_cache)
     n, m, Ntst = size(coll)
-    ϕc = get_time_slices(ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
-    pϕ = get_tmp(coll.cache.∂gj, ϕc) # zeros(𝒯, n, m)
-    rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
+    ϕm = get_time_slices(ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
+    pϕ = get_tmp(coll.cache.∂gj, ϕm) # zeros(𝒯, n, m)
+    rg = axes(ϕm, 2)[UnitRange(1, m+1)] # (j-1)*m
     @inbounds for j in 1:Ntst
-        LA.mul!(pϕ, ϕc[:, rg], ∂L)
+        LA.mul!(pϕ, ϕm[:, rg], ∂L)
         coll.∂ϕ[:, (j-1)*m .+ (1:m)] .= pϕ
         rg = rg .+ m
     end

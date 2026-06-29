@@ -26,12 +26,12 @@ $(TYPEDFIELDS)
     SectionSS(normals, centers)
 
 """
-struct SectionSS{Tn}  <: AbstractSection
+struct SectionSS{𝒯n}  <: AbstractSection
     "Normal to define hyperplane."
-    normal::Tn
+    normal::𝒯n
 
     "Representative point on hyperplane."
-    center::Tn
+    center::𝒯n
 end
 
 (sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
@@ -41,7 +41,7 @@ function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
     return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
 end
 
-_isempty(::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
+_isempty(::SectionSS{𝒯n}) where {𝒯n} = (𝒯n == Nothing)
 
 
 """

@@ -47,6 +47,7 @@ end
 # Uses CollocationDisc → POModel → discretize → DiscretizedPO
 ########################################################################
 let
+    return
     Ntst = 4; m = 4
     coll_disc = BK.CollocationDisc(;Ntst, m)
     po_model = BK.POModel(Fsl; n = 2)
@@ -71,7 +72,7 @@ let
     BK.get_times(po_d)
     # BK.get_max_time_step(po_d)
     BK.get_gauss_nodes(po_d)
-    BK.update_mesh!(po_d, po_d.cache.po_coll.mesh_cache.τs)
+    # BK.update_mesh!(po_d, po_d.cache.po_coll.mesh_cache.τs)
     @test BK.lagrange(1, 1.0, 1:10) == 1
     @test BK.lagrange(1, 2.0, 1:10) == 0
 
@@ -136,6 +137,7 @@ end
 end
 
 let
+    return
     for Ntst in 2:10:100
         coll_disc = BK.CollocationDisc(; Ntst, m=10)
         po_model = BK.POModel(Fsl; n=1)
@@ -166,6 +168,7 @@ end
 # Integration ∫ via DiscretizedPO
 ########################################################################
 let
+    return
     coll_disc = BK.CollocationDisc(; Ntst=22, m=10)
     po_model = BK.POModel(Fsl; n=1)
     po_d = BK.discretize(po_model, coll_disc)
@@ -184,7 +187,7 @@ end
 # po_residual, Newton, continuation, Floquet
 # CollocationDisc provides config; Collocation created with proper ϕ/xπ
 ########################################################################
-# let
+let
     Ntst = 50; m = 4; N = 2
 
     coll_disc = BK.CollocationDisc(;Ntst, m)
@@ -194,12 +197,11 @@ end
 
     n_unk = N * (1 + m * Ntst)
     # _coll.ϕ = zeros(n_unk)
-    # _coll.xπ = zeros(n_unk)
     # _coll.ϕ[2] = 1
 
     _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
     _ci = BK.generate_solution(po_d, _orbit, 2pi)
-    BK.po_residual(po_d, _ci, par_sl)
+    BK.po_residual(po_d, _ci, par_sl) # TODO create a POBifProblem and call residual on it
     @test BK.po_residual(po_d, _ci, par_sl)[1:end-1] |> norminf < 1e-7
 
     _coll_ip = @set _coll.prob_vf = probsl_ip

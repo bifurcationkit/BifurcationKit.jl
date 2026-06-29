@@ -1,6 +1,6 @@
 struct PeriodicBC; end
 const POModel{Tf, 𝒯} = BVP.BVPModel{Tf, PeriodicBC, 𝒯}
-const DiscretizedPO{Tf, 𝒯, Tdisc, Tcache} = BVP.DiscretizedBVP{POModel{Tf, 𝒯}, Tdisc, Tcache} # mauvais, utiliser 
+const DiscretizedPO{Tf, 𝒯, Tdisc, Tcache} = BVP.DiscretizedBVP{POModel{Tf, 𝒯}, Tdisc, Tcache} # TODO remove, use instead:
  # struct DiscretizedPO <: AbstractDiscretizedPO
     #     d_bvp::DiscretizedBVP
     #     section
@@ -45,7 +45,7 @@ function discretize(model::POModel, disc::CollocationDisc)
         inplace = false,
         record_from_solution = (x, p; k...) -> nothing,
     )
-    po_coll = Collocation(Ntst, m; N = n, prob_vf, meshadapt, K)
+    po_coll = Collocation(Ntst, m; N = n, prob_vf, meshadapt, K) # TODO: remnove this and add section, mesh cache, etc
     return BVP.DiscretizedBVP(model, disc, (; po_coll))
 end
 
@@ -74,6 +74,23 @@ get_gauss_nodes(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_gauss_nodes(d_b
 get_gauss_nodes(d_bvp::DiscretizedPO) = get_gauss_nodes(BVP.get_cache(d_bvp).po_coll)
 get_Ls(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_Ls(d_bvp.cache.po_coll.mesh_cache)
 get_Ls(d_bvp::DiscretizedPO) = get_Ls(BVP.get_cache(d_bvp).po_coll.mesh_cache)
+
+
+
+# what follows is really bad for now
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function update_mesh!(d_bvp::DiscretizedPO{ <: CollocationDisc}, τs)
     update_mesh!(d_bvp.cache.po_coll.mesh_cache, τs)

@@ -7,15 +7,17 @@ Calls BifurcationKit's po_residual_bare! and adds phase condition.
 function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     model = get_model(d_bvp)
     disc = get_discretizer(d_bvp)
-    n = state_dimension(model)
-    t0, tf = get_time_interval(model)
+    n = state_dimension(model) # TODO stay at the level of d_bvp
+    t0, tf = get_time_interval(model) # TODO stay at the level of d_bvp
     M = mesh_size(disc)
 
     # Extract shooting points and period
+    # TODO Xm = get_time_slices(d_bvp, out)
     Xm = reshape(@view(X[1:n*M]), n, M)
     T = tf - t0
 
     # Allocate output
+    # TODO use get_time_slices(d_bvp, out)
     out = similar(X)
     outm = reshape(@view(out[1:n*M]), n, M)
     
