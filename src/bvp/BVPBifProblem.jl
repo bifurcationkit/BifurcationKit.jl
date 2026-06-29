@@ -35,7 +35,7 @@ $(TYPEDFIELDS)
 
 - `BVPBifProblem(d_bvp, u0, params, lens; kwargs...)` where `d_bvp` is a `DiscretizedBVP`
 """
-struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: BK.AbstractBifurcationProblem
+struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: AbstractBVPBifProblem
     "The discretized BVP"
     d_bvp::Tbvp
     "The jacobian (type or function)"

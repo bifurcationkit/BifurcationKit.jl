@@ -51,6 +51,12 @@ import ForwardDiff as FD
 # using Accessors
 import BifurcationKit as BK
 
+abstract type AbstractBVPModel end
+abstract type AbstractDiscretizer end
+abstract type AbstractDiscretizedBVP end
+abstract type AbstractDiscretizedPO <: AbstractDiscretizedBVP end
+abstract type AbstractBVPBifProblem <: BK.AbstractBifurcationProblem end
+
 # Core types
 include("BVPModel.jl")
 include("Discretizers.jl")

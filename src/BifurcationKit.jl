@@ -97,6 +97,10 @@ module BifurcationKit
     include("periodicorbit/BifurcationPoints.jl")
     include("periodicorbit/PeriodicOrbitUtils.jl")
 
+    # BVP problem
+    include("bvp/BVP.jl")
+        include("periodicorbit/Collocation.jl")
+
     include("periodicorbit/PoincareRM.jl")
     include("periodicorbit/NormalForms.jl")
 
@@ -114,9 +118,6 @@ module BifurcationKit
     # wave problem
     include("wave/WaveProblem.jl")
     include("wave/EigSolver.jl")
-
-    # BVP problem
-    include("bvp/BVP.jl")
 
     # plotting
     include("plotting/Utils.jl")

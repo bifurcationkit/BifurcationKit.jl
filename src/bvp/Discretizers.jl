@@ -7,13 +7,6 @@
 using DocStringExtensions
 import ..BifurcationKit: AutoDiffDense, TimeMesh, can_adapt
 
-"""
-$(TYPEDEF)
-
-Abstract type for all BVP discretization methods.
-"""
-abstract type AbstractDiscretizer end
-
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Shooting
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -169,8 +162,6 @@ Base.@kwdef struct Collocation <: AbstractDiscretizer
     update_every_step::Int = 1
 
     verbose_mesh_adapt::Bool = false
-
-
 end
 
 meshadapt(coll::Collocation) = coll.meshadapt

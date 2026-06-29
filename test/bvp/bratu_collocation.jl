@@ -19,11 +19,10 @@ end
 let
 # 3. Create BVP Model
 # State dimension is 2 (u, u')
-# Fixed interval [0, 1] => phase condition fixes T=1.0
+# Fixed interval [0, 1]
 model = BifurcationKit.BVP.BVPModel(Fbratu, gbratu; n=2)
 
 # 4. Discretize using Collocation method
-# Using 201 points for better accuracy
 disc = BifurcationKit.BVP.Collocation(Ntst=30, m=3)
 bvp = BifurcationKit.BVP.discretize(model, disc)
 
@@ -31,8 +30,7 @@ bvp = BifurcationKit.BVP.discretize(model, disc)
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (a = 0.5, b = 0.)
 t_vals = LinRange(0, 1, 101)
-x0 = zeros(2 * (1 + disc.m * disc.Ntst))
-# x0[end] = 1.0 # Interval length T = 1.0
+x0 = BK.BVP.generate_solution(bvp, t -> zeros(2))
 
 # 6. Create BVPBifProblem
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))

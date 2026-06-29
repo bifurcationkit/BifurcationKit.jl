@@ -580,7 +580,7 @@ end
         for l in Base.OneTo(m)
             _POO_coll_scheme!(coll, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
-        if CP === true # statically knownm, should be removed by compiler
+        if CP === true # statically known, should be removed by compiler
             @inbounds for l in Base.OneTo(m)
                 phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
