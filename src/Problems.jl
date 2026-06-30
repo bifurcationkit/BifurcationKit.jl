@@ -186,8 +186,8 @@ end
 
 #####
 
-const _type_jet  = vcat(:T01!, vec([ Symbol("T", i, j)  for i=0:3, j=1:7 if i+i<7]))
-const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<7]))
+const _type_jet  = vcat(:T01!, vec([ Symbol("T", i, j)  for i=0:7, j=0:7 if (i+j != 0) && (i+j ≤ 7) && (i ≤ 3 || j ≤ 3)]))
+const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:7, j=0:7 if (i+j != 0) && (i+j ≤ 7) && (i ≤ 3 || j ≤ 3)]))
 
 @eval begin
     """
@@ -484,7 +484,12 @@ for (op, at, kd) in (
                     nothing 
                 else
                     R01Trait = R01 === FiniteDifferences() ? R01 : nothing
-                    Jet(;δ = delta, R01Trait, kwargs_jet...)
+                    if R01 === AutoDiff() || R01 === FiniteDifferences()
+                        Jet(;δ = delta, R01Trait, kwargs_jet...)
+                    else
+                        # R01 passed as a function, route it through the jet
+                        Jet(;δ = delta, R01Trait, R01 = R01, kwargs_jet...)
+                    end
                 end
                 vf = BifFunction(Foop,
                                 Finp,
