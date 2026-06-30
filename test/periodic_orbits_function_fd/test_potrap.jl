@@ -20,14 +20,14 @@ pb = Trapeze(
 
 pbg = Trapeze(
             prob,
-            pb.ϕ,
-            pb.xπ,
+            pb.section.ϕ,
+            pb.section.xπ,
             pb.mesh.ds ; ongpu = true)
 
 pbi = Trapeze(
             probi,
-            pb.ϕ,
-            pb.xπ,
+            pb.section.ϕ,
+            pb.section.xπ,
             pb.mesh.ds)
 @test BK.isinplace(pb) == false
 # BK.POTrapFunctional(pb, res, orbitguess_f)
@@ -107,7 +107,7 @@ function _functional(poPb, u0, p)
     outc[:, M] .= u0c[:, M] .- u0c[:, 1]
 
     return vcat(vec(outc),
-            dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
+            dot(u0[1:end-1] .- poPb.section.xπ, poPb.section.ϕ)) # this is the phase condition
 end
 
 function _dfunctional(poPb, u0, p, du)
@@ -143,7 +143,7 @@ function _dfunctional(poPb, u0, p, du)
     outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     return vcat(vec(outc),
-            dot(du[1:end-1], poPb.ϕ)) # this is the phase condition
+            dot(du[1:end-1], poPb.section.ϕ)) # this is the phase condition
 
 end
 
@@ -302,8 +302,8 @@ pbsp = Trapeze(
 
 pbspti = Trapeze(
             prob,
-            pbsp.ϕ,
-            pbsp.xπ,
+            pbsp.section.ϕ,
+            pbsp.section.xπ,
             ones(9) ./ 10)
 
 BK.get_mesh_size(pbspti)
@@ -311,8 +311,8 @@ orbitguess_f = rand(2n*10+1)
 BK.getperiod(pbspti, orbitguess_f, par)
 BK.get_periodic_orbit(pbspti, orbitguess_f, par)
 
-@test pbspti.xπ ≈ pbsp.xπ
-@test pbspti.ϕ ≈ pbsp.ϕ
+@test pbspti.section.xπ ≈ pbsp.section.xπ
+@test pbspti.section.ϕ ≈ pbsp.section.ϕ
 BK.po_residual(pbspti, orbitguess_f, par)
 @test BK.po_residual(pbsp, orbitguess_f, par) ≈ BK.po_residual(pbspti, orbitguess_f, par)
 end

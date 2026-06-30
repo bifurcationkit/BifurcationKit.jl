@@ -1,60 +1,3 @@
-abstract type AbstractSection end
-
-update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
-
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function sectionShooting(x::AbstractArray,
-                        T,
-                        normal::AbstractArray,
-                        center::AbstractArray)
-    N = length(center)
-    # we only constrain the first point to lie on a specific hyperplane
-    # this avoids the temporary xc - centers
-    return (VI.inner(x, normal) - VI.inner(center, normal)) * T
-end
-
-# section for Standard Shooting
-"""
-$(TYPEDEF)
-
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`Shooting`](@ref). The hyperplane is defined by a point `center` and a `normal`.
-
-# Internal fields
-$(TYPEDFIELDS)
-
-# Constructor(s)
-    SectionSS(normals, centers)
-
-"""
-struct SectionSS{𝒯n}  <: AbstractSection
-    "Normal to define hyperplane."
-    normal::𝒯n
-
-    "Representative point on hyperplane."
-    center::𝒯n
-end
-
-(sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
-
-# matrix-free jacobian
-function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
-    return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
-end
-
-_isempty(::SectionSS{𝒯n}) where {𝒯n} = (𝒯n == Nothing)
-
-
-"""
-$(TYPEDSIGNATURES)
-
-Update the field of `SectionSS`, useful during continuation procedure for updating the section.
-"""
-function update!(sect::SectionSS, normal, center)
-    _copyto!(sect.normal, normal)
-    _copyto!(sect.center, center)
-    sect
-end
-
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
@@ -122,7 +65,6 @@ function _duplicate!(x::AbstractVector)
 end
 _duplicate(x::AbstractVector) = _duplicate!(_copy(x))
 _duplicate(hyp::SectionPS) = SectionPS(_duplicate(hyp.normals), _duplicate(hyp.centers))
-_duplicate(hyp::SectionSS) = SectionSS(_duplicate(hyp.normals), _duplicate(hyp.centers))
 # ==================================================================================================
 """
 $(TYPEDSIGNATURES)

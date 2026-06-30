@@ -83,6 +83,7 @@ module BifurcationKit
 
 
     # periodic orbit problems
+    include("bvp/Sections.jl")
     include("periodicorbit/Sections.jl")
     include("periodicorbit/PeriodicOrbits.jl")
     include("periodicorbit/PeriodicOrbitTrapeze.jl")

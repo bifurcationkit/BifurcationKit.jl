@@ -29,8 +29,7 @@ bvp = BifurcationKit.BVP.discretize(model, disc)
 # 5. Set up parameters and initial guess
 # At p₁ = 0, the solution is u(t) = 0, u'(t) = 0
 params = (a = 0.5, b = 0.)
-t_vals = LinRange(0, 1, 101)
-x0 = BK.BVP.generate_solution(bvp, t -> zeros(2))
+x0 = BifurcationKit.BVP.generate_solution(bvp, t -> zeros(2))
 
 # 6. Create BVPBifProblem
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))

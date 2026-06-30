@@ -205,7 +205,7 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
         return BK.BVPSavedSolutionAndState(copy(BK.get_times(coll)),
                 x,
                 copy(BK.getmesh(coll.mesh_cache)),
-                BK._copy(coll.ϕ),
+                BK._copy(coll.section.ϕ),
                 )
     else
         return x

@@ -49,13 +49,13 @@ function discretize(model::POModel, disc::CollocationDisc)
     return BVP.DiscretizedBVP(model, disc, (; po_coll))
 end
 
-Base.size(d_bvp::DiscretizedPO{ <: CollocationDisc}) = size(d_bvp.cache.po_coll)
-Base.length(d_bvp::DiscretizedPO{ <: CollocationDisc}) = length(d_bvp.cache.po_coll)
-@inline getperiod(d_bvp::DiscretizedPO{ <: CollocationDisc}, X, p = nothing) = X[end]
-get_time_slices(d_bvp::DiscretizedPO{ <: CollocationDisc}, X) = get_time_slices(d_bvp.cache.po_coll, X)
+Base.size(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = size(d_bvp.cache.po_coll)
+Base.length(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = length(d_bvp.cache.po_coll)
+@inline getperiod(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, X, p = nothing) = X[end]
+get_time_slices(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, X) = get_time_slices(d_bvp.cache.po_coll, X)
 get_time_slices(d_bvp::DiscretizedPO, X) = get_time_slices(BVP.get_cache(d_bvp).po_coll, X)
 
-# function Base.show(io::IO, d_bvp::DiscretizedPO{ <: CollocationDisc})
+# function Base.show(io::IO, d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯})
 #     println(io, "┌─ DiscretizedPO")
 #     println(io, "├─ State dimension : ", state_dimension(d_bvp))
 #     println(io, "├─ Total unknowns  : ", length(d_bvp))
@@ -67,91 +67,78 @@ get_time_slices(d_bvp::DiscretizedPO, X) = get_time_slices(BVP.get_cache(d_bvp).
 # Forwarding methods: DiscretizedPO{<:CollocationDisc} → internal Collocation cache
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-get_times(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_times(d_bvp.cache.po_coll)
+get_times(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = get_times(d_bvp.cache.po_coll)
 get_times(d_bvp::DiscretizedPO) = get_times(BVP.get_cache(d_bvp).po_coll)
-get_max_time_step(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_max_time_step(d_bvp.cache.po_coll)
-get_gauss_nodes(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_gauss_nodes(d_bvp.cache.po_coll)
+get_max_time_step(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = get_max_time_step(d_bvp.cache.po_coll)
+get_gauss_nodes(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = get_gauss_nodes(d_bvp.cache.po_coll)
 get_gauss_nodes(d_bvp::DiscretizedPO) = get_gauss_nodes(BVP.get_cache(d_bvp).po_coll)
-get_Ls(d_bvp::DiscretizedPO{ <: CollocationDisc}) = get_Ls(d_bvp.cache.po_coll.mesh_cache)
+get_Ls(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = get_Ls(d_bvp.cache.po_coll.mesh_cache)
 get_Ls(d_bvp::DiscretizedPO) = get_Ls(BVP.get_cache(d_bvp).po_coll.mesh_cache)
 
 
 
 # what follows is really bad for now
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-function update_mesh!(d_bvp::DiscretizedPO{ <: CollocationDisc}, τs)
+function update_mesh!(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, τs)
     update_mesh!(d_bvp.cache.po_coll.mesh_cache, τs)
     return d_bvp
 end
 
-function generate_solution(d_bvp::DiscretizedPO{ <: CollocationDisc}, orbit, period)
+function generate_solution(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, orbit, period)
     generate_solution(d_bvp.cache.po_coll, orbit, period)
 end
 function generate_solution(d_bvp::DiscretizedPO, orbit, period)
     generate_solution(BVP.get_cache(d_bvp).po_coll, orbit, period)
 end
 
-function get_periodic_orbit(d_bvp::DiscretizedPO{ <: CollocationDisc}, u, p)
+function get_periodic_orbit(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, u, p)
     get_periodic_orbit(d_bvp.cache.po_coll, u, p)
 end
 function get_periodic_orbit(d_bvp::DiscretizedPO, u, p)
     get_periodic_orbit(BVP.get_cache(d_bvp).po_coll, u, p)
 end
 
-function POInterpolation(d_bvp::DiscretizedPO{ <: CollocationDisc}, x)
+function POInterpolation(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, x)
     POInterpolation(d_bvp.cache.po_coll, x)
 end
 function POInterpolation(d_bvp::DiscretizedPO, x)
     POInterpolation(BVP.get_cache(d_bvp).po_coll, x)
 end
 
-function getmesh(d_bvp::DiscretizedPO{ <: CollocationDisc})
+function getmesh(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯})
     getmesh(d_bvp.cache.po_coll.mesh_cache)
 end
 function getmesh(d_bvp::DiscretizedPO)
     getmesh(BVP.get_cache(d_bvp).po_coll.mesh_cache)
 end
 
-function ∫(d_bvp::DiscretizedPO{ <: CollocationDisc}, args...; kwargs...)
+function ∫(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
     ∫(d_bvp.cache.po_coll, args...; kwargs...)
 end
 
-function po_analytical_jacobian(d_bvp::DiscretizedPO{ <: CollocationDisc}, args...; kwargs...)
+function po_analytical_jacobian(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
     po_analytical_jacobian(d_bvp.cache.po_coll, args...; kwargs...)
 end
 
-function po_jacobian_block(d_bvp::DiscretizedPO{ <: CollocationDisc}, args...; kwargs...)
+function po_jacobian_block(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
     po_jacobian_block(d_bvp.cache.po_coll, args...; kwargs...)
 end
 
-function po_analytical_jacobian_sparse(d_bvp::DiscretizedPO{ <: CollocationDisc}, args...; kwargs...)
+function po_analytical_jacobian_sparse(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
     po_analytical_jacobian_sparse(d_bvp.cache.po_coll, args...; kwargs...)
 end
 
-function jacobian_poocoll_sparse_indx!(d_bvp::DiscretizedPO{ <: CollocationDisc}, J, u, p, indx)
+function jacobian_poocoll_sparse_indx!(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, J, u, p, indx)
     jacobian_poocoll_sparse_indx!(d_bvp.cache.po_coll, J, u, p, indx)
 end
 
-function get_blocks(d_bvp::DiscretizedPO{ <: CollocationDisc}, J)
+function get_blocks(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, J)
     get_blocks(d_bvp.cache.po_coll, J)
 end
 
-get_discretization(d_bvp::DiscretizedPO{ <: CollocationDisc}) = d_bvp.cache.po_coll
+get_discretization(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = d_bvp.cache.po_coll
 
-function Base.show(io::IO, d_bvp::DiscretizedPO{Tf, 𝒯, <: CollocationDisc}) where {Tf, 𝒯}
+function Base.show(io::IO, d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc}) where {Tf, 𝒯}
     coll = d_bvp.discretizer
     n = d_bvp.model.n
     println(io, "┌─ DiscretizedPO (CollocationDisc)")
@@ -170,7 +157,7 @@ function PeriodicOrbitProblem(br,
 
 end
 
-function po_residual(d_bvp::DiscretizedPO{Tf, 𝒯, <: CollocationDisc}, X, p) where {Tf, 𝒯}
+function po_residual(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc}, X, p) where {Tf, 𝒯}
     po_coll = d_bvp.cache.po_coll
     n, m, Ntst = size(po_coll)
     Xc = get_time_slices(po_coll, X)
@@ -185,7 +172,7 @@ function po_residual(d_bvp::DiscretizedPO{Tf, 𝒯, <: CollocationDisc}, X, p) w
 end
 
 @views function po_jacobian(
-                            d_bvp::DiscretizedPO{ <: CollocationDisc},
+                            d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯},
                             ::DenseAnalytical,
                             u,
                             pars,
@@ -201,7 +188,7 @@ end
 end
 
 function po_jacobian(
-                    d_bvp::DiscretizedPO{ <: CollocationDisc},
+                    d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯},
                     ::FullSparse,
                     u,
                     pars,
@@ -216,7 +203,7 @@ function po_jacobian(
 end
 
 function po_jacobian(
-                    d_bvp::DiscretizedPO{ <: CollocationDisc},
+                    d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯},
                     ::FullSparseInplace,
                     u,
                     pars,

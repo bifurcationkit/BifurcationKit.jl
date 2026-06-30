@@ -1,4 +1,3 @@
-using Revise
 using Test
 using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
@@ -196,8 +195,8 @@ let
     _coll = po_d.cache.po_coll
 
     n_unk = N * (1 + m * Ntst)
-    # _coll.ϕ = zeros(n_unk)
-    # _coll.ϕ[2] = 1
+    _coll.section.ϕ[2] = 1
+    BK.updatesection!(_coll, _coll.section.ϕ, nothing)
 
     _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
     _ci = BK.generate_solution(po_d, _orbit, 2pi)

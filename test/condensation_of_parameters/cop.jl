@@ -169,8 +169,7 @@ prob_ana = BifurcationProblem((x,p)->_al*x, zeros(N), par_hopf, (@optic _.r) ; J
 coll = Collocation(Ntst, m; 
                                     prob_vf = prob_ana, 
                                     N,
-                                    ϕ = rand(N*( 1 + m * Ntst)), 
-                                    xπ = rand(N*( 1 + m * Ntst)))
+                                    ϕ = rand(N*( 1 + m * Ntst)))
 _ci = generate_solution(coll, t->cos(t) .* ones(N), 2pi);
 #####################################################
 Jco = BK.po_analytical_jacobian(coll, _ci, par_sl);
