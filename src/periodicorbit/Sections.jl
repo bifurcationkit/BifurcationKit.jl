@@ -1,6 +1,4 @@
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
-
 function _section_hyp!(out, x, normals, centers, radius)
     for ii in eachindex(normals)
         if norm(x-centers[ii]) < radius
@@ -15,7 +13,7 @@ end
 """
 $(TYPEDEF)
 
-This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShooting`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
+This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShooting`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`). See [1] for more details.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -23,12 +21,19 @@ $(TYPEDFIELDS)
 # Constructor(s)
     SectionPS(normals, centers)
 
+# Ref(s)
+[1] J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
+
 """
 struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
-    M::Int64                # number of hyperplanes
-    normals::Tn             # normals to define hyperplanes
-    centers::Tc             # representative point on each hyperplane
-    indices::Vector{Int64}  # indices to be removed in the operator Ek
+    "number of hyperplanes"
+    M::Int64
+    "normals to define hyperplanes"
+    normals::Tn
+    "representative point on each hyperplane"
+    centers::Tc
+    "indices to be removed in the operator Ek"
+    indices::Vector{Int64}
 
     normals_bar::Tnb
     centers_bar::Tcb
