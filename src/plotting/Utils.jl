@@ -1,4 +1,4 @@
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _plot_backend = Ref{AbstractPlotBackend}(BK_NoPlot())
 get_plot_backend() = _plot_backend[]
 
@@ -65,7 +65,7 @@ function get_axis_labels(ind1, ind2, br)
     return xguide, yguide
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function filter_bifurcations(bifpt)
     # this function filters Fold points and Branch points which are located at the same/previous/next point
     length(bifpt) == 0 && return bifpt

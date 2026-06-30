@@ -22,7 +22,4 @@ let
     @test np.a == 0
     @test np.b == 0.2
     @test np.c == prob.params.c
-
-    hh = BK.HopfHopf(0, zeros(2), ((@optic _[1]), (@optic _[2])), zeros(1), zeros(1), (λ1 = 0, λ2 = 0), :nothing)
-    show(stdout, hh)
 end

@@ -18,7 +18,7 @@ end
 
 # see https://discourse.julialang.org/t/uniform-scaling-inplace-addition-with-matrix/59928/5
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -65,7 +65,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
         J = jacobian(wrap, u0, par) # TODO must not be computed, cf TRAP
         monodromy = MonodromyQaD(get_discretization(wrap), J, u0, par)
     end
-    vals, vecs, cv, info = fl.eigsolver(monodromy, nev; k...)
+    vals, vecs, cv, info = fl.eigsolver(monodromy, nev; iter, state, k...)
 
     if Inf in vals
         @warn "Detecting infinite eigenvalue during the computation of Floquet coefficients."
@@ -83,7 +83,7 @@ function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par,
     end
     return σ, geteigenvector(fl.eigsolver, vecs, I), cv, info
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Shooting
 # Matrix free monodromy operators
 function MonodromyQaD_matrix_free(sh::Shooting, x, p, du::AbstractVector)
@@ -190,7 +190,7 @@ end
     end
     return out_a
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PoincareShooting
 
 # matrix free evaluation of monodromy operator
@@ -278,7 +278,7 @@ end
     end
     return out_a
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Trapeze
 
 # Matrix-Free version of the monodromy operator
@@ -291,7 +291,7 @@ end
 
     # time step
     h =  T * get_time_step(trap, 1)
-    Typeh = typeof(h)
+    𝒯 = typeof(h)
 
     out = copy(du)
 
@@ -299,14 +299,15 @@ end
 
     out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, M-1], par), out)
     # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, 1])) \ out
-    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+
+    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = one(𝒯), a₁ = -h/2)
     out .= res
 
     for ii in 2:M-1
         h =  T * get_time_step(trap, ii)
         out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, ii-1], par), out)
         # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, ii])) \ out
-        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = one(𝒯), a₁ = -h/2)
         out .= res
     end
 
@@ -378,7 +379,7 @@ function MonodromyQaD(trap::Trapeze, J, u0, par)
     end
     return mono
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
  $(TYPEDEF)
 
@@ -439,18 +440,18 @@ function compute_eigenvalues(eig::FloquetGEV, iter::ContIterable{Tkind}, state, 
     wrappo = getprob(iter)
     disc = get_discretization(wrappo)
     J = jacobian(wrappo, u0, par)
-    eig(disc, J, nev; k...)
+    eig(disc, J, nev; iter, state, k...)
 end
 
 @views function (fl::FloquetGEV)(coll::Collocation, _J::AbstractMatrix, nev; k...)
     n = get_state_dim(coll)
-    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver
+    J = copy(_J[begin:end-1, begin:end-1]) # we cannot mess-up with the linear solver, so we make a copy
     # case of v(0)
     J[end-n+1:end, 1:n] .= LA.I(n)
     # case of v(1)
     J[end-n+1:end, end-n+1:end] .= (-1) .* J[end-n+1:end, 1:n]
-    # solve generalized eigenvalue problem
-    values, vecs = gev(fl.eigsolver, J, fl.B, nev)
+    # solve generalized eigenvalue problem, we compute all eigenvalues because they are already sorted
+    values, vecs = gev(fl.eigsolver, J, fl.B, size(J, 1))
     # remove infinite eigenvalues
     indvalid = findall(x -> abs(x) < 1e9, values)
     vals = values[indvalid]
@@ -548,7 +549,7 @@ function compute_eigenvalues(eig::FloquetColl, iter::ContIterable{Tkind}, state,
     wrapcoll = get_wrap_po(iter)
     coll = get_discretization(wrapcoll)
     J = jacobian(wrapcoll, u0, par)
-    eig(coll, J, nev; k...)
+    eig(coll, J, nev; iter, state, k...)
 end
 
 function (eig::FloquetColl)(coll, J, nev; kwargs...)

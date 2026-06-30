@@ -1,6 +1,6 @@
 abstract type AbstractBranchResult end
 abstract type AbstractResult{Tkind, Tprob} <: AbstractBranchResult end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # functions used in record_from_solution
 """
 [Internal] Transform the result of `record_from_solution` into a named tuple.
@@ -14,7 +14,7 @@ _namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x).
 [Internal] Merge the result of `record_from_solution` with a named tuple.
 """
 _mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Structure to hold continuation result
 """
 $(TYPEDEF)
@@ -162,7 +162,7 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 @inline _getvectoreltype(br::AbstractBranchResult) = eltype(_getvectortype(br))
 
 # get the bordered linear solver used for the branch
-getbls(br::AbstractBranchResult) = getbls(getalg(br))
+get_bordered_linsolver(br::AbstractBranchResult) = get_bordered_linsolver(getalg(br))
 
 """
     setparam(br, p0)
@@ -282,7 +282,7 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     println(io, prefix * "├─ Number of points: ", length(br.branch))
     print(io, prefix * "├─ Type of vectors: ")
     printstyled(io, _getvectortype(br), color=:cyan, bold = true)
-    if Kind <: TwoParamCont
+    if Kind <: AbstractTwoParamCont
         print(io, "\n" * prefix * "├─ Parameters ", map(get_lens_symbol, get_lenses(br)))
     end
     print(io, "\n" * prefix * "├─ Parameter ")
@@ -343,7 +343,7 @@ Return the list of bifurcation points on a branch. It essentially filters the fi
 function bifurcation_points(br::AbstractBranchResult)
     [sp for sp in br.specialpoint if is_bifurcation(sp)]
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -394,7 +394,7 @@ function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: Abst
         show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _reverse!(x) = reverse!(x)
 _reverse!(::Nothing) = nothing
 function _reverse(br0::ContResult)

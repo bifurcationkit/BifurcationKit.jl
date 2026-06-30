@@ -2,7 +2,7 @@ function d2PO(f, x, dx1, dx2)
    return ForwardDiff.derivative(t2 -> ForwardDiff.derivative( t1 -> f(x .+ t1 .* dx1 .+ t2 .* dx2,), 0), 0)
 end
 
-function get_periodic_orbit(br::AbstractResult{ <: TwoParamPeriodicOrbitCont}, ind::Int)
+function get_periodic_orbit(br::AbstractResult{ <: AbstractTwoParamPeriodicOrbitCont}, ind::Int)
     𝐌𝐚 = get_formulation(getprob(br))
     wrappo = get_wrap_po(𝐌𝐚)
     disc = get_discretization(wrappo)
@@ -154,7 +154,11 @@ get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(
 __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args...)
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
-####################################################################################################
+
+function is_supercritical(br::AbstractResult{<:NeimarkSackerMinimallyAugmentedFormulation}, ind::Int)
+    real(br.CH[ind]) < 0
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation
         conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
@@ -172,11 +176,11 @@ function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCon
     end
     return contres
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # the following resolves method ambiguity
 for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialProblem)
     @eval begin
-        function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+        function __user_record_solution_periodic_orbit(pbwrap::$at, ::NoUserPassedFunction, iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont}, state)
             prob_po = get_discretization(pbwrap)
             𝐌𝐚 = get_formulation(getprob(iter))
             u = getx(state)
@@ -189,7 +193,7 @@ for at in (:AbstractWrapperPeriodicOrbitProblem, :AbstractWrapperPODifferentialP
     end
 end
 
-function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDifferencesProblem, ::UserPassedFunction, iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont}, state)
     𝐌𝐚 = get_formulation(getprob(iter))
     u = getx(state)
     p = getp(state)
@@ -199,7 +203,7 @@ end
 
 # shooting functional
 # we pass the full parameters updated at the bifurcation point
-function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: TwoParamPeriodicOrbitCont}, state)
+function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont}, state)
     probma = getprob(iter)
     𝐌𝐚 = get_formulation(probma)
     lens1, lens2 = get_lenses(probma)
@@ -214,7 +218,7 @@ function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, ite
     po = getvec(u, 𝐌𝐚)
     return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = newpar); iter, state)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,

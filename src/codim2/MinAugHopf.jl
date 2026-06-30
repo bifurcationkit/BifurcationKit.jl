@@ -10,9 +10,9 @@ function hopf_point(br::AbstractBranchResult, index::Int)
     specialpoint = br.specialpoint[index] # Hopf point
     p = specialpoint.param                # parameter value at the Hopf point
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev]) # frequency at the Hopf point
-    return BorderedArray(specialpoint.x, [p, ω] )
+    return BorderedArray(_copy(saved_solution(specialpoint.x)), [p, ω] )
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional
 hopf_ma_test(𝐇, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = 𝐇.linbdsolver(J, a, b, J22, _zero, n; shift = Complex{𝒯}(0, -ω))
 
@@ -41,7 +41,7 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -92,7 +92,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
 
     δ = getdelta(𝐇.prob_vf)
-    ϵ1, ϵ2, ϵ3 = 𝒯(δ), 𝒯(δ), 𝒯(δ)
+    ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
     ################### computation of σx σp ####################
     # TODO!! This is only finite differences
     # we can probably use R01 and R11
@@ -108,7 +108,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # since this is matrix based, it requires X to ba an AbstractVector
 function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector{𝒯}, par) where {Tprob, 𝒯}
     𝐇 = get_formulation(pdpb)
@@ -132,7 +132,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the Hopf MA problem.
 struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -207,7 +207,7 @@ function (::HopfLinearSolverMinAug)(Jhopf, du::BorderedArray{vectype, 𝒯}; kwa
                 du.u, du.p[1], du.p[2])
     return BorderedArray{vectype, 𝒯}(out[1], [out[2], out[3]]), out[4], out[5]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @inline has_adjoint(pb::HopfMAProblem) = has_adjoint(get_formulation(pb))
 @inline is_symmetric(pb::HopfMAProblem) = is_symmetric(get_formulation(pb))
 
@@ -223,7 +223,7 @@ function finalise_solution(iter::ContIterable{HopfCont},
                                   iter)
     return isbt && fin_user
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -368,7 +368,7 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
 end
 
 function record_from_solution(iter::ContIterable{Tkind, <: HopfMAProblem},
-                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+                              state::AbstractContinuationState) where {Tkind <: AbstractTwoParamCont}
     𝐏𝐛 = getprob(iter)
     𝐇 = get_formulation(𝐏𝐛)
     lens1, lens2 = get_lenses(𝐏𝐛)
@@ -438,11 +438,11 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 compute_eigen_elements = false,
                 usehessian = true,
                 kind = HopfCont(),
-                massmatrix = LinearAlgebra.I,
+                massmatrix = LA.I,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
-    @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getlens(prob_vf)
+    lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
+    lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1")
 
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
@@ -538,9 +538,8 @@ function continuation_hopf(prob,
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
 
-    if isnothing(br.eig) 
-        error("The branch contains no eigen elements.\nThis is strange because a Hopf point was detected.\nPlease open an issue on the website.")
-    end
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
 
     p = bifpt.param
     parbif = setparam(br, p)

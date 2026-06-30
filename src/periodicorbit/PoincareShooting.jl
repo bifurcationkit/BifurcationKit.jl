@@ -1,4 +1,4 @@
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
 
 """
@@ -212,7 +212,7 @@ function projection(psh::PoincareShooting, x::AbstractMatrix)
     end
     return orbitguess_bar
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function po_residual(psh::PoincareShooting, x_bar::AbstractVector, par; verbose = false)
     M = get_mesh_size(psh)
@@ -375,7 +375,7 @@ end
 
 # out of place version
 po_jacobian(psh::PoincareShooting, x::AbstractVector, par) = po_jacobian!(psh, zeros(eltype(x), length(x), length(x)), x, par)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # functions needed for Branch switching from Hopf bifurcation point
 function re_make(psh::PoincareShooting, prob_vf, hopfpt, ζr, centers, period; k...)
 

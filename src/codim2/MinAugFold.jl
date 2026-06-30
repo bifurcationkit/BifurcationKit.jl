@@ -9,9 +9,9 @@ function fold_point(br::AbstractBranchResult, index::Int)
         error("This should be a Fold / BP point.\nYou passed a $bptype point.")
     end
     specialpoint = br.specialpoint[index]
-    return BorderedArray(_copy(specialpoint.x), specialpoint.param)
+    return BorderedArray(_copy(saved_solution(specialpoint.x)), specialpoint.param)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the Fold bifurcation point
     # input:
@@ -36,7 +36,7 @@ function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where �
     ~cv && @debug "[Fold residual] Linear solver for J did not converge."
     return residual(𝐅.prob_vf, x, par), σ
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -98,7 +98,7 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵₓ, v, w, par0, dJvdp, itv, itw)
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
     𝐅 = get_formulation(pdpb)
     x = @view X[begin:end-1]
@@ -112,7 +112,7 @@ function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
 
     [J_at_xp dₚF ; σₓ' σₚ]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the fold MA problem.
 struct FoldLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -174,11 +174,11 @@ function (foldl::FoldLinearSolverMinAug)(Jfold, du::BorderedArray{vectype, 𝒯}
                  du.u, du.p)
     return BorderedArray{vectype, 𝒯}(out[1], out[2]), out[3], out[4]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @inline has_adjoint(pb::FoldMAProblem) = has_adjoint(get_formulation(pb))
 @inline is_symmetric(pb::FoldMAProblem) = is_symmetric(get_formulation(pb))
 jacobian_adjoint(pb::FoldMAProblem, args...) = jacobian_adjoint(get_formulation(pb), args...)
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -314,7 +314,7 @@ function update!(probma::FoldMAProblem, iter, state)
 end
 
 function record_from_solution(iter::ContIterable{Tkind, <: FoldMAProblem},
-                              state::AbstractContinuationState) where {Tkind <: TwoParamCont}
+                              state::AbstractContinuationState) where {Tkind <: AbstractTwoParamCont}
     𝐏𝐛 = getprob(iter)
     𝐅 = get_formulation(𝐏𝐛)
     lens1, lens2 = get_lenses(𝐏𝐛)
@@ -384,8 +384,8 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
                            kind = FoldCont(),
                            record_from_solution = nothing,
                            kwargs...) where {𝒯, vectype}
-    @assert lens1 != lens2 "Please choose 2 different parameters. You only passed $lens1"
-    @assert lens1 == getlens(prob)
+    lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
+    lens1 != getlens(prob) && error("lens1 must be the continuation parameter. You passed $lens1")
 
     if alg isa PALC && alg.tangent isa Bordered
         @warn "You selected the PALC continuation algorithm with Bordered predictor.\nThe jacobian being singular on Fold points, this could lead to bad prediction and convergence.\nIf you have issues, try a different tangent predictor like Secant for example, you can pass it using `alg = PALC()`."
@@ -472,10 +472,14 @@ function continuation_fold(prob,
                 kwargs...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
 
     p = bifpt.param
     parbif = setparam(br, p)
+
+    ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
 
     if start_with_eigen
         # jacobian at bifurcation point

@@ -18,6 +18,9 @@ This operator allows to handle the following situation. Assume you want to solve
 
 where ``||u||₂² = dot(u, u)``. The fields of the struct `DeflationOperator` are as follows:
 
+!!! danger "Accumulator"
+    You can use a different accumulator than `Πᵢ`, for example `mean`. This is important because if you have many roots `αⁿ` can be smaller than machine precision. `mean` resolves this issue.
+
 # Internal fields
 
 $(TYPEDFIELDS)
@@ -28,9 +31,9 @@ Also, one can add (resp. remove) a new root by using `push!(defOp, newroot)` (re
 
 # Constructors
 
-- `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}; autodiff = false)`
-- `DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false)`
-- `DeflationOperator(p::Real, α::Real, roots::Vector{vectype}, v::vectype; autodiff = false)`
+- `DeflationOperator(power::Real, α::T, roots::Vector{vectype}; autodiff = false, δ = convert(T, 1e-8), accumulator = Val(:Prod))`
+- `DeflationOperator(power::Real, dot, α::Real, roots::Vector{vectype}; autodiff = false, δ = convert(VI.scalartype(roots[1]), 1e-8) , accumulator = Val(:Prod))`
+- `DeflationOperator(power::Real, α::T, roots::Vector{vectype}, tmp::vectype; autodiff = false, accumulator = Val(:Prod))`
 
 The option `autodiff` triggers the use of automatic differentiation for the computation of the gradient of the scalar function `M`. This works only on `AbstractVector` for now.
 
@@ -44,14 +47,14 @@ Note that passing `CustomDist(dist, true)` will trigger the use of automatic dif
 
 # Linear solvers / jacobians
 
-When used with newton, you have access to the following linear solvers
+When used with newton, you have access to the following linear solvers:
 
 - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
-- For other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
+- for other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
 - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem.
 - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """
-struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflationFactor
+@with_kw_noshow struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype, Tac} <: AbstractDeflationFactor
     "power `p`. You can use an `Int` for example."
     power::Tp
 
@@ -64,6 +67,9 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflat
     "roots."
     roots::Vector{vectype}
 
+    "accumulator"
+    accumulator::Tac
+
     "[internal] to reduce allocations during computation."
     tmp::vectype
 
@@ -72,12 +78,14 @@ struct DeflationOperator{Tp <: Real, Tdot, T <: Real, vectype} <: AbstractDeflat
 
     "[internal] for finite differences."
     δ::T
+
+    @assert accumulator in (Val(:Prod), Val(:Mean))
 end
 
 # constructors
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}; autodiff = false) where {T, vectype} = DeflationOperator(p, VI.inner, α, roots, _copy(roots[1]), autodiff, T(1e-8))
-DeflationOperator(p::Real, dt, α::Real, roots::Vector{vectype}; autodiff = false) where vectype = DeflationOperator(p, dt, α, roots, _copy(roots[1]), autodiff, convert(VI.scalartype(roots[1]), 1e-8))
-DeflationOperator(p::Real, α::T, roots::Vector{vectype}, v::vectype; autodiff = false) where {vectype, T <: Real} = DeflationOperator(p, VI.inner, α, roots, v, autodiff, T(1e-8))
+DeflationOperator(power::Real, α::T, roots::Vector{vectype}; autodiff = false, δ = convert(T, 1e-8), accumulator = Val(:Prod)) where {T, vectype} = DeflationOperator(;power, dot = VI.inner, α, roots, tmp = _copy(roots[1]), autodiff, δ, accumulator)
+DeflationOperator(power::Real, dot, α::Real, roots::Vector{vectype}; autodiff = false, δ = convert(VI.scalartype(roots[1]), 1e-8) , accumulator = Val(:Prod)) where vectype = DeflationOperator(;power, dot, α, roots, tmp = _copy(roots[1]), autodiff, δ, accumulator)
+DeflationOperator(power::Real, α::T, roots::Vector{vectype}, tmp::vectype; autodiff = false, accumulator = Val(:Prod)) where {vectype, T <: Real} = DeflationOperator(; power, dot = VI.inner, α, roots, tmp, autodiff, δ = convert(T, 1e-8), accumulator)
 
 # methods to deal with DeflationOperator
 Base.eltype(::DeflationOperator{Tp, Tdot, T, vectype}) where {Tp, Tdot, T, vectype} = T
@@ -90,10 +98,19 @@ Base.deleteat!(df::DeflationOperator, id) = deleteat!(df.roots, id)
 Base.empty!(df::DeflationOperator) = empty!(df.roots)
 Base.firstindex(::DeflationOperator) = 1
 Base.lastindex(df::DeflationOperator) = length(df)
-Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), copy(df.tmp), df.autodiff, df.δ)
+Base.copy(df::DeflationOperator) = DeflationOperator(df.power, df.dot, df.α, deepcopy(df.roots), df.accumulator, copy(df.tmp), df.autodiff, df.δ)
+
+# method for accumulator
+@inline __accumulate(::Val{:Prod}, out, val) = out * val
+@inline __accumulate(::Val{:Mean}, out, val) = out + val
+
 
 function Base.show(io::IO, df::DeflationOperator; prefix = "")
-    println(io, prefix * "┌─ Deflation operator Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α)")
+    if df.accumulator == Val(:Prod)
+        println(io, prefix * "┌─ Deflation operator Πᵢ(||u - rootᵢ||₂⁻²ᵖ + α)")
+    else
+        println(io, prefix * "┌─ Deflation operator Mean(||u - rootᵢ||₂⁻²ᵖ + α)")
+    end
     println(io, prefix * "├─ roots    = ", length(df.roots))
     println(io, prefix * "├─ eltype   = ", eltype(df))
     println(io, prefix * "├─ power    = ", df.power)
@@ -112,7 +129,10 @@ function (df::DeflationOperator{𝒯p, Tdot, 𝒯})(::Val{:inplace}, u, tmp) whe
     out = M(tmp)
     for ii in 2:length(df.roots)
         _copyto!(tmp, u); VI.add!(tmp, df.roots[ii], 𝒯(-1))
-        out *= M(tmp)
+        out = __accumulate(df.accumulator, out, M(tmp))
+    end
+    if df.accumulator isa Val{:Mean}
+        out /= length(df.roots)
     end
     return out
 end
@@ -122,17 +142,20 @@ end
 (df::DeflationOperator{Tp, Tdot, T, vectype})(u) where {Tp, Tdot, T, vectype} = df(Val(:inplace), u, similar(u))
 
 # version when a custom distance is passed
-function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot <: CustomDist, T, vectype}
-    length(df.roots) == 0 && return one(T)
-    M(u, v) = one(T) / df.dot(u, v)^df.power + df.α
+function (df::DeflationOperator{Tp, Tdot, 𝒯, vectype})(::Val{:inplace}, u, tmp) where {Tp, Tdot <: CustomDist, 𝒯, vectype}
+    length(df.roots) == 0 && return one(𝒯)
+    M(u, v) = one(𝒯) / df.dot(u, v)^df.power + df.α
     out = M(u, df.roots[1])
     for ii in 2:length(df.roots)
-        out *= M(u, df.roots[ii])
+        out = __accumulate(df.accumulator, out, M(u, df.roots[ii]))
+    end
+    if df.accumulator isa Val{:Mean}
+        out /= length(df.roots)
     end
     return out
 end
 
-# Compute jvp(M(u),du). We use tmp for storing intermediate values
+# Compute jvp(M(u), du). We use tmp for storing intermediate values
 function (df::DeflationOperator{Tp, Tdot, T, vectype})(::Val{:dMwithTmp}, tmp, u, du) where {Tp, Tdot, T, vectype}
     length(df) == 0 && return zero(T)
     if df.autodiff
@@ -222,7 +245,7 @@ function Base.show(io::IO, prob::DeflatedProblem; prefix = "")
     show(io, prob.M; prefix = "    ")
 end
 
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Implement the Jlinear solvers for the deflated problem
 abstract type AbstractLinearSolverForDeflation <: AbstractLinearSolver end
 
@@ -232,7 +255,7 @@ $(TYPEDEF)
 
 Custom linear solver for deflated problem, very close to the Sherman-Morrison formula.
 """
-@with_kw_noshow struct DeflatedProblemCustomLS{T} <: AbstractLinearSolverForDeflation
+Base.@kwdef struct DeflatedProblemCustomLS{T} <: AbstractLinearSolverForDeflation
     solver::T = nothing
 end
 
@@ -296,7 +319,7 @@ Full iterative linear solver for deflated problem.
 struct DefProbFullIterativeLinearSolver{T} <: AbstractLinearSolverForDeflation
     solver::T
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

@@ -89,7 +89,7 @@ function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     end
     return ζs, ζ★s
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -219,8 +219,10 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     options = br.contparams.newton_options
 
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, bifpt.x)
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     p = bifpt.param
     𝒯 = VI.scalartype(x0)
     δ = getdelta(prob)
@@ -252,7 +254,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
             ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
         end
     end
-    VI.scale!(ζ, 1 / scaleζ(ζ))
+    ζ = VI.scale!!(ζ, 1 / scaleζ(ζ))
 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
     if Tevecs_ad == Nothing
@@ -273,7 +275,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     if ~(abs(VI.inner(ζ, ζ★)) > 1e-10)
         error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))).\nThis dot product should not be zero.\nPerhaps, you can increase `nev` which is currently $nev.")
     end
-    ζ★ ./= VI.inner(ζ, ζ★)
+    ζ★ = VI.scale!!(ζ★, 1 / VI.inner(ζ, ζ★))
     ζ★ = convert(𝒯eigvec, real(ζ★))
 
     # differentials and projector on Range(L), there are real valued
@@ -399,6 +401,8 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     # we solve b11 * ds + b20 * amp / 2 = 0
     amp = -2ds * b11 / b20 * ampfactor
     dsfactor = one(𝒯)
+    Tx0 = typeof(bp.x0)
+    # we enforce ::Tx0 because for StaticArrays, xm1 could be SizedArray as Ψ01 is a view(SArray)
 
     # x0  next point on the branch
     # x1  next point on the bifurcated branch
@@ -420,9 +424,9 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     end
 
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0,
-             x1,
-             xm1,
+    return (;x0 = convert(Tx0, x0),
+             x1 = convert(Tx0, x1),
+             xm1 = convert(Tx0, xm1),
              p = pnew,
              pm1 = bp.p - ds,
              dsfactor,
@@ -473,8 +477,9 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
         @warn "Singular normal form (`amp = 0`)!! Defaulting to `amp = $amp`."
     end
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
+    x1 = bp.x0 .+ amp .* real.(bp.ζ)
     return (;x0 = bp.x0, 
-             x1 = bp.x0 .+ amp .* real.(bp.ζ), 
+             x1 = x1, 
              p = pnew, 
              dsfactor, 
              amp, 
@@ -516,14 +521,15 @@ function _predictor(bp::AbstractSimpleBranchPoint,
     dotps = [VI.inner(τ.u, bp.ζ) * sol[1] + sol[2] * τ.p for sol in solutions]
     I = argmin(abs.(dotps))
     pnew = bp.p + solutions[I][2]
+    x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ)
 
     return (;x0 = bp.x0, 
-            x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ), 
+            x1, 
             p = pnew, dsfactor, 
             amp = one(𝒯), 
             δp = pnew - bp.p)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Base.@kwdef struct NdBPNormalForm{T}
     a01::Array{T, 1}
     a02::Array{T, 1}
@@ -679,11 +685,13 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     options = getcontparams(br).newton_options
     ls = options.linsolver
 
-    # bifurcation point
     if ~(bifpt.x isa 𝒯eigvec)
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
-    x0 = convert(𝒯eigvec, bifpt.x)
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     𝒯 = VI.scalartype(x0)
 
     # parameter for vector field
@@ -753,7 +761,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     cs = zeros(𝒯, 2, 2)
     # bls(z) = (ls(L, z)[1], 0, true,1)
     bls(z) = solve_bls_block(bls_block, L, as, bs, cs, z, zeros(𝒯, 2))
-    # projector on Range(L)
 
     # eigenvector eltype
     𝒯vec = VI.scalartype(ζs[1])
@@ -976,7 +983,7 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
     printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (reduced equation).\n    These need to be transformed as solutions of the full functional.\n")
     return (before = rootsNFm, after = rootsNFp)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @with_kw struct HopfNormalForm{𝒯, 𝒯a, 𝒯b}
     a::𝒯
     b::𝒯
@@ -1113,7 +1120,13 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_hopf]
-    𝒯 = VI.scalartype(bifpt.x)
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    𝒯 = VI.scalartype(x0)
     eigRes = br.eig
 
     # eigenvalue
@@ -1123,7 +1136,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = setparam(br, p)
-    L = jacobian(prob, convert(𝒯eigvec, bifpt.x), parbif)
+    L = jacobian(prob, x0, parbif)
 
     # right eigenvector
     if ~haseigenvector(br)
@@ -1139,22 +1152,22 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
     if ~detailed_type
-        return Hopf(bifpt.x, bifpt.τ, bifpt.param,
+        return Hopf(x0, bifpt.τ, bifpt.param,
                   ω,
                   parbif, lens,
                   ζ, zero(ζ),
-                  HopfNormalForm(a = missing, 
+                  HopfNormalForm(a = missing,
                                b = missing,
                                Ψ110 = missing,
                                Ψ001 = missing,
                                Ψ200 = missing
                         ),
                 Symbol("?")
-    )
+        )
     end
 
     # left eigen-elements
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(𝒯eigvec, bifpt.x), parbif) : adjoint(L)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     if start_with_eigen_type
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
     else
@@ -1175,18 +1188,18 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("Error of precision in normalization")
     end
 
-    hopfpt = Hopf(bifpt.x, bifpt.τ, bifpt.param,
+    hopfpt = Hopf(x0, bifpt.τ, bifpt.param,
                   ω,
                   parbif, lens,
                   ζ, ζ★,
-                  HopfNormalForm(a = missing, 
+                  HopfNormalForm(a = missing,
                                b = missing,
                                Ψ110 = missing,
                                Ψ001 = missing,
                                Ψ200 = missing
                         ),
                 Symbol("?")
-    )
+        )
     return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
 end
 
@@ -1266,7 +1279,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
             p = pnew,
             dsfactor = dsfactor)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1356,7 +1369,7 @@ function predictor(pd::PeriodDoubling, δp; verbose::Bool = false, ampfactor = 1
     x1 = abs(sqrt(-c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)*∂p*(∂p - 2))/(c*(∂p^3 - 3*∂p^2 + 4*∂p - 2)))
     return (;x0 = zero(x1), x1, δp)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1478,6 +1491,12 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_ns]
+
+    # we put the problem back to the state it was
+    update!(prob, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(Teigvec, saved_solution(bifpt.x))
+
     eigRes = br.eig
 
     # eigenvalue
@@ -1487,7 +1506,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # parameter for vector field
     p = bifpt.param
     parbif = set(getparams(br), lens, p)
-    L = jacobian(getprob(br), convert(Teigvec, bifpt.x), parbif)
+    L = jacobian(getprob(br), x0, parbif)
 
     # right eigenvector
     if haseigenvector(br) == false
@@ -1503,7 +1522,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, convert(Teigvec, bifpt.x), parbif) : adjoint(L)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
 
     # check that λ★ ≈ conj(λ)
@@ -1515,16 +1534,16 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         error("Error of precision in normalization.")
     end
 
-    nspt = NeimarkSacker(bifpt.x, bifpt.τ, bifpt.param,
+    nspt = NeimarkSacker(x0, bifpt.τ, bifpt.param,
         ω,
         parbif, lens,
         ζ, ζ★,
-        (a = zero(Complex{VI.scalartype(bifpt.x)}), b = zero(Complex{VI.scalartype(bifpt.x)}) ),
+        (a = zero(Complex{VI.scalartype(x0)}), b = zero(Complex{VI.scalartype(x0)}) ),
         :SuperCritical
     )
     return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed, autodiff)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

@@ -33,6 +33,7 @@ module BifurcationKit
     include("BorderedArrays.jl")
     include("LinearSolver.jl")
     include("EigSolver.jl")
+    include("GeneralizedEigenSolver.jl")
     include("LinearBorderSolver.jl")
     include("Preconditioner.jl")
     include("Newton.jl")
@@ -54,8 +55,9 @@ module BifurcationKit
 
     # continuers
     include("continuation/Contbase.jl")
-    include("continuation/Natural.jl")
     include("continuation/Palc.jl")
+    include("continuation/Tangents.jl")
+    include("continuation/Natural.jl")
     include("continuation/Multiple.jl")
     include("continuation/MoorePenrose.jl")
     include("continuation/AutoSwitch.jl")
@@ -78,6 +80,7 @@ module BifurcationKit
     include("bifdiagram/BifurcationDiagram.jl")
 
     include("TimeMesh.jl")
+
 
     # periodic orbit problems
     include("periodicorbit/Sections.jl")

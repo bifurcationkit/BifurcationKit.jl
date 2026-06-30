@@ -86,7 +86,7 @@ setparam(iter::ContIterable, p0) = setparam(getprob(iter), p0)
 @inline get_lens_symbol(it::ContIterable) = get_lens_symbol(getlens(it))
 
 # get the linear solver for Continuation
-getlinsolver(iter::ContIterable) = getlinsolver(getalg(iter))
+get_bordered_linsolver(iter::ContIterable) = get_bordered_linsolver(getalg(iter))
 
 @inline is_event_active(it::ContIterable) = !isnothing(it.event) && it.contparams.detect_event > 0
 @inline compute_eigenelements(it::ContIterable) = compute_eigenelements(it.contparams) || (is_event_active(it) && compute_eigenelements(it.event))
@@ -109,7 +109,7 @@ function finalise_solution(iter::ContIterable, state::AbstractContinuationState,
                                   state,
                                   iter)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -121,7 +121,6 @@ Mutable structure containing the state of the continuation procedure. The fields
 # Internal fields
 
 $(TYPEDFIELDS)
-
 
 # Useful functions
 - `copy(state)` returns a copy of `state`.
@@ -139,47 +138,51 @@ $(TYPEDFIELDS)
 - `getparams(iter, state)` return the current parameter set.
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
-    "predictor"
+    "predictor."
     z_pred::Tv
-    "tangent to the curve, predictor"
+    "tangent to the curve."
     τ::Tv
-    "current solution"
+    "current solution."
     z::Tv
-    "previous solution"
+    "previous solution."
     z_old::Tv
 
-    "Boolean for newton correction"
-    converged::Bool
-    "Number of newton iteration (in corrector)"
+    "Boolean for newton correction."
+    converged::Bool = false
+    "Number of newton iteration (in corrector)."
     itnewton::Int64 = 0
-    "number of linear iteration (in newton corrector)"
+    "number of linear iteration (in newton corrector)."
     itlinear::Int64 = 0
-    "current continuation step"
+    "current continuation step."
     step::Int64 = 0
-    "current step size"
-    ds::T
-    "boolean to stop continuation"
+    "current step size."
+    ds::T = missing
+    "boolean to stop continuation."
     stopcontinuation::Bool = false
-    "perform step size adaptation"
+    "perform step size adaptation."
     stepsizecontrol::Bool = true
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
-    "number of unstable eigenvalues (current, previous)"
+    "number of unstable eigenvalues (current, previous)."
     n_unstable::Tuple{Int64, Int64}  = (-1, -1)
-    "number of unstable complex eigenvalues (current, previous)"
+    "number of unstable complex eigenvalues (current, previous)."
     n_imag::Tuple{Int64, Int64}      = (-1, -1)
-    "boolean for eigen solver computation"
+    "boolean for eigen solver computation."
     convergedEig::Bool               = true
 
-    "current eigenvalues"
+    "current eigenvalues."
     eigvals::Teigvals = nothing
-    "current eigenvectors"
+    "current eigenvectors."
     eigvecs::Teigvec  = nothing
-    "store the current event values"
+    "store the current event values."
     eventValue::Tcb = nothing
-    "whether the state is in bisection for locating special points"
+    "whether the state is in bisection for locating special points."
     in_bisection::Bool = false
+end
+
+function EmptyContState(z::Tvec) where {Tvec} 
+    ContState{Union{Missing, Tvec}, Missing, Nothing, Nothing, Nothing}(;z, τ=missing, z_pred=missing, z_old=missing)
 end
 
 function Base.copy(state::ContState)
@@ -242,7 +245,8 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
-getparams(iter::AbstractContinuationIterable, state::AbstractContinuationState) = (@assert false; setparam(iter, getp(state)))
+# there is a dispatch for codim2:
+getparams(iter::AbstractContinuationIterable, state::AbstractContinuationState) = setparam(iter, getp(state))
 
 @inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################
@@ -345,14 +349,14 @@ end
 function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     # the keyword argument is to overwrite verbosity behaviour, like when locating bifurcations
     verbose = min(it.verbosity, _verbosity) > 0
-    prob = it.prob
+    prob = getprob(it)
     p₀ = getparam(prob)
 
     algo_string = typeof(getalg(it)).name.name; lalgo = 54-length(algo_string|>string)-2
     verbose && printstyled("━"^54*"\n"*"─"^(lalgo÷2)*" ", algo_string, " "*"─"^(lalgo÷2)*"\n\n", bold = true, color = :red)
 
     # newton parameters
-    (;p_min, p_max, max_steps, newton_options, η, ds) = it.contparams
+    (;p_min, p_max, max_steps, newton_options, η, ds) = getcontparams(it)
 
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
@@ -406,20 +410,26 @@ function iterate_from_two_points(it::ContIterable,
                                     u₁, p₁::T; 
                                     _verbosity = it.verbosity) where {T}
     ds = it.contparams.ds
-    z = BorderedArray(_copy(u₁), p₁)
-    # Compute eigenvalues to get the eigenvecs type. Necessary for creating a ContResult.
+    z0 = BorderedArray(_copy(u₀), p₀)
+    z1 = BorderedArray(_copy(u₁), p₁)
+    # Compute the eigenvalues to get the type of eigenvecs type. Required for creating a ContResult.
     eigvals = eigvecs = nothing
-    cveig::Bool = true
+    converged_eig::Bool = true
+    # we try to get the types returned by the eigenvalue solver. 
+    # we perform the computations at z0 as state will be initialized after the call initialize!
     if compute_eigenelements(it)
-        eigvals, eigvecs, cveig, = compute_eigenvalues(it, (z = z,), u₀, getparams(it.prob), it.contparams.nev)
+        eiginfo, _, n_unstable, n_imag, converged_eig = compute_eigenvalues(it, EmptyContState(z0))
+        eigvals, eigvecs, _, _ = eiginfo
     end
 
     # compute event value and store it into state
     cbval = is_event_active(it) ? initialize(it.event, T) : nothing
-    state = ContState(;z_pred = BorderedArray(_copy(u₀), p₀),
-                        τ = BorderedArray(VI.scale(u₁, 0), zero(p₁)),
-                        z,
-                        z_old = BorderedArray(_copy(u₀), p₀),
+    # we create a continuation state, its current solution is z1, and z_old = z0.
+    # this allows to compute the tangent. Then z0 -> state.z
+    state = ContState(;z_pred = VI.zerovector(z1),
+                        τ = VI.zerovector(z1),
+                        z = z1, # current solution
+                        z_old = z0,
                         converged = true,
                         ds = it.contparams.ds,
                         eigvals,
@@ -427,14 +437,17 @@ function iterate_from_two_points(it::ContIterable,
                         eventValue = (cbval, cbval)
                     )
 
-    # initialize the state for the continuation algorithm
-    # at this stage, the tangent is set up
+    # initialize the state for the continuation algorithm, at this stage, the tangent is set up
+    # state was initialized above with state.z = z1 and state.z_old = z0
+    # we did this to allow the computation of the tangent by Secant
+    # initialize! thus computes the tangent, update the predictor state.z_pred and
+    # put back z0 as current solution state.z <- z0
     initialize!(state, it)
 
     # update stability
     if compute_eigenelements(it)
         (;n_unstable, n_imag) = is_stable(getcontparams(it), eigvals)
-        update_stability!(state, n_unstable, n_imag, cveig)
+        update_stability!(state, n_unstable, n_imag, converged_eig)
     end
 
     # we update the event function result
@@ -443,8 +456,8 @@ function iterate_from_two_points(it::ContIterable,
 end
 
 function Base.iterate(it::ContIterable,
-                        state::ContState; 
-                        _verbosity = it.verbosity)
+                      state::ContState; 
+                      _verbosity = it.verbosity)
     if !done(it, state) return nothing end
     # the next line is to overwrite verbosity behaviour, for example when locating bifurcations
     verbosity = min(it.verbosity, _verbosity)
@@ -623,7 +636,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `bothside = true` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
 - `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
-- `callback_newton` callback for newton iterations. See docs of [`newton`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)
+- `callback_newton` callback for newton iterations. See docs of [`solve`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)
 - `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch but before saving the current `state` to it! For advanced use:
     - the state `state::ContState` of the continuation iterator is passed in `kwargs`. This can be used for testing whether this is called from bisection for locating bifurcation points / events: `in_bisection(state)` for example. This allows to escape some personal code in this case.
     Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).

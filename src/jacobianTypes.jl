@@ -1,7 +1,7 @@
 abstract type AbstractNonLinearSolver end
 
 struct Newton <: AbstractNonLinearSolver end
-################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 abstract type AbstractJacobianType end
 abstract type AbstractJacobianMatrixFree <: AbstractJacobianType end
 abstract type AbstractJacobianMatrix <: AbstractJacobianType end
@@ -97,7 +97,7 @@ Specific to trapezoid method.
 """
 struct BorderedSparseInplace <: AbstractJacobianMatrix end
 
-################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 The jacobian for Minimally Augmented problem is based on an analytical formula and is matrix based.
 """

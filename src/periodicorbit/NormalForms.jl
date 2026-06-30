@@ -53,7 +53,7 @@ function get_normal_form(wrap::AbstractWrapperPeriodicOrbitProblem,
     end
     error("Normal form for $(bifpt.type) not yet implemented.")
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 [WIP] Note: the computation of this normal form is not yet fully implemented.
 """
@@ -231,15 +231,12 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        coll = get_discretization(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh)
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    
-    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
@@ -402,7 +399,7 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     # @assert false
     return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, true)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function period_doubling_normal_form(pbwrap,
                                 br,
                                 ind_bif::Int,
@@ -558,14 +555,12 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        coll = get_discretization(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh )
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    pd0 = PeriodDoubling(x0, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type
         # method based on Iooss method
         return period_doubling_normal_form_iooss(pbwrap, pd0; detailed, verbose, nev, kwargs_nf...)
@@ -598,7 +593,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     𝒯 = eltype(coll)
 
     # identity matrix for collocation problem
-    Icoll = I(coll, _getsolution(pd.x0), par)
+    Icoll = I(coll, saved_solution(pd.x0), par)
 
     F(u, pars) = residual(coll.prob_vf, u, pars)
     # TODO: use R01
@@ -618,7 +613,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # we use an extended linear system for this
     #########
     # compute v1
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
     J[end, :] .= _rand(nj)
@@ -645,7 +640,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     #########
     # compute v1★
     # TODO: extract from continuation_pd
-    J★ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    J★ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)
     J★[end, end] = 0
@@ -690,7 +685,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
     # the previous linear problem J
-    Jψ = po_analytical_jacobian(coll, _getsolution(pd.x0), par; _transpose = Val(true), ρF = -1)
+    Jψ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
     Jψ[end-N:end-1, 1:N] .= -LA.I(N)
     Jψ[end-N:end-1, end-N:end-1] .= LA.I(N)
     # build the extended linear problem
@@ -726,7 +721,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                                     )
                             # _plot(vcat(vec(rhsₛ),1))
     # we could perhaps save the re-computation of J here and use the previous J
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
@@ -775,7 +770,7 @@ function period_doubling_normal_form_iooss(pbwrap,
         rhsₛ[:, i] .= ∂Fu₀ₛ[:, i] .- a₀₁ .* Fu₀ₛ[:, i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
-    jac = jacobian(pbwrap, _getsolution(pd.x0), par)
+    jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
     J[end-N:end-1, end-N:end-1] .= LA.I(N)
@@ -884,7 +879,7 @@ function period_doubling_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
 
     return PeriodDoublingPO(pd0.x0, pd0.x0[end], v₁, v₁★, pd, coll, true)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
                                 br::AbstractBranchResult,
                                 ind_bif::Int,
@@ -922,24 +917,24 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     coll = get_discretization(pbwrap)
     N, m, Ntst = size(coll)
     bifpt = br.specialpoint[ind_bif]
+
+    # we put the problem back to the state it was
+    update!(pbwrap, bifpt.x)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
     par = setparam(br, bifpt.param)
-    period = getperiod(coll, bifpt.x, par)
+    period = getperiod(coll, x0, par)
 
     # get the eigenvalue
     eigRes = br.eig
     λₙₛ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ωₙₛ = abs(imag(λₙₛ))
 
-    if bifpt.x isa POSavedSolutionAndState
-        # the solution is mesh adapted, we need to restore the mesh.
-        pbwrap = deepcopy(pbwrap)
-        update_mesh!(coll, bifpt.x._mesh )
-        bifpt = @set bifpt.x = bifpt.x.sol
-    end
-    ns0 = NeimarkSacker(bifpt.x, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
+    ns0 = NeimarkSacker(x0, nothing, bifpt.param, ωₙₛ, par, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed_type
-        return NeimarkSackerPO(bifpt.x, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
+        return NeimarkSackerPO(x0, period, bifpt.param, ωₙₛ, nothing, nothing, ns0, pbwrap, true)
     end
 
     if prm_type # method based on Poincare Return Map (PRM)
@@ -1289,7 +1284,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
 
     return NeimarkSackerPO(ns0.x0, period, ns0.p, ns0.ω, real.(ζs), nothing, ns, sh, true)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1355,7 +1350,7 @@ function predictor(nf::NeimarkSackerPO,
     orbitguess = copy(nf.po)
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1367,7 +1362,7 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
                     override = false)
     pbnew = deepcopy(nf.prob)
     N, m, Ntst = size(nf.prob)
-    orbitguess0 = _getsolution(nf.po)[begin:end-1]
+    orbitguess0 = saved_solution(nf.po)[begin:end-1]
 
     # we update the problem by doubling Ntst
     # we need to save the mesh for adaptation
@@ -1450,7 +1445,7 @@ function predictor(nf::BranchPointPO{ <: Collocation},
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ[2]
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -1501,7 +1496,7 @@ function predictor(nf::BranchPointPO{ <: Shooting },
     orbitguess[eachindex(ζs)] .+= ζs
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 

@@ -9,7 +9,7 @@ abstract type AbstractFiniteDifferencesDiscretization <: AbstractDifferentialDis
 # Periodic orbit computations by shooting method
 abstract type AbstractShootingDiscretization <: AbstractBoundaryValueDiscretization end
 abstract type AbstractPoincareShootingDiscretization <: AbstractShootingDiscretization end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function re_make(prob::AbstractDifferentialDiscretization;
                 params = getparams(prob)
                 )
@@ -22,7 +22,7 @@ function re_make(prob::AbstractShootingDiscretization;
                 )
     @set prob.par = params
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # get the number of time slices
 @inline get_mesh_size(pb::AbstractBoundaryValueDiscretization) = pb.M
 isinplace(::AbstractShootingDiscretization) = false
@@ -108,7 +108,7 @@ for PoType in (:POInterpolation, :BVPInterpolation)
         getprob(interp::$PoType) = interp.pb
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
@@ -128,12 +128,12 @@ for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
             _mesh::T3
             ϕ::T4
         end
-        @inline _getsolution(pb::$PSType) = pb.sol
-        minus(x::$PSType, y::$PSType) = minus(_getsolution(x), _getsolution(y))
+        @inline saved_solution(saved_sol::$PSType) = saved_sol.sol
+        minus(x::$PSType, y::$PSType) = minus(saved_solution(x), saved_solution(y))
     end
 end
-@inline _getsolution(x) = x
-####################################################################################################
+@inline saved_solution(x) = x
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -150,7 +150,9 @@ $(TYPEDFIELDS)
 end
 Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
 Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+update!(wrap::PeriodicOrbitFunctionalSh, x) = true
+
 function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)
     success = converged(state)
@@ -165,7 +167,7 @@ function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalT
     end
     return true
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _po_sh_jacobian_types = (AutoDiffMF(),
                                 MatrixFree(),
                                 AutoDiffDense(),
@@ -290,7 +292,7 @@ function newton(disc::AbstractShootingDiscretization,
     return solve(probw, defOp, options; kwargs...)
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Continuation for shooting problems
 """
 $(TYPEDSIGNATURES)
@@ -361,7 +363,7 @@ function continuation(disc::AbstractBoundaryValueDiscretization,
     _linear_algo = (Ty == Nothing) ?  MatrixBLS() : linear_algo
     return continuation(disc, orbitguess, alg, _contParams, _linear_algo; kwargs...)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -510,7 +512,7 @@ function _continuation(hopfpt::Hopf,
     )
     return Branch(branch, hopfpt)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -595,7 +597,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     bifprob = re_make(vector_field; lens, params)
     return _continuation(nf, bifprob, options_cont, disc; verbose, kwargs...)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Branch switching from bifurcations of periodic orbits
 """
 $(TYPEDSIGNATURES)

@@ -7,8 +7,9 @@ f(u, p) = @. p.r * u - u^3
 @testset "ContResult" begin
     prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
     opt = BK.ContinuationPar(p_min=-1.0, p_max=1.0)
+    @reset opt.newton_options.verbose = true
     contres = BK.continuation(prob, PALC(), opt)
-    @assert typeof(contres) <: BK.ContResult
+    @test typeof(contres) <: BK.ContResult
     bp = contres.specialpoint[1] # pitchfork bifurcation
 
     # Test slicing of ContResult object

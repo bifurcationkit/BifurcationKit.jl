@@ -96,27 +96,48 @@ $(TYPEDSIGNATURES)
 - `ss` tuple of speeds
 - `D` tuple of Lie generators
 """
-function applyD(pb::TWModel, out, ss, u)
+function applyD!(pb::TWModel, out, ss, u)
     for (D, s) in zip(pb.∂, ss)
         # out .-=  s .* (D * u)
         LA.mul!(out, D, u, -s, 1)
     end
     out
 end
-applyD(pb::TWModel, u) = applyD(pb, zero(u), 1, u)
+applyD(pb::TWModel, u) = applyD!(pb, zero(u), 1, u)
 
-# s is the speed.
-# Return F(u, p) - s * D * u
-@views function VF_plus_D(pb::TWModel, u::AbstractVector, s::Tuple, pars)
+"""
+Return `F(u, p) - s * D * u` where `s` is the speed.
+"""
+@views function _VF_plus_D(pb::TWModel, u::AbstractVector, s::Tuple, pars)
     # apply the vector field
     out = residual(pb.prob_vf, u, pars)
     # we add the freezing, it can be done now since out is filled by the previous call!!
-    applyD(pb, out, s, u)
+    applyD!(pb, out, s, u)
     return out
 end
 
 # function (u, p) -> F(u, p) - s * D * u to be used with shooting or Trapeze
-VFtw(pb::TWModel, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
+VFtw(pb::TWModel, u::AbstractVector, parsFreez) = _VF_plus_D(pb, u, parsFreez.s, parsFreez.user)
+
+"""
+Return `dF(u, p)⋅du - s * D * du - ds * D * u` where `s` is the speed.
+"""
+function _jvp_VF_plus_D!(pb,
+                        out::AbstractVector,
+                        u::AbstractVector,
+                        du::AbstractVector,
+                        s::Tuple,
+                        ds::Tuple,
+                        pars,
+                        ::Val{add_ds} = Val(true)) where {add_ds}
+    J = jacobian(pb.prob_vf, u, pars)
+    out .= apply(J, du)
+    applyD!(pb, out, s, du)
+    if add_ds
+        applyD!(pb, out, ds, u)
+    end
+    return out
+end
 
 # vector field of the TW problem
 @views function residual_tw!(pb::TWModel, out, x::AbstractVector, pars)
@@ -129,7 +150,7 @@ VFtw(pb::TWModel, u::AbstractVector, parsFreez) = VF_plus_D(pb, u, parsFreez.s, 
     # get the speed
     s = Tuple(x[end-nc+1:end])
     # apply the vector field
-    outu .= VF_plus_D(pb, u, s, pars)
+    outu .= _VF_plus_D(pb, u, s, pars)
     # we put the constraints
     for ii in 0:nc-1
         out[end-ii] = LA.dot(u, pb.∂u₀[ii+1])
@@ -143,7 +164,7 @@ end
 residual!(pb::TravellingWave, out, x::AbstractVector, pars) = residual_tw!(get_discretization(pb), out, x, pars)
 residual(pb::TravellingWave, x::AbstractVector, pars) = residual_tw!(get_discretization(pb), similar(x), x, pars)
 
-# jacobian-free function
+# jacobian-vector-product function
 @views function (pb::TWModel)(x::AbstractVector, pars, dx::AbstractVector)
     # number of constraints
     nc = pb.nc
@@ -157,11 +178,7 @@ residual(pb::TravellingWave, x::AbstractVector, pars) = residual_tw!(get_discret
     # get the speed
     s = Tuple(x[end-nc+1:end])
     ds = Tuple(dx[end-nc+1:end])
-    # get the jacobian
-    J = jacobian(pb.prob_vf, u, pars)
-    outu .= apply(J, du)
-    applyD(pb, outu, s, du)
-    applyD(pb, outu, ds, u)
+    _jvp_VF_plus_D!(pb, outu, u, du, s, ds, pars)
     # we put the constraints
     for ii in 0:nc-1
         out[end-ii] = LA.dot(du, pb.∂u₀[ii+1])
@@ -193,7 +210,7 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
     end
     return J2
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
@@ -227,7 +244,7 @@ function newton(tw::TWModel,
     wrap = WrapTW(tw, jac, orbitguess, BifurcationKit.record_from_solution(tw.prob_vf), plot_solution(tw.prob_vf))
     return solve(wrap, Newton(), optn; kwargs...,)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function record_from_solution(iter::ContIterable{TravellingWaveCont},
                               state::AbstractContinuationState)
     probTW = getprob(iter)
@@ -238,29 +255,32 @@ function record_from_solution(iter::ContIterable{TravellingWaveCont},
     end
 end
 
+"""
+$(TYPEDEF)
+
+Specific continuation routine for wave problems.
+
+## Arguments
+- 
+"""
 function continuation(prob::TWModel,
                     orbitguess, 
                     alg::AbstractContinuationAlgorithm, 
                     contParams::ContinuationPar;
+                    eigsolver = GEigenWave(),
                     record_from_solution = nothing,
                     plot_solution = plot_solution(prob.prob_vf),
                     δ = convert(VI.scalartype(orbitguess), getdelta(prob)),
                     kwargs...)
-    jacobianTW = prob.jacobian
-    @assert jacobianTW in (MatrixFree(), AutoDiffMF(), AutoDiff(), FullLU(), FiniteDifferences())
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
     B = SPA.spdiagm(vcat(ones(N-1), 0))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
-    contParamsWave = @set contParams.newton_options.eigsolver = convertToGEV(old_eigsolver, B)
-
-    # update record function
+    contParamsWave = @set contParams.newton_options.eigsolver = convert_to_wave_eigen_solver(eigsolver, old_eigsolver, B)
     # this is to remove this part from the arguments passed to continuation
-    jac = _generate_jacobian(prob, jacobianTW, orbitguess, getparams(prob); δ)
+    jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, plot_solution, record_from_solution)
-
     # call continuation
-    branch = continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
-    return branch
+    return continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
 end

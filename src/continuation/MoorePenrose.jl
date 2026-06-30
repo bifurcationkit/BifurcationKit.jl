@@ -4,110 +4,111 @@
 $(TYPEDEF)
 
 Moore-Penrose continuation algorithm.
+The predictor uses the tangent from `tangent` (default `PALC()`).
+The corrector solves the extended system `(F(x,p)=0, τ⋅(x-x₀,p-p₀)=0)` using a Moore-Penrose inverse.
 
-Additional information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/MooreSpence/).
+Available linear solvers for `method`:
+- `BifurcationKit.direct` (default): solves `[J dFdp] ⋅ Δ = rhs` directly via `\\`.
+- `BifurcationKit.pInv`: solves using `LinearAlgebra.pinv`.
+- `BifurcationKit.iterative`: uses a bordered linear solver `ls` (e.g., `MatrixBLS()`) for the extended system.
 
 # Constructors
 
-`alg = MoorePenrose()`
-
-`alg = MoorePenrose(tangent = PALC())`
+`MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)`
 
 # Internal fields
 
 $(TYPEDFIELDS)
-
-# Constructor(s)
-
-`MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)`
 """
 struct MoorePenrose{T, Tls <: AbstractLinearSolver} <: AbstractContinuationAlgorithm
-    "Tangent predictor, for example `PALC()`."
-    tangent::T
-    "Moore Penrose linear solver. Can be BifurcationKit.direct, BifurcationKit.pInv or BifurcationKit.iterative."
+    "Tangent predictor, for example `PALC()`, `Natural()`, etc." # we could have passed an AbstractTangentComputation directly but that would mean duplicating the architecture of PALC. So we use an AbstractContinuationAlgorithm as a predictor with some abuse of notation.
+    predictor::T
+    "Moore Penrose linear solver. Can be `BifurcationKit.direct`, `BifurcationKit.pInv` or `BifurcationKit.iterative`."
     method::MoorePenroseLS
-    "(Bordered) linear solver."
+    "(Bordered) linear solver used to invert the jacobian of the (bordered) problem during moore-penrose iterations. It is also used to compute the tangent for the predictor `Bordered()`."
     ls::Tls
 end
 # important for bisection algorithm, switch on / off internal adaptive behavior
-internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.tangent, swch)
-@inline getdot(alg::MoorePenrose) = getdot(alg.tangent)
-@inline getθ(alg::MoorePenrose) = getθ(alg.tangent)
-getbls(alg::MoorePenrose) = alg.ls
+internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.predictor, swch)
+@inline getdot(alg::MoorePenrose) = getdot(alg.predictor)
+@inline getθ(alg::MoorePenrose) = getθ(alg.predictor)
+get_bordered_linsolver(alg::MoorePenrose) = alg.ls
 
-_shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.tangent)))"
+_shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.predictor)))"
 
 """
 $(TYPEDSIGNATURES)
+
+Constructor for the `MoorePenrose` continuation algorithm.
 """
-function MoorePenrose(;tangent = PALC(),
+function MoorePenrose(;predictor = PALC(),
                         method = direct,
                         ls = nothing)
-    if ~(method == iterative)
+    if method != iterative
         ls = DefaultLS()
     else
         if isnothing(ls)
-            if tangent isa PALC
-                ls = tangent.bls
+            if predictor isa PALC
+                ls = get_bordered_linsolver(predictor)
             else
                 ls = MatrixBLS()
             end
         end
     end
-    return MoorePenrose(tangent, method, ls)
+    return MoorePenrose(predictor, method, ls)
 end
 
-getpredictor(alg::MoorePenrose) = getpredictor(alg.tangent)
-getlinsolver(alg::MoorePenrose) = getlinsolver(alg.tangent)
-
 function Base.empty!(alg::MoorePenrose)
-    empty!(alg.tangent)
+    empty!(alg.predictor)
     alg
 end
 
-function update(alg0::MoorePenrose,
+function update(alg_mp::MoorePenrose,
                 contParams::ContinuationPar,
-                linear_algo) #TODO type unstable
-    tgt = update(alg0.tangent, contParams, linear_algo)
-    alg = @set alg0.tangent = tgt
+                linear_algo::Tla) where {Tla} #TODO type unstable
+    tangent = update(alg_mp.predictor, contParams, linear_algo)
+    alg = @set alg_mp.predictor = tangent
 
     # for direct methods, we need a direct solver
-    if alg.method != iterative || alg.ls isa AbstractBorderedLinearSolver
+    if alg.method != iterative && alg.ls isa AbstractBorderedLinearSolver
         @reset alg.ls = DefaultLS()
+        return alg
     end
 
-    if isnothing(linear_algo) && alg.method != iterative
+    if Tla == Nothing && alg.method != iterative
         if hasproperty(alg.ls, :solver) && isnothing(alg.ls.solver)
             return @set alg.ls.solver = contParams.newton_options.linsolver
         end
-    else
-        return @set alg.ls = isnothing(linear_algo) ? MatrixBLS() : linear_algo
+    end
+    if Tla != Nothing && alg.method == iterative
+        return @set alg.ls = linear_algo
     end
     alg
 end
 
 initialize!(state::AbstractContinuationState,
              iter::AbstractContinuationIterable,
-              alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.tangent, nrm)
+              alg::MoorePenrose, nrm = false) = initialize!(state, iter, alg.predictor, nrm)
 
 function getpredictor!(state::AbstractContinuationState,
-                        iter::AbstractContinuationIterable,
-                         alg::MoorePenrose, nrm = false)
+                       iter::AbstractContinuationIterable,
+                       alg::MoorePenrose, 
+                       nrm = false)
     (iter.verbosity > 0) && println("Predictor:  MoorePenrose")
     # we just compute the tangent
-    getpredictor!(state, iter, alg.tangent, nrm)
+    getpredictor!(state, iter, alg.predictor, nrm)
 end
 
 update_predictor!(state::AbstractContinuationState,
-                   iter::AbstractContinuationIterable,
-                    alg::MoorePenrose,
-                    nrm = false) = update_predictor!(state, iter, alg.tangent, nrm)
+                  iter::AbstractContinuationIterable,
+                  alg::MoorePenrose,
+                  nrm = false) = update_predictor!(state, iter, alg.predictor, nrm)
 
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,
-                       it::AbstractContinuationIterable,
-                     algo::MoorePenrose;
-                     kwargs...)
+                    it::AbstractContinuationIterable,
+                    algo::MoorePenrose;
+                    kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
@@ -115,7 +116,7 @@ function corrector!(state::AbstractContinuationState,
     sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callback_newton, kwargs...)
 
     # update fields
-    _update_field_but_not_sol!(state, sol)
+    _update_field_but_not_solution!(state, sol)
 
     # update solution
     if converged(sol)
@@ -131,14 +132,15 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
                              normN = norm,
                              callback = cb_default,
                              kwargs...)
-    prob = iter.prob
+    prob = getprob(iter)
     par = getparams(prob)
     ϵ = getdelta(prob)
     paramlens = getlens(iter)
     contparams = getcontparams(iter)
     𝒯 = eltype(iter)
+    alg = getalg(iter)
 
-    (;method) = iter.alg
+    (; method) = alg
 
     z0 = getsolution(state)
     τ0 = state.τ
@@ -146,7 +148,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
     (;tol, max_iterations, verbose) = contparams.newton_options
     (;p_min, p_max) = contparams
-    linsolver = iter.alg.ls
+    linsolver = alg.ls
 
     # initialise variables
     x = _copy(z_pred.u)
@@ -184,7 +186,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         step += 1
         # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
         _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+        dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!!(dFdp, one(𝒯) / ϵ)
 
         # compute jacobian
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -209,20 +211,20 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             # x .= X[begin:end-1]; p = X[end]
             du, dup, flag, itlinear1 = linsolver(J, dFdp, ϕ.u, ϕ.p, res_f, zero(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp
             ~flag && @debug "[MoorePenrose] Bordered linear solver did not converge."
-            minus!!(x, du)
+            x = minus!!(x, du)
             p -= dup
             verbose && print_nonlinear_step(step, nothing, itlinear1)
         end
 
         p = clamp(p, p_min, p_max)
-        res_f .= residual(prob, x, set(par, paramlens, p))
+        _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
         res = normN(res_f)
 
         if method === iterative
             # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
             _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-            minus!!(dFdp, res_f); VI.scale!(dFdp, 1 / ϵ)
+            dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!!(dFdp, 1 / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # ϕ .= A \ vcat(zero(x),1)
             u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp

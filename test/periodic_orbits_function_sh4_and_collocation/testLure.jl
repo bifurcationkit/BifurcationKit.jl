@@ -127,6 +127,15 @@ for meshadapt in (false, true)
     usedeflation = true,
     )
 end
+
+# ----- test saved_solution interface -----
+let
+    x0 = rand(10)
+    mesh0 = collect(range(0, 1, length=11))
+    saved = BK.POSavedSolutionAndState(mesh0, x0, mesh0, zeros(10))
+    @test BK.saved_solution(x0) === x0
+    @test BK.saved_solution(saved) === x0
+end
 ####################################################################################################
 probsh = ODE.ODEProblem(lur!, copy(BK.getu0(prob)), (0., 1000.), BK.getparams(prob); abstol = 1e-12, reltol = 1e-10)
 

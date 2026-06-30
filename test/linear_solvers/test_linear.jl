@@ -1,7 +1,7 @@
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack, Random
 const BK = BifurcationKit
 Random.seed!(1234)
-# test that the top eigenvalues are sorted by decrasing real part
+# test that the top eigenvalues are sorted by decreasing real part
 _test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
 BK.closesttozero(rand(10))
@@ -104,7 +104,7 @@ let
 end
 ####################################################################################################
 let
-    # test of the linear  solvers
+    # test of the linear solvers
     J0 = rand(100, 100) * 0.1 - I
     rhs = rand(100)
     sol_explicit = J0 \ rhs
@@ -623,7 +623,7 @@ let
     B = sparse(I(length(x0)))
     out = Arpack.eigs(J0, nev = 20, which = :LR)
     resgev = BK.gev(DefaultEig(), J0, B, 10)
-    @test issorted(resgev[1], by = real)
+    @test _test_sorted(resgev[1])
 
     eil = BK.EigKrylovKit(tol = 1e-9)
     outkk = eil(J0, 20)
@@ -667,9 +667,60 @@ let
     eig = BifurcationKit.ShiftInvert(0.1, DefaultLS(), EigArnoldiMethod(x₀=rand(10)))
     J = I + 0.1rand(10,10)
     res1 = eig(J, 10)
-    res1[1]
-    @test norminf(eigvals(J, sortby = real) - res1[1])<1e-9
+    res0 = sort(eigvals(J), by =  x -> (real(x), imag(x)), rev = true)
+    @test _test_sorted(res0)
+    @test _test_sorted(res1[1])
+    @test norminf(res0 .- res1[1]) < 1e-9
 
     eig = BK.EigenMassMatrix([1. 0; 0 0], DefaultEig())
-    eig(rand(2, 2), 2)
+    res2 = eig(rand(2, 2), 2)
+end
+####################################################################################################
+# test generalised eigensolvers
+
+let
+    n = 100
+    x0 = rand(n)
+    J0 = I + sprand(n,n,0.1)
+    B = diagm(0 => vcat(ones(n)))
+
+    geil = BK.EigenMassMatrix(B, BK.DefaultEig())
+    outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
+    @test _test_sorted(outkk[1])
+
+    eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
+    outkk = geil(Symmetric(J0), 10)
+    @test _test_sorted(outkk[1])
+    geteigenvector(eil, outkk[2], 1:2)
+
+    eil = BK.EigArnoldiMethod(;x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, B)
+    outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
+    @test _test_sorted(outkk[1])
+end
+
+let
+    n = 100
+    x0 = rand(n)
+    J0 = I + sprand(n,n,0.1)
+    B = diagm(0 => vcat(ones(n-1), 0))
+    Jmf = x -> J0 * x
+    Bmf = x -> B * x
+
+    @test _test_sorted(BK.DefaultGEig(; B)(J0, 10)[1])
+
+    eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
+    outkk = geil(Symmetric(J0), 10)
+    @test _test_sorted(outkk[1])
+    geteigenvector(eil, outkk[2], 2)
+
+    eil = BK.EigArnoldiMethod(;x₀ = rand(n))
+    geil = BK.convert_to_GEV(eil, B)
+    outkk = geil(J0, 10)
+    BK.geteigenvector(geil, outkk[2], 1:2)
+    @test _test_sorted(outkk[1])
 end

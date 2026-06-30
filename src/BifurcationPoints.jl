@@ -5,7 +5,8 @@ abstract type AbstractSimpleBranchPointForMaps <: AbstractSimpleBranchPoint end
 abstract type AbstractBifurcationPointCodim2 <: AbstractBifurcationPoint end
 
 istranscritical(::AbstractBranchPoint) = false
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TODO: we should probably use PointTypes as in Bifurcations.jl
 """
 $(TYPEDEF)
 
@@ -52,7 +53,7 @@ $(TYPEDFIELDS)
     param::T = 0.
 
     "Norm of the equilibrium at the special point."
-    norm::T  = 0.
+    norm::T = 0.
 
     "`printsol = record_from_solution(x, param)` where `record_from_solution` is one of the arguments to [`continuation`](@ref)."
     printsol::Tp = 0.
@@ -150,9 +151,8 @@ end
 function is_bifurcation(sp::SpecialPoint)
     type(sp) in (:bp, :fold, :hopf, :nd, :cusp, :gh, :bt, :zh, :hh, :ns, :pd,)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # types for bifurcation point with 1d kernel for the jacobian
-
 for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
                   (:Fold, AbstractSimpleBranchPoint),
                   (:Pitchfork, AbstractSimpleBranchPoint),
@@ -162,6 +162,11 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
                   (:PitchforkMap, AbstractSimpleBranchPointForMaps),
                   (:TranscriticalMap, AbstractSimpleBranchPointForMaps),
                   (:NdBranchPoint, AbstractBranchPoint),
+                  (:Cusp, AbstractBifurcationPointCodim2),
+                  (:Bautin, AbstractBifurcationPointCodim2),
+                  (:ZeroHopf, AbstractBifurcationPointCodim2),
+                  (:HopfHopf, AbstractBifurcationPointCodim2),
+                  (:BogdanovTakens, AbstractBifurcationPoint)
                   )
     @eval begin
         """
@@ -184,18 +189,18 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
 
         - You can use `BifurcationKit.nf(bp; kwargs...)` to pretty print the normal form with a string."
         """
-        mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
+        @with_kw_noshow mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
 
             "Tangent of the curve at the bifurcation point."
-            τ::Tτ
+            τ::Tτ = missing
 
             "Parameter value at the bifurcation point."
-            p::T
+            p::T = missing
 
             "Parameters used by the vector field."
-            params::Tpar
+            params::Tpar = missing
 
             "Parameter axis used to compute the branch on which this bifurcation point was detected."
             lens::Tlens
@@ -210,7 +215,7 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
             nf::Tnf
 
             "Type of bifurcation point"
-            type::Symbol
+            type::Symbol = :NA
         end
     end
 end
@@ -297,7 +302,7 @@ function Base.show(io::IO, bp::BranchPointMap) #a⋅(p - pbif) + x⋅(b1⋅(p - 
     end
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # type for bifurcation point Nd kernel for the jacobian
 type(::NdBranchPoint) = :NonSimpleBranchPoint
 Base.length(bp::NdBranchPoint) = length(bp.ζ)
@@ -309,7 +314,7 @@ function Base.show(io::IO, bp::NdBranchPoint; prefix = "")
     println(io, prefix, "Normal form:")
     println(io, prefix, mapreduce(x -> x * "\n", *, _get_string(bp, "δ$plens")) )
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 for (op, opt) in ((:Hopf, AbstractSimpleBranchPoint),
                   (:NeimarkSacker, AbstractSimpleBranchPointForMaps)
                 )

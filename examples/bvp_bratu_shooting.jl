@@ -9,8 +9,9 @@ function record_from_solution(x, p; iter, k...)
     return (max_u = norm(x, 2), s = sum(x))
 end
 
-function plot_solution(x, p; kwargs...)
-    sol = BK._get_shooting_solution(d_bvp.cache, reshape(x, 2, disc.M), 1,  @set params.a = p)
+function plot_solution(x, p; iter, state, kwargs...)
+    prob = BK.getprob(iter)
+    sol = BK.BVP.get_solution_bvp(prob, x, BK.getparams(iter, state))
     plot!(sol.t, sol.u[1, :]; ylabel="u(t)", title="Bratu Solution (p₁=)", kwargs...)
 end
 
@@ -99,7 +100,6 @@ plot(diagram, vars = (:param, :s), legend = false)
 # CODIMENSION 2
 bp_codim = continuation(br, 1, (@optic _.b), ContinuationPar(optc, p_min = -1.);
             verbosity = 0,
-            jacobian_ma = BK.MinAug(), # autodiff is too slow
             usehessian = false,        # not yet defined for BVPBifProblem
             )
 plot(bp_codim)

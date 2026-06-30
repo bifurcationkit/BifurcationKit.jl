@@ -22,7 +22,7 @@ function nb_signs(x, event::SetOfEvents)
     end
     return nb
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Function to locate precisely an Event using a bisection algorithm. We make sure that, at the end of the algorithm, the state is just after the event (in the s coordinate).
 # I put the event in first argument even if it is in `iter` in order to allow for easier dispatch
 function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
@@ -239,8 +239,8 @@ function locate_event!(event::AbstractEvent, iter, _state, verbose::Bool = true)
     verbose && println("────▶ Leaving [location event]")
     return status, getinterval(interval...)
 end
-####################################################################################################
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # because of the way the results are recorded, with state corresponding to the (continuation) step = 0 saved in br.branch[1], 
 # it means that br.eig[k] corresponds to state.step = k-1. Thus, the eigen-elements (and other information)
 # corresponding to the current event point are saved in br.eig[step+1]
@@ -260,7 +260,7 @@ function get_event_type(::AbstractEvent,
     (verbosity > 0) && printstyled(color=:red, "!! User point at p ≈ $(getp(state)) \n")
     return true, userpoint
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_event_type(event::AbstractContinuousEvent, 
                         iter::AbstractContinuationIterable, 
                         state, 
@@ -299,7 +299,7 @@ function get_event_type(event::AbstractContinuousEvent,
     (verbosity > 0) && printstyled(color=:red, "!! Continuous user point at p ≈ $(getp(state)) \n")
     return true, userpoint
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_event_type(event::AbstractDiscreteEvent, 
                         iter::AbstractContinuationIterable, 
                         state, 
@@ -335,7 +335,7 @@ function get_event_type(event::AbstractDiscreteEvent,
     (verbosity > 0) && printstyled(color=:red, "!! Discrete user point at p ≈ $(getp(state)) \n")
     return true, userpoint
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_event_type(event::PairOfEvents, 
                         iter::AbstractContinuationIterable, 
                         state, 
@@ -364,7 +364,7 @@ function get_event_type(event::PairOfEvents,
     end
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_event_type(event::SetOfEvents, 
                         iter::AbstractContinuationIterable, 
                         state, 

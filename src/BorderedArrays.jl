@@ -74,13 +74,13 @@ getvec(x::AbstractVector) = @view x[begin:end-1]
 getp(x::AbstractVector) = x[end]
 getvec(x::BorderedArray) = x.u
 getp(x::BorderedArray{vectype, T}) where {vectype, T <: Number} = x.p
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # computes x-y into x and returns x
 minus!!(x, y) = VI.add!!(x, y, -VI.One())
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # returns x - y
 minus(x, y) = VI.add(x, y, -VI.One())
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # implements interface from VectorInterface for BorderedArray
 # KrylovKit vector interface https://github.com/Jutho/VectorInterface.jl
 @inline VI.scalartype(W::BorderedArray) = promote_type(VI.scalartype(W.u), VI.scalartype(W.p))

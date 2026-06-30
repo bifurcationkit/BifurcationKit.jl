@@ -15,13 +15,16 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<: Integer}, split
             else
                 xx[(2*(i-1)).+(indices[i-1]+1:ind)] .= @views x[(indices[i-1]+1:ind)]
             end
+            # safeguard for boundary indices (e.g. sp.idx == 1)
+            _left = ind > 1 ? x[ind-1] : x[ind]
+            _right = ind < length(x) ? x[ind+1] : x[ind]
             if !splitval
-                xx[2*(i-1)+ind] = x[ind-1]
+                xx[2*(i-1)+ind] = _left
             end
             # Add a NaN is necessary, otherwise continue with same value as before (useful for linewidth)
-            xx[2*(i-1)+ind+1] = splitval ? NaN : x[ind-1]
+            xx[2*(i-1)+ind+1] = splitval ? NaN : _left
             # Repeat last value before NaN, but adapt for linewidth
-            xx[2*(i-1)+ind+2] = splitval ? x[ind] : x[ind+1]
+            xx[2*(i-1)+ind+2] = splitval ? x[ind] : _right
         end
         # Fill the rest of the extended array
         xx[last(indices)+2*length(indices)+1:end] .= @views x[last(indices)+1:end]
@@ -29,6 +32,43 @@ function isplit(x::AbstractVector{T}, indices::AbstractVector{<: Integer}, split
     else
         return x
     end
+end
+
+function plot_stability_segments!(ax,
+                                x,
+                                y,
+                                stable;
+                                color = Makie.wong_colors()[1],
+                                dash_unstable_style = true,
+                                linewidthunstable = 1,
+                                linewidthstable = 3linewidthunstable,
+                                kw...
+                            )
+    @assert length(x) == length(y) == length(stable)
+    i = 1
+    n = length(x) - 1
+
+    first_plot = true
+    color = nothing
+
+    while i < n
+        current = stable[i]
+
+        j = i + 1
+        while j <= n && stable[j] == current
+            j += 1
+        end
+        # first call: let Makie choose color
+        if first_plot
+            p = lines!(ax, x[i:j], y[i:j]; linestyle = (current ? :solid : :dash), kw...)
+            color = p.color[]
+            first_plot = false
+        else
+            lines!(ax, x[i:j], y[i:j]; color, linestyle = (current ? :solid : :dash), kw...)
+        end
+        i = j
+    end
+    return ax
 end
 
 """
@@ -50,11 +90,13 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
                 vars = nothing,
                 linewidthunstable = 1,
                 linewidthstable = 3linewidthunstable,
+                dash_unstable_style = false,
                 plotcirclesbif = true,
                 branchlabel = nothing,
                 branchcolor = nothing,
                 applytoY = identity, 
-                applytoX = identity) where {Tkind, Tprob}
+                applytoX = identity,
+                kw...) where {Tkind, Tprob}
 
     # names for axis labels
     ind1, ind2 = get_plot_vars(contres, vars)
@@ -62,21 +104,37 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
 
     # stability linewidth
     linewidth = linewidthunstable
-    if Tkind <: TwoParamCont
+    if Tkind <: AbstractTwoParamCont
         linewidthstable = 1
     end
     indices = Int[sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
-        linewidth = isplit(map(x->x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
+        linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
     end
 
-    xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
-    ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
-    if isnothing(branchcolor)
-        lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel)
+    if dash_unstable_style == false
+        xbranch = isplit(map(applytoX, getproperty(contres.branch, ind1)), indices)
+        ybranch = isplit(map(applytoY, getproperty(contres.branch, ind2)), indices)
+        if isnothing(branchcolor)
+            lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel, kw...)
+        else
+            lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel, color = branchcolor, kw...)
+        end
     else
-        lines!(ax1, xbranch, ybranch; linewidth, label = branchlabel, color = branchcolor)
+        if Tkind <: AbstractTwoParamCont
+            _stable = (Tkind == NSCont || Tkind == HopfCont) ? [is_supercritical(contres, ind) for ind in eachindex(contres.stable)] : fill(true, length(contres.stable))
+        else
+            _stable = contres.stable
+        end
+        plot_stability_segments!(ax1, 
+                                map(applytoX, getproperty(contres.branch, ind1)),
+                                map(applytoY, getproperty(contres.branch, ind2)),
+                                _stable,
+                                color = branchcolor,
+                                label = branchlabel,
+                                kw...
+                                )
     end
     ax1.xlabel = xlab
     ax1.ylabel = ylab
@@ -125,7 +183,8 @@ function plot_branch_cont(contres::ContResult,
                           linewidthstable = 3.0linewidthunstable,
                           plotcirclesbif = true,
                           applytoY = identity,
-                          applytoX = identity)
+                          applytoX = identity,
+                          kw...)
     sol = getsolution(state)
     if length(contres) == 0
         return
@@ -166,7 +225,7 @@ function plot_branch_cont(contres::ContResult,
         Makie.arrows2d!(ax1, [x], [y], [u], [v], color = :green, tipwidth = 15, tiplength = 15, minshaftlength = 0)
     end
 
-    plot!(ax1, contres; plotfold, plotstability, plotspecialpoints, putspecialptlegend, filterspecialpoints, linewidthunstable, linewidthstable, plotcirclesbif, applytoY, applytoX)
+    plot!(ax1, contres; plotfold, plotstability, plotspecialpoints, putspecialptlegend, filterspecialpoints, linewidthunstable, linewidthstable, plotcirclesbif, applytoY, applytoX, kw...)
 
     if isnothing(plotuserfunction) == false
         ax_perso = fig[2, 2] = Axis(fig, tellheight = true)

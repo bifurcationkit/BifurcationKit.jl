@@ -15,15 +15,15 @@ Returns a variable containing parameters to affect the `newton` algorithm when s
 $(TYPEDFIELDS)
 """
 @with_kw struct NewtonPar{T, L <: AbstractLinearSolver, E <: AbstractEigenSolver}
-    "absolute tolerance for `F(x)`"
+    "absolute tolerance for `F(x)`."
     tol::T = 1e-12
-    "number of Newton iterations"
+    "number of Newton iterations."
     max_iterations::Int64 = 25
     "display Newton iterations?"
     verbose::Bool = false
-    "linear solver, must be `<: AbstractLinearSolver`"
+    "linear solver, must be `<: AbstractLinearSolver`."
     linsolver::L = DefaultLS()
-    "eigen solver, must be `<: AbstractEigenSolver`"
+    "eigen solver, must be `<: AbstractEigenSolver`."
     eigsolver::E = DefaultEig()
     linesearch::Bool = false
     α::T = convert(typeof(tol), 1.0)        # damping
@@ -47,22 +47,22 @@ For example
 $(TYPEDFIELDS)
 """
 struct NonLinearSolution{Tu, Tprob, Tres, Titlin}
-    "solution"
+    "solution."
     u::Tu
-    "nonlinear problem, typically a `BifurcationProblem`"
+    "nonlinear problem, typically a `BifurcationProblem`."
     prob::Tprob
-    "sequence of residuals"
+    "sequence of residuals."
     residuals::Tres
     "has algorithm converged?"
     converged::Bool
-    "number of newton steps"
+    "number of newton steps."
     itnewton::Int
-    "total number of linear iterations"
+    "total number of linear iterations."
     itlineartot::Titlin
 end
 @inline converged(sol::NonLinearSolution) = sol.converged
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar;
                     normN = norm,
                     callback = cb_default,

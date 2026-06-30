@@ -20,10 +20,10 @@ abstract type AbstractBifurcationProblem end
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T, Tjac} <: AbstractBifurcationProblem end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 abstract type AbstractBoundaryValueProblem <: AbstractBifurcationProblem end
 abstract type AbstractPeriodicOrbitProblem <: AbstractBoundaryValueProblem end
 #####################################
@@ -42,15 +42,15 @@ abstract type AbstractWrapperPeriodicOrbitProblem <: AbstractPeriodicOrbitProble
 abstract type AbstractWrapperPOShootingProblem <: AbstractWrapperPeriodicOrbitProblem end
 abstract type AbstractWrapperPODifferentialProblem <: AbstractWrapperPeriodicOrbitProblem end
 abstract type AbstractWrapperPOFiniteDifferencesProblem <: AbstractWrapperPODifferentialProblem end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 abstract type AbstractWaveProblem <: AbstractBifurcationProblem end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 abstract type HasJetUserPassedTrait end
 struct TraitUserPassed <: HasJetUserPassedTrait end
 struct TraitNoUserPassed  <: HasJetUserPassedTrait end
 
 has_dpF(::Type{T}) where T = isbits(T) ? TraitUserPassed() : TraitNoUserPassed()
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # const type to hold "all" types of optics. Note that we used to rely on `Setfield.jl` where optics were called lens. Hence, we still have some of the old terminology in the package (i.e. name lens instead of optic).
 const OpticType = Union{Nothing, AllOpticTypes}
 
@@ -270,7 +270,8 @@ function R01!(::FiniteDifferences,
     if isnothing(res_f)
         res_f = residual(prob, x, set(par, getlens(prob), p))
     end
-    minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = minus!!(dFdp, res_f)
+    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
 const _dict_doc_string_prob = Dict(
@@ -353,9 +354,9 @@ for (op, at, kd) in (
                 plotSolution::Tplot
                 "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x, p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`."
+                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`. The saved solution can be retrieved back using `saved_solution`."
                 save_solution::Tgets
-                "Function to update the problem after each continuation step. Defaults to `update_default`. It has signature `update!(prob, iter, state)` where `prob` is the current bifurcation problem, `iter::ContIterable` the current iterable and `state::ContState` the current state of the continuation. It should return `true` if the update was successful and `false` otherwise. The continuation will stop if `false` is returned. This type of function is useful for example to update the problem internals like meshes, preconditioners, etc."
+                "Function to update the problem after each continuation step. Defaults to `update_default`. It has signature `update!(prob, iter, state)` where `prob` is the current bifurcation problem, `iter::ContIterable` the current iterable and `state::ContState` the current state of the continuation. It should return `true` if the update was successful and `false` otherwise. The continuation will stop if `false` is returned. This type of function is useful for example to update the problem internals like meshes, preconditioners, etc. Not that you can extract the type of continuation from `iter` (for example `FoldCont`) and thus modify the method `update!` accordingly."
                 update!::Tupdate
             end
 
@@ -567,7 +568,7 @@ function apply_jacobian(pb::AbstractBifurcationProblem, x, par, dx, transpose_ja
         end
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(SIGNATURES)
 
@@ -619,7 +620,7 @@ function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitPr
     disc = re_make(get_discretization(prob); params)
     new_prob = setproperties(prob; disc, u0)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # simple trait for dispatching on user passed functions
 struct NoUserPassedFunction end
 struct UserPassedFunction end
@@ -660,7 +661,7 @@ function Base.show(io::IO, prob::AbstractBifurcationProblem; prefix = "")
     print(io, "\n" * prefix * "└─ Parameter: ")
     printstyled(io, get_lens_symbol(getlens(prob)); color, bold)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # the following structs are a machinery to extend multilinear mapping from Real valued to Complex valued Arrays
 # this is done so as to use AD (ForwardDiff.jl,...) to provide the differentials which only works on reals (usually).
 """
@@ -714,7 +715,7 @@ function (R3::TrilinearMap)(dx1, dx2, dx3)
 end
 
 (b::TrilinearMap)(dx1::T, dx2::T, dx3::T) where {T <: AbstractArray{<: Real}} = b.tl(dx1, dx2, dx3)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 for op in (
         :RecordForFold,
         :RecordForHopf,

@@ -10,7 +10,7 @@ end
 function plot_solution(x, p; iter, kwargs...)
     prob = BK.getprob(iter)
     sol = BK.BVP.get_solution_bvp(prob, x, p)
-    plot!(sol.t, sol.u[1, :]; label="",  kwargs...)
+    plot!(sol.t, sol.u[1, :]; label="",  marker = :d, kwargs...)
 end
 
 # ==============================================================================

@@ -193,15 +193,7 @@ println("="^80)
 nf_with_c3 = bautin_ho.nf
 nf_without_c3 = merge(nf_with_c3, (c₃ = 0.0 + 0.0im, l3 = 0.0))
 
-bautin_without_c3 = BK.Bautin(
-    bautin_ho.x0,
-    bautin_ho.params,
-    bautin_ho.lens,
-    bautin_ho.ζ,
-    bautin_ho.ζ★,
-    nf_without_c3,
-    bautin_ho.type
-)
+bautin_without_c3 = BK.setproperties(bautin_ho; nf = nf_without_c3)
 
 # Call the predictor with both versions
 println("Calling predictor with full higher-order normal form (with c₃)...")
@@ -329,10 +321,7 @@ println("✓ The eigenvector has a non-zero third component")
 pred3_with_c3 = BK.predictor(bautin_ho3, Val(:FoldPeriodicOrbitCont), ϵ_test)
 
 nf3_without_c3 = merge(bautin_ho3.nf, (c₃ = 0.0 + 0.0im, l3 = 0.0))
-bautin3_without_c3 = BK.Bautin(
-    bautin_ho3.x0, bautin_ho3.params, bautin_ho3.lens,
-    bautin_ho3.ζ, bautin_ho3.ζ★, nf3_without_c3, bautin_ho3.type,
-)
+bautin3_without_c3 = BK.setproperties(bautin_ho3; nf = nf3_without_c3)
 pred3_without_c3 = BK.predictor(bautin3_without_c3, Val(:FoldPeriodicOrbitCont), ϵ_test)
 
 Δparams3 = norm(pred3_with_c3.params .- pred3_without_c3.params)

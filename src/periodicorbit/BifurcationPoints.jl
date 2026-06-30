@@ -1,6 +1,6 @@
 abstract type AbstractBifurcationPointOfPO <: AbstractBifurcationPoint end
 abstract type AbstractSimpleBifurcationPointPO <: AbstractBifurcationPointOfPO end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # types for bifurcation point with 1d kernel for the jacobian
 for op in (:BranchPointPO, :PeriodDoublingPO,)
     @eval begin
@@ -80,7 +80,7 @@ function Base.show(io::IO, bp::BranchPointPO)
     show(io, bp.nf; prefix = "\t")
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # type for Neimark-Sacker bifurcation point
 
 """

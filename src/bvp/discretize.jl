@@ -36,18 +36,18 @@ prob = BifurcationProblem(bvp, x0, params, (@optic _.ω))
 """
 function discretize end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Shooting
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.EnsembleProblem, SciMLBase.DAEProblem}}, 
                     disc::Shooting; 
                     kwargsDE...)
     cache = BK.Shooting(mesh_size(disc), model.F, disc.alg; parallel = is_parallel(disc), kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Trapezoid
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function discretize(model::BVPModel, disc::Trapeze)
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
@@ -90,9 +90,9 @@ function discretize(model::BVPModel, disc::Trapeze)
     return DiscretizedBVP(model, disc, cache)
 end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Collocation
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
     n = state_dimension(model)
@@ -120,9 +120,9 @@ function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
     return DiscretizedBVP(model, disc, cache)
 end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Utility: Generate initial guess
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 """
 $(TYPEDSIGNATURES)

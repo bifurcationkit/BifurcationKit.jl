@@ -17,7 +17,7 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     sol2, flag2, it2 = ls(J, rhs2; kwargs...)
     return sol1, sol2, flag1 & flag2, (it1, it2)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The two following methods are used for the continuation of Hopf points and the computation of Floquet multipliers
 """
 [Internal] This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
@@ -80,9 +80,9 @@ function _axpy_op!(o, J, v::AbstractArray, a₀, a₁)
         return o .= a₀ .* v .+ a₁ .* o
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for default \ operator (backslash)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -133,9 +133,9 @@ end
 function (l::DefaultPILS)(J, rhs; kwargs...)
     return J \ rhs, true, 1
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for IterativeSolvers
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -200,13 +200,13 @@ function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = VI.Zero()
                                  maxiter = l.maxiter, initially_zero = l.initially_zero,
                                  Pl = l.Pl, Pr = l.Pr, kwargs...)
     if res[2].isconverged == false
-        @debug "IterativeSolvers.gmres iterated maxIter = $(res[2].iters) times without achieving the desired tolerance.\n"
+        @debug "IterativeSolvers.gmres iterated maxiter = $(res[2].iters) times without achieving the desired tolerance.\n"
     end
     return res[1], res[2].isconverged, res[2].iters
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for KrylovKit
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -289,9 +289,9 @@ function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = VI.Zero(), a₁ = VI.On
     info.converged == 0 && (@debug "KrylovKit.linsolve solver did not converge")
     return res, info.converged == 1, info.numops
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for Krylov
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 

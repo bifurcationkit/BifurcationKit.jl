@@ -31,7 +31,7 @@ res = bvp_residual(bvp, X, params)
 prob = BVPBifProblem(bvp, X0, params, (@optic _.μ))
 ```
 """
-struct DiscretizedBVP{Tmodel<:BVPModel, Tdisc<:AbstractDiscretizer, Tcache}
+struct DiscretizedBVP{Tmodel <: BVPModel, Tdisc <: AbstractDiscretizer, Tcache}
     "Mathematical BVP model"
     model::Tmodel
 
@@ -42,9 +42,9 @@ struct DiscretizedBVP{Tmodel<:BVPModel, Tdisc<:AbstractDiscretizer, Tcache}
     cache::Tcache
 end
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Interface: bvp_residual and bvp_jacobian
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # These functions must be implemented for each discretizer type.
 # The implementations are in the discretizer-specific files:
     #   - trapeze/residual.jl, trapeze/jacobian.jl
@@ -71,9 +71,9 @@ function bvp_jacobian end
 function bvp_jacobian(d_bvp::DiscretizedBVP, ::BK.AutoDiffDense, x, p)
     FD.jacobian(z -> bvp_residual(d_bvp, z, p), x)
 end
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Getters
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 """State dimension."""
 state_dimension(bvp::DiscretizedBVP) = state_dimension(bvp.model)
@@ -93,9 +93,9 @@ get_cache(bvp::DiscretizedBVP) = bvp.cache
 BK.record_from_solution(bvp::DiscretizedBVP) = BK.record_from_solution(get_model(bvp))
 BK.plot_solution(bvp::DiscretizedBVP) = BK.plot_solution(get_model(bvp))
 
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Display
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function Base.show(io::IO, bvp::DiscretizedBVP)
     println(io, "┌─ DiscretizedBVP")
     println(io, "├─ State dimension : ", state_dimension(bvp))
@@ -103,7 +103,7 @@ function Base.show(io::IO, bvp::DiscretizedBVP)
     println(io, "├─ Model           : BVPModel")
     print(io,   "└─ Discretizer     : ", typeof(bvp.discretizer).name.name)
 end
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector) where {Tmodel}
     coll = d_bvp.cache.po_coll
     N, m, Ntst = size(coll)
@@ -122,7 +122,7 @@ function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractV
     M = mesh_size(get_discretizer(d_bvp))
     reshape(u, N, M)
 end
-# ============================================================================
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector, params) where {Tmodel}
     sh = d_bvp.cache
     N = state_dimension(d_bvp)
@@ -156,7 +156,7 @@ function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, x::Tx, 
     coll = d_bvp.cache.po_coll # TODO: remove
     ts = BK.get_times(coll)
     mesh = x.mesh
-    u = BK._getsolution(x)
+    u = BK.saved_solution(x)
     um = get_time_slices(d_bvp, u)
     return BK.BVPSolution(t = mesh .* T, u = um)
 end

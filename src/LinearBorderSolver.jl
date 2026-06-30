@@ -20,7 +20,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                         R, n::𝒯; 
                         shift::𝒯s = nothing,
                         dotp = getdot(iter).dot,
-                        applyξu! = getdot(iter).apply!) where {𝒯, 𝒯s}
+                        applyξu! = _get_apply_dot(getdot(iter))) where {𝒯, 𝒯s}
     # the following parameters are used for the pseudo arc length continuation
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
@@ -36,7 +36,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
 end
 
 update_bls(lbs::AbstractBorderedLinearSolver, ls) = error("update_bls not implemented for $(typeof(lbs))")
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -204,7 +204,7 @@ function solve_bls_block(lbs::BorderingBLS,
     end
     return u1, u2, cv, (its...)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -283,7 +283,7 @@ function solve_bls_block(::MatrixBLS,
     sol = A \ vcat(rhst, rhsb)
     return (@view sol[begin:end-n]), (@view sol[end-n+1:end]), true, 1
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -305,17 +305,6 @@ struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
     dot::Td # possibly custom dot product
 end
 
-function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
-    out = VI.zerovector(x)
-    _copyto!(out.u, apply(lbmap.J, x.u))
-    VI.add!(out.u, lbmap.a, x.p)
-    if isnothing(lbmap.shift) == false
-        VI.add!(out.u, x.u, lbmap.shift)
-    end
-    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
-    return out
-end
-
 function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     # This implements the case where Tc is a number, ie there is one scalar constraint in the
     # bordered linear system
@@ -333,6 +322,19 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
 end
 
 # case matrix by blocks
+
+function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Number}
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
+    VI.add!(out.u, lbmap.a, x.p)
+    if isnothing(lbmap.shift) == false
+        VI.add!(out.u, x.u, lbmap.shift)
+    end
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
+    return out
+end
+
+# Careful: specific type definition suggested by Aqua.jl to avoid ambiguities
 function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <: Tuple, Tb <: Tuple}
     out = VI.zerovector(x)
     _copyto!(out.u, apply(lbmap.J, x.u))
@@ -346,6 +348,17 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <
     for ii in eachindex(lbmap.b)
         out.p[ii] += lbmap.dot(lbmap.b[ii], x.u)
     end
+    return out
+end
+
+function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray{Tv, Tp}) where {Tj, Ta <: Tuple, Tb <: Tuple, Tv, Tp <: Number}
+    out = VI.zerovector(x)
+    _copyto!(out.u, apply(lbmap.J, x.u))
+    VI.add!(out.u, lbmap.a, x.p)
+    if isnothing(lbmap.shift) == false
+        VI.add!(out.u, x.u, lbmap.shift)
+    end
+    out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
 
@@ -435,10 +448,10 @@ function solve_bls_block(lbs::MatrixFreeBLS,
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Linear Solvers based on a bordered solver
 # !!!! This one is used as a linear Solver, not as a Bordered one
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -473,7 +486,7 @@ function  (l::LSFromBLS)(J, rhs1, rhs2)
 
     return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 update_bls(lbs::BorderingBLS, ls) = (@set lbs.solver = ls)
 update_bls(lbs::MatrixBLS, ls) = (@set lbs.solver = ls)
 update_bls(lbs::MatrixFreeBLS, ls) = (@set lbs.solver = ls)

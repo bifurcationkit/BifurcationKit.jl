@@ -56,13 +56,14 @@ end
 """
 For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonBT`.
 """
-function bt_point(br::AbstractResult{<: TwoParamCont, Tprob}, index::Int) where {Tprob}
+function bt_point(br::AbstractResult{<: AbstractTwoParamCont, Tprob}, index::Int) where {Tprob}
     bptype = br.specialpoint[index].type
     @assert bptype == :bt "This should be a BT point"
     specialpoint = br.specialpoint[index]
-    return BorderedArray(_copy(specialpoint.x.x), [specialpoint.x.p1, specialpoint.param])
+    # specialpoint.x should be an AbstractMASolution
+    return BorderedArray(_copy(get_solution(specialpoint.x)), [specialpoint.x.p1, specialpoint.param])
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 getvec(x, ::BTMinimallyAugmentedFormulation) = getvec(x)
 getp(x, ::BTMinimallyAugmentedFormulation) = getp(x)
 
@@ -110,7 +111,7 @@ end
     res = 𝐁𝐓(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the BT MA problem.
 struct BTLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -236,7 +237,7 @@ function (::BTLinearSolverMinAug)(Jbt, du::BorderedArray{vectype, T}; debugArray
     # this type annotation enforces type stability
     return BorderedArray{vectype, T}(out[1], out[2]), out[3], out[4]
 end
-###################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @inline has_adjoint(BTpb::BTMAProblem) = has_adjoint(BTpb.prob)
 @inline is_symmetric(BTpb::BTMAProblem) = is_symmetric(BTpb.prob)
 residual(BTpb::BTMAProblem, x, p) = BTpb.prob(x, p)
@@ -336,9 +337,9 @@ function newton_bt(prob::AbstractBifurcationProblem,
         x0 = get_vec_bls(sol.u, 2), params = parbt, lens = _getlenses(𝐁𝐓), 
         ζ = 𝐁𝐓.b, 
         ζ★ = 𝐁𝐓.a, 
-        nf = (a = missing, b = missing ),
+        nf = (a = missing, b = missing, K2 = zero(Ty) ),
         type = :none, 
-        nfsupp = (K2 = zero(Ty),))
+    )
     return @set sol.u = bt
 end
 

@@ -1,13 +1,13 @@
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const _trapezoid_jacobian_type = (Dense(),
-                                    AutoDiffDense(),
-                                    FullLU(),
-                                    FullMatrixFree(),
-                                    BorderedLU(),
-                                    BorderedMatrixFree(),
-                                    FullSparseInplace(),
-                                    BorderedSparseInplace(),
-                                    AutoDiffMF())
+                                  AutoDiffDense(),
+                                  FullLU(),
+                                  FullMatrixFree(),
+                                  BorderedLU(),
+                                  BorderedMatrixFree(),
+                                  FullSparseInplace(),
+                                  BorderedSparseInplace(),
+                                  AutoDiffMF())
 
 const DocStrjacobianPOTrap = """
 Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_trapezoid_jacobian_type`. This is used to select a way of inverting the jacobian `dG` of the functional G.
@@ -54,12 +54,12 @@ Note that you can generate this guess from a function solution using `generate_s
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
 
-- `pb(orbitguess, p)` evaluates the functional G on `orbitguess`
-- `pb(orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
-- `pb(Val(:JacFullSparse), orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess` without the constraints. It is called `A_γ` in the docs.
-- `pb(Val(:JacFullSparseInplace), J, orbitguess, p)`. Same as `pb(Val(:JacFullSparse), orbitguess, p)` but overwrites `J` inplace. Note that the sparsity pattern must be the same independently of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `pb(Val(:JacFullSparse), orbitguess, p)`.
-- `pb(Val(:JacCyclicSparse), orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
-- `pb(Val(:BlockDiagSparse), orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
+- `po_residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `po_jvp(pb, orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
+- `po_jacobian_sparse(pb, orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess` without the constraints. It is called `A_γ` in the docs.
+- `po_jacobian_sparse!(pb, J, orbitguess, p)`. Same as `po_jacobian_sparse` but overwrites `J` inplace. Note that the sparsity pattern must be the same independently of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `po_jacobian_sparse`.
+- `jacobian_cyclic_sparse(pb, orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
+- `jacobian_block_diag(pb, orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
 
 # Jacobian
 $DocStrjacobianPOTrap
@@ -68,39 +68,39 @@ $DocStrjacobianPOTrap
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
 @with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractFiniteDifferencesDiscretization
-    "a bifurcation problem"
+    "Bifurcation problem."
     prob_vf::Tprob = nothing
 
-    "used to set a section for the phase constraint equation, of size N*M"
+    "Used to set a section for the phase constraint equation, of size N*M."
     ϕ::vectype = nothing
 
-    "used in the section for the phase constraint equation, of size N*M"
+    "Used in the section for the phase constraint equation, of size N*M."
     xπ::vectype = nothing
 
-    "number of time slices"
+    "Number of time slices."
     M::Int = 0
 
-    "Mesh, see `TimeMesh`"
+    "Mesh, see `TimeMesh`."
     mesh::TimeMesh{T} = TimeMesh(M)
 
-    "dimension of the problem in case of an `AbstractVector`"
+    "Dimension of the problem in case of an `AbstractVector`."
     N::Int = 0
 
-    "linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a matrix-free setting."
+    "Linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a matrix-free setting."
     linsolver::Tls = DefaultLS()
 
-    "whether the computation takes place on the gpu (Experimental)"
+    "Whether the computation takes place on the gpu (Experimental)."
     ongpu::Bool = false
 
     isautonomous::Bool = true
 
-    "a mass matrix. You can pass for example a sparse matrix. Default: identity matrix."
+    "Mass matrix. You can pass for example a sparse matrix. Default: identity matrix."
     massmatrix::Tmass = nothing
 
-    "updates the section every `update_section_every_step` step during continuation"
+    "Updates the section every `update_section_every_step` step during continuation."
     update_section_every_step::UInt = 1
 
-    "symbol which describes the type of jacobian used in Newton iterations (see below)."
+    "Type of jacobian used in Newton iterations (see below)."
     jacobian::Tjac = Dense()
 
     @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `Trapeze`. Pick one in $_trapezoid_jacobian_type"
@@ -197,12 +197,12 @@ function Trapeze(prob_vf,
 end
 
 Trapeze(prob_vf,
-                        m::Union{Int, AbstractVector},
-                        N::Int,
-                        ls::AbstractLinearSolver = DefaultLS();
-                        ongpu = false,
-                        adaptmesh = false,
-                        massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
+        m::Union{Int, AbstractVector},
+        N::Int,
+        ls::AbstractLinearSolver = DefaultLS();
+        ongpu = false,
+        adaptmesh = false,
+        massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
 
 
 # do not type h::Number because this will annoy CUDA
@@ -242,6 +242,8 @@ end
 potrap_scheme!(trap, dest, u1, u2, par, h, tmp, linear = Val(true); applyf = Val(true)) = potrap_scheme!(trap, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf)
 
 """
+$(TYPEDSIGNATURES)
+
 This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
 """
 @views function po_residual!(trap::Trapeze, out, u, par)
@@ -285,9 +287,11 @@ po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 end
 
 """
+$(TYPEDSIGNATURES)
+
 Matrix free expression (jvp) of the jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
 """
-function po_jvp!(trap::Trapeze, out, u, par, du)
+@views function po_jvp!(trap::Trapeze, out, u, par, du)
     M, N = size(trap)
     T  = _extract_period_fdtrap(trap, u)
     dT = _extract_period_fdtrap(trap, du)
@@ -297,42 +301,41 @@ function po_jvp!(trap::Trapeze, out, u, par, du)
     duc = get_time_slices(trap, du)
 
     # compute the cyclic part
-    @views Jc(trap, outc, u[begin:end-1-N], par, T, du[begin:end-N-1], outc[:, M])
+    Jc(trap, outc, u[begin:end-1-N], par, T, du[begin:end-N-1], outc[:, M])
 
     # outc[:, M] plays the role of tmp until it is used just after the for-loop
-    tmp = @view outc[:, M]
+    tmp = outc[:, M]
 
     # we now compute the partial derivative w.r.t. the period T
-    @views residual!(trap.prob_vf, tmp, uc[:, M-1], par)
+    residual!(trap.prob_vf, tmp, uc[:, M-1], par)
 
     h = dT * get_time_step(trap, 1)
-    @views potrap_scheme!(trap, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, tmp, Val(false))
+    potrap_scheme!(trap, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, tmp, Val(false))
     for ii in 2:M-1
         h = dT * get_time_step(trap, ii)
-        @views potrap_scheme!(trap, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, tmp, Val(false))
+        potrap_scheme!(trap, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, tmp, Val(false))
     end
 
     # closure condition ensuring a periodic orbit
-    outc[:, M] .= @views duc[:, M] .- duc[:, 1]
+    outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
     phase_cond = LA.dot(du[begin:end-1], trap.ϕ)
     if on_gpu(trap)
-        return @views vcat(out[begin:end-1], phase_cond)
+        return vcat(out[begin:end-1], phase_cond)
     else
-        out[end] = @views phase_cond
+        out[end] = phase_cond
         return out
     end
 end
 
-
-# residual(trap::Trapeze, u::AbstractVector, par) = residual!(trap, similar(u), u, par)
 po_jvp(trap::Trapeze, u::AbstractVector, par, du) = po_jvp!(trap, similar(du), u, par, du)
 jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(wrap), u, par, du)
-
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Matrix free expression of matrices related to the Jacobian Matrix of the PO functional
 """
+$(TYPEDSIGNATURES)
+
 Function to compute the Matrix-Free version of Aγ, see docs for its expression.
 """
 function Aγ!(trap::Trapeze, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
@@ -352,6 +355,8 @@ function Aγ!(trap::Trapeze, outc, u0::AbstractVector, par, du::AbstractVector; 
 end
 
 """
+$(TYPEDSIGNATURES)
+
 Function to compute the Matrix-Free version of the cyclic matrix Jc, see docs for its expression.
 """
 function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du::AbstractVector, tmp)
@@ -388,8 +393,10 @@ function Jc(trap::Trapeze, u0::AbstractVector, par, du::AbstractVector)
     tmp  = similar(view(outc, :, 1))
     return @views Jc(trap, outc, u0[begin:end-1-N], par, T, du, tmp)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
+$(TYPEDSIGNATURES)
+
 Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
 """
 function po_jacobian_block(trap::Trapeze, u0::AbstractVector, par; γ = 1)
@@ -406,6 +413,8 @@ function po_jacobian_block(trap::Trapeze, u0::AbstractVector, par; γ = 1)
 end
 
 """
+$(TYPEDSIGNATURES)
+
 This function populates Jc with the cyclic matrix using the different Jacobians
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
@@ -453,6 +462,8 @@ end
 cylic_potrap_sparse(trap::Trapeze, orbitguess0, par) = block_to_sparse(po_cylic_block(trap, orbitguess0, par))
 
 """
+$(TYPEDSIGNATURES)
+
 This method returns the jacobian of the functional G encoded in Trapeze using a Sparse representation.
 """
 function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
@@ -475,6 +486,8 @@ function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ =
 end
 
 """
+$(TYPEDSIGNATURES)
+
 This method returns the jacobian of the functional G encoded in Trapeze using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
 @views function po_jacobian_sparse!(trap::Trapeze, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
@@ -628,7 +641,7 @@ function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     A_diag_sp = block_to_sparse(A_diagBlock) # most of the computing time is here!!
     return A_diag_sp
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Utils
 """
 $(TYPEDSIGNATURES)
@@ -666,7 +679,7 @@ This function updates the section during the continuation run.
     end
     return true
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Linear solvers for the jacobian of the functional G implemented by Trapeze
 # composite type to encode the Aγ Operator and its associated cyclic matrix
 abstract type AbstractPOTrapAγOperator end
@@ -760,7 +773,7 @@ end
     !flag && @warn "Sparse solver for Aγ did not converge"
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
     ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
@@ -790,7 +803,7 @@ end
     out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
     return vcat(out1, LA.dot(J.Aγ.prob.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # linear solver for the PO functional, akin to a bordered linear solver
 @with_kw struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
     linsolverbls::Tl = BorderingBLS(solver = AγLinearSolver(), check_precision = false)    # linear solver
@@ -918,7 +931,7 @@ newton(trap::Trapeze,
         options::NewtonPar;
         kwargs...) where {Tp, Tdot, T, vectype} = _newton_po_from_disc(trap, orbitguess, options; defOp, kwargs...)
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # continuation wrapper
 """
 $(TYPEDSIGNATURES)
@@ -1038,7 +1051,7 @@ function continuation(trap::Trapeze,
     return continuation_po(trap, orbitguess, alg, _contParams, _linear_algo; record_from_solution, kwargs...)
 end
 
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # function needed for automatic Branch switching from Hopf bifurcation point
 function re_make(trap::Trapeze,
                 prob_vf,
@@ -1118,4 +1131,4 @@ function generate_ci_problem(trap::Trapeze,
 end
 
 generate_ci_problem(trap::Trapeze, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generate_ci_problem(trap, bifprob, sol, (zero(period), period); ktrap...)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

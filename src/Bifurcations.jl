@@ -1,4 +1,4 @@
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 This function checks whether the solution with eigenvalues `eigvalues` is stable. It also computes the number of unstable eigenvalues with nonzero imaginary part
 """
@@ -26,7 +26,7 @@ function detect_bifurcation(state::ContState)
     # detect a bifurcation if the numbers do not match
     return n1 !== n2
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # Test function for Fold bifurcation
 @inline detect_fold(p1, p2, p3) = (p3 - p2) * (p2 - p1) < 0
@@ -65,7 +65,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
         return false
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 Function for coarse identification of bifurcation points.
 """
@@ -230,7 +230,7 @@ function locate_bifurcation!(iter::ContIterable, _state::ContState, verbose::Boo
 
         # the eigenelements have been computed/stored in state during the call iterate(iter, state)
         push!(nunstbls, state.n_unstable[1])
-        push!(nimags, state.n_imag[1])
+        push!(nimags,   state.n_imag[1])
 
         if nunstbls[end] == nunstbls[end-1]
             # bifurcation point still after current state, keep going

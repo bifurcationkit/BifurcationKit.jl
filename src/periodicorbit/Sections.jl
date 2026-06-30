@@ -2,8 +2,8 @@ abstract type AbstractSection end
 
 update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
 
-####################################################################################################
-function sectionShooting(x::AbstractArray,
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function section_shooting(x::AbstractArray,
                         T,
                         normal::AbstractArray,
                         center::AbstractArray)
@@ -13,17 +13,20 @@ function sectionShooting(x::AbstractArray,
     return (VI.inner(x, normal) - VI.inner(center, normal)) * T
 end
 
-# section for Standard Shooting
 """
 $(TYPEDEF)
 
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`Shooting`](@ref). The hyperplane is defined by a point `center` and a `normal`.
+This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`Shooting`](@ref). The hyperplane is defined by a point `center` and a `normal` and is defined by
+
+```math
+0 = < normal, x - center >
+```
 
 # Internal fields
 $(TYPEDFIELDS)
 
 # Constructor(s)
-    SectionSS(normals, centers)
+    SectionSS(normals, centers) which only applies to the first normal (resp. center) in the list of normals (resp. centers).
 
 """
 struct SectionSS{Tn}  <: AbstractSection
@@ -34,7 +37,7 @@ struct SectionSS{Tn}  <: AbstractSection
     center::Tn
 end
 
-(sect::SectionSS)(u, T) = sectionShooting(u, T, sect.normal, sect.center)
+(sect::SectionSS)(u, T) = section_shooting(u, T, sect.normal, sect.center)
 
 # matrix-free jacobian
 function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
@@ -42,7 +45,6 @@ function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
 end
 
 _isempty(::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
-
 
 """
 $(TYPEDSIGNATURES)
@@ -55,9 +57,7 @@ function update!(sect::SectionSS, normal, center)
     sect
 end
 
-####################################################################################################
-# Poincare shooting based on Sánchez, J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _section_hyp!(out, x, normals, centers, radius)
     for ii in eachindex(normals)
         if norm(x-centers[ii]) < radius
@@ -72,7 +72,7 @@ end
 """
 $(TYPEDEF)
 
-This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShooting`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`).
+This composite type (named for SectionPoincaréShooting) encodes a type of Poincaré sections implemented by hyperplanes. It can be used in conjunction with [`PoincareShooting`](@ref). Each hyperplane is defined par a point (one example in `centers`) and a normal (one example in `normals`). See [1] for more details.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -80,12 +80,19 @@ $(TYPEDFIELDS)
 # Constructor(s)
     SectionPS(normals, centers)
 
+# Ref(s)
+[1] J., M. Net, B. Garcı́a-Archilla, and C. Simó. “Newton–Krylov Continuation of Periodic Orbits for Navier–Stokes Flows.” Journal of Computational Physics 201, no. 1 (November 20, 2004): 13–33. https://doi.org/10.1016/j.jcp.2004.04.018.
+
 """
 struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
-    M::Int64                # number of hyperplanes
-    normals::Tn             # normals to define hyperplanes
-    centers::Tc             # representative point on each hyperplane
-    indices::Vector{Int64}  # indices to be removed in the operator Ek
+    "number of hyperplanes"
+    M::Int64
+    "normals to define hyperplanes"
+    normals::Tn
+    "representative point on each hyperplane"
+    centers::Tc
+    "indices to be removed in the operator Ek"
+    indices::Vector{Int64}
 
     normals_bar::Tnb
     centers_bar::Tcb

@@ -9,9 +9,9 @@ struct BK_Makie <: AbstractPlotBackend end
 
 """
 Internal function to select the keys out of nt that are valid for the continuation function below.
-Can be used like `foo(kw...) = _keep_opts_cont(values(nt))`
+Can be used like `foo(kw...) = _keep_continuation_options(values(nt))`
 """
-function _keep_opts_cont(nt) 
+function _keep_continuation_options(nt) 
     return NamedTuple{filter(in((:kind,
                             :filename,
                             :plot,
@@ -61,33 +61,30 @@ end
 @inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
 @inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# this is very useful methods than can be used with dispatch to specialize the eigensolver to the model
+# these are very useful methods than can be used with dispatch to specialize the eigensolver to the model
+# indeed, something, we need to apply the eigensolver to a modified getx(state) (for example Floquet exponents)
+# and the following method is very handy
 function compute_eigenvalues(eigsolver::AbstractEigenSolver, 
                              iter::ContIterable,
                              state,
                              u0,
                              par,
-                             nev = iter.contparams.nev; kwargs...)
-    eigsolver(jacobian(iter.prob, u0, par), nev; iter, state, kwargs...)
+                             nev = getcontparams(iter).nev; kwargs...)
+    eigsolver(jacobian(getprob(iter), u0, par), nev; iter, state, kwargs...)
 end
 
-function compute_eigenvalues(iter::ContIterable,
-                             state,
-                             u0,
-                             par,
-                             nev = iter.contparams.nev; kwargs...)
-    compute_eigenvalues(iter.contparams.newton_options.eigsolver, iter, state, u0, par, nev; kwargs...)
+function compute_eigenvalues(eigsolver::AbstractEigenSolver, iter::ContIterable, state::ContState; kwargs...)
+    # we compute more eigenvalues than the number of unstable eigenvalues in the previous step
+    n = state.n_unstable[2]
+    nev_ = max(n + 5, getcontparams(iter).nev)
+    @debug "Computing spectrum..."
+    eiginfo = compute_eigenvalues(eigsolver, iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
+    (; isstable, n_unstable, n_imag) = is_stable(getcontparams(iter), eiginfo[1])
+    return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
 end
 
 function compute_eigenvalues(iter::ContIterable, state::ContState; kwargs...)
-    # we compute the eigen-elements
-    # we compute more eigenvalues than the number of unstable eigenvalues in the previous step
-    n = state.n_unstable[2]
-    nev_ = max(n + 5, iter.contparams.nev)
-    @debug "Computing spectrum..."
-    eiginfo = compute_eigenvalues(iter, state, getx(state), setparam(iter, getp(state)), nev_; kwargs...)
-    (; isstable, n_unstable, n_imag) = is_stable(iter.contparams, eiginfo[1])
-    return eiginfo, isstable, n_unstable, n_imag, eiginfo[3]
+    compute_eigenvalues(getcontparams(iter).newton_options.eigsolver, iter, state; kwargs...)
 end
 
 # same as previous but we save the eigen-elements in `state`
@@ -144,7 +141,7 @@ Same as `finite_differences` but with inplace `F`
     end
     return J
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function block_to_sparse(J::BA.AbstractBlockArray)
     nl, nc = size(J.blocks)
     # form the first line of blocks
@@ -218,7 +215,7 @@ function detect_loop(br::ContResult, x, p::T; rtol = convert(T, 1e-3), verbose::
                     ", ||δx|| = ", norminf(minus(bp.x, x))::T, 
                     ", |δp| = ", abs(bp.param - p)::T,
                     " \n")
-        if (norminf(minus(bp.x, x)) / norminf(_getsolution(x)) < rtol) && isapprox(bp.param, p; rtol)
+        if (norminf(minus(bp.x, x)) / norminf(saved_solution(x)) < rtol) && isapprox(bp.param, p; rtol)
             printstyled(color = :magenta, "    ├─\t Loop detected!, n = $N\n")
             return true
         end
@@ -228,4 +225,4 @@ function detect_loop(br::ContResult, x, p::T; rtol = convert(T, 1e-3), verbose::
 end
 detect_loop(br::ContResult, u; kwargs...) = detect_loop(br, u.x, u.param; kwargs...)
 detect_loop(br::ContResult, ::Nothing; rtol = 1e-3, verbose = true) = detect_loop(br, br.specialpoint[end].x, br.specialpoint[end].param; rtol = rtol, verbose = verbose)
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

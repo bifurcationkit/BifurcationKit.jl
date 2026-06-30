@@ -18,7 +18,7 @@ function _update_cont_params(cont_params::ContinuationPar, coll::Collocation, or
 end
 
 @inline _update_cont_params(cont_params::ContinuationPar, pb::AbstractFiniteDifferencesDiscretization, orbitguess) = cont_params
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @inline user_passed_pofunction(rf::RecordForPeriodicOrbits) = user_passed_function(rf.user_record_from_solution)
 
 function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter, state)
@@ -61,7 +61,7 @@ function record_from_solution(iter::ContIterable{FoldPeriodicOrbitCont, <: FoldM
                     _namedrecordfromsol(__user_record_solution_periodic_orbit(probwrap, user_passed_pofunction(probwrap.recordFromSolution), iter, state))...
                     ) 
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function modify_po_plot(::Union{BK_NoPlot, BK_Plots}, probPO, pars, lens; kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(x, (prob = probPO, p = set(pars, lens, p)); k...)

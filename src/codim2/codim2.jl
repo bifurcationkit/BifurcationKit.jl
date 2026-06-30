@@ -22,6 +22,9 @@ for (op, at) in (
     # Internal fields
 
     $(FIELDS)
+
+    # Update
+    The internal (bifurcation) problem is updated with call `update!(MAProb.prob_vf, iter, state)`
     """
     mutable struct $op{Tprob <: AbstractBifurcationProblem,
                        vectype,
@@ -173,12 +176,12 @@ function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     end
     return MASolution(x_ma, p1)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 test_ma(::AbstractMinimallyAugmentedFormulation_Fold_PD ,Jac, v, w, J22, _zero, n, lsbd) = lsbd(Jac, v, w, J22, _zero, n)
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> residual(𝐏𝐛, z, p), x)
 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = getdelta(𝐏𝐛)) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
@@ -186,7 +189,7 @@ jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p;
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (residual(𝐏𝐛, x .+ 1e-8 .* dx, p) .- residual(𝐏𝐛, x .- 1e-8 .* dx, p)) ./ (2e-8)
 
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, pbma = 𝐏𝐛.prob)
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional for Fold/PD
 function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Fold_PD)(x::BorderedArray, params)
     res = 𝐌𝐚(x.u, x.p, params)
@@ -197,7 +200,7 @@ end
     res = 𝐌𝐚(x[begin:end-1], x[end], params)
     return vcat(res[1], res[2])
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional for Hopf/NS
 function (𝐌𝐚::AbstractMinimallyAugmentedFormulation_Hopf_NS)(x::BorderedArray, params)
     res = 𝐌𝐚(x.u, x.p[1], x.p[2], params)
@@ -208,14 +211,14 @@ end
     res = 𝐌𝐚(x[begin:end-2], x[end-1], x[end], params)
     return vcat(res[1], res[2], res[3])
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # methods to get the two lenses associated to a 2-param continuation
 @inline function get_lenses(𝐏𝐛::AbstractMABifurcationProblem)
     𝐌𝐚 = get_formulation(𝐏𝐛)
     return getlens(𝐌𝐚), getlens(𝐏𝐛)
 end
 
-@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: TwoParamCont
+@inline function get_lenses(br::AbstractResult{Tkind}) where Tkind <: AbstractTwoParamCont
     return get_lenses(getprob(br))
 end
 
@@ -225,7 +228,6 @@ function getparams(u, p2, 𝐏𝐛::AbstractMABifurcationProblem)
 end
 
 getparams(z::BorderedArray, 𝐏𝐛::AbstractMABifurcationProblem) = getparams(z.u, z.p, 𝐏𝐛)
-
 
 """
 For two-parameter continuation, retrieve the current full parameters set. Can be used in a `record_from_solution` for example:
@@ -237,7 +239,7 @@ function myrecord(x,p;iter, state, k...)
 end
 ```
 """
-function getparams(iter::AbstractContinuationIterable{ <: TwoParamCont}, 
+function getparams(iter::AbstractContinuationIterable{ <: AbstractTwoParamCont}, 
                     state::AbstractContinuationState)
     return getparams(getx(state), getp(state), getprob(iter))
 end
@@ -247,12 +249,12 @@ $(TYPEDSIGNATURES)
 
 Returns the parameters corresponding to the ind-th solution in `br.sol[ind]` where `br` is a two parameters branch of bifurcation points.
 """
-function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: TwoParamCont
+function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: AbstractTwoParamCont
     p1 = br.sol[ind].x.p1
     p2 = br.sol[ind].p
     return _set(getparams(br), get_lenses(br), (p1, p2))
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; 
                                     update_minaug_every_step = 1, 
                                     kwargs...)
@@ -304,7 +306,7 @@ function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob
     # print(io, "\n" * prefix * "└─ Parameter: ")
     # printstyled(io, get_lens_symbol(getlens(𝐌𝐚)); color, bold)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     𝐌𝐚 = get_formulation(getprob(br))
     𝒯 = _getvectortype(br)
@@ -322,7 +324,7 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     parbif = _set(getparams(br), get_lenses(br), (p1, p2))
     return (x = x0, params = parbif)
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -364,7 +366,7 @@ function newton(br::AbstractBranchResult,
         return newton_fold(br, ind_bif; normN, options, start_with_eigen, kwargs...)
     end
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -425,7 +427,7 @@ function continuation(br::AbstractBranchResult,
             kwargs...)
     end
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # branch switching at BT / ZH / HH bifurcation point
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         options_cont::ContinuationPar = br.contparams;
@@ -444,7 +446,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         bdlinsolver_adjoint = bdlinsolver,
                         bdlinsolver_block = bdlinsolver,
-                        kwargs...) where {Tkind <: TwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
+                        kwargs...) where {Tkind <: AbstractTwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     verbose && println("--> Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif)
@@ -550,7 +552,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
         return Branch(branch, nf)
     end
 end
-################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
 
@@ -573,4 +575,8 @@ function _correct_event_labels(contres::ContResult)
         end
     end
     return contres
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int)
+    real(br.l1[ind]) < 0
 end

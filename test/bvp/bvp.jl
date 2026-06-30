@@ -429,6 +429,14 @@ let
     @test BK.BVP.save_solution(bvp_c, x0_c, (ω=1.0,)) === x0_c
 end
 
+# ----- saved_solution interface -----
+let
+    x0 = rand(10)
+    mesh0 = collect(range(0, 1, length=11))
+    saved = BK.BVPSavedSolutionAndState(mesh0, x0, mesh0, zeros(10))
+    @test BK.saved_solution(x0) === x0
+    @test BK.saved_solution(saved) === x0
+end
 # ----- get_periodic_orbit (Trapeze) -----
 let
     F(u, p) = [u[2], -p.ω^2 * u[1]]

@@ -5,6 +5,7 @@ using Core.Compiler: return_type # for type stability testing
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
 
+####################################################################################################
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
             -x[2] + p.γ * x[1]^2]
 
@@ -16,7 +17,7 @@ function Jbp(x, p)
     J[2,2] = -1.0
     return J
 end
-####################################################################################################
+
 let
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
 
@@ -518,15 +519,15 @@ let
         @test isapprox(abs.(btpt.ζ[2]), [0, 1];rtol = 1e-6)
         @test isapprox(abs.(btpt.ζ★[1]), [1, 0];rtol = 1e-6)
 
-        @test isapprox(btpt.nfsupp.K2, [0, 0]; atol = 1e-5)
-        @test isapprox(btpt.nfsupp.d, 0; atol = 1e-3)
-        @test isapprox(btpt.nfsupp.e, 0; atol = 1e-3)
-        @test isapprox(btpt.nfsupp.a1, 0; atol = 1e-3)
-        @test isapprox(btpt.nfsupp.b1, 0; atol = 1e-3)
+        @test isapprox(btpt.nf.K2, [0, 0]; atol = 1e-5)
+        @test isapprox(btpt.nf.d, 0; atol = 1e-3)
+        @test isapprox(btpt.nf.e, 0; atol = 1e-3)
+        @test isapprox(btpt.nf.a1, 0; atol = 1e-3)
+        @test isapprox(btpt.nf.b1, 0; atol = 1e-3)
 
         btpt1 = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
         @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
-        @test mapreduce(isapprox, &, btpt.nfsupp, btpt1.nfsupp)
+        @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
 
         HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
         HC.hopf(0.)
@@ -641,6 +642,8 @@ let
         pred.EigenVec(0.1)
         pred.EigenVecAd(0.1)
         pred.fold(0.1)
+        pred = BK.predictor(zh, Val(:NS), 0.01)
+        pred = BK.predictor(zh, Val(:HopfCurve), 0.1)
     end
 end
 ####################################################################################################
@@ -682,6 +685,8 @@ let
         @test br_codim2.specialpoint[1].type == :hh
         hh = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true))
         BK.type(hh)
+        BK.predictor(hh, Val(:HopfCurve), 0.01)
+        BK.predictor(hh, Val(:NS), 0.01)
         # @test hh.nf.G2100 == par_hh.G2100
         # @test hh.nf.G0021 == par_hh.G0021
         # @test hh.nf.G1110 == par_hh.G1110

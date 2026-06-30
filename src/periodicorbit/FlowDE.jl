@@ -31,7 +31,7 @@ end
 
 has_monodromy_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tjac, TprobMono} = ~(TprobMono == Nothing)
 @inline getdelta(fl::FlowDE) = fl.delta
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # constructors
 """
 $(TYPEDSIGNATURES)
@@ -50,7 +50,7 @@ function Flow(prob1::Union{ODEProblem, EnsembleProblem},
               kwargs...)
     return FlowDE(prob1, alg1, prob2, alg2, kwargs, get(kwargs, :callback, nothing), nothing, nothing, 1e-8)
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _apply_vector_field(prob::ODEProblem, o, x, p) = prob.f(o, x, p, prob.tspan[1])
 _apply_vector_field(prob::ODEProblem, x, p) = prob.f(x, p, prob.tspan[1])
 _apply_vector_field(prob::EnsembleProblem, x, p) = _apply_vector_field(prob.prob, x, p)
@@ -75,7 +75,7 @@ function _flow(x, pars, tm, pb::ODEProblem, alg; kwargs...)
     sol = SciMLBase.solve(_prob, alg; save_everystep = false, kwargs...)
     return (t = sol.t[end], u = sol.u[end])
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ######### methods for the flow
 # this function takes into account a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
@@ -96,7 +96,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     # sol.u contains a vector of tuples (sol_i.t[end], sol_i[end])
     return sol.u
 end
-####################################################################################################
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ######### Differential of the flow
 function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k...)
     n = length(x)

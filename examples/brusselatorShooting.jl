@@ -149,8 +149,9 @@ vf = ODE.ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_
 prob = ODE.ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 #####
 # solve the Brusselator
-sol = @time ODE.solve(prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
+sol = @time ODE.solve(prob, QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
 ####################################################################################################
+using OrdinaryDiffEqRosenbrock
 M = 10
 dM = 3
 orbitsection = Array(list_of_time_steps[:, 1:dM:M])
@@ -162,10 +163,10 @@ sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,
 BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
 probSh = Shooting(prob,
-    ODE.Rodas4P(),
+    Rodas4P(),
     [list_of_time_steps[:,ii] for ii=1:dM:M];
     abstol = 1e-11, reltol = 1e-9,
-    parallel = true, #pb with LoopVectorization
+    parallel = false, #pb with LoopVectorization
     lens = (@optic _.l),
     par = par_hopf,
     update_section_every_step = 1,
@@ -217,7 +218,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont, 
-    Shooting(Mt, prob, ODE.Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
+    Shooting(Mt, prob, Rodas4P(); abstol = 1e-11, reltol = 1e-9, parallel = true,
             jacobian = BK.FiniteDifferencesMF(),
             # jacobian = BK.AutoDiffMF(),
             );
@@ -302,7 +303,7 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    PoincareShooting(Mt, prob, ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
+    PoincareShooting(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,
@@ -319,6 +320,7 @@ plot(br_po, legend = :bottomright)
 br_po2 = continuation(deepcopy(br_po), 1, setproperties(br_po.contparams, detect_bifurcation = 0, max_steps = 10, save_sol_every_step = 1);
     verbosity = 3, plot = true,
     ampfactor = .2, δp = 0.01,
+    use_normal_form = false,
     # usedeflation = true,
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     record_from_solution = (x, p) -> (period = getperiod(p.prob, x, p.p),),
