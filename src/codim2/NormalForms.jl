@@ -730,29 +730,29 @@ function bautin_normal_form(_prob::HopfMAProblem,
         @info "━"^53*"\n──▶ Bautin Normal form higher order computation"
         #Setting all necessary derivatives for the higher order computation
 
-        B(v1,v2) = prob_vf.VF.jet.R20(x0,parbif,v1,v2)
-        C(v1, v2, v3) = prob_vf.VF.jet.R30(x0,parbif, v1, v2, v3)
-        D40(v1, v2, v3, v4) = prob_vf.VF.jet.R40(x0,parbif, v1, v2, v3, v4)   #UndefVarError: `D` not defined in local scope
-        D50(v1, v2, v3, v4, v5) = prob_vf.VF.jet.R50(x0,parbif, v1, v2, v3, v4, v5)  #E was already defined somewhere..
-        K(v1, v2, v3, v4, v5, v6) = prob_vf.VF.jet.R60(x0,parbif, v1, v2, v3, v4, v5, v6)
-        dL(v1, v2, v3, v4, v5, v6, v7) = prob_vf.VF.jet.R70(x0,parbif, v1, v2, v3, v4, v5, v6, v7)  #L is already used as A
+        B(v1,v2) = R20(prob_vf, x0,parbif,v1,v2)
+        C(v1, v2, v3) = R30(prob_vf, x0,parbif, v1, v2, v3)
+        D40(v1, v2, v3, v4) = R40(prob_vf, x0,parbif, v1, v2, v3, v4)   #UndefVarError: `D` not defined in local scope
+        D50(v1, v2, v3, v4, v5) = R50(prob_vf, x0,parbif, v1, v2, v3, v4, v5)  #E was already defined somewhere..
+        K(v1, v2, v3, v4, v5, v6) = R60(prob_vf, x0,parbif, v1, v2, v3, v4, v5, v6)
+        dL(v1, v2, v3, v4, v5, v6, v7) = R70(prob_vf, x0,parbif, v1, v2, v3, v4, v5, v6, v7)  #L is already used as A
 
         J₁ = prob_vf.VF.jet.R01(x0,parbif)
-        A₁(v1, p1) = prob_vf.VF.jet.R11(x0,parbif, v1, p1)
-        B₁(v1, v2, p1) = prob_vf.VF.jet.R21(x0,parbif, v1, v2, p1)
-        C₁(v1, v2, v3, p1) = prob_vf.VF.jet.R31(x0,parbif, v1, v2, v3, p1)
-        D₁(v1, v2, v3, v4, p1) = prob_vf.VF.jet.R41(x0,parbif, v1, v2, v3, v4, p1)
-        E₁(v1, v2, v3, v4, v5, p1) = prob_vf.VF.jet.R51(x0,parbif, v1, v2, v3, v4, v5, p1)
+        A₁(v1, p1) = R11(prob_vf, x0,parbif, v1, p1)
+        B₁(v1, v2, p1) = R21(prob_vf, x0,parbif, v1, v2, p1)
+        C₁(v1, v2, v3, p1) = R31(prob_vf, x0,parbif, v1, v2, v3, p1)
+        D₁(v1, v2, v3, v4, p1) = R41(prob_vf, x0,parbif, v1, v2, v3, v4, p1)
+        E₁(v1, v2, v3, v4, v5, p1) = R51(prob_vf, x0,parbif, v1, v2, v3, v4, v5, p1)
 
-        J₂(p1, p2) = prob_vf.VF.jet.R02(x0,parbif, p1, p2)
-        A₂(v1, p1, p2) = prob_vf.VF.jet.R12(x0,parbif, v1, p1, p2)
-        B₂(v1, v2, p1, p2) = prob_vf.VF.jet.R22(x0,parbif, v1, v2, p1, p2)
-        C₂(v1, v2, v3, p1, p2) = prob_vf.VF.jet.R32(x0,parbif, v1, v2, v3, p1, p2)
+        J₂(p1, p2) = R02(prob_vf, x0,parbif, p1, p2)
+        A₂(v1, p1, p2) = R12(prob_vf, x0,parbif, v1, p1, p2)
+        B₂(v1, v2, p1, p2) = R22(prob_vf, x0,parbif, v1, v2, p1, p2)
+        C₂(v1, v2, v3, p1, p2) = R32(prob_vf, x0,parbif, v1, v2, v3, p1, p2)
 
-        J₃(p1, p2, p3) = prob_vf.VF.jet.R03(x0,parbif, p1, p2, p3)
-        A₃(v1, p1, p2, p3) = prob_vf.VF.jet.R13(x0,parbif, v1, p1, p2, p3)
-        B₃(v1, v2, p1, p2, p3) = prob_vf.VF.jet.R32(x0,parbif, v1, v2, p1, p2, p3)
-        C₃(v1, v2, v3, p1, p2, p3) = prob_vf.VF.jet.R33(x0,parbif, v1, v2, v3, p1, p2, p3)
+        J₃(p1, p2, p3) = R03(prob_vf, x0,parbif, p1, p2, p3)
+        A₃(v1, p1, p2, p3) = R13(prob_vf, x0,parbif, v1, p1, p2, p3)
+        B₃(v1, v2, p1, p2, p3) = R32(prob_vf, x0,parbif, v1, v2, p1, p2, p3)
+        C₃(v1, v2, v3, p1, p2, p3) = R33(prob_vf, x0,parbif, v1, v2, v3, p1, p2, p3)
         # normal form computation up to third lyapunov coefficient based on
         # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 

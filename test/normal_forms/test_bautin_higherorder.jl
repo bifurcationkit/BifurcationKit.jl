@@ -84,6 +84,7 @@ function Fsl2!(f, u, p, t = 0)
     return f
 end
 
+let
 # Generate jet derivatives (THIS WILL TAKE SEVERAL MINUTES!)
 println("="^80)
 println("Generating jet derivatives symbolically...")
@@ -106,14 +107,11 @@ prob_with_jet = BK.BifurcationProblem(
     jet...
 )
 
-opt_newton = BK.NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-opts_br = BK.ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5,
-                          detect_bifurcation = 3, nev = 2, newton_options = opt_newton,
-                          max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
-
-@reset opts_br.newton_options.verbose = false
-@reset opts_br.newton_options.tol = 1e-12
-opts_br = BK.setproperties(opts_br; n_inversion = 10, max_bisection_steps = 25)
+newton_options = BK.NewtonPar(tol = 1e-12, max_iterations = 40, verbose = false)
+opts_br = BK.ContinuationPar(;dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5,
+                          detect_bifurcation = 3, nev = 2, newton_options,
+                          max_steps = 80, save_sol_every_step = 1,
+                          n_inversion = 10, max_bisection_steps = 25)
 
 println("Running continuation...")
 br = BK.continuation(prob_with_jet, BK.PALC(), opts_br)
@@ -242,8 +240,8 @@ println("="^80)
 # inner product, so ‖q‖ = 1 and ⟨q, p⟩ = 1 are unchanged and l2, l3 stay at the 2D
 # values 4*c5 and 8*c7. The rotation mixes z1 into z3, so the eigenvector picks up a
 # non-zero third component and the computation really runs in 3D.
+end
 
-# fixed rotation in the (1, 3) plane (orthogonal, so Q' = inv(Q))
 const θrot = 0.6
 const Qrot = [cos(θrot) 0.0 -sin(θrot); 0.0 1.0 0.0; sin(θrot) 0.0 cos(θrot)]
 
@@ -278,9 +276,13 @@ function Fsl3!(f, u, p, t = 0)
     return f
 end
 
+let
+# fixed rotation in the (1, 3) plane (orthogonal, so Q' = inv(Q))
 println("\n" * "="^80)
 println("Generating jet derivatives for the 3D embedding...")
 println("="^80)
+
+par_sl = (r = -0.5, μ = 0., ν = 1.0, c3 = 0.1, c5 = 0.3, c7 = 1.2)
 
 jet3 = getJet(Fsl3_symbolic, 3)
 
@@ -288,6 +290,12 @@ prob_with_jet3 = BK.BifurcationProblem(
     Fsl3!, [0.01, 0.01, 0.0], par_sl, (@optic _.r);
     jet3...
 )
+
+newton_options = BK.NewtonPar(tol = 1e-12, max_iterations = 40, verbose = false)
+opts_br = BK.ContinuationPar(;dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5,
+                          detect_bifurcation = 3, nev = 2, newton_options,
+                          max_steps = 80, save_sol_every_step = 1,
+                          n_inversion = 10, max_bisection_steps = 25)
 
 opts_br3 = BK.setproperties(opts_br; nev = 3)
 
@@ -326,6 +334,7 @@ println("\n|ζ[3]| = $(abs(bautin_ho3.ζ[3]))")
 @test abs(bautin_ho3.ζ[3]) > 1e-6
 println("✓ The eigenvector has a non-zero third component")
 
+ϵ_test = 0.01
 pred3_with_c3 = BK.predictor(bautin_ho3, Val(:FoldPeriodicOrbitCont), ϵ_test)
 
 nf3_without_c3 = merge(bautin_ho3.nf, (c₃ = 0.0 + 0.0im, l3 = 0.0))
@@ -343,3 +352,4 @@ println("✓ The predictor uses c₃ in 3D as well")
 println("\n" * "="^80)
 println("3D embedding passed! Higher-order Bautin normal form also works beyond 2D.")
 println("="^80)
+end
