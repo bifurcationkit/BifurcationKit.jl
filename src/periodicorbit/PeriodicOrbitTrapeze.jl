@@ -257,7 +257,7 @@ This function implements the functional for finding periodic orbits based on fin
     outc[:, M] .= uc[:, M] .- uc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(u[begin:end-1], trap.section.ϕ) - LA.dot(trap.section.xπ, trap.section.ϕ)
+    phase_cond = trap.section(u[begin:end-1])
 
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond) # this is the phase condition
@@ -319,7 +319,7 @@ Matrix free expression (jvp) of the jacobian of the problem for computing period
     outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(du[begin:end-1], trap.section.ϕ)
+    phase_cond = trap.section(u[begin:end-1], T, du[begin:end-1], dT)
 
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond)
@@ -480,7 +480,8 @@ function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ =
     @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
     Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, eachindex(trap.section.ϕ)] .= trap.section.ϕ
+    ϕ = get_ϕ(trap.section)
+    Aγ[N*M+1, eachindex(ϕ)] .= ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
     return Aγ
 end
@@ -536,7 +537,7 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.section.ϕ)] .=  trap.section.ϕ
+        J0[N*M+1, eachindex(get_ϕ(trap.section))] .= get_ϕ(trap.section)
 
         return J0
 end
@@ -560,7 +561,8 @@ end
         J0[:, end] .= ∂TGpo
 
         # the following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.section.ϕ)] .= trap.section.ϕ
+        ϕ = get_ϕ(trap.section)
+        J0[N*M+1, eachindex(ϕ)] .= ϕ
     end
     return J0
 end
@@ -801,7 +803,8 @@ end
     # we call J.Aγ.prob(x, par, dx) but we dont have (x, par)
     out1 = apply(J.Aγ, dx[begin:end-1])
     out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
-    return vcat(out1, LA.dot(J.Aγ.prob.section.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
+    ϕ = get_ϕ(J.Aγ.prob.section)
+    return vcat(out1, LA.dot(ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # linear solver for the PO functional, akin to a bordered linear solver
@@ -812,8 +815,9 @@ end
 # Linear solver associated to POTrapJacobianBordered
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
+    ϕ = get_ϕ(J.Aγ.prob.section)
     dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
-                                             J.Aγ.prob.section.ϕ, J.∂TGpo[end],
+                                             ϕ, J.∂TGpo[end],
                                            rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end

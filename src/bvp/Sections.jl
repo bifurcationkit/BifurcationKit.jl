@@ -39,6 +39,9 @@ function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
     return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
 end
 
+get_normal(sect::SectionSS) = sect.normal
+get_center(sect::SectionSS) = sect.center
+
 _isempty(::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
 
 """
@@ -71,6 +74,15 @@ struct SectionTrapeze{Tvectype} <: AbstractSection
     xπ::Tvectype
 end
 
+(sect::SectionTrapeze)(u) = VI.inner(u, sect.ϕ) - VI.inner(sect.xπ, sect.ϕ)
+(sect::SectionTrapeze)(u, T) = sect(u)
+function (sect::SectionTrapeze)(u, T::𝒯, du, dT::𝒯) where 𝒯
+    return VI.inner(du, sect.ϕ)
+end
+
+get_ϕ(sect::SectionTrapeze) = sect.ϕ
+get_xπ(sect::SectionTrapeze) = sect.xπ
+
 """
 $(TYPEDSIGNATURES)
 
@@ -100,6 +112,9 @@ struct SectionCollocation{Tϕ, T∂ϕ} <: AbstractSection
     "Derivative of ϕ, cached to avoid recomputation."
     ∂ϕ::T∂ϕ
 end
+
+get_ϕ(sect::SectionCollocation) = sect.ϕ
+get_∂ϕ(sect::SectionCollocation) = sect.∂ϕ
 
 """
 $(TYPEDSIGNATURES)

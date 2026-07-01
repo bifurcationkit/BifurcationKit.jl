@@ -56,6 +56,11 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
     SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Float64}(M, nothing, nothing, Int64[], nothing, nothing, 100.)
 end
 
+get_normals(sect::SectionPS) = sect.normals
+get_centers(sect::SectionPS) = sect.centers
+get_normals_bar(sect::SectionPS) = sect.normals_bar
+get_centers_bar(sect::SectionPS) = sect.centers_bar
+
 (hyp::SectionPS)(out, u) = _section_hyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
 _isempty(::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
