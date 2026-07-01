@@ -209,18 +209,12 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
 - `residual!(coll, out, orbitguess, p)` evaluates the functional G on `orbitguess`
 - `jacobian(coll, orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
 """
-@with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractDifferentialDiscretization
+@with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, Tsection, Tmass} <: AbstractDifferentialDiscretization
     "Bifurcation problem."
     prob_vf::Tprob = nothing
 
-    "Used to set a section for the phase constraint equation."
-    ϕ::vectype = nothing
-
-    "Used in the section for the phase constraint equation."
-    xπ::vectype = nothing
-
-    "We store the derivative of ϕ, no need to recompute it each time."
-    ∂ϕ::∂vectype = nothing
+    "Phase constraint section."
+    section::Tsection = SectionCollocation(nothing, nothing)
 
     "Dimension of the state space."
     N::Int = 0
@@ -258,16 +252,29 @@ function Collocation(Ntst::Int,
                     m::Int,
                     𝒯 = Float64;
                     cache_In = false,
+                    N::Int = 1,
+                    ϕ = nothing,
                     kwargs...)
-    N = get(kwargs, :N, 1)
+
+    _ϕ = isnothing(ϕ) ? zeros(𝒯, N * n_mesh_pts(m, Ntst)) : ϕ
+
+    if !isnothing(ϕ) && length(_ϕ) != N * n_mesh_pts(m, Ntst)
+        throw(ArgumentError("The length of `ϕ` ($(length(_ϕ))) is inconsistent with the collocation dimensions (expected $(N * n_mesh_pts(m, Ntst))). Did you forget to specify `N`?"))
+    end
+
+    _∂ϕ = Matrix{𝒯}(undef, N, Ntst * m)
+    _section = SectionCollocation(_ϕ, _∂ϕ)
+
     coll = Collocation(; mesh_cache = MeshCollocationCache(Ntst, m, 𝒯),
                                     cache = POCollCache(𝒯, Ntst, N, m, cache_In),
+                                    section = _section,
+                                    N = N,
                                     kwargs...)
-    if ~isnothing(coll.ϕ)
-        coll = set_collocation_size(coll, Ntst, m)
-        updatesection!(coll, coll.ϕ, nothing)
-    end
-    coll
+
+    # Compute ∂ϕ from ϕ and initialize ∇phase cache.
+    updatesection!(coll, _ϕ, nothing)
+
+    return coll
 end
 
 """
@@ -278,9 +285,9 @@ This function changes the parameters `Ntst, m` for the collocation functional `c
 function set_collocation_size(coll::Collocation, Ntst, m)
     𝒯 = eltype(coll)
     coll2 = @set coll.mesh_cache = MeshCollocationCache(Ntst, m, eltype(coll))
-    resize!(coll2.ϕ, length(coll2))
-    resize!(coll2.xπ, length(coll2))
-    @reset coll2.∂ϕ = zeros(eltype(coll), coll.N, Ntst * m)
+    resize!(coll2.section.ϕ, length(coll2))
+    # there is no resize method for matrices
+    @reset coll2.section.∂ϕ = zeros(eltype(coll), coll.N, Ntst * m)
     @reset coll2.cache.∇phase = zeros(𝒯, coll.N * n_mesh_pts(m, Ntst))
     return coll2
 end
@@ -420,9 +427,7 @@ function generate_ci_problem(_coll::Collocation,
     coll = setproperties(_coll;
                             N,
                             prob_vf,
-                            ϕ  = zeros(𝒯, n_unknowns),
-                            xπ = zeros(𝒯, n_unknowns),
-                            ∂ϕ = zeros(𝒯, N, Ntst * m),
+                            section = SectionCollocation(zeros(𝒯, n_unknowns), zeros(𝒯, N, Ntst * m)),
                             cache = POCollCache(eltype(_coll), Ntst, N, m, cache_In))
 
     # find best period candidate
@@ -510,7 +515,7 @@ function phase_condition(coll::Collocation,
     puj = get_tmp(coll.cache.gj, uc) # zeros(𝒯, n, m)
     uj  = get_tmp(coll.cache.uj, uc)  #zeros(𝒯, n, m+1)
 
-    # vc = get_time_slices(coll.ϕ, size(coll)...)
+    # vc = get_time_slices(coll.section.ϕ, size(coll)...)
     pvj = get_tmp(coll.cache.∂gj, uc) #zeros(𝒯, n, m)
     vj  = get_tmp(coll.cache.vj, uc)  #zeros(𝒯, n, m+1)
 
@@ -532,7 +537,7 @@ end
     phase = zero(𝒯)
     n, m, Ntst = size(coll)
     ω = get_gauss_weight(coll)
-    ϕc = get_time_slices(coll.ϕ, size(coll)...)
+    ϕc = get_time_slices(coll.section.ϕ, size(coll)...)
     rg = axes(uc, 2)[UnitRange(1, m+1)]
 
     @inbounds for j in 1:Ntst
@@ -580,9 +585,9 @@ end
         for l in Base.OneTo(m)
             _POO_coll_scheme!(coll, out[:, rg[l]], ∂pj[:, l], pj[:, l], pars, period * dt, tmp)
         end
-        if CP === true # statically knownm, should be removed by compiler
+        if CP === true # statically known, should be removed by compiler
             @inbounds for l in Base.OneTo(m)
-                phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+                phase += LA.dot(pj[:, l], coll.section.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
         end
         # careful here https://discourse.julialang.org/t/is-this-a-bug-scalar-ranges-with-the-parser/70670/4"
@@ -708,7 +713,7 @@ end
                 residual!(VF, J[_rgX, nJ], pj[:, l], pars)
                 J[_rgX, nJ] .*= (-dt)
 
-                phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+                phase += LA.dot(pj[:, l], coll.section.∂ϕ[:, (j-1)*m + l]) * ω[l]
             end
         end
         rg = rg .+ m
@@ -820,7 +825,7 @@ end
             residual!(VF, view(J, BA.Block(l + (j-1)*m, n_blocks)), pj[:, l], pars)
             view(J, BA.Block(l + (j-1)*m, n_blocks)) .*= (-dt)
 
-            phase += LA.dot(pj[:, l], coll.∂ϕ[:, iₚ + l]) * ω[l]
+            phase += LA.dot(pj[:, l], coll.section.∂ϕ[:, iₚ + l]) * ω[l]
             view(J, BA.Block(n_blocks, i∇)) .= coll.cache.∇phase[rgNx]' ./ period
             i∇ += 1; rgNx = rgNx .+ n
         end
@@ -888,7 +893,7 @@ end
             end
             # add derivative w.r.t. the period
             J[rgNx .+ (l-1)*n, end] .= residual(coll.prob_vf, pj[:,l], pars) .* (-dt)
-            phase += LA.dot(pj[:, l], coll.∂ϕ[:, (j-1)*m + l]) * ω[l]
+            phase += LA.dot(pj[:, l], coll.section.∂ϕ[:, (j-1)*m + l]) * ω[l]
         end
         rg = rg .+ m
         rgNx = rgNx .+ (m * n)
@@ -941,9 +946,7 @@ function re_make(coll::Collocation,
 
     # update the problem
     new_coll = setproperties(coll; N, prob_vf,
-                ϕ = zeros(n_unknows),
-                xπ = zeros(n_unknows),
-                ∂ϕ = zeros(N, Ntst * m),
+                section = SectionCollocation(zeros(n_unknows), zeros(N, Ntst * m)),
                 cache = POCollCache(eltype(coll), Ntst, N, m)
                 )
 
@@ -972,7 +975,7 @@ function __save_po_solution_coll(coll::Collocation, x, pars)
         return POSavedSolutionAndState(copy(get_times(coll)),
                 x,
                 copy(getmesh(coll.mesh_cache)),
-                _copy(coll.ϕ),
+                _copy(coll.section.ϕ),
                 )
     else
         return x
@@ -1155,20 +1158,18 @@ end
                                 x::AbstractVector,
                                 par) # (2 allocations: 96 bytes)
     @debug "[collocation] update section"
-    # update the reference point
-    coll.xπ .= 0
     # update the "normals"
-    coll.ϕ .= x[eachindex(coll.ϕ)]
+    coll.section.ϕ .= x[eachindex(coll.section.ϕ)]
     # update ∂ϕ
-    ϕ = coll.ϕ
+    ϕ = coll.section.ϕ
     L, ∂L = get_Ls(coll.mesh_cache)
     n, m, Ntst = size(coll)
-    ϕc = get_time_slices(ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
-    pϕ = get_tmp(coll.cache.∂gj, ϕc) # zeros(𝒯, n, m)
-    rg = axes(ϕc, 2)[UnitRange(1, m+1)] # (j-1)*m
+    ϕm = get_time_slices(ϕ, n, m, Ntst) # (2 allocations: 96 bytes)
+    pϕ = get_tmp(coll.cache.∂gj, ϕm) # zeros(𝒯, n, m)
+    rg = axes(ϕm, 2)[UnitRange(1, m+1)] # (j-1)*m
     @inbounds for j in 1:Ntst
-        LA.mul!(pϕ, ϕc[:, rg], ∂L)
-        coll.∂ϕ[:, (j-1)*m .+ (1:m)] .= pϕ
+        LA.mul!(pϕ, ϕm[:, rg], ∂L)
+        coll.section.∂ϕ[:, (j-1)*m .+ (1:m)] .= pϕ
         rg = rg .+ m
     end
 
@@ -1179,7 +1180,7 @@ end
     @inbounds for j = 1:Ntst
         for k₁ = 1:m+1
             for l = 1:m
-                coll.cache.∇phase[rg] .+= (L[k₁, l] * ω[l]) .* coll.∂ϕ[:, (j-1)*m + l]
+                coll.cache.∇phase[rg] .+= (L[k₁, l] * ω[l]) .* coll.section.∂ϕ[:, (j-1)*m + l]
             end
             if k₁ < m + 1
                 rg = rg .+ n

@@ -1315,8 +1315,8 @@ function predictor(nf::PeriodDoublingPO{ <: Trapeze},
     # we append twice the period
     orbitguess = vcat(vec(orbitguess_c), 2nf.T)
     # we update the phase condition
-    @reset pbnew.xπ = orbitguess[begin:end-1]
-    @reset pbnew.ϕ = circshift(orbitguess[begin:end-1], length(orbitguess))
+    @reset pbnew.section.xπ = orbitguess[begin:end-1]
+    @reset pbnew.section.ϕ = circshift(orbitguess[begin:end-1], length(orbitguess))
     # we need to duplicate the po as well in case deflation is used
     po0 = get_time_slices(pb, nf.po)
     po = vcat(vec(hcat(po0, po0)), nf.T) 
@@ -1397,7 +1397,6 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
     orbitguess_c = @. orbitguess0 + ampfactor * nf.ζ
     orbitguess = vcat(orbitguess_c[begin:end-N], orbitguess0 .- ampfactor .* nf.ζ)
 
-    pbnew.xπ .= orbitguess
     ϕ = circshift(orbitguess, length(orbitguess))
     updatesection!(pbnew, ϕ, nothing)
 

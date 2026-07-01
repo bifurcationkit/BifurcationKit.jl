@@ -35,7 +35,7 @@ $(TYPEDFIELDS)
 
 - `BVPBifProblem(d_bvp, u0, params, lens; kwargs...)` where `d_bvp` is a `DiscretizedBVP`
 """
-struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: BK.AbstractBifurcationProblem
+struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: AbstractBVPBifProblem
     "The discretized BVP"
     d_bvp::Tbvp
     "The jacobian (type or function)"
@@ -205,7 +205,7 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
         return BK.BVPSavedSolutionAndState(copy(BK.get_times(coll)),
                 x,
                 copy(BK.getmesh(coll.mesh_cache)),
-                BK._copy(coll.ϕ),
+                BK._copy(coll.section.ϕ),
                 )
     else
         return x

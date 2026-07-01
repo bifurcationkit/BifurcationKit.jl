@@ -31,7 +31,7 @@ g(u0, u1, p) = u0 .- u1  # Periodic BC
 model = BVPModel(F, g; n=2)
 ```
 """
-struct BVPModel{TF, Tg, T}
+struct BVPModel{TF, Tg, T} <: AbstractBVPModel
     "Vector field: F(u, p) → ℝⁿ"
     F::TF
     

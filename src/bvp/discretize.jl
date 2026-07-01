@@ -74,8 +74,7 @@ function discretize(model::BVPModel, disc::Trapeze)
 
     po_trap = BK.Trapeze(;
         prob_vf,
-        ϕ,
-        xπ,
+        section = BK.SectionTrapeze(ϕ, xπ),
         M,
         mesh = disc.mesh,
         N = n,

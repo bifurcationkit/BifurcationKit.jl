@@ -7,13 +7,6 @@
 using DocStringExtensions
 import ..BifurcationKit: AutoDiffDense, TimeMesh, can_adapt
 
-"""
-$(TYPEDEF)
-
-Abstract type for all BVP discretization methods.
-"""
-abstract type AbstractDiscretizer end
-
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Shooting
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -35,22 +28,22 @@ $(TYPEDFIELDS)
 ```julia
 using OrdinaryDiffEq
 disc = Shooting(M=4, alg=Tsit5())
+```
 
 ## Constructor
 - `M::Int = 1`: Number of shooting intervals (M=1 is simple shooting)
 - `alg = nothing`: ODE solver algorithm
 - `parallel::Bool = false`: Use parallel integration
-```
 """
 Base.@kwdef struct Shooting{Talg} <: AbstractDiscretizer
     "Number of shooting intervals"
-    M::Int
+    M::Int = 1
 
     "ODE solver algorithm (from OrdinaryDiffEq.jl)"
-    alg::Talg
+    alg::Talg = nothing
 
     "Use parallel integration for multiple shooting"
-    parallel::Bool
+    parallel::Bool = false
 end
 
 is_parallel(sh::Shooting) = sh.parallel
@@ -161,16 +154,13 @@ Base.@kwdef struct Collocation <: AbstractDiscretizer
 
     "Enable mesh adaptation."
     meshadapt::Bool = false
-
     "Mesh adaptation parameter (max/min step ratio)."
     K::Float64 = 100.
 
-    "Update mesh update_every_step continuation step."
+    "Update mesh every update_every_step continuation step."
     update_every_step::Int = 1
 
     verbose_mesh_adapt::Bool = false
-
-
 end
 
 meshadapt(coll::Collocation) = coll.meshadapt

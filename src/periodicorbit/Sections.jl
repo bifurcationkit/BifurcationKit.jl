@@ -1,62 +1,3 @@
-abstract type AbstractSection end
-
-update!(sh::AbstractSection) = error("Not yet implemented. You can use the dummy function `sh->true`.")
-
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function section_shooting(x::AbstractArray,
-                        T,
-                        normal::AbstractArray,
-                        center::AbstractArray)
-    N = length(center)
-    # we only constrain the first point to lie on a specific hyperplane
-    # this avoids the temporary xc - centers
-    return (VI.inner(x, normal) - VI.inner(center, normal)) * T
-end
-
-"""
-$(TYPEDEF)
-
-This composite type (named for Section Standard Shooting) encodes a type of section implemented by a single hyperplane. It can be used in conjunction with [`Shooting`](@ref). The hyperplane is defined by a point `center` and a `normal` and is defined by
-
-```math
-0 = < normal, x - center >
-```
-
-# Internal fields
-$(TYPEDFIELDS)
-
-# Constructor(s)
-    SectionSS(normals, centers) which only applies to the first normal (resp. center) in the list of normals (resp. centers).
-
-"""
-struct SectionSS{Tn}  <: AbstractSection
-    "Normal to define hyperplane."
-    normal::Tn
-
-    "Representative point on hyperplane."
-    center::Tn
-end
-
-(sect::SectionSS)(u, T) = section_shooting(u, T, sect.normal, sect.center)
-
-# matrix-free jacobian
-function (sect::SectionSS)(u, T::𝒯, du, dT::𝒯) where 𝒯
-    return sect(u, one(𝒯)) * dT + VI.inner(du, sect.normal) * T
-end
-
-_isempty(::SectionSS{Tn}) where {Tn} = (Tn == Nothing)
-
-"""
-$(TYPEDSIGNATURES)
-
-Update the field of `SectionSS`, useful during continuation procedure for updating the section.
-"""
-function update!(sect::SectionSS, normal, center)
-    _copyto!(sect.normal, normal)
-    _copyto!(sect.center, center)
-    sect
-end
-
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _section_hyp!(out, x, normals, centers, radius)
     for ii in eachindex(normals)
@@ -115,6 +56,11 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
     SectionPS(M = 0) = new{Nothing, Nothing, Nothing, Nothing, Float64}(M, nothing, nothing, Int64[], nothing, nothing, 100.)
 end
 
+get_normals(sect::SectionPS) = sect.normals
+get_centers(sect::SectionPS) = sect.centers
+get_normals_bar(sect::SectionPS) = sect.normals_bar
+get_centers_bar(sect::SectionPS) = sect.centers_bar
+
 (hyp::SectionPS)(out, u) = _section_hyp!(out, u, hyp.normals, hyp.centers, hyp.radius)
 _isempty(::SectionPS{Tn, Tc, Tnb, Tcb}) where {Tn, Tc, Tnb, Tcb} = (Tn == Nothing) || (Tc == Nothing)
 
@@ -129,7 +75,6 @@ function _duplicate!(x::AbstractVector)
 end
 _duplicate(x::AbstractVector) = _duplicate!(_copy(x))
 _duplicate(hyp::SectionPS) = SectionPS(_duplicate(hyp.normals), _duplicate(hyp.centers))
-_duplicate(hyp::SectionSS) = SectionSS(_duplicate(hyp.normals), _duplicate(hyp.centers))
 # ==================================================================================================
 """
 $(TYPEDSIGNATURES)
