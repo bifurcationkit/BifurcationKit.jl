@@ -99,6 +99,14 @@ function PeriodicOrbitModel(F; n::Int=0, phase=nothing, t0=0., tf=1.)
     BVPModel(F, __g_periodic, n, (t0, tf))
 end
 
+struct PeriodicBC end
+const POModel{Tf, 𝒯} = BVPModel{Tf, PeriodicBC, 𝒯}
+
+function POModel(F, 𝒯 = Float64; k...)
+    BVPModel(F, PeriodicBC(); t0 = zero(𝒯), tf = one(𝒯), k...)
+end
+
+
 __g_periodic(u0, u1, p) = u0 .- u1
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -107,6 +115,9 @@ __g_periodic(u0, u1, p) = u0 .- u1
 
 """State dimension of the model."""
 state_dimension(model::BVPModel) = model.n
+
+"""Element type of the model."""
+Base.eltype(::BVPModel{TF, Tg, T}) where {TF, Tg, T} = T
 
 """Evaluate the vector field."""
 evaluate_F(model::BVPModel, u, p) = model.F(u, p)

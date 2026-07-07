@@ -32,6 +32,7 @@ disc = BK.Trapeze(M=100)
 bvp = BK.discretize(model, disc)
 
 # 5. Generate initial guess
+
 x0 = BK.generate_solution(bvp, t -> [cos(t), sin(t)], 2π)
 
 # 6. Create BVP bifurcation problem
@@ -44,6 +45,7 @@ br = BK.continuation(prob, PALC(), ContinuationPar())
 See also: [`BVPModel`](@ref), [`discretize`](@ref), [`BVPBifProblem`](@ref), [`Shooting`](@ref), [`Trapeze`](@ref), [`Collocation`](@ref)
 """
 module BVP
+export __interpolate_posolution, _compute_error!
 
 using DocStringExtensions
 import LinearAlgebra as LA
@@ -61,6 +63,8 @@ abstract type AbstractBVPBifProblem <: BK.AbstractBifurcationProblem end
 include("BVPModel.jl")
 include("Discretizers.jl")
 include("DiscretizedBVP.jl")
+include("residual.jl")
+include("jacobian.jl")
 include("discretize.jl")
 
 # Residual/Jacobian implementations for each discretizer
@@ -68,8 +72,13 @@ include("shooting/residual.jl")
 include("shooting/jacobian.jl")  # Shooting has specialized analytical jacobian
 include("trapeze/residual.jl")
 include("trapeze/jacobian.jl")
+include("collocation/cache.jl")
+include("collocation/section.jl")
 include("collocation/residual.jl")
+include("collocation/jacobian_impl.jl")
 include("collocation/jacobian.jl")
+include("collocation/interpolation.jl")
+include("collocation/mesh_adaptation.jl")
 
 # Integration with BifurcationKit
 include("BVPBifProblem.jl")
@@ -78,15 +87,19 @@ include("Continuation.jl")
 include("Bifurcations.jl")
 
 # Exports - Core types
-export BVPModel, PeriodicOrbitModel
+export BVPModel, PeriodicOrbitModel, POModel, PeriodicBC
 # export AbstractDiscretizer, Shooting, Trapeze, Collocation
 export DiscretizedBVP
 export discretize, generate_solution
 export bvp_residual, bvp_jacobian, jvp
 export state_dimension, getperiod
 
+# Collocation caches
+export MeshCollocationCache, CollocationCache, n_mesh_pts
+export get_times, update_mesh!, get_Ls, get_mesh_coll, get_full_mesh, get_gauss_nodes, get_gauss_weight, get_max_time_step
+
 # Exports - BVP Bifurcation Problem
-export BVPBifProblem
+export BVPBifProblem, BVPSavedSolutionAndState, BVPInterpolation
 export get_periodic_orbit, get_bvp
 
 # Internal exports for extensions

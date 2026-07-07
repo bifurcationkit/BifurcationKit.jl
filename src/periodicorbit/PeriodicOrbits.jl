@@ -83,7 +83,7 @@ function generate_solution(pb::AbstractBoundaryValueDiscretization, orbit, perio
     end
 end
 
-for PoType in (:POInterpolation, :BVPInterpolation)
+for PoType in (:POInterpolation, )
     ds = """
     \$(TYPEDEF)
 
@@ -112,7 +112,7 @@ end
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
-for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
+for PSType in (:POSavedSolutionAndState, )
     ds = """
     \$(TYPEDEF)
 

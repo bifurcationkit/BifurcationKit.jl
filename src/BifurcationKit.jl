@@ -82,6 +82,12 @@ module BifurcationKit
     include("TimeMesh.jl")
 
 
+    function updatesection! end
+    
+    # BVP problem
+    include("bvp/BVP.jl")
+    Reexport.@reexport using .BVP
+
     # periodic orbit problems
     include("bvp/Sections.jl")
     include("periodicorbit/Sections.jl")
@@ -98,9 +104,7 @@ module BifurcationKit
     include("periodicorbit/BifurcationPoints.jl")
     include("periodicorbit/PeriodicOrbitUtils.jl")
 
-    # BVP problem
-    include("bvp/BVP.jl")
-        include("periodicorbit/Collocation.jl")
+    include("periodicorbit/Collocation.jl")
 
     include("periodicorbit/PoincareRM.jl")
     include("periodicorbit/NormalForms.jl")

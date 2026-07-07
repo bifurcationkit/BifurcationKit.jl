@@ -45,6 +45,7 @@ function discretize(model::BVPModel{ <: Union{SciMLBase.ODEProblem, SciMLBase.En
     cache = BK.Shooting(mesh_size(disc), model.F, disc.alg; parallel = is_parallel(disc), kwargsDE...)
     return DiscretizedBVP(model, disc, cache)
 end
+
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Trapezoid
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -93,30 +94,36 @@ end
 # Collocation
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function discretize(model::BVPModel, disc::Collocation) # TODO ::BVP.Collocation
+function discretize(model::BVPModel, disc::Collocation)
     n = state_dimension(model)
     @assert n > 0 "State dimension must be specified in the model"
 
     (;Ntst, m, K, meshadapt) = disc
+    𝒯 = eltype(model)
 
-    # Create a BifurcationProblem wrapper for the vector field
-    prob_vf = BK.BifurcationProblem(
-        (u, p) -> model.F(u, p),
-        zeros(0),
-        nothing,
-        (BK.@optic _);
-        inplace = false,
-        record_from_solution = BK.record_sol_default
-    )
+    mesh_cache = MeshCollocationCache(Ntst, m, 𝒯)
+    coll_cache = CollocationCache(𝒯, Ntst, n, m)
 
-    # Create PeriodicOrbitOCollProblem
-    po_coll = BK.Collocation(Ntst, m; N = n, prob_vf, meshadapt, K)
-
-    cache = (
-        po_coll = po_coll,
-        # Lagrange matrices are already inside po_coll.mesh_cache
-    )
+    cache = (; mesh_cache, coll_cache)
     return DiscretizedBVP(model, disc, cache)
+end
+
+function discretize(model::POModel, disc::Collocation)
+    n = state_dimension(model)
+    @assert n > 0 "State dimension must be specified in the model"
+
+    (;Ntst, m) = disc
+
+    # Allocate phase condition arrays for SectionCollocation
+    𝒯 = eltype(model)
+    ϕ = zeros(𝒯, n * n_mesh_pts(m, Ntst))
+    ∂ϕ = zeros(𝒯, n, Ntst * m)
+    section = BK.SectionCollocation(ϕ, ∂ϕ)
+
+    # Use invoke to call the generic BVP discretize method, avoiding infinite recursion on POModel
+    d_bvp = invoke(discretize, Tuple{BVPModel, typeof(disc)}, model, disc)
+
+    return DiscretizedPO(d_bvp, section)
 end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -174,15 +181,15 @@ end
 
 function generate_solution(model::BVPModel, disc::Collocation, cache, orbit)
     n = state_dimension(model)
-    coll = cache.po_coll # TODO: caca
-    𝒯 = eltype(coll)
-    n, _m, Ntst = size(coll)
-    ts = BK.get_times(coll)
+    mesh_cache = cache.mesh_cache
+    𝒯 = eltype(mesh_cache.τs)
+    m, Ntst = size(mesh_cache)
+    ts = get_times(mesh_cache)
     Nt = length(ts)
     t0, tf = get_time_interval(model)
     ci = zeros(𝒯, n, Nt)
     for (l, t) in pairs(ts)
-        ci[:, l] .= orbit(t0 + (tf - t0) * t)
+        ci[:, l] .= orbit(t0 + t * (tf - t0))
     end
     return vec(ci)
 end
