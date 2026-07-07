@@ -202,8 +202,8 @@ save_solution(::DiscretizedBVP, x, _) = x
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars) # TODO: duplicate of existing function
     disc = get_discretizer(bvp)
     mesh_cache = get_cache(bvp).mesh_cache
-    if BK.meshadapt(disc)
-        return BK.BVPSavedSolutionAndState(copy(BK.get_times(mesh_cache)),
+    if meshadapt(disc)
+        return BK.BVPSavedSolutionAndState(copy(get_times(mesh_cache)),
                 x,
                 copy(BK.getmesh(mesh_cache)),
                 nothing,  # pure BVP has no phase condition section
@@ -256,7 +256,7 @@ function __update_bvp_coll!(d_bvp::Union{DiscretizedBVP, DiscretizedPO}, bvpsol,
             @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
         old_bvp = BK._copy(bvpsol) # avoid possible overwrite in compute_error!
-        oldmesh = BK.get_times(mesh_cache) .* δT
+        oldmesh = get_times(mesh_cache) .* δT
         ####################################
         # get solution, we copy x because it is overwritten at the end of this function
         sol = BVPInterpolation(deepcopy(d_bvp), copy(old_bvp), nothing)

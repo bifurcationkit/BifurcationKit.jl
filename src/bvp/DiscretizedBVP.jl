@@ -205,7 +205,7 @@ end
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector, params) where {Tmodel}
     t0, tf = get_time_interval(get_model(d_bvp))
     T = tf - t0
-    ts = BK.get_times(d_bvp.cache.mesh_cache)
+    ts = get_times(d_bvp.cache.mesh_cache)
     um = get_time_slices(d_bvp, u)
     return BK.BVPSolution(t = ts .* T, u = um)
 end
@@ -213,7 +213,7 @@ end
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, x::Tx, params) where {Tmodel, Tx <: BVPSavedSolutionAndState}
     t0, tf = get_time_interval(get_model(d_bvp))
     T = tf - t0
-    ts = BK.get_times(d_bvp.cache.mesh_cache)
+    ts = get_times(d_bvp.cache.mesh_cache)
     mesh = x.mesh
     u = BK.saved_solution(x)
     um = get_time_slices(d_bvp, u)

@@ -133,10 +133,43 @@ function getmesh(d_bvp::DiscretizedPO)
     BVP.getmesh(BVP.get_cache(d_bvp).mesh_cache)
 end
 
-function ∫(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}, args...; kwargs...)
-    # We can probably delegate this to mesh_cache if it exists, or just skip it if it's unused.
-    # But since ∫ is used in periodicorbit, let's keep it throwing or adapt it if necessary.
-    error("∫ not yet adapted for DiscretizedPO without po_coll")
+@views function ∫(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation},
+                  uc::AbstractMatrix,
+                  vc::AbstractMatrix,
+                  period = one(eltype(uc)))
+    𝒯y = promote_type(eltype(uc), eltype(vc))
+    phase = zero(𝒯y)
+
+    mesh_cache = BVP.get_cache(d_bvp).mesh_cache
+    coll_cache  = BVP.get_cache(d_bvp).coll_cache
+    coll = BVP.get_discretizer(d_bvp)
+    m, Ntst = coll.m, coll.Ntst
+
+    L, _ = BVP.get_Ls(mesh_cache)
+    ω    = mesh_cache.gauss_weight
+    mesh = BVP.getmesh(mesh_cache)
+
+    # Pre-allocated temporaries — must use get_tmp for ForwardDiff compatibility
+    guj = get_tmp(coll_cache.gj, uc)   # n × m (points de Gauss de u)
+    gvj = get_tmp(coll_cache.gi, vc)   # n × m (points de Gauss de v, uses gi buffer)
+
+    rg = UnitRange(1, m+1)
+    @inbounds for j in 1:Ntst
+        LinearAlgebra.mul!(guj, uc[:, rg], L)
+        LinearAlgebra.mul!(gvj, vc[:, rg], L)
+        @inbounds for l in 1:m
+            phase += LinearAlgebra.dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
+        end
+        rg = rg .+ m
+    end
+    return phase * period
+end
+
+function ∫(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation},
+           u::AbstractVector, v::AbstractVector, period = one(eltype(u)))
+    uc = get_time_slices(d_bvp, u)
+    vc = get_time_slices(d_bvp, v)
+    return ∫(d_bvp, uc, vc, period)
 end
 
 function po_analytical_jacobian(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}, args...; kwargs...)

@@ -17,8 +17,8 @@
     ω = mesh_cache.gauss_weight
     phase = zero(𝒯)
     
-    um = reshape(u[1:end-1], n, m*Ntst + 1)
-    period = u[end]
+    um = _bvp_coll_get_Xm(prob, u, n, Ntst, m)
+    period = _bvp_coll_get_T(prob, u)
 
     pj = zeros(𝒯, n, m)
     In = coll_cache.In # this helps greatly the for loop for J0 below
