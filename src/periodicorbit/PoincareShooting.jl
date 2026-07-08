@@ -96,9 +96,9 @@ This function updates the normals and centers of the hyperplanes defining the Po
 """
 @views function updatesection!(psh::PoincareShooting, centers_bar, par; _norm = norm)
     M = get_mesh_size(psh); Nm1 = div(length(centers_bar), M)
-    centers_barc = reshape(centers_bar, Nm1, M)
-    centers = [E(psh.section, centers_barc[:, ii], ii) for ii = 1:M]
-    normals = [vector_field(psh.flow, c, par) for c in centers]
+    centers_bar_m = reshape(centers_bar, Nm1, M)
+    centers = [E(psh.section, centers_barm[:, ii], ii) for ii = 1:M]
+    normals = [vector_field(psh.flow, center, par) for center in centers]
     for ii in eachindex(normals)
         normals[ii] ./= _norm(normals[ii])
     end
