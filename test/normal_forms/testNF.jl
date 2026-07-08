@@ -4,7 +4,6 @@ using Test
 using Core.Compiler: return_type # for type stability testing
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
-
 ####################################################################################################
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
             -x[2] + p.γ * x[1]^2]
@@ -434,10 +433,12 @@ let
         BK.type(hp)
 
         nf = hp.nf
-        BK.type(hp)
-
         @test nf.a ≈ 1  atol = 1e-9
-        @test nf.b/2 ≈ (-par_sl.c3 + im*par_sl.μ)  atol = 1e-14
+        @test nf.b/2 ≈ (-par_sl.c3 + im * par_sl.μ)  atol = 1e-14
+
+        # test the predictor
+        pred = BK.predictor(hp, 0.1)
+        @test sign(pred.ω - hp.ω) == sign(imag(nf.b))
 
         # same but when the eigenvalues are not saved in the branch but computed on the fly instead
         br = BK.continuation(probsl2, PALC(), ContinuationPar(opts_br, save_eigenvectors = false); normC = norminf)
