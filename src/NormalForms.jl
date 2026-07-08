@@ -1222,7 +1222,7 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `ω` frequency of the periodic orbit (corrected with normal form coefficients)
 - `period` of the periodic orbit (corrected with normal form coefficients)
 - `p` new parameter value
-- `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
+- `dsfactor` factor which when multiplied to `abs(ds)` selects the correct side of the bifurcation point where the bifurcated branch exists.
 """
 function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
     # get the element type
@@ -1242,11 +1242,16 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
         dsnew::𝒯 = abs(ds) * dsfactor
         pnew = hp.p + dsnew
 
-        # we solve a * ds + b * amp^2 = 0
-        amp = ampfactor * sqrt(-dsnew * real(a) / real(b))
+        # we solve Re(a) * ds + Re(b) * amp^2 = 0
+        # using dsnew instead of ds, it always has the good sign
+        amp0 = sqrt(-dsnew * real(a) / real(b))
+        amp = ampfactor * amp0
 
         # correction to Hopf Frequency
-        ω = hp.ω + (imag(a) - imag(b) * real(a) / real(b)) * ds
+        # one finds ∂θ = ω + Im(a)⋅ds + Im(b)⋅r²
+        # the radius of the periodic solution is 0 = Re(a)⋅ds + Re(b)⋅r²
+        # hence, we find ω_corrected = ω + Im(a)⋅ds - Im(b)⋅Re(a) / Re(b)⋅ds
+        ω = hp.ω + imag(a) * ds + imag(b) * amp0^2
         Ψ001 = nf.Ψ001
         Ψ110 = nf.Ψ110
         Ψ200 = nf.Ψ200

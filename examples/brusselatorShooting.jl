@@ -106,7 +106,7 @@ br = @time continuation(
 M = 10
 ind_hopf = 1
 nf_hopf = BK.get_normal_form(br, ind_hopf; detailed = Val(false))
-pred = predictor(nf_hopf, 1; ampfactor = 22*0.075)
+pred = predictor(nf_hopf, 0.1)
 list_of_time_steps = reduce(hcat, [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]])
 orbitguess_f = vcat(vec(list_of_time_steps), pred.period)
 ####################################################################################################
@@ -158,7 +158,7 @@ orbitsection = Array(list_of_time_steps[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.1)
 
-sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
+sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
 
 BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
@@ -250,15 +250,15 @@ plot(br_po, br_po2, legend=false)
 # Multiple Poincare Shooting with Hyperplane parametrization
 dM = 5
 Fbru(u,p) = Fbru!(similar(u),u,p)
-normals = [Fbru(orbitguess_f2[:,ii], par_hopf)/(norm(Fbru(orbitguess_f2[:,ii], par_hopf))) for ii = 1:dM:M]
-centers = [orbitguess_f2[:,ii] for ii = 1:dM:M]
+list_of_time_steps = [pred.orbit(t) for t in LinRange(0, 2pi, dM + 1)[1:dM]]
+normals = [Fbru(list_of_time_steps[ii], par_hopf)/(norm(Fbru(list_of_time_steps[ii], par_hopf))) for ii = 1:dM]
+centers = [list_of_time_steps[ii] for ii = 1:dM]
 
 probHPsh = PoincareShooting(prob, QNDF(), normals, centers;
     abstol = 1e-10, reltol = 1e-8,
     parallel = false,
     δ = 1e-8,
     lens = (@optic _.l),
-    update_section_every_step = 2,
     par = par_hopf,
     jacobian = BK.FiniteDifferencesMF())
 

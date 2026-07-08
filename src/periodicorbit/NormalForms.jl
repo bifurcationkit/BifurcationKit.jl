@@ -136,7 +136,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), ζ)
     ζs = reduce(vcat, ζ_a)
 
-    # normal form for Poincaré map
+    # empty normal form for Poincaré map
     bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed_type
