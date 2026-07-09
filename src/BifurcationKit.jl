@@ -86,7 +86,17 @@ module BifurcationKit
     
     # BVP problem
     include("bvp/BVP.jl")
-    Reexport.@reexport using .BVP
+    using .BVP
+    export BVPModel, PeriodicOrbitModel, POModel, PeriodicBC
+    export DiscretizedBVP
+    export discretize, generate_solution
+    export bvp_residual, bvp_jacobian, jvp
+    export state_dimension, getperiod
+    export MeshCollocationCache, CollocationCache, n_mesh_pts
+    export get_times, update_mesh!, get_Ls, get_mesh_coll, get_full_mesh, get_gauss_nodes, get_gauss_weight, get_max_time_step
+    export BVPBifProblem, BVPSavedSolutionAndState, BVPInterpolation
+    export get_periodic_orbit, get_bvp
+    export integrate_shooting, integrate_with_sensitivity
 
     # periodic orbit problems
     include("bvp/Sections.jl")

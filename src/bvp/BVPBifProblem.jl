@@ -201,7 +201,7 @@ save_solution(::DiscretizedBVP, x, _) = x
 
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars) # TODO: duplicate of existing function
     disc = get_discretizer(bvp)
-    mesh_cache = get_cache(bvp).mesh_cache
+    mesh_cache = get_mesh_cache(bvp)
     if meshadapt(disc)
         return BK.BVPSavedSolutionAndState(copy(get_times(mesh_cache)),
                 x,
@@ -216,7 +216,7 @@ end
 function (sol::BVPInterpolation{ <: DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
     d_bvp = sol.pb
     model = get_model(d_bvp)
-    mesh_cache = d_bvp.cache.mesh_cache
+    mesh_cache = get_mesh_cache(d_bvp)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
     xm = get_time_slices(d_bvp, BK.getx(sol))
@@ -226,7 +226,7 @@ end
 function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, 
                     x::BVPSavedSolutionAndState) where {Tmodel <: BVPModel}
     d_bvp = get_bvp(prob)
-    mesh_cache = d_bvp.cache.mesh_cache
+    mesh_cache = get_mesh_cache(d_bvp)
     BK.update_mesh!(mesh_cache, x._mesh)
     return true
 end
@@ -241,7 +241,7 @@ function __update_bvp_coll!(d_bvp::Union{DiscretizedBVP, DiscretizedPO}, bvpsol,
     model = get_model(d_bvp)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
-    mesh_cache = get_cache(d_bvp).mesh_cache
+    mesh_cache = get_mesh_cache(d_bvp)
     n = state_dimension(d_bvp)
     has_mesh_been_updated = false
     if meshadapt(disc) == false

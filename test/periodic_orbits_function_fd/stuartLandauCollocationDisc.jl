@@ -285,67 +285,70 @@ end
 # Analytical Jacobian via DiscretizedPO (forwarding methods)
 # TODO: enable once analytical jacobian is implemented in BVP
 # ########################################################################
-# let
-#     Ntst = 10; m = 3; N = 4
-#     nullvf(x,p) = zero(x)
-# 
-#     coll_disc = BK.BVP.Collocation(;Ntst, m)
-#     po_model = BK.POModel(nullvf; n=N)
-#     po_d = BK.discretize(po_model, coll_disc)
-# 
-#     _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
-#     BK.po_residual(po_d, _ci, par_sl)
-#     Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(po_d, z, par_sl), _ci)
-#     D = @time BK.po_analytical_jacobian(po_d, _ci, par_sl)
-#     @test norminf(Jcofd - D) < 1e-14
-# 
-#     Ntst = 140; m = 4; N = 5
-#     _al = I(N) + 0.1 .* rand(N,N)
-#     idvf(x,p) = _al*x
-# 
-#     coll_disc = BK.BVP.Collocation(;Ntst, m)
-#     po_model = BK.POModel(idvf; n=N)
-#     po_d = BK.discretize(po_model, coll_disc)
-# 
-#     _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
-#     Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(po_d, z, par_sl), _ci)
-#     Jco = BK.po_analytical_jacobian(po_d, _ci, par_sl)
-#     @test norminf(Jcofd - Jco) < 1e-14
-# 
-#     N = 2; @assert N == 2 "must be the dimension of the SL"
-#     Ntst = 3; m = 2
-# 
-#     coll_disc = BK.BVP.Collocation(;Ntst, m)
-#     po_model = BK.POModel(Fsl; n=N)
-#     po_d = BK.discretize(po_model, coll_disc)
-# 
-#     _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
-#     Jcofd = ForwardDiff.jacobian(z->BK.po_residual(po_d, z, par_sl), _ci)
-#     Jco = @time BK.po_analytical_jacobian(po_d, _ci, par_sl)
-#     Jco_bk = @time BK.po_jacobian_block(po_d, _ci, par_sl)
-#     @test norminf(Jcofd - Jco) < 1e-14
-#     @test norminf(Jcofd - Jco_bk) < 1e-14
-# 
-#     BK.po_analytical_jacobian(po_d, _ci, par_sl; _transpose = Val(true), ρF = 1)
-# 
-#     _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
-# 
-#     coll_disc = BK.BVP.Collocation(;Ntst, m)
-#     po_model_dense = BK.POModel((u, p) -> _asp * u; n=N)
-#     po_model = BK.POModel((u, p) -> _asp * u; n=N)
-#     po_d_dense = BK.discretize(po_model_dense, coll_disc)
-#     po_d = BK.discretize(po_model, coll_disc)
-# 
-#     _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
-#     Jco_sp = BK.po_analytical_jacobian_sparse(po_d, _ci, par_sl)
-#     Jco = BK.po_analytical_jacobian(po_d_dense, _ci, par_sl)
-#     @test norminf(Jco - Array(Jco_sp)) < 1e-15
-#     Jco2 = copy(Jco) |> sparse
-#     Jco2 .= 0
-#     _indx = BK.get_blocks(po_d, Jco2)
-#     @time BK.jacobian_poocoll_sparse_indx!(po_d, Jco2, _ci, par_sl, _indx)
-#     @test norminf(Jco - Jco2) < 1e-14
-# end
+let
+    Ntst = 10; m = 3; N = 4
+    nullvf(x,p) = zero(x)
+
+    coll_disc = BK.BVP.Collocation(;Ntst, m)
+    po_model = BK.POModel(nullvf; n=N)
+    po_d = BK.discretize(po_model, coll_disc)
+
+    _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
+    BK.po_residual(po_d, _ci, par_sl)
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(po_d, z, par_sl), _ci)
+    D = @time BK.po_analytical_jacobian(po_d, _ci, par_sl)
+    @test norminf(Jcofd - D) < 1e-14
+
+    Ntst = 140; m = 4; N = 5
+    _al = I(N) + 0.1 .* rand(N,N)
+    idvf(x,p) = _al*x
+
+    coll_disc = BK.BVP.Collocation(;Ntst, m)
+    po_model = BK.POModel(idvf; n=N)
+    po_d = BK.discretize(po_model, coll_disc)
+
+    _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
+    Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(po_d, z, par_sl), _ci)
+    Jco = BK.po_analytical_jacobian(po_d, _ci, par_sl)
+    @test norminf(Jcofd - Jco) < 1e-14
+
+    N = 2; @assert N == 2 "must be the dimension of the SL"
+    Ntst = 3; m = 2
+
+    coll_disc = BK.BVP.Collocation(;Ntst, m)
+    po_model = BK.POModel(Fsl; n=N)
+    po_d = BK.discretize(po_model, coll_disc)
+
+    _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
+    Jcofd = ForwardDiff.jacobian(z->BK.po_residual(po_d, z, par_sl), _ci)
+    Jco = @time BK.po_analytical_jacobian(po_d, _ci, par_sl)
+    Jco_bk = @time BK.po_jacobian_block(po_d, _ci, par_sl)
+    @test norminf(Jcofd - Jco) < 1e-14
+    @test norminf(Jcofd - Jco_bk) < 1e-14
+
+    BK.po_analytical_jacobian(po_d, _ci, par_sl; _transpose = Val(true), ρF = 1)
+
+    _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
+
+    coll_disc = BK.BVP.Collocation(;Ntst, m)
+    po_model_dense = BK.POModel((u, p) -> _asp * u; n=N)
+    po_model = BK.POModel((u, p) -> _asp * u; n=N)
+    po_d_dense = BK.discretize(po_model_dense, coll_disc)
+    po_d = BK.discretize(po_model, coll_disc)
+
+    _ci = BK.generate_solution(po_d, t->cos(t) .* ones(N), 2pi)
+    # Test new sparse blocks jacobian
+    Jco_sp = BK.bvp_jacobian(po_d, BK.FullSparse(), _ci, par_sl)
+    Jco = BK.po_analytical_jacobian(po_d_dense, _ci, par_sl)
+    @test norminf(Jco - Array(Jco_sp)) < 1e-15
+    Jco2 = copy(Jco) |> sparse
+    Jco2 .= 0
+    _indx = BK.get_blocks(po_d, Jco2)
+    # Test new sparse inplace jacobian
+    VF = BK.BifurcationProblem((x, p) -> po_model.F(x, p), zeros(0), [1.0], 1; inplace = false)
+    @time BK.BVP.bvp_jacobian_sparse_inplace!(Jco2, _indx, po_d, VF, _ci, par_sl)
+    @test norminf(Jco - Jco2) < 1e-14
+end
 
 ########################################################################
 # Hopf predictor + continuation (uses Collocation directly,

@@ -208,8 +208,14 @@ function get_blocks(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}, J)
     m = coll.m
     Ntst = coll.Ntst
     blocks = n * ones(Int64, BVP.n_mesh_pts(m, Ntst) + 1); blocks[end] = 1
-    Jb = BA.BlockArray(J, blocks, blocks)
-    return Jb
+    n_blocks = length(blocks)
+    I, J_idx, K = SPA.findnz(J)
+    out = [Vector{Int}() for i in 1:n_blocks, j in 1:n_blocks];
+    for k in eachindex(I)
+        i, j = div(I[k]-1, n), div(J_idx[k]-1, n)
+        push!(out[1+i, 1+j], k)
+    end
+    return out
 end
 
 function Base.show(io::IO, d_bvp::DiscretizedPO{Tf, 𝒯, <:BVP.Collocation}) where {Tf, 𝒯}
