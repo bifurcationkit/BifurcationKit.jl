@@ -144,11 +144,11 @@ function get_time_slices(psh::PoincareShooting, x_bar::AbstractVector)
     M = get_mesh_size(psh); Nm1 = length(x_bar) ÷ M
     # reshape the period orbit guess
     x_barm = reshape(x_bar, Nm1, M)
-    xc = similar(x_bar, Nm1 + 1, M)
+    xm = similar(x_bar, Nm1 + 1, M)
     for ii=1:M
-        @views E!(psh.section, xc[:, ii], x_barm[:, ii], ii)
+        @views E!(psh.section, xm[:, ii], x_barm[:, ii], ii)
     end
-    xc
+    xm
 end
 
 """
@@ -162,19 +162,19 @@ function get_periodic_orbit(psh::PoincareShooting, x_bar::AbstractVector, p)
 
     # reshape the period orbit guess
     x_barm = reshape(x_bar, Nm1, M)
-    xc = similar(x_bar, Nm1 + 1, M)
+    xm = similar(x_bar, Nm1 + 1, M)
 
     T = getperiod(psh, x_bar, p)
 
     # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(psh)
-        E!(psh.section, view(xc, :, 1), view(x_barm, :, 1), 1)
+        E!(psh.section, view(xm, :, 1), view(x_barm, :, 1), 1)
         # We need the callback to be active here!!!
-        sol1 = @views evolve(psh.flow, Val(:Full), xc[:, 1], p, T; callback = nothing)
+        sol1 = @views evolve(psh.flow, Val(:Full), xm[:, 1], p, T; callback = nothing)
         return sol1
     else # threaded version
-        E!(psh.section, view(xc, :, 1), view(x_barm, :, 1), 1)
-        sol = @views evolve(psh.flow, Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
+        E!(psh.section, view(xm, :, 1), view(x_barm, :, 1), 1)
+        sol = @views evolve(psh.flow, Val(:Full), xm[:, 1:1], p, [T]; callback = nothing)
         return sol.u[1]
     end
 end
@@ -217,19 +217,8 @@ end
 function po_residual(psh::PoincareShooting, x_bar::AbstractVector, par; verbose = false)
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
-
-    # reshape the period orbit guess
-    x_barm = reshape(x_bar, Nm1, M)
-
-    # TODO the following declaration of xc allocates. It would be better to make it inplace
-    xm = similar(x_bar, Nm1 + 1, M)
-
-    # variable to hold the result of the computations
+    xm = get_time_slices(psh, x_bar)
     outc = similar(xm)
-
-    # we extend the state space to be able to call the flow, so we fill xm
-    #TODO create the projections on the fly
-    E!(psh.section, xm, x_barm, M)
 
     if ~isparallel(psh)
         for ii in 1:M
@@ -470,3 +459,60 @@ function generate_ci_problem(psh::PoincareShooting,
 end
 
 generate_ci_problem(psh::PoincareShooting, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generate_ci_problem(psh, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)
+
+for PSType in (:POSavedSolutionAndState_PSH, 
+               :BVPSavedSolutionAndState_PSH)
+    ds = """
+    \$(TYPEDEF)
+
+    Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalSh, ...)`
+
+    # Internal fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PSType{T1, T2, T3, T4}
+            sol_bar::T1
+            sol::T2
+            centers::T3
+            normals::T4
+        end
+        @inline saved_solution(saved_sol::$PSType) = saved_sol.sol_bar
+        minus(x::$PSType, y::$PSType) = minus(saved_solution(x), saved_solution(y))
+    end
+end
+
+get_periodic_orbit(psh::PoincareShooting, x::POSavedSolutionAndState_PSH, p) = get_periodic_orbit(psh, saved_solution(x), p)
+
+function save_solution(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x_bar, p)
+    psh = get_discretization(pbwrap)
+    xm = get_time_slices(psh, x_bar)
+    return POSavedSolutionAndState_PSH(
+                _copy(x_bar),
+                vec(xm),
+                _copy(psh.section.centers), 
+                _copy(psh.section.normals),
+                )
+end
+
+function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, state)
+    success = converged(state)
+    bisection = in_bisection(state)
+    step = state.step
+    z = getsolution(state)
+
+    psh = get_discretization(wrap)
+    update_section_every_step = psh.update_section_every_step
+    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+        @debug "[Periodic orbit] update section"
+        xm = get_time_slices(psh, _copy(z.u)) 
+        updatesection!(psh, z.u, setparam(wrap, z.p))
+        M = get_mesh_size(psh)
+        new_po = reduce(vcat, [R(psh, xm[:, k], k) for k in 1:M]) # this has vanishing residual
+        # @assert norminf(residual(wrap, new_po, setparam(wrap, z.p))) < 1e-6
+        # the E map has changed, recompute the predictor
+        _copyto!(z.u, new_po)
+        getpredictor!(state, iter)
+    end
+    return true
+end

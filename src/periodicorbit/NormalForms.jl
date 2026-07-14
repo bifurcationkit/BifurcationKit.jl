@@ -114,7 +114,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     pars = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     
@@ -139,22 +139,25 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     ζ2 = real(geteigenvector(floquetsolver, br.eig[bifpt.idx].eigenvecs, ind[2]))
     ζ1 ./= scaleζ(ζ1)
     ζ2 ./= scaleζ(ζ2)
-    _dot_prods = (LA.dot(ζ₀, ζ1), LA.dot(ζ₀, ζ2))
+    # For PoincareShooting, the Floquet eigenvectors are (N-1)-dimensional
+    # (projected onto the Poincaré section), so we need to project ζ₀ as well
+    _ζ₀ = prob_sh isa PoincareShooting ? R(prob_sh.section, ζ₀, 1) : ζ₀
+    _dot_prods = (LA.dot(_ζ₀, ζ1), LA.dot(_ζ₀, ζ2))
     verbose && println("├─ scalar products with ζ₀ are  ", _dot_prods)
     ind0 = argmax(abs.(abs.(_dot_prods) .- 1))
     ζ = ind0 == 1 ? ζ1 : ζ2
-    verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(ζ₀, ζ))
+    verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(_ζ₀, ζ))
 
     # compute the full eigenvector
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), ζ)
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, saved_solution(bifpt.x), setparam(br, bifpt.param), ζ)
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
+    bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed_type
         ζ★ = nothing
-        return BranchPointPO(bifpt.x, period, real.(ζs), ζ★, bp0, prob_sh, true)
+        return BranchPointPO(x0, period, real.(ζs), ζ★, bp0, prob_sh, true)
     end
 
     # newton parameter
@@ -245,7 +248,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     par = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
@@ -256,7 +259,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     end
     # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
-    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # A VIRER
+    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # TODO: remove
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 

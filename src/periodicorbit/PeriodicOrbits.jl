@@ -154,7 +154,7 @@ Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function restore_problem!(wrap::PeriodicOrbitFunctionalSh, x, pars)
     sh = get_discretization(wrap)
-    updatesection!(sh, x, pars)
+    updatesection!(sh, saved_solution(x), pars)
     return true
 end
 

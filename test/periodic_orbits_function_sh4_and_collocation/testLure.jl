@@ -3,9 +3,9 @@ using LinearAlgebra, Test
 using BifurcationKit
 const BK = BifurcationKit
 import OrdinaryDiffEq as ODE
-
-record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
+record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
+
 function lur!(dz, u, p, t = 0)
     (; α, β) = p
     x, y, z = u
@@ -15,12 +15,6 @@ function lur!(dz, u, p, t = 0)
     dz
 end
 
-prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
-opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
-opts_br = @set opts_br.newton_options.verbose = false
-br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
-# plot(br)
-####################################################################################################
 function plotPO(x, p; k...)
     xtt = get_periodic_orbit(p.prob, x, p.p)
     plot!(xtt.t, xtt[1,:]; markersize = 2, marker = :d, k...)
@@ -35,6 +29,12 @@ function recordPO(x, p; k...)
     return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
+prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
+opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
+opts_br = @set opts_br.newton_options.verbose = false
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
+# plot(br)
+
 let
 prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 
