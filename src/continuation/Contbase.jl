@@ -54,9 +54,16 @@ end
 update(alg::AbstractContinuationAlgorithm, ::ContinuationPar, _) = alg
 
 
-# helper functions to update ::ContState when calling the corrector
+"""
+$(TYPEDSIGNATURES)
+
+Update `state` metadata (`converged`, `itnewton`, `itlinear`) from the solution `sol`,
+and save the previous solution `state.z` into `state.z_old` for step-size control / fallback
+when converged. Does **not** overwrite `state.z` with `sol.u` — that is left to the caller
+(e.g., to allow mesh adaptation or field-specific updates first).
+"""
 function _update_field_but_not_solution!(state::AbstractContinuationState,
-                                    sol::NonLinearSolution)
+                                         sol::NonLinearSolution)
     state.converged = sol.converged
     state.itnewton  = sol.itnewton
     state.itlinear  = sol.itlineartot

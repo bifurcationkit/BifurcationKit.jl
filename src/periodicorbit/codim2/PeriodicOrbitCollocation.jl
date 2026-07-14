@@ -35,8 +35,9 @@ for (fname, cdt, err_msg) in (
             end
             specialpoint = br.specialpoint[index]
             pbwrap = deepcopy(getprob(br))
+            pars = setparam(br, specialpoint.param)
             # we put the problem back to the state it was
-            update!(pbwrap, specialpoint.x)
+            restore_problem!(pbwrap, specialpoint.x, pars)
             return BorderedArray(_copy(saved_solution(specialpoint.x)), specialpoint.param)
         end
     end
@@ -50,8 +51,9 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
     specialpoint = br.specialpoint[index]
     ω = imag(br.eig[specialpoint.idx].eigenvals[specialpoint.ind_ev])
     pbwrap = deepcopy(getprob(br))
+    pars = setparam(br, specialpoint.param)
     # we put the problem back to the state it was
-    update!(pbwrap, specialpoint.x)
+    restore_problem!(pbwrap, specialpoint.x, pars)
     return BorderedArray(_copy(saved_solution(specialpoint.x)), [specialpoint.param, ω])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -111,9 +113,10 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
     coll = get_discretization(pbwrap)
+    par = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
 
     # this updates the section
     coll = deepcopy(coll)
@@ -163,7 +166,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     pbwrap = deepcopy(getprob(br))
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
 
     # we copy the problem for not mutating the one passed by the user
     coll = deepcopy(get_discretization(pbwrap))

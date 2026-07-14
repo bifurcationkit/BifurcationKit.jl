@@ -116,7 +116,7 @@ end
 function updatesection!(sh::Shooting, x, pars)
     @debug "Update section shooting"
     x1 = get_time_slice(sh, x, 1)
-    @views update!(sh.section, vector_field(sh.flow, x1, pars), x1)
+    update!(sh.section, vector_field(sh.flow, x1, pars), x1)
     sh.section.normal ./= norm(sh.section.normal)
     return true
 end
