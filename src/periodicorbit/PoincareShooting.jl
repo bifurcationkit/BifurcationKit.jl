@@ -179,39 +179,6 @@ function get_periodic_orbit(psh::PoincareShooting, x_bar::AbstractVector, p)
     end
 end
 get_periodic_orbit(psh::PoincareShooting, x::AbstractVector, p::Real) = get_periodic_orbit(psh, x, setparam(psh, p))
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré section.
-"""
-function projection(psh::PoincareShooting, x::AbstractVector)
-    # create initial guess. We have to pass it through the projection R
-    M = get_mesh_size(psh)
-    orbitguess_bar = Vector{eltype(x)}(undef, 0)
-    @assert M == length(psh.section.normals)
-    for ii=1:M
-        push!(orbitguess_bar, R(psh, x[ii], ii))
-    end
-    return orbitguess_bar
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré section.
-"""
-function projection(psh::PoincareShooting, x::AbstractMatrix)
-    # create initial guess. We have to pass it through the projection R
-    M = get_mesh_size(psh)
-    m, n = size(x)
-    orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
-    @assert M == length(psh.section.normals)
-    for ii=1:M
-        orbitguess_bar[ii, :] .= @views R(psh, x[ii, :], ii)
-    end
-    return orbitguess_bar
-end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function po_residual(psh::PoincareShooting, x_bar::AbstractVector, par; verbose = false)

@@ -263,6 +263,7 @@ probHPsh = PoincareShooting(prob, QNDF(), normals, centers;
     par = par_hopf,
     jacobian = BK.FiniteDifferencesMF())
 
+# TODO: handle this change where projection is removed
 initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
