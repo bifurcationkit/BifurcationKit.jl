@@ -140,7 +140,7 @@ end
     𝒯y = promote_type(eltype(uc), eltype(vc))
     phase = zero(𝒯y)
 
-    mesh_cache = BVP.get_cache(d_bvp).mesh_cache
+    mesh_cache = BVP.get_mesh_cache(d_bvp)
     coll_cache  = BVP.get_cache(d_bvp).coll_cache
     coll = BVP.get_discretizer(d_bvp)
     m, Ntst = coll.m, coll.Ntst
@@ -187,7 +187,7 @@ function po_jacobian_block(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}, u
     J = BA.BlockArray(array_zeros(𝒯, length(u), length(u)), blocks, blocks)
     
     # We call the inplace sparse blocks jacobian
-    VF = BifurcationProblem((x, p) -> BVP.get_model(d_bvp).F(x, p), zeros(0), [1.0], 1; inplace = false)
+    VF = BifurcationProblem((x, p) -> BVP.get_model(d_bvp).F(x, p), zeros(𝒯, 0), [one(𝒯)], 1; inplace = false)
     BVP.bvp_jacobian_sparse_blocks!(J, d_bvp, VF, u, pars; ∂ϕ = d_bvp.section.∂ϕ, kwargs...)
     return J
 end

@@ -58,7 +58,7 @@ function bvp_jacobian(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, ::BK.FullSp
 end
 
 function bvp_jacobian(d_po::DiscretizedPO{Tmodel, <: Collocation}, ::BK.FullSparse, u::AbstractVector, pars; kwargs...) where {Tmodel}
-    mesh_cache = get_cache(d_po).mesh_cache
+    mesh_cache = get_mesh_cache(d_po)
     m, Ntst = size(mesh_cache)
     n = state_dimension(d_po)
     𝒯 = eltype(u)
