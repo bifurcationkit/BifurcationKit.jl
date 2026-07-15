@@ -23,66 +23,6 @@ get_gauss_nodes(d_bvp::DiscretizedPO) = BVP.get_gauss_nodes(BVP.get_cache(d_bvp)
 get_Ls(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}) = BVP.get_Ls(BVP.get_cache(d_bvp).mesh_cache)
 get_Ls(d_bvp::DiscretizedPO) = BVP.get_Ls(BVP.get_cache(d_bvp).mesh_cache)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# LEGACY IMPLEMENTATIONS FOR CollocationDisc (Kept for reference)
-# ─────────────────────────────────────────────────────────────────────────────
-# function update_mesh!(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, τs)
-#     update_mesh!(d_bvp.cache.po_coll.mesh_cache, τs)
-#     return d_bvp
-# end
-# 
-# function generate_solution(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, orbit, period)
-#     generate_solution(d_bvp.cache.po_coll, orbit, period)
-# end
-# 
-# function get_periodic_orbit(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, u, p)
-#     get_periodic_orbit(d_bvp.cache.po_coll, u, p)
-# end
-# 
-# function POInterpolation(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, x)
-#     POInterpolation(d_bvp.cache.po_coll, x)
-# end
-# 
-# function getmesh(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯})
-#     getmesh(d_bvp.cache.po_coll.mesh_cache)
-# end
-# 
-# function ∫(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
-#     ∫(d_bvp.cache.po_coll, args...; kwargs...)
-# end
-# 
-# function po_analytical_jacobian(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
-#     po_analytical_jacobian(d_bvp.cache.po_coll, args...; kwargs...)
-# end
-# 
-# function po_jacobian_block(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
-#     po_jacobian_block(d_bvp.cache.po_coll, args...; kwargs...)
-# end
-# 
-# function po_analytical_jacobian_sparse(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, args...; kwargs...)
-#     po_analytical_jacobian_sparse(d_bvp.cache.po_coll, args...; kwargs...)
-# end
-# 
-# function jacobian_poocoll_sparse_indx!(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, J, u, p, indx)
-#     jacobian_poocoll_sparse_indx!(d_bvp.cache.po_coll, J, u, p, indx)
-# end
-# 
-# function get_blocks(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}, J)
-#     get_blocks(d_bvp.cache.po_coll, J)
-# end
-# 
-# get_discretization(d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc} where {Tf, 𝒯}) = d_bvp.cache.po_coll
-# 
-# function Base.show(io::IO, d_bvp::DiscretizedPO{Tf, 𝒯, <:CollocationDisc}) where {Tf, 𝒯}
-#     coll = d_bvp.discretizer
-#     n = d_bvp.model.n
-#     println(io, "┌─ DiscretizedPO (CollocationDisc)")
-#     println(io, "├─ State dimension n : ", n)
-#     println(io, "├─ Ntst              : ", coll.Ntst)
-#     println(io, "├─ m                 : ", coll.m)
-#     println(io, "└─ Mesh adaptation   : ", coll.meshadapt)
-# end
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 function update_mesh!(d_bvp::DiscretizedPO{<:POModel, <:BVP.Collocation}, τs)

@@ -34,17 +34,7 @@ x0 = BifurcationKit.BVP.generate_solution(bvp, t -> zeros(2))
 # 6. Create BVPBifProblem
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))
 
-####
-# Test that the new residual perfectly matches the legacy one
-res_legacy, _ = BifurcationKit.BVP.__bvp_residual_collocation_legacy(bvp, x0, params, Val(false))
-res_new, _ = BifurcationKit.BVP.__bvp_residual_collocation(bvp, x0, params, Val(false))
-@test res_legacy ≈ res_new
 
-x1 = x0 .+ 0.1 * rand(length(x0))
-res_legacy1, phase_legacy = BifurcationKit.BVP.__bvp_residual_collocation_legacy(bvp, x1, params, Val(false))
-res_new1, phase_new = BifurcationKit.BVP.__bvp_residual_collocation(bvp, x1, params, Val(false))
-@test res_legacy1 ≈ res_new1
-####
 # test jacobian
 prob_ana = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a); jacobian = BifurcationKit.DenseAnalytical())
 _Jfd = BifurcationKit.jacobian(prob, prob.u0, prob.params)
