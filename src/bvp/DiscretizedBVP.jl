@@ -93,6 +93,9 @@ get_cache(bvp::DiscretizedBVP) = bvp.cache
 """Get the mesh cache."""
 get_mesh_cache(bvp::DiscretizedBVP) = get_cache(bvp).mesh_cache
 
+"""Get the collocation cache."""
+get_coll_cache(bvp::DiscretizedBVP) = get_cache(bvp).coll_cache
+
 BK.record_from_solution(bvp::DiscretizedBVP) = BK.record_from_solution(get_model(bvp))
 BK.plot_solution(bvp::DiscretizedBVP) = BK.plot_solution(get_model(bvp))
 
@@ -148,6 +151,9 @@ get_cache(d_po::DiscretizedPO) = get_cache(d_po.d_bvp)
 
 """Get the mesh cache."""
 get_mesh_cache(d_po::DiscretizedPO) = get_mesh_cache(d_po.d_bvp)
+
+"""Get the collocation cache."""
+get_coll_cache(d_po::DiscretizedPO) = get_coll_cache(d_po.d_bvp)
 
 """Total length of the solution vector: state unknowns + 1 (period T)."""
 Base.length(d_po::DiscretizedPO) = length(d_po.d_bvp) + 1

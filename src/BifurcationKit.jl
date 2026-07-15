@@ -109,6 +109,7 @@ module BifurcationKit
     include("periodicorbit/StandardShooting.jl")
     include("periodicorbit/PoincareShooting.jl")
     include("periodicorbit/ShootingDE.jl")
+    include("periodicorbit/cop_legacy.jl")
     include("periodicorbit/cop.jl")
     include("periodicorbit/Floquet.jl")
     include("periodicorbit/BifurcationPoints.jl")
