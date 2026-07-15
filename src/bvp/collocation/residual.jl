@@ -15,12 +15,7 @@ _bvp_coll_get_T(::DiscretizedPO, X) = X[end]
 # State matrix Xm of size (n, Ntst*m+1):
 #   BVP → X is purely the state
 #   PO  → X = [state..., T], strip the period
-function _bvp_coll_get_Xm(::DiscretizedBVP, X, n, Ntst, m)
-    reshape(X, n, Ntst * m + 1)
-end
-function _bvp_coll_get_Xm(::DiscretizedPO, X, n, Ntst, m)
-    reshape(X[1:end-1], n, Ntst * m + 1)
-end
+
 
 # Boundary condition written into the last column of outm:
 #   BVP → general g(u(0), u(T), p) = 0
@@ -53,15 +48,15 @@ _bvp_coll_get_∂ϕ(d_po::DiscretizedPO) = d_po.section.∂ϕ
     disc   = get_discretizer(d_bvp)
     cache  = get_cache(d_bvp)         # needs: cache.mesh_cache, cache.coll_cache
     n      = state_dimension(d_bvp)
-    Ntst   = disc.Ntst
-    m      = disc.m
+    Ntst   = get_ntst(disc)
+    m      = get_m(disc)
     𝒯      = eltype(X)
 
     T  = _bvp_coll_get_T(d_bvp, X)
-    Xm = _bvp_coll_get_Xm(d_bvp, X, n, Ntst, m)  # (n, Ntst*m+1)
+    Xm = get_time_slices(d_bvp, X)
 
     out  = similar(X)
-    outm = reshape(out[1:n*(Ntst*m+1)], n, Ntst*m+1)
+    outm = get_time_slices(d_bvp, out)
 
     # Mesh data from cache
     mesh  = getmesh(cache.mesh_cache)          # Ntst+1 normalized time nodes in [0, 1]

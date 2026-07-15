@@ -163,6 +163,10 @@ get_section(d_po::DiscretizedPO) = d_po.section
 
 get_time_slices(d_po::DiscretizedPO, u::AbstractVector) = get_time_slices(d_po.d_bvp, u)
 
+"""Get the time interval of the underlying model."""
+get_time_interval(d_bvp::DiscretizedBVP) = get_time_interval(get_model(d_bvp))
+get_time_interval(d_po::DiscretizedPO) = get_time_interval(d_po.d_bvp)
+
 BK.record_from_solution(d_po::DiscretizedPO) = BK.record_from_solution(d_po.d_bvp)
 BK.plot_solution(d_po::DiscretizedPO) = BK.plot_solution(d_po.d_bvp)
 
@@ -178,8 +182,8 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector) where {Tmodel}
     N = state_dimension(d_bvp)
-    m = d_bvp.discretizer.m
-    Ntst = d_bvp.discretizer.Ntst
+    m = get_m(get_discretizer(d_bvp))
+    Ntst = get_ntst(get_discretizer(d_bvp))
     BK.get_time_slices(u, N, m, Ntst)
 end
 
@@ -187,13 +191,13 @@ function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::Abstract
     sh = d_bvp.cache
     N = state_dimension(d_bvp)
     M = mesh_size(get_discretizer(d_bvp))
-    reshape(u, N, M)
+    reshape(@view(u[1:N*M]), N, M)
 end
 
 function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector) where {Tmodel}
     N = state_dimension(d_bvp)
     M = mesh_size(get_discretizer(d_bvp))
-    reshape(u, N, M)
+    reshape(@view(u[1:N*M]), N, M)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_solution_bvp(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector, params) where {Tmodel}

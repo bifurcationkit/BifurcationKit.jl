@@ -164,6 +164,8 @@ Base.@kwdef struct Collocation <: AbstractDiscretizer
 end
 
 meshadapt(coll::Collocation) = coll.meshadapt
+get_ntst(coll::Collocation) = coll.Ntst
+get_m(coll::Collocation) = coll.m
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Common Interface
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

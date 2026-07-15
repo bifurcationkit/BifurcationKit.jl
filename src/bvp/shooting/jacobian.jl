@@ -18,16 +18,16 @@ Compute the Jacobian for shooting discretization.
 Where Φᵢ = ∂φ(uᵢ)/∂uᵢ is the monodromy matrix.
 """
 
-function bvp_jacobian(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, jac::Nothing, X, p)
-    model = bvp.model
-    disc = bvp.discretizer
+function bvp_jacobian(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, jac::Nothing, X, p)
+    model = d_bvp.model
+    disc = d_bvp.discretizer
     
     n = state_dimension(model)
     M = disc.M
     N = n * M + 1
     
     # Extract shooting points and period
-    U = reshape(@view(X[1:n*M]), n, M)
+    U = get_time_slices(d_bvp, X)
     T = X[end]
     dt = T / M
     

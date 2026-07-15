@@ -13,13 +13,13 @@ function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
 
     # Extract shooting points and period
     # TODO Xm = get_time_slices(d_bvp, out)
-    Xm = reshape(@view(X[1:n*M]), n, M)
+    Xm = get_time_slices(d_bvp, X)
     T = tf - t0
 
     # Allocate output
     # TODO use get_time_slices(d_bvp, out)
     out = similar(X)
-    outm = reshape(@view(out[1:n*M]), n, M)
+    outm = get_time_slices(d_bvp, out)
     
     # Core residual computation using BVP-specific po_residual_bare!
     bvp_residual_bare!(d_bvp, outm, Xm, p, T)
