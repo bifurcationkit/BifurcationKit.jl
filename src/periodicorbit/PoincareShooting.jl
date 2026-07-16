@@ -81,7 +81,7 @@ function Base.show(io::IO, psh::PoincareShooting)
     println(io, "├─ jacobian        : ", psh.jacobian)
     println(io, "├─ update section  : ", psh.update_section_every_step)
     if psh.flow isa FlowDE
-        println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
+        println(io, "├─ integrator      : ", typeof(psh.flow.alg).name.name)
     end
     println(io, "└─ parallel        : ", isparallel(psh))
 end
@@ -457,9 +457,15 @@ function save_solution(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, 
     return POSavedSolutionAndState_PSH(
                 _copy(x_bar),
                 vec(xm),
-                _copy(psh.section.centers), 
-                _copy(psh.section.normals),
+                _copy.(psh.section.centers),
+                _copy.(psh.section.normals),
                 )
+end
+
+function restore_problem!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x::POSavedSolutionAndState_PSH, pars)
+    sh = get_discretization(wrap)
+    update!(sh.section, x.normals, x.centers)
+    return true
 end
 
 function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, state)
