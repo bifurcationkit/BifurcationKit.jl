@@ -1,5 +1,5 @@
 function _compute_error!(mesh_cache::MeshCollocationCache, n::Int, sol, x::AbstractVector{𝒯}, ΔT;
-                        normE = norminf,
+                        normE = BK.norminf,
                         verbosity::Bool = false,
                         K = 𝒯(Inf),
                         par = nothing,
@@ -9,7 +9,7 @@ function _compute_error!(mesh_cache::MeshCollocationCache, n::Int, sol, x::Abstr
     # sol is the piecewise polynomial approximation of y.
     # However, sol is of degree m, hence ∂(sol, m+1) = 0
     # we thus estimate yᵐ⁺¹ using ∂(sol, m)
-    dmsol = ∂(sol, Val(m))
+    dmsol = BK.∂(sol, Val(m))
     # we find the values of vm := ∂m(x) at the mid points
     τsT = getmesh(mesh_cache) .* ΔT
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]

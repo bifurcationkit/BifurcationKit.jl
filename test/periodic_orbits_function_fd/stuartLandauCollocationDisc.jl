@@ -202,8 +202,9 @@ let
 
     _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
     _ci = BK.generate_solution(po_d, _orbit, 2pi)
-    BK.po_residual(po_d, _ci, par_sl) # TODO create a POBifProblem and call residual on it
-    @test BK.po_residual(po_d, _ci, par_sl)[1:end-1] |> norminf < 1e-7
+    
+    _po_prob = POBifProblem(po_d, _ci, par_sl, (@optic _.r))
+    @test BK.residual(_po_prob, _ci, par_sl)[1:end-1] |> norminf < 1e-7
 
     _coll_ip = @set _coll.prob_vf = probsl_ip
 
@@ -245,7 +246,7 @@ let
     po_d_new = BK.discretize(po_model2, po_disc)
     BK.updatesection!(po_d_new, _ci, nothing)
     
-    prob_bvp = BK.BVPBifProblem(po_d_new, _ci, par_sl, (@optic _.r); jacobian = BK.AutoDiffDense(), plot_solution = _plot_solution)
+    prob_bvp = BK.POBifProblem(po_d_new, _ci, par_sl, (@optic _.r); jacobian = BK.AutoDiffDense(), plot_solution = _plot_solution)
 
     br_po = @time continuation(prob_bvp, PALC(tangent = Bordered()), optcontpo;
             verbosity = 0, plot = false, finalise_solution = _finalise_solution

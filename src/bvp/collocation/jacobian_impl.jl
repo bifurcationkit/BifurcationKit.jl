@@ -16,7 +16,7 @@
     ω = mesh_cache.gauss_weight
     phase = zero(𝒯)
     
-    um = _bvp_coll_get_Xm(prob, u, n, Ntst, m)
+    um = get_time_slices(prob, u)
     period = _bvp_coll_get_T(prob, u)
 
     pj = zeros(𝒯, n, m)
@@ -87,7 +87,7 @@ end
     ω = mesh_cache.gauss_weight
     mesh = BVP.getmesh(mesh_cache)
     
-    um = _bvp_coll_get_Xm(prob, u, n, Ntst, m)
+    um = get_time_slices(prob, u)
     period = _bvp_coll_get_T(prob, u)
 
     pj = zeros(𝒯, n, m)
@@ -166,7 +166,7 @@ end
     mesh = BVP.getmesh(mesh_cache)
     
     period = _bvp_coll_get_T(prob, u)
-    um = _bvp_coll_get_Xm(prob, u, n, Ntst, m)
+    um = get_time_slices(prob, u)
     
     phase = zero(𝒯)
     pj = zeros(𝒯, n, m)

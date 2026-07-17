@@ -101,6 +101,7 @@ export get_times, update_mesh!, get_Ls, get_mesh_coll, get_full_mesh, get_gauss_
 # Exports - BVP Bifurcation Problem
 export BVPBifProblem, BVPSavedSolutionAndState, BVPInterpolation
 export get_periodic_orbit, get_bvp
+export POBifProblem, UpdateFunctionForPOFunctional
 
 # Internal exports for extensions
 export integrate_shooting, integrate_with_sensitivity

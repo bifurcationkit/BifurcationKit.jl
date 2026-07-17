@@ -38,6 +38,9 @@ struct BVPSavedSolutionAndState{T1, T2, T3, T4}
     ϕ::T4
 end
 
+BK.saved_solution(saved_sol::BVPSavedSolutionAndState) = saved_sol.sol
+BK.minus(x::BVPSavedSolutionAndState, y::BVPSavedSolutionAndState) = BK.minus(BK.saved_solution(x), BK.saved_solution(y))
+
 """
 $(TYPEDEF)
 
@@ -180,21 +183,7 @@ function Base.show(io::IO, d_po::DiscretizedPO)
 end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Collocation}, u::AbstractVector) where {Tmodel}
-    N = state_dimension(d_bvp)
-    m = get_m(get_discretizer(d_bvp))
-    Ntst = get_ntst(get_discretizer(d_bvp))
-    BK.get_time_slices(u, N, m, Ntst)
-end
-
-function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Shooting}, u::AbstractVector) where {Tmodel}
-    sh = d_bvp.cache
-    N = state_dimension(d_bvp)
-    M = mesh_size(get_discretizer(d_bvp))
-    reshape(@view(u[1:N*M]), N, M)
-end
-
-function get_time_slices(d_bvp::DiscretizedBVP{Tmodel, <: Trapeze}, u::AbstractVector) where {Tmodel}
+function get_time_slices(d_bvp::DiscretizedBVP, u::AbstractVector)
     N = state_dimension(d_bvp)
     M = mesh_size(get_discretizer(d_bvp))
     reshape(@view(u[1:N*M]), N, M)
