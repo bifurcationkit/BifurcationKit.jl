@@ -57,7 +57,7 @@ let
     N = 3
     Mf = rand(N, N)
     prob1 = BK.BifurcationProblem((x,p) -> Mf * x.^2, zeros(1), nothing)
-    coll = BK.Collocation(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)), xπ = zeros(N * ( 1 + m * Ntst)))
+    coll = BK.Collocation(Ntst, m, prob_vf = prob1, N = N, ϕ = ones(N * ( 1 + m * Ntst)))
     size(coll)
     length(coll)
     BK.get_times(coll)
@@ -187,8 +187,9 @@ let
     prob_vf = probsl,
     N = 2,
     ϕ = rand(N*( 1 + m * Ntst)),
-    xπ = zeros(N*( 1 + m * Ntst)))
-    coll.ϕ[2] = 1 #phase condition
+    )
+    coll.section.ϕ[2] = 1 #phase condition
+    BK.updatesection!(coll, coll.section.ϕ, nothing)
     
     _orbit(t) = [cos(t), sin(t)] * sqrt(par_sl.r/par_sl.c3)
     _ci = BK.generate_solution(coll, _orbit, 2pi)
@@ -276,7 +277,7 @@ let
     N = 4
     nullvf(x,p) = zero(x)
     prob0 = BifurcationProblem(nullvf, zeros(N), par_hopf, (@optic _.r))
-    coll = BK.Collocation(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll = BK.Collocation(Ntst, m; prob_vf = prob0, N, ϕ = rand(N*( 1 + m * Ntst)))
     
     _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
     BK.po_residual(coll,_ci, par_sl);
@@ -291,7 +292,7 @@ let
     _al = I(N) + 0.1 .* rand(N,N)
     idvf(x,p) = _al*x
     prob_ana = BifurcationProblem(idvf, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _al)
-    coll = BK.Collocation(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll = BK.Collocation(Ntst, m; prob_vf = prob_ana, N = N, ϕ = rand(N*( 1 + m * Ntst)))
     _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
     Jcofd = ForwardDiff.jacobian(z -> BK.po_residual(coll, z, par_sl), _ci);
     Jco = BK.po_analytical_jacobian(coll, _ci, par_sl); # 0.004388 seconds (573 allocations: 60.124 MiB)
@@ -302,7 +303,7 @@ let
     @assert N == 2 "must be the dimension of the SL"
     Ntst = 3
     m = 2
-    coll = BK.Collocation(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
+    coll = BK.Collocation(Ntst, m; prob_vf = probsl, N = N, ϕ = rand(N*( 1 + m * Ntst)))
     _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
     Jcofd = ForwardDiff.jacobian(z->BK.po_residual(coll, z, par_sl), _ci);
     Jco = @time BK.po_analytical_jacobian(coll, _ci, par_sl);
@@ -316,8 +317,8 @@ let
     _asp = sparse(I(N) + 0.1 .* sprand(N,N,0.1))
     prob_ana =       BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> _asp)
     prob_ana_dense = BifurcationProblem((x,p)->_asp*x, zeros(N), par_hopf, (@optic _.r) ; J = (x,p) -> Array(_asp))
-    coll_dense = BK.Collocation(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)), xπ = rand(N*( 1 + m * Ntst)))
-    coll       = BK.Collocation(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(coll_dense.ϕ), xπ = copy(coll_dense.xπ))
+    coll_dense = BK.Collocation(Ntst, m; prob_vf = prob_ana_dense, N, ϕ = rand(N*( 1 + m * Ntst)))
+    coll       = BK.Collocation(Ntst, m; prob_vf = prob_ana,       N, ϕ = copy(coll_dense.section.ϕ))
     _ci = BK.generate_solution(coll, t->cos(t) .* ones(N), 2pi);
     Jco_sp = BK.po_analytical_jacobian_sparse(coll, _ci, par_sl);
     Jco = BK.po_analytical_jacobian(coll_dense, _ci, par_sl);

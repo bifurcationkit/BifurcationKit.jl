@@ -35,7 +35,7 @@ $(TYPEDFIELDS)
 
 - `BVPBifProblem(d_bvp, u0, params, lens; kwargs...)` where `d_bvp` is a `DiscretizedBVP`
 """
-struct BVPBifProblem{Tbvp <: DiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: BK.AbstractBifurcationProblem
+struct BVPBifProblem{Tbvp <: AbstractDiscretizedBVP, Tjac, Tu, Tp, Tl, Tplot, Trec, Tupdate} <: AbstractBVPBifProblem
     "The discretized BVP"
     d_bvp::Tbvp
     "The jacobian (type or function)"
@@ -86,7 +86,7 @@ br = continuation(prob, PALC(), ContinuationPar())
 ```
 """
 function BVPBifProblem(
-    d_bvp::DiscretizedBVP,
+    d_bvp::AbstractDiscretizedBVP,
     u0,
     params,
     lens;
@@ -129,7 +129,7 @@ BK.plot_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Nothing}) where {Tb
 
 BK.record_from_solution(prob::BVPBifProblem, x, p; k...) = prob.recordFromSolution(x, p; k...)
 BK.record_from_solution(prob::BVPBifProblem{Tbvp, Tjac, Tu, Tp, Tl, Tplot, Nothing}) where {Tbvp, Tjac, Tu, Tp, Tl, Tplot} = BK.record_from_solution(get_bvp(prob))
-@inline BK.update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(args...; kwargs...)
+@inline BK.update!(prob::BVPBifProblem, args...; kwargs...) = prob.update!(prob, args...; kwargs...)
 
 # Residual - delegate to the DiscretizedBVP
 residual(prob::BVPBifProblem, x, p) = bvp_residual(get_bvp(prob), x, p)
@@ -200,42 +200,49 @@ save_solution(prob::BVPBifProblem, x, p) = save_solution(prob.d_bvp, x, p)
 save_solution(::DiscretizedBVP, x, _) = x
 
 function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars) # TODO: duplicate of existing function
-    coll = bvp.cache.po_coll
-    if BK.meshadapt(coll) # mildly type unstable but Union{T1, T2} handles it
-        return BK.BVPSavedSolutionAndState(copy(BK.get_times(coll)),
+    disc = get_discretizer(bvp)
+    mesh_cache = get_mesh_cache(bvp)
+    if meshadapt(disc)
+        return BK.BVPSavedSolutionAndState(copy(get_times(mesh_cache)),
                 x,
-                copy(BK.getmesh(coll.mesh_cache)),
-                BK._copy(coll.ϕ),
+                copy(getmesh(mesh_cache)),
+                nothing,  # pure BVP has no phase condition section
                 )
     else
         return x
     end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function (sol::BK.BVPInterpolation{ <:  DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
+function (sol::BVPInterpolation{ <: DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
     d_bvp = sol.pb
     model = get_model(d_bvp)
-    coll = d_bvp.cache.po_coll
+    mesh_cache = get_mesh_cache(d_bvp)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
-    xm = get_time_slices(d_bvp, BK.getx(sol))
-    BK.__interpolate_posolution(coll, t0, xm, δT)
+    xm = get_time_slices(d_bvp, getx(sol))
+    __interpolate_posolution(mesh_cache, t0, xm, δT)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, 
-                    x::BK.BVPSavedSolutionAndState) where {Tmodel <: BVPModel}
+                    x::BVPSavedSolutionAndState) where {Tmodel <: BVPModel}
     d_bvp = get_bvp(prob)
-    coll = d_bvp.cache.po_coll
-    BK.update_mesh!(coll, x._mesh)
+    mesh_cache = get_mesh_cache(d_bvp)
+    BK.update_mesh!(mesh_cache, x._mesh)
     return true
 end
 
-function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, update_pred = true)
+BK.updatesection!(prob::BVPBifProblem, x, par) = BK.updatesection!(get_bvp(prob), x, par)
+BK.updatesection!(::DiscretizedBVP, x, par) = nothing
+# For DiscretizedPO: the concrete updatesection!(::DiscretizedPO{<:POModel,<:Collocation}, ...)
+# defined in bvp/collocation/section.jl will be found by dispatch automatically.
+
+function __update_bvp_coll!(d_bvp::DiscretizedPO{<:BVPModel, <:Collocation}, bvpsol, params, iter, state, update_pred = true)
     disc = get_discretizer(d_bvp)
     model = get_model(d_bvp)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
-    coll = d_bvp.cache.po_coll
+    mesh_cache = get_mesh_cache(d_bvp)
+    n = state_dimension(d_bvp)
     has_mesh_been_updated = false
     if meshadapt(disc) == false
         return true
@@ -249,22 +256,23 @@ function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, 
             @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
         old_bvp = BK._copy(bvpsol) # avoid possible overwrite in compute_error!
-        oldmesh = BK.get_times(coll) .* δT
         ####################################
         # get solution, we copy x because it is overwritten at the end of this function
-        sol = BK.BVPInterpolation(deepcopy(d_bvp), copy(old_bvp), nothing)
+        sol = BVPInterpolation(deepcopy(d_bvp), copy(old_bvp), nothing)
 
-        (; newmesh, ϕ) = BK._compute_error!(coll, sol, old_bvp, δT;
+        (; newmesh, ϕ) = _compute_error!(mesh_cache, n, sol, old_bvp, δT;
                             verbosity = disc.verbose_mesh_adapt,
-                            K = coll.K,
+                            K = disc.K,
                             par = BK.setparam(iter, BK.getp(state)))
         # update solution
         newsol = generate_solution(d_bvp, sol)
         old_bvp .= newsol
-        success = true
-        if ~success # stop continuation if mesh adaptation fails
-            return false
-        end
+    end
+    if BK.converged(state) &&
+            BK.in_bisection(state) == false &&
+            BK.mod_counter(step, update_every_step) == 1
+        @debug "[Collocation] update section"
+        BK.updatesection!(d_bvp, bvpsol, params)
     end
     if has_mesh_been_updated && update_pred
         # we recompute the tangent predictor
@@ -274,23 +282,48 @@ function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, 
     return true
 end
 
-function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
-                    iter::BK.ContIterable{Tkind},
-                    state; 
-                    update_pred = true) where {Tmodel <: BVPModel, Tkind}
-    d_bvp = get_bvp(prob)
-    bvpsol = BK._copy(BK.getx(state))
-    __update_bvp_coll!(d_bvp, bvpsol, BK.setparam(iter, BK.getp(state)), iter, state)
+struct UpdateFunctionForPOFunctional end
+
+function (::UpdateFunctionForPOFunctional)(
+        prob::BVPBifProblem{<:DiscretizedPO{<:BVPModel, <:Collocation}},
+        iter::BK.ContIterable,
+        state;
+        update_pred = true)
+    d_po  = get_bvp(prob)
+    po    = BK._copy(BK.getx(state))
+    params = BK.setparam(iter, BK.getp(state))
+    __update_bvp_coll!(d_po, po, params, iter, state, update_pred)
 end
 
-function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
-                    iter::BK.ContIterable{Tkind},
-                    state; 
-                    update_pred = true) where {Tmodel <: BVPModel, Tkind <: BK.AbstractTwoParamCont}
-    d_bvp = get_bvp(prob)
-    Z = BK.getsolution(state)
+function (::UpdateFunctionForPOFunctional)(
+        prob::BVPBifProblem{<:DiscretizedPO{<:BVPModel, <:Collocation}},
+        iter::BK.ContIterable{Tkind},
+        state;
+        update_pred = true) where {Tkind <: BK.AbstractTwoParamCont}
+    d_po = get_bvp(prob)
+    Z    = BK.getsolution(state)
+    𝐌𝐚   = BK.get_formulation(BK.getprob(iter))
+    po   = BK.getvec(Z.u, 𝐌𝐚)
     params = BK.getparams(iter, state)
-    𝐌𝐚 = BK.get_formulation(BK.getprob(iter))
-    bvpsol = BK.getvec(Z.u, 𝐌𝐚)
-    __update_bvp_coll!(d_bvp, bvpsol, params, iter, state, false)
+    __update_bvp_coll!(d_po, po, params, iter, state, false)
+end
+
+"""
+    POBifProblem(d_po, u0, params, lens; kwargs...)
+
+Constructeur de confort pour les orbites périodiques. Équivalent à
+`BVPBifProblem` avec `update! = UpdateFunctionForPOFunctional()`.
+"""
+function POBifProblem(
+        d_po::AbstractDiscretizedPO,
+        u0,
+        params,
+        lens;
+        jacobian = BK.AutoDiffDense(),
+        kwargs...)
+    BVPBifProblem(
+        d_po, u0, params, lens;
+        update! = UpdateFunctionForPOFunctional(),
+        jacobian = jacobian,
+        kwargs...)
 end

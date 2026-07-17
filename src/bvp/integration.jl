@@ -20,31 +20,29 @@ Returns a `NamedTuple` with fields:
 - `period`: The period T
 """
 function get_periodic_orbit(bvp::DiscretizedBVP, X, p)
-    n = state_dimension(bvp)
-    disc = get_discretizer(bvp)
     T = X[end]
-    
-    return _get_periodic_orbit(disc, X, n, T)
+    return _get_periodic_orbit(bvp, X, T)
 end
 
-function _get_periodic_orbit(disc::Shooting, X, n, T)
-    M = disc.M
-    U = reshape(@view(X[1:n*M]), n, M)
+function _get_periodic_orbit(bvp::DiscretizedBVP{Tmodel, <:Shooting}, X, T) where {Tmodel}
+    M = mesh_size(get_discretizer(bvp))
+    U = get_time_slices(bvp, X)
     t = LinRange(0, T, M+1)[1:M]
     return (t = collect(t), u = U, period = T)
 end
 
-function _get_periodic_orbit(disc::Trapeze, X, n, T)
-    M = disc.M
-    U = reshape(@view(X[1:n*M]), n, M)
+function _get_periodic_orbit(bvp::DiscretizedBVP{Tmodel, <:Trapeze}, X, T) where {Tmodel}
+    M = mesh_size(get_discretizer(bvp))
+    U = get_time_slices(bvp, X)
     t = LinRange(0, T, M)
     return (t = collect(t), u = U, period = T)
 end
 
-function _get_periodic_orbit(disc::Collocation, X, n, T)
-    Ntst, m = disc.Ntst, disc.m
+function _get_periodic_orbit(bvp::DiscretizedBVP{Tmodel, <:Collocation}, X, T) where {Tmodel}
+    disc = get_discretizer(bvp)
+    Ntst, m = get_ntst(disc), get_m(disc)
     N_total = Ntst * m + 1
-    U = reshape(@view(X[1:n*N_total]), n, N_total)
+    U = get_time_slices(bvp, X)
     # Approximate times (actual times depend on mesh)
     t = LinRange(0, T, N_total)
     return (t = collect(t), u = U, period = T)

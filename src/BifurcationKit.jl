@@ -82,7 +82,25 @@ module BifurcationKit
     include("TimeMesh.jl")
 
 
+    function updatesection! end
+    function saved_solution end
+    
+    # BVP problem
+    include("bvp/BVP.jl")
+    using .BVP
+    export  BVPModel, PeriodicOrbitModel, POModel,
+        Shooting, Trapeze, Collocation,
+        discretize, generate_solution,
+        bvp_residual, bvp_jacobian, jvp,
+        BVPBifProblem, POBifProblem, UpdateFunctionForPOFunctional, state_dimension, getperiod
+    export MeshCollocationCache, CollocationCache, n_mesh_pts
+    export get_times, update_mesh!, get_Ls, get_mesh_coll, get_full_mesh, get_gauss_nodes, get_gauss_weight, get_max_time_step
+    export BVPSavedSolutionAndState, BVPInterpolation
+    export get_periodic_orbit, get_bvp
+    export integrate_shooting, integrate_with_sensitivity
+
     # periodic orbit problems
+    include("bvp/Sections.jl")
     include("periodicorbit/Sections.jl")
     include("periodicorbit/PeriodicOrbits.jl")
     include("periodicorbit/PeriodicOrbitTrapeze.jl")
@@ -92,10 +110,13 @@ module BifurcationKit
     include("periodicorbit/StandardShooting.jl")
     include("periodicorbit/PoincareShooting.jl")
     include("periodicorbit/ShootingDE.jl")
+    include("periodicorbit/cop_legacy.jl")
     include("periodicorbit/cop.jl")
     include("periodicorbit/Floquet.jl")
     include("periodicorbit/BifurcationPoints.jl")
     include("periodicorbit/PeriodicOrbitUtils.jl")
+
+    include("periodicorbit/Collocation.jl")
 
     include("periodicorbit/PoincareRM.jl")
     include("periodicorbit/NormalForms.jl")
@@ -114,9 +135,6 @@ module BifurcationKit
     # wave problem
     include("wave/WaveProblem.jl")
     include("wave/EigSolver.jl")
-
-    # BVP problem
-    include("bvp/BVP.jl")
 
     # plotting
     include("plotting/Utils.jl")

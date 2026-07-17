@@ -34,7 +34,7 @@ x0 = BifurcationKit.BVP.generate_solution(bvp, t -> zeros(2))
 # 6. Create BVPBifProblem
 prob = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a))
 
-####
+
 # test jacobian
 prob_ana = BifurcationKit.BVP.BVPBifProblem(bvp, x0, params, (@optic _.a); jacobian = BifurcationKit.DenseAnalytical())
 _Jfd = BifurcationKit.jacobian(prob, prob.u0, prob.params)

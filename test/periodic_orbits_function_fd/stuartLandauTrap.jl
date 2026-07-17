@@ -2,6 +2,7 @@
 using Test
 using BifurcationKit, LinearAlgebra, ForwardDiff, SparseArrays
 const BK = BifurcationKit
+_test_sorted(x) = issorted(x, by = real, rev = true)
 ##################################################################
 # The goal of these tests is to test all combinations of options
 ##################################################################

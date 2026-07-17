@@ -67,15 +67,12 @@ $DocStrjacobianPOTrap
 !!! note "GPU call"
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
-@with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractFiniteDifferencesDiscretization
+@with_kw_noshow struct Trapeze{Tprob, Tsection, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractFiniteDifferencesDiscretization
     "Bifurcation problem."
     prob_vf::Tprob = nothing
 
-    "Used to set a section for the phase constraint equation, of size N*M."
-    ϕ::vectype = nothing
-
-    "Used in the section for the phase constraint equation, of size N*M."
-    xπ::vectype = nothing
+    "Phase constraint section."
+    section::Tsection = SectionTrapeze(nothing, nothing)
 
     "Number of time slices."
     M::Int = 0
@@ -119,7 +116,7 @@ end
 @inline isinplace(trap::Trapeze) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
 @inline get_time_step(trap::Trapeze, i::Int) = get_time_step(trap.mesh, i)
 get_times(trap::Trapeze) = cumsum(collect(trap.mesh))
-@inline hasmassmatrix(trap::Trapeze{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
+@inline hasmassmatrix(trap::Trapeze{Tprob, Tsection, Tls, T, Tmass}) where {Tprob, Tsection, Tls, T, Tmass} = ~(Tmass == Nothing)
 @inline getparams(trap::Trapeze) = getparams(trap.prob_vf)
 @inline getlens(trap::Trapeze) = getlens(trap.prob_vf)
 @inline getdelta(trap::Trapeze) = getdelta(trap.prob_vf)
@@ -161,7 +158,7 @@ function Trapeze(prob_vf,
     _length = ϕ isa AbstractVector ? length(ϕ) : 0
     M = m isa Number ? m : length(m) + 1
 
-    return Trapeze(;prob_vf, ϕ, xπ, M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
+    return Trapeze(;prob_vf, section = SectionTrapeze(ϕ, xπ), M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
 end
 
 function Trapeze(prob_vf,
@@ -176,9 +173,16 @@ function Trapeze(prob_vf,
                                     jacobian = Dense()) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
+    _ϕ = similar(ϕ, N*M)
+    _xπ = similar(xπ, N*M)
+    _xπ .= 0
+    _ϕ .= 0
+
+    _xπ[eachindex(xπ)] .= xπ
+    _ϕ[eachindex(ϕ)] .= ϕ
+
     trap = Trapeze(;prob_vf,
-                                    ϕ = similar(ϕ, N*M),
-                                    xπ = similar(xπ, N*M),
+                                    section = SectionTrapeze(_ϕ, _xπ),
                                     M,
                                     mesh = TimeMesh(m),
                                     N,
@@ -187,12 +191,6 @@ function Trapeze(prob_vf,
                                     massmatrix,
                                     update_section_every_step,
                                     jacobian)
-
-    trap.xπ .= 0
-    trap.ϕ .= 0
-
-    trap.xπ[eachindex(xπ)] .= xπ
-    trap.ϕ[eachindex(ϕ)] .= ϕ
     return trap
 end
 
@@ -259,7 +257,8 @@ This function implements the functional for finding periodic orbits based on fin
     outc[:, M] .= uc[:, M] .- uc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(u[begin:end-1], trap.ϕ) - LA.dot(trap.xπ, trap.ϕ)
+    phase_cond = trap.section(u[begin:end-1])
+
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond) # this is the phase condition
     else
@@ -320,7 +319,8 @@ Matrix free expression (jvp) of the jacobian of the problem for computing period
     outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(du[begin:end-1], trap.ϕ)
+    phase_cond = trap.section(u[begin:end-1], T, du[begin:end-1], dT)
+
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond)
     else
@@ -480,7 +480,8 @@ function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ =
     @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
     Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
+    ϕ = get_ϕ(trap.section)
+    Aγ[N*M+1, eachindex(ϕ)] .= ϕ
     Aγ[N*M+1, N*M+1] = ∂TGpo[end]
     return Aγ
 end
@@ -536,7 +537,7 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
         J0[:, end] .=  ∂TGpo
 
         # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ
+        J0[N*M+1, eachindex(get_ϕ(trap.section))] .= get_ϕ(trap.section)
 
         return J0
 end
@@ -560,7 +561,8 @@ end
         J0[:, end] .= ∂TGpo
 
         # the following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
+        ϕ = get_ϕ(trap.section)
+        J0[N*M+1, eachindex(ϕ)] .= ϕ
     end
     return J0
 end
@@ -669,13 +671,13 @@ This function updates the section during the continuation run.
     T = _extract_period_fdtrap(trap, x)
 
     # update the reference point
-    trap.xπ .= x[begin:end-1]
+    trap.section.xπ .= x[begin:end-1]
 
     # update the normals
     for ii in 0:M-1
         # ii2 = (ii+1)<= M ? ii+1 : ii+1-M
-        residual!(trap.prob_vf, trap.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], pars)
-        trap.ϕ[ii*N+1:ii*N+N] ./= M
+        residual!(trap.prob_vf, trap.section.ϕ[ii*N+1:ii*N+N], xc[:, ii+1], pars)
+        trap.section.ϕ[ii*N+1:ii*N+N] ./= M
     end
     return true
 end
@@ -801,7 +803,8 @@ end
     # we call J.Aγ.prob(x, par, dx) but we dont have (x, par)
     out1 = apply(J.Aγ, dx[begin:end-1])
     out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
-    return vcat(out1, LA.dot(J.Aγ.prob.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
+    ϕ = get_ϕ(J.Aγ.prob.section)
+    return vcat(out1, LA.dot(ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # linear solver for the PO functional, akin to a bordered linear solver
@@ -812,8 +815,9 @@ end
 # Linear solver associated to POTrapJacobianBordered
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
+    ϕ = get_ϕ(J.Aγ.prob.section)
     dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
-                                             J.Aγ.prob.ϕ, J.∂TGpo[end],
+                                             ϕ, J.∂TGpo[end],
                                            rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end
@@ -1068,17 +1072,17 @@ function re_make(trap::Trapeze,
     orbitguess = vcat(vec(orbitguess_v), period) |> vec
 
     # update the problem
-    probPO = setproperties(trap; N, prob_vf, ϕ = zeros(N * M), xπ = zeros(N * M))
+    probPO = setproperties(trap; N, prob_vf, section = SectionTrapeze(zeros(N * M), zeros(N * M)))
 
     orbit = get(kwargs, :orbit, nothing)
 
     if isnothing(orbit)
-        probPO.ϕ[1:N] .= real.(ζr)
-        probPO.xπ[1:N] .= hopfpt.x0
+        probPO.section.ϕ[1:N] .= real.(ζr)
+        probPO.section.xπ[1:N] .= hopfpt.x0
     else
-        probPO.xπ .= orbitguess[begin:end-1]
+        probPO.section.xπ .= orbitguess[begin:end-1]
         _sol = get_periodic_orbit(probPO, orbitguess, nothing)
-        probPO.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:, i], getparams(prob_vf)) for i = 1:probPO.M])
+        probPO.section.ϕ .= reduce(vcat, [residual(prob_vf, _sol.u[:, i], getparams(prob_vf)) for i = 1:probPO.M])
     end
     return probPO, orbitguess
 end
@@ -1110,11 +1114,11 @@ function generate_ci_problem(trap::Trapeze,
 
     par = sol.prob.p
     prob_vf = re_make(bifprob, params = par)
-    probtrap = setproperties(trap; M = trap.M, N, prob_vf, xπ = copy(u0), ϕ = copy(u0), ktrap...)
+    probtrap = setproperties(trap; M = trap.M, N, prob_vf, section = SectionTrapeze(copy(u0), copy(u0)), ktrap...)
 
     M, N = size(probtrap)
-    resize!(probtrap.ϕ, N * M)
-    resize!(probtrap.xπ, N * M)
+    resize!(probtrap.section.ϕ, N * M)
+    resize!(probtrap.section.xπ, N * M)
 
     period = tspan[2] - tspan[1]
 
@@ -1125,8 +1129,8 @@ function generate_ci_problem(trap::Trapeze,
     end
     ci = generate_solution(probtrap, t -> sol(tspan[1] + t * period / (2pi)), period)
     _sol = get_periodic_orbit(probtrap, ci, nothing)
-    probtrap.xπ .= ci[begin:end-1]
-    probtrap.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:, i], sol.prob.p) for i = 1:probtrap.M])
+    probtrap.section.xπ .= ci[begin:end-1]
+    probtrap.section.ϕ .= reduce(vcat, [residual(bifprob, _sol.u[:, i], sol.prob.p) for i = 1:probtrap.M])
     return probtrap, ci
 end
 
