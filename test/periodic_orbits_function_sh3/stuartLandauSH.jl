@@ -261,8 +261,8 @@ br_pok2 = continuation(_psh, outpo.u, PALC(),
     opts_po_cont; normC = norminf)
 # plot(br_pok2)
 BK.setparam(BK.getprob(br_pok2), 1.)
-BK.getperiod(BK.get_discretization(BK.getprob(br_pok2)), br_pok2.sol[1].x, br_pok2.sol[1].p)
-BK.get_time_slices(BK.get_discretization(BK.getprob(br_pok2)), br_pok2.sol[1].x)
+BK.getperiod(BK.get_discretization(BK.getprob(br_pok2)), BK.saved_solution(br_pok2.sol[1].x), br_pok2.sol[1].p)
+BK.get_time_slices(BK.get_discretization(BK.getprob(br_pok2)), BK.saved_solution(br_pok2.sol[1].x))
 BK.get_periodic_orbit(br_pok2, 1)
 ####################################################################################################
 @info "Multiple Poincaré Shooting"

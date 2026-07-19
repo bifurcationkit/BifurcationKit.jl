@@ -81,7 +81,7 @@ function Base.show(io::IO, psh::PoincareShooting)
     println(io, "├─ jacobian        : ", psh.jacobian)
     println(io, "├─ update section  : ", psh.update_section_every_step)
     if psh.flow isa FlowDE
-        println(io, "├─ integrator  : ", typeof(psh.flow.alg).name.name)
+        println(io, "├─ integrator      : ", typeof(psh.flow.alg).name.name)
     end
     println(io, "└─ parallel        : ", isparallel(psh))
 end
@@ -96,9 +96,9 @@ This function updates the normals and centers of the hyperplanes defining the Po
 """
 @views function updatesection!(psh::PoincareShooting, centers_bar, par; _norm = norm)
     M = get_mesh_size(psh); Nm1 = div(length(centers_bar), M)
-    centers_barc = reshape(centers_bar, Nm1, M)
-    centers = [E(psh.section, centers_barc[:, ii], ii) for ii = 1:M]
-    normals = [vector_field(psh.flow, c, par) for c in centers]
+    centers_bar_m = reshape(centers_bar, Nm1, M)
+    centers = [E(psh.section, centers_bar_m[:, ii], ii) for ii = 1:M]
+    normals = [vector_field(psh.flow, center, par) for center in centers]
     for ii in eachindex(normals)
         normals[ii] ./= _norm(normals[ii])
     end
@@ -114,24 +114,24 @@ function getperiod(psh::PoincareShooting, x_bar, par)
     M = get_mesh_size(psh); Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
-    x_barc = reshape(x_bar, Nm1, M)
+    x_barm = reshape(x_bar, Nm1, M)
 
     # variable to hold the computed result
     xc = similar(x_bar, Nm1 + 1, M)
     outc = similar(xc)
 
-    period = zero(VI.scalartype(x_barc))
+    period = zero(VI.scalartype(x_barm))
 
     # we extend the state space to be able to call the flow, so we fill xc
     if ~isparallel(psh)
         for ii in 1:M
-            @views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
+            @views E!(psh.section, xc[:, ii], x_barm[:, ii], ii)
             # We need the callback to be active here!!!
             period += @views evolve(psh.flow, xc[:, ii], par, Inf).t
         end
     else
         for ii in 1:M
-            @views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
+            @views E!(psh.section, xc[:, ii], x_barm[:, ii], ii)
         end
         solOde =  evolve(psh.flow, xc, par, repeat([Inf], M))
         period = sum(x->x.t, solOde)
@@ -143,12 +143,12 @@ getperiod(psh::PoincareShooting, x_bar, p::Real) = getperiod(psh, x_bar, setpara
 function get_time_slices(psh::PoincareShooting, x_bar::AbstractVector)
     M = get_mesh_size(psh); Nm1 = length(x_bar) ÷ M
     # reshape the period orbit guess
-    x_barc = reshape(x_bar, Nm1, M)
-    xc = similar(x_bar, Nm1 + 1, M)
+    x_barm = reshape(x_bar, Nm1, M)
+    xm = similar(x_bar, Nm1 + 1, M)
     for ii=1:M
-        @views E!(psh.section, xc[:, ii], x_barc[:, ii], ii)
+        @views E!(psh.section, xm[:, ii], x_barm[:, ii], ii)
     end
-    xc
+    xm
 end
 
 """
@@ -161,90 +161,44 @@ function get_periodic_orbit(psh::PoincareShooting, x_bar::AbstractVector, p)
     M = get_mesh_size(psh); Nm1 = length(x_bar) ÷ M
 
     # reshape the period orbit guess
-    x_barc = reshape(x_bar, Nm1, M)
-    xc = similar(x_bar, Nm1 + 1, M)
+    x_barm = reshape(x_bar, Nm1, M)
+    xm = similar(x_bar, Nm1 + 1, M)
 
     T = getperiod(psh, x_bar, p)
 
     # !!!! we could use @views but then Sundials will complain !!!
     if ~isparallel(psh)
-        E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
+        E!(psh.section, view(xm, :, 1), view(x_barm, :, 1), 1)
         # We need the callback to be active here!!!
-        sol1 = @views evolve(psh.flow, Val(:Full), xc[:, 1], p, T; callback = nothing)
+        sol1 = @views evolve(psh.flow, Val(:Full), xm[:, 1], p, T; callback = nothing)
         return sol1
     else # threaded version
-        E!(psh.section, view(xc, :, 1), view(x_barc, :, 1), 1)
-        sol = @views evolve(psh.flow, Val(:Full), xc[:, 1:1], p, [T]; callback = nothing)
+        E!(psh.section, view(xm, :, 1), view(x_barm, :, 1), 1)
+        sol = @views evolve(psh.flow, Val(:Full), xm[:, 1:1], p, [T]; callback = nothing)
         return sol.u[1]
     end
 end
 get_periodic_orbit(psh::PoincareShooting, x::AbstractVector, p::Real) = get_periodic_orbit(psh, x, setparam(psh, p))
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the projection of each vector (`x[i]` is a `Vector`) on the Poincaré section.
-"""
-function projection(psh::PoincareShooting, x::AbstractVector)
-    # create initial guess. We have to pass it through the projection R
-    M = get_mesh_size(psh)
-    orbitguess_bar = Vector{eltype(x)}(undef, 0)
-    @assert M == length(psh.section.normals)
-    for ii=1:M
-        push!(orbitguess_bar, R(psh, x[ii], ii))
-    end
-    return orbitguess_bar
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-Compute the projection of each vector (`x[i, :]` is a `Vector`) on the Poincaré section.
-"""
-function projection(psh::PoincareShooting, x::AbstractMatrix)
-    # create initial guess. We have to pass it through the projection R
-    M = get_mesh_size(psh)
-    m, n = size(x)
-    orbitguess_bar = Matrix{eltype(x)}(undef, m, n-1)
-    @assert M == length(psh.section.normals)
-    for ii=1:M
-        orbitguess_bar[ii, :] .= @views R(psh, x[ii, :], ii)
-    end
-    return orbitguess_bar
-end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Poincaré (multiple) shooting with hyperplanes parametrization
 function po_residual(psh::PoincareShooting, x_bar::AbstractVector, par; verbose = false)
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
-
-    # reshape the period orbit guess
-    x_barc = reshape(x_bar, Nm1, M)
-
-    # TODO the following declaration of xc allocates. It would be better to make it inplace
-    xc = similar(x_bar, Nm1 + 1, M)
-
-    # variable to hold the result of the computations
-    outc = similar(xc)
-
-    # we extend the state space to be able to call the flow, so we fill xc
-    #TODO create the projections on the fly
-    for ii in 1:M
-        E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
-    end
+    xm = get_time_slices(psh, x_bar)
+    outc = similar(xm)
 
     if ~isparallel(psh)
         for ii in 1:M
             im1 = ii == 1 ? M : ii - 1
             # We need the callback to be active here!!!
-            outc[:, ii] .= xc[:, ii] .- evolve(psh.flow, xc[:, im1], par, Inf).u
+            outc[:, ii] .= xm[:, ii] .- evolve(psh.flow, xm[:, im1], par, Inf).u
         end
     else
-        solOde = evolve(psh.flow, xc, par, repeat([Inf64], M))
+        solOde = evolve(psh.flow, xm, par, repeat([Inf64], M))
         for ii in 1:M
             im1 = ii == 1 ? M : ii - 1
             # We need the callback to be active here!!!
-            @views outc[:, ii] .= xc[:, ii] .- solOde[im1][2]
+            @views outc[:, ii] .= xm[:, ii] .- solOde[im1][2]
         end
     end
 
@@ -279,19 +233,13 @@ end
 
 # jacobian of the shooting functional
 function po_jvp(psh::PoincareShooting, x_bar::AbstractVector, par, dx_bar::AbstractVector)
-    δ = psh.δ
-    if δ > 0
-        # mostly for debugging purposes
-        return (psh(x_bar .+  δ .* dx_bar, par) .- psh(x_bar, par)) ./ δ
-    end
-
     # otherwise analytical Jacobian
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
 
     # reshape the period orbit guess
-    x_barc  = reshape( x_bar, Nm1, M)
-    dx_barc = reshape(dx_bar, Nm1, M)
+    x_barm  = reshape( x_bar, Nm1, M)
+    dx_barm = reshape(dx_bar, Nm1, M)
 
     # variable to hold the computed result
     xc  = similar( x_bar, Nm1 + 1, M)
@@ -300,8 +248,8 @@ function po_jvp(psh::PoincareShooting, x_bar::AbstractVector, par, dx_bar::Abstr
 
     # we extend the state space to be able to call the flow, so we fill xc
     for ii in 1:M
-         E!(psh.section,  view(xc, :, ii),  view(x_barc, :, ii), ii)
-        dE!(psh.section, view(dxc, :, ii), view(dx_barc, :, ii), ii)
+         E!(psh.section,  view(xc, :, ii),  view(x_barm, :, ii), ii)
+        dE!(psh.section, view(dxc, :, ii), view(dx_barm, :, ii), ii)
     end
 
     if ~isparallel(psh)
@@ -328,7 +276,7 @@ function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix, x_bar::AbstractV
     Nm1 = div(length(x_bar), M)
     N = Nm1 + 1
 
-    x_barc = reshape(x_bar, Nm1, M)
+    x_barm = reshape(x_bar, Nm1, M)
 
     # TODO the following declaration of xc allocates. It would be better to make it inplace
     xc = similar(x_bar, N, M)
@@ -336,7 +284,7 @@ function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix, x_bar::AbstractV
     # we extend the state space to be able to call the flow, so we fill xc
     #TODO create the projections on the fly
     for ii in 1:M
-        E!(psh.section, view(xc, :, ii), view(x_barc, :, ii), ii)
+        E!(psh.section, view(xc, :, ii), view(x_barm, :, ii), ii)
     end
 
     # jacobian of the flow
@@ -445,12 +393,12 @@ Generate a periodic orbit problem from a solution.
 - returns a `Shooting` and an initial guess.
 """
 function generate_ci_problem(psh::PoincareShooting,
-                        bifprob::AbstractBifurcationProblem,
-                        prob_de,
-                        sol::AbstractTimeseriesSolution,
-                        tspan::Tuple;
-                        alg = sol.alg,
-                        ksh...)
+                            bifprob::AbstractBifurcationProblem,
+                            prob_de,
+                            sol::AbstractTimeseriesSolution,
+                            tspan::Tuple;
+                            alg = sol.alg,
+                            ksh...)
     u0 = sol(0)
     @assert u0 isa AbstractVector
     N = length(u0)
@@ -472,3 +420,66 @@ function generate_ci_problem(psh::PoincareShooting,
 end
 
 generate_ci_problem(psh::PoincareShooting, bifprob::AbstractBifurcationProblem, prob_de, sol::AbstractTimeseriesSolution, period::Real; alg = sol.alg, ksh...) = generate_ci_problem(psh, bifprob, prob_de, sol, (zero(period), period); alg = alg, ksh...)
+
+for PSType in (:POSavedSolutionAndState_PSH, 
+               :BVPSavedSolutionAndState_PSH)
+    ds = """
+    \$(TYPEDEF)
+
+    Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalSh, ...)`
+
+    # Internal fields
+    \$(TYPEDFIELDS)
+    """
+    @eval begin
+        @doc $ds struct $PSType{T1, T2, T3, T4}
+            sol_bar::T1
+            sol::T2
+            centers::T3
+            normals::T4
+        end
+        @inline saved_solution(saved_sol::$PSType) = saved_sol.sol_bar
+        minus(x::$PSType, y::$PSType) = minus(saved_solution(x), saved_solution(y))
+    end
+end
+
+get_periodic_orbit(psh::PoincareShooting, x::POSavedSolutionAndState_PSH, p) = get_periodic_orbit(psh, saved_solution(x), p)
+
+function save_solution(pbwrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x_bar, p)
+    psh = get_discretization(pbwrap)
+    xm = get_time_slices(psh, x_bar)
+    return POSavedSolutionAndState_PSH(
+                _copy(x_bar),
+                vec(xm),
+                _copy.(psh.section.centers),
+                _copy.(psh.section.normals),
+                )
+end
+
+function restore_problem!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x::POSavedSolutionAndState_PSH, pars)
+    sh = get_discretization(wrap)
+    update!(sh.section, x.normals, x.centers)
+    return true
+end
+
+function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, state)
+    success = converged(state)
+    bisection = in_bisection(state)
+    step = state.step
+    z = getsolution(state)
+
+    psh = get_discretization(wrap)
+    update_section_every_step = psh.update_section_every_step
+    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+        @debug "[Periodic orbit] update section"
+        xm = get_time_slices(psh, _copy(z.u)) 
+        updatesection!(psh, z.u, setparam(wrap, z.p))
+        M = get_mesh_size(psh)
+        new_po = reduce(vcat, [R(psh, xm[:, k], k) for k in 1:M]) # this has vanishing residual
+        # @assert norminf(residual(wrap, new_po, setparam(wrap, z.p))) < 1e-6
+        # the E map has changed, recompute the predictor
+        _copyto!(z.u, new_po)
+        getpredictor!(state, iter)
+    end
+    return true
+end

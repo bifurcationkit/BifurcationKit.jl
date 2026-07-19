@@ -3,9 +3,9 @@ using LinearAlgebra, Test
 using BifurcationKit
 const BK = BifurcationKit
 import OrdinaryDiffEq as ODE
-
-record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
 ####################################################################################################
+record_from_solution(x, p; k...) = (u1 = x[1], u2 = x[2])
+
 function lur!(dz, u, p, t = 0)
     (; α, β) = p
     x, y, z = u
@@ -15,12 +15,6 @@ function lur!(dz, u, p, t = 0)
     dz
 end
 
-prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
-opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
-opts_br = @set opts_br.newton_options.verbose = false
-br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
-# plot(br)
-####################################################################################################
 function plotPO(x, p; k...)
     xtt = get_periodic_orbit(p.prob, x, p.p)
     plot!(xtt.t, xtt[1,:]; markersize = 2, marker = :d, k...)
@@ -35,6 +29,12 @@ function recordPO(x, p; k...)
     return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
+prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
+opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
+opts_br = @set opts_br.newton_options.verbose = false
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
+# plot(br)
+
 let
 prob = BK.ODEBifProblem(lur!, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 
@@ -156,6 +156,25 @@ show(br_po)
 # plot(br, br_po)
 # plot(br_po, vars=(:param, :period))
 
+# test the saved solutions
+for ind in eachindex(br_po.sol)
+    pt = br_po.sol[ind]
+    pars = BK.setparam(br_po, pt.p)
+    wrap = BK.getprob(br_po)
+    BK.restore_problem!(wrap, pt.x, pars)
+    # @error "" BK.residual(wrap, BK.saved_solution(pt.x), pars)
+    @test norminf(BK.residual(wrap, BK.saved_solution(pt.x), pars)) < br_po.contparams.newton_options.tol
+end
+
+for ind in eachindex(br_po.specialpoint)
+    pt = br_po.specialpoint[ind]
+    pars = BK.setparam(br_po, pt.param)
+    wrap = BK.getprob(br_po)
+    BK.restore_problem!(wrap, pt.x, pars)
+    # @error "" BK.residual(wrap, BK.saved_solution(pt.x), pars)
+    @test norminf(BK.residual(wrap, BK.saved_solution(pt.x), pars)) < br_po.contparams.newton_options.tol
+end
+
 @test br_po.specialpoint[1].param ≈ 0.63031334 rtol = 1e-4
 @test br_po.specialpoint[2].param ≈ -0.63031334 atol = 1e-2
 
@@ -182,10 +201,10 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, max_steps = 5,
 
 # plot(br_po, br_po_pd)
 #######################################
-opts_po_cont_ps = @set opts_po_cont.newton_options.tol = 1e-9
-@set opts_po_cont_ps.dsmax = 0.0025
+opts_po_cont_ps = @set opts_po_cont.newton_options.tol = 1e-11
+# @set opts_po_cont_ps.dsmax = 0.0025
 br_po = continuation(br, 2, opts_po_cont_ps,
-    PoincareShooting(2, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
+    PoincareShooting(3, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
     # verbosity = 3, plot=true,
     callback_newton = BK.cbMaxNorm(10),
     record_from_solution = recordPO,
@@ -193,6 +212,25 @@ br_po = continuation(br, 2, opts_po_cont_ps,
     normC = norminf)
 
 # plot(br_po, br)
+
+# test the saved solutions
+for ind in eachindex(br_po.sol)
+    pt = br_po.sol[ind]
+    pars = BK.setparam(br_po, pt.p)
+    wrap = BK.getprob(br_po)
+    BK.restore_problem!(wrap, pt.x, pars)
+    # @error "" BK.residual(wrap, BK.saved_solution(pt.x), pars)
+    @test norminf(BK.residual(wrap, BK.saved_solution(pt.x), pars)) < br_po.contparams.newton_options.tol
+end
+
+for ind in eachindex(br_po.specialpoint)
+    pt = br_po.specialpoint[ind]
+    pars = BK.setparam(br_po, pt.param)
+    wrap = BK.getprob(br_po)
+    BK.restore_problem!(wrap, pt.x, pars)
+    # @error "" BK.residual(wrap, BK.saved_solution(pt.x), pars)
+    @test norminf(BK.residual(wrap, BK.saved_solution(pt.x), pars)) < br_po.contparams.newton_options.tol
+end
 
 show(br_po)
 # test showing normal form

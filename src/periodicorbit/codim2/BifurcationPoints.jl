@@ -5,6 +5,8 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
         """
         $(TYPEDEF)
 
+        Structure to hold the codim2 bifurcation of periodic orbits.
+
         # Internal fields
         $(TYPEDFIELDS)
 

@@ -112,7 +112,8 @@ end
 # method to save solution on the branch
 save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
-for PSType in (:POSavedSolutionAndState, :BVPSavedSolutionAndState)
+for PSType in (:POSavedSolutionAndState, 
+               :BVPSavedSolutionAndState)
     ds = """
     \$(TYPEDEF)
 
@@ -151,7 +152,11 @@ end
 Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
 Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-update!(wrap::PeriodicOrbitFunctionalSh, x) = true
+function restore_problem!(wrap::PeriodicOrbitFunctionalSh, x, pars)
+    sh = get_discretization(wrap)
+    updatesection!(sh, saved_solution(x), pars)
+    return true
+end
 
 function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
     prob = get_discretization(wrap)

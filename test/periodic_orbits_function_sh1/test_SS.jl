@@ -175,8 +175,10 @@ let
     sectionps = SectionPS(normals, centers)
     probPSh = PoincareShooting(flow = fl, M = M, section = sectionps)
 
+    # TODO correct this
+    # ci = reduce(vcat, BK.projection(probPSh, poguess.vec))
+    ci = reduce(vcat, [BK.R(probPSh, poguess.vec[ii], ii) for ii in 1:M])
 
-    ci = reduce(vcat, BK.projection(probPSh, poguess.vec))
     dci = rand(length(ci))
 
     # we test that we have the analytical version of the flow

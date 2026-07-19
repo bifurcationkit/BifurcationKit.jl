@@ -182,7 +182,7 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
 end
 
 function EmptyContState(z::Tvec) where {Tvec} 
-    ContState{Union{Missing, Tvec}, Missing, Nothing, Nothing, Nothing}(;z, τ=missing, z_pred=missing, z_old=missing)
+    ContState{Union{Missing, Tvec}, Missing, Nothing, Nothing, Nothing}(;z, τ = missing, z_pred = missing, z_old = missing)
 end
 
 function Base.copy(state::ContState)
@@ -463,7 +463,7 @@ function Base.iterate(it::ContIterable,
     verbosity = min(it.verbosity, _verbosity)
     verbose = verbosity > 0; verbose1 = verbosity > 1
 
-    (;step, ds) = state
+    (; step, ds) = state
 
     if verbose
         printstyled("━"^55*"\nContinuation step $step \n", bold = true);

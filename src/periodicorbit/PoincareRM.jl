@@ -187,6 +187,7 @@ function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end
 
+# JVP of ::PoincaréMap
 function d1F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h)
     @assert length(x) == length(h)
     sh = get_discretization(Π.probpo)
@@ -234,7 +235,7 @@ function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
     sh = get_discretization(Π.probpo)
     normal = Π.Σ.normal
     VF(z) = vector_field(sh.flow, z, pars)
-    dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
+    dvf(z, h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     Πx, tΣ = Π(x, pars)
     Fx = vector_field(sh.flow, Πx, pars)
@@ -248,8 +249,6 @@ function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
 
     # differentials of return times
     ∂th1 = -LA.dot(normal, ∂ϕh1) / LA.dot(normal, Fx)
-    y = ∂ϕ(x,h₂)
-
     y = dvf(Πx, ∂Πh2) .* ∂th1 .+
         ∂2ϕh12 .+ dvf(Πx, ∂ϕh1) .* ∂th2
     ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)

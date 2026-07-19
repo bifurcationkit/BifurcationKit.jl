@@ -219,16 +219,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     options = br.contparams.newton_options
 
-    # we put the problem back to the state it was
-    update!(prob, bifpt.x)
-    # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     p = bifpt.param
-    𝒯 = VI.scalartype(x0)
-    δ = getdelta(prob)
-
     # parameter for vector field
     parbif = set(getparams(br), lens, p)
+    # we put the problem back to the state it was
+    restore_problem!(prob, bifpt.x, parbif)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    𝒯 = VI.scalartype(x0)
+    δ = getdelta(prob)
 
     L = jacobian(prob, x0, parbif)
 
@@ -688,15 +687,14 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     if ~(bifpt.x isa 𝒯eigvec)
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."
     end
-    # we put the problem back to the state it was
-    update!(prob, bifpt.x)
-    # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    𝒯 = VI.scalartype(x0)
-
     # parameter for vector field
     p = bifpt.param
     parbif = setparam(br, p)
+    # we put the problem back to the state it was
+    restore_problem!(prob, bifpt.x, parbif)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    𝒯 = VI.scalartype(x0)
 
     L = jacobian(prob_vf, x0, parbif)
     # we invert L repeatedly, so we try to factorize it
@@ -1121,8 +1119,11 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # bifurcation point
     bifpt = br.specialpoint[ind_hopf]
 
+    # parameter for vector field
+    p = bifpt.param
+    parbif = setparam(br, p)
     # we put the problem back to the state it was
-    update!(prob, bifpt.x)
+    restore_problem!(prob, bifpt.x, parbif)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
@@ -1132,10 +1133,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # eigenvalue
     λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ω = imag(λ)
-
-    # parameter for vector field
-    p = bifpt.param
-    parbif = setparam(br, p)
     L = jacobian(prob, x0, parbif)
 
     # right eigenvector
@@ -1492,8 +1489,11 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # bifurcation point
     bifpt = br.specialpoint[ind_ns]
 
+    # parameter for vector field
+    p = bifpt.param
+    parbif = set(getparams(br), lens, p)
     # we put the problem back to the state it was
-    update!(prob, bifpt.x)
+    restore_problem!(prob, bifpt.x, parbif)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(Teigvec, saved_solution(bifpt.x))
 
@@ -1502,10 +1502,6 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # eigenvalue
     λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ω = imag(λ)
-
-    # parameter for vector field
-    p = bifpt.param
-    parbif = set(getparams(br), lens, p)
     L = jacobian(getprob(br), x0, parbif)
 
     # right eigenvector

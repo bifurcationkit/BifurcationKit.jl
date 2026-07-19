@@ -94,7 +94,9 @@ struct SectionPS{Tn, Tc, Tnb, Tcb, Tr} <: AbstractSection
     "indices to be removed in the operator Ek"
     indices::Vector{Int64}
 
+    "Projected normals"
     normals_bar::Tnb
+    "Projected centers"
     centers_bar::Tcb
 
     radius::Tr
@@ -151,9 +153,9 @@ function update!(hyp::SectionPS, normals, centers)
     return hyp
 end
 
-# Operateur Rk from the paper above
+# Operateur Rk from the papers 10.1016/j.jcp.2004.04.018 and 10.1016/j.jcp.2012.12.034
 @views function R!(out, x::AbstractVector, k::Int)
-    out[1:k-1] .= x[1:k-1]
+    out[begin:k-1] .= x[begin:k-1]
     out[k:end] .= x[k+1:end]
     return out
 end
@@ -166,7 +168,7 @@ R(hyp::SectionPS, x::AbstractVector, k::Int) = R!(hyp, similar(x, length(x) - 1)
 dR!(hyp::SectionPS, out, dx::AbstractVector, k::Int) = R!(hyp, out, dx, k)
 dR(hyp::SectionPS, dx::AbstractVector, k::Int) = R(hyp, dx, k)
 
-# Operateur Ek from the paper above
+# Operateur Ek from the papers 10.1016/j.jcp.2004.04.018 and 10.1016/j.jcp.2012.12.034
 function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
     @assert length(xbar) == length(hyp.normals[1]) - 1 "Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))"
     k = hyp.indices[ii]
@@ -178,6 +180,12 @@ function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
     @views out[k+1:end] .= xbar[k:end]
     out[k] = coord_k
     return out
+end
+
+function E!(hyp::SectionPS, outm::AbstractMatrix, x_barm::AbstractMatrix, M::Int)
+    for ii in 1:M
+        E!(hyp, view(outm, :, ii), view(x_barm, :, ii), ii)
+    end
 end
 
 function E(hyp::SectionPS, xbar::AbstractVector, ii::Int)

@@ -65,10 +65,17 @@ function branch_normal_form(pbwrap,
                             lens = getlens(br),
                             scaleζ = norminf,
                             kwargs_nf...) where {𝒯eigvec}
+    # this method is the default one, e.g. for Trapeze
     disc = get_discretization(pbwrap)
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
-    period = getperiod(disc, bifpt.x, par)
+
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
+    period = getperiod(disc, x0, par)
 
     # let us compute the kernel
     λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
@@ -81,14 +88,14 @@ function branch_normal_form(pbwrap,
     # compute the eigenvector for shooting problem, 
     # it is of dimension larger than the Poincaré return map.
     floquetsolver = br.contparams.newton_options.eigsolver
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ))
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, x0, setparam(br, bifpt.param), real.(ζ))
     ζs = reduce(vcat, ζ_a)
 
     # normal form for the Poincaré return map
-    nf = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, par, lens, nothing, nothing, nothing, :none)
+    nf = BranchPoint(x0, bifpt.τ, bifpt.param, par, lens, nothing, nothing, nothing, :none)
 
     ζ★ = nothing
-    return BranchPointPO(bifpt.x, period, real.(ζs), ζ★, nf, disc, true)
+    return BranchPointPO(x0, period, real.(ζs), ζ★, nf, disc, true)
 end
 
 function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
@@ -105,12 +112,18 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     prob_sh = get_discretization(pbwrap)
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
-    period = getperiod(prob_sh, bifpt.x, pars)
+
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    
+    period = getperiod(prob_sh, x0, pars)
 
     # we compute the kernel:
     # it is two-dimensional. One vector is the trivial vector ∂u₀ where
     # u₀ is the periodic orbit. Hence, ζ₀ = F(u₀(0), par)
-    po = get_time_slices(prob_sh, bifpt.x)
+    po = get_time_slices(prob_sh, x0)
     ζ₀ = vector_field(prob_sh.flow, po[:, 1], pars)
     ζ₀ ./= scaleζ(ζ₀)
 
@@ -126,22 +139,25 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     ζ2 = real(geteigenvector(floquetsolver, br.eig[bifpt.idx].eigenvecs, ind[2]))
     ζ1 ./= scaleζ(ζ1)
     ζ2 ./= scaleζ(ζ2)
-    _dot_prods = (LA.dot(ζ₀, ζ1), LA.dot(ζ₀, ζ2))
+    # For PoincareShooting, the Floquet eigenvectors are (N-1)-dimensional
+    # (projected onto the Poincaré section), so we need to project ζ₀ as well
+    _ζ₀ = prob_sh isa PoincareShooting ? R(prob_sh.section, ζ₀, 1) : ζ₀
+    _dot_prods = (LA.dot(_ζ₀, ζ1), LA.dot(_ζ₀, ζ2))
     verbose && println("├─ scalar products with ζ₀ are  ", _dot_prods)
     ind0 = argmax(abs.(abs.(_dot_prods) .- 1))
     ζ = ind0 == 1 ? ζ1 : ζ2
-    verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(ζ₀, ζ))
+    verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(_ζ₀, ζ))
 
     # compute the full eigenvector
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), ζ)
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, saved_solution(bifpt.x), setparam(br, bifpt.param), ζ)
     ζs = reduce(vcat, ζ_a)
 
     # normal form for Poincaré map
-    bp0 = BranchPoint(bifpt.x, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
+    bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
 
     if ~detailed_type
         ζ★ = nothing
-        return BranchPointPO(bifpt.x, period, real.(ζs), ζ★, bp0, prob_sh, true)
+        return BranchPointPO(x0, period, real.(ζs), ζ★, bp0, prob_sh, true)
     end
 
     # newton parameter
@@ -232,7 +248,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     par = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
@@ -243,7 +259,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     end
     # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
-    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # A VIRER
+    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # TODO: remove
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 
@@ -433,18 +449,23 @@ function period_doubling_normal_form(pbwrap,
 end
 
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
-                                br,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                nev::Int = length(eigenvalsfrombif(br, ind_bif)),
-                                verbose = false,
-                                lens = getlens(br),
-                                detailed::Val{detailed_type} = Val(true),
-                                scaleζ = norminf,
-                                kwargs_nf...) where {𝒯eigvec, detailed_type}
+                                     br,
+                                     ind_bif::Int,
+                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
+                                     verbose = false,
+                                     lens = getlens(br),
+                                     detailed::Val{detailed_type} = Val(true),
+                                     scaleζ = norminf,
+                                     kwargs_nf...) where {𝒯eigvec, detailed_type}
     verbose && println("━"^53*"\n──▶ Period-doubling normal form computation")
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
+
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
     # let us compute the kernel
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
@@ -456,10 +477,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
 
     # compute the full eigenvector
     floquetsolver = br.contparams.newton_options.eigsolver
-    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, bifpt.x, setparam(br, bifpt.param), real.(ζ₋₁))
+    ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, x0, setparam(br, bifpt.param), real.(ζ₋₁))
     ζs = reduce(vcat, ζ_a)
 
-    pd0 = PeriodDoubling(bifpt.x, nothing, bifpt.param, pars,lens, nothing, nothing, nothing, :none)
+    pd0 = PeriodDoubling(x0, nothing, bifpt.param, pars,lens, nothing, nothing, nothing, :none)
     if ~detailed_type
         sh = get_discretization(pbwrap)
         period = getperiod(sh, pd0.x0, pd0.params)
@@ -481,7 +502,11 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Poinc
                                 lens = getlens(pbwrap),
                                 kwargs_nf...)
     psh = get_discretization(pbwrap)
-    period = getperiod(psh, pd0.x0, pd0.params)
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, pd0.x0, pd0.params)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = saved_solution(pd0.x0)
+    period = getperiod(psh, x0, pd0.params)
     ζ★ = nothing
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd0, psh, true)
 end
@@ -501,16 +526,15 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
-    # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
-    xₛ = get_time_slices(sh, Π.po)[:, 1]
+    xₛ = get_time_slices(sh, Π.po)[:, begin]
 
-    # If M is the monodromy matrix and E := x - <x,e>e with e the eigen
+    # If M is the monodromy matrix and E := x - <x, e>⋅e with e the eigen
     # vector of M for the eigenvalue 1, then, we find that
     # eigenvector(P) = E ∘ eigenvector(M)
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
-    _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
+    _nrm > optn.tol && @warn "[PD-NF-PRM]Residual seems large = $_nrm"
 
     # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     dΠ = jacobian(Π, xₛ, pars)
@@ -556,7 +580,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     par = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
@@ -918,12 +942,12 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     N, m, Ntst = size(coll)
     bifpt = br.specialpoint[ind_bif]
 
+    par = setparam(br, bifpt.param)
     # we put the problem back to the state it was
-    update!(pbwrap, bifpt.x)
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
-    par = setparam(br, bifpt.param)
     period = getperiod(coll, x0, par)
 
     # get the eigenvalue
@@ -1255,7 +1279,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
-    _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
+    _nrm > optn.tol && @warn "[NS normal form PRM], residual = $_nrm"
 
     dΠ = jacobian(Π, xₛ, pars)
     F  = LA.eigen(dΠ)

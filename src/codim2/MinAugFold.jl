@@ -473,11 +473,10 @@ function continuation_fold(prob,
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
 
-    # we put the problem back to the state it was
-    update!(prob, bifpt.x)
-
     p = bifpt.param
     parbif = setparam(br, p)
+    # we put the problem back to the state it was
+    restore_problem!(prob, bifpt.x, parbif)
 
     ζ = bifpt.τ.u; VI.scale!(ζ, 1 / normC(ζ))
 

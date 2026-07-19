@@ -538,11 +538,10 @@ function continuation_hopf(prob,
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
 
-    # we put the problem back to the state it was
-    update!(prob, bifpt.x)
-
     p = bifpt.param
     parbif = setparam(br, p)
+    # we put the problem back to the state it was
+    restore_problem!(prob, bifpt.x, parbif)
 
     if start_with_eigen
         if ~haseigenvector(br)

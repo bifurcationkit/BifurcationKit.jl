@@ -314,9 +314,9 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     step = bifpt.step
     # get the biurcation point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
-        x0 = convert(𝒯.parameters[1], bifpt.x.x)
+        x0 = convert(𝒯.parameters[1], saved_solution(bifpt.x.x))
     else
-        x0 = convert(𝒯, bifpt.x.x)
+        x0 = convert(𝒯, saved_solution(bifpt.x.x))
     end
     # parameters for vector field
     p1 = bifpt.x.p1

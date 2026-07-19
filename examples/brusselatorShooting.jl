@@ -149,6 +149,7 @@ vf = ODE.ODEFunction(Fbru!; jac_prototype = copy(jac_buffer), colorvec = column_
 prob = ODE.ODEProblem(vf,  sol0, (0.0, 520.), par_bru) # gives 0.22s
 #####
 # solve the Brusselator
+using OrdinaryDiffEqBDF
 sol = @time ODE.solve(prob, QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true);
 ####################################################################################################
 using OrdinaryDiffEqRosenbrock
@@ -158,7 +159,7 @@ orbitsection = Array(list_of_time_steps[:, 1:dM:M])
 
 initpo = vcat(vec(orbitsection), 3.1)
 
-sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), ODE.QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
+sol = @time ODE.solve(ODE.remake(prob, u0=vec(orbitsection[:, end]), tspan = (0,4.)), QNDF(); abstol = 1e-10, reltol = 1e-8, progress = true)
 
 BK.plot_periodic_shooting(initpo[1:end-1], length(1:dM:M));title!("")
 
@@ -262,6 +263,7 @@ probHPsh = PoincareShooting(prob, QNDF(), normals, centers;
     par = par_hopf,
     jacobian = BK.FiniteDifferencesMF())
 
+# TODO: handle this change where projection is removed
 initpo_bar = reduce(vcat, BK.projection(probHPsh, centers))
 
 ls = GMRESIterativeSolvers(reltol = 1e-7, N = length(vec(initpo_bar)), maxiter = 500, verbose = false)
@@ -292,6 +294,7 @@ br_po = @time continuation(probHPsh, outpo_psh.u, PALC(),
 ####################################################################################################
 # automatic branch switching from Hopf point with Poincare Shooting
 # linear solver
+using OrdinaryDiffEqBDF
 ls = GMRESIterativeSolvers(reltol = 1e-9, maxiter = 100, verbose = false)
 # newton parameters
 optn_po = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 25, linsolver = ls, eigsolver = eig = EigKrylovKit(tol= 1e-12, x₀ = rand(2n-1), verbose = 0, dim = 50))
@@ -303,7 +306,13 @@ br_po = continuation(
     br, 1,
     # arguments for continuation
     opts_po_cont,
-    PoincareShooting(Mt, prob, QNDF(); abstol = 1e-10, reltol = 1e-8, parallel = false, jacobian = BK.FiniteDifferencesMF());
+    PoincareShooting(Mt,
+                    prob,
+                    QNDF(); 
+                    abstol = 1e-10,
+                    reltol = 1e-8,
+                    parallel = false,
+                    jacobian = BK.FiniteDifferencesMF());
     linear_algo = MatrixFreeBLS(@set ls.N = (2n-1)*Mt+1),
     ampfactor = 1.0, δp = 0.005,
     verbosity = 3,    plot = true,
