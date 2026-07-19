@@ -658,7 +658,7 @@ end
                                     u::AbstractVector{𝒯},
                                     pars,
                                     um::AbstractMatrix{𝒯},
-                                    period::𝒯; 
+                                    period::𝒯;
                                     _transpose::Val{TransposeBool} = Val(false),
                                     _compute_borders::Val{Compute_borders} = Val(true),
                                     ρD = one(𝒯),
