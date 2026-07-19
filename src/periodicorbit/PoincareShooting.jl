@@ -233,12 +233,6 @@ end
 
 # jacobian of the shooting functional
 function po_jvp(psh::PoincareShooting, x_bar::AbstractVector, par, dx_bar::AbstractVector)
-    δ = psh.δ
-    if δ > 0
-        # mostly for debugging purposes
-        return (psh(x_bar .+  δ .* dx_bar, par) .- psh(x_bar, par)) ./ δ
-    end
-
     # otherwise analytical Jacobian
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)

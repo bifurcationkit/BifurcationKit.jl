@@ -466,6 +466,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+
     # let us compute the kernel
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
     verbose && print("├─ computing nullspace of Periodic orbit problem...")
@@ -525,7 +526,6 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
-    # Π = PoincareCallback(pbwrap, pd0.x0, pars; radius = 0.1)
     xₛ = get_time_slices(sh, Π.po)[:, begin]
 
     # If M is the monodromy matrix and E := x - <x, e>⋅e with e the eigen
@@ -534,7 +534,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
-    _nrm > 1e-10 && @warn "Residual seems large = $_nrm"
+    _nrm > optn.tol && @warn "[PD-NF-PRM]Residual seems large = $_nrm"
 
     # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     dΠ = jacobian(Π, xₛ, pars)
@@ -1279,7 +1279,7 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     xₛ = get_time_slices(sh, Π.po)[:, 1]
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
-    _nrm > 1e-12 && @warn "[NS normal form PRM], residual = $_nrm"
+    _nrm > optn.tol && @warn "[NS normal form PRM], residual = $_nrm"
 
     dΠ = jacobian(Π, xₛ, pars)
     F  = LA.eigen(dΠ)
