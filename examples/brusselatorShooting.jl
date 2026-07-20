@@ -301,7 +301,7 @@ optn_po = NewtonPar(verbose = true, tol = 1e-9,  max_iterations = 25, linsolver 
 # continuation parameters
 opts_po_cont = ContinuationPar(dsmax = 0.03, ds= 0.005, p_max = 1.5, max_steps = 100, newton_options = optn_po, nev = 10, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 2)
 
-Mt=1
+Mt = 1
 br_po = continuation(
     br, 1,
     # arguments for continuation

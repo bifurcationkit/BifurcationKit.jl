@@ -526,7 +526,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     period = getperiod(sh, pd0.x0, pars)
     # compute the Poincaré return map, the section is on the first time slice
     Π = PoincareMap(pbwrap, pd0.x0, pars, optn)
-    xₛ = get_time_slices(sh, Π.po)[:, begin]
+    xₛ = _copy(get_time_slices(sh, Π.po)[:, begin])
 
     # If M is the monodromy matrix and E := x - <x, e>⋅e with e the eigen
     # vector of M for the eigenvalue 1, then, we find that
@@ -534,7 +534,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
-    _nrm > optn.tol && @warn "[PD-NF-PRM]Residual seems large = $_nrm"
+    _nrm > optn.tol && @warn "[PD-NF-PRM] Residual seems large = $_nrm"
 
     # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     dΠ = jacobian(Π, xₛ, pars)
@@ -553,9 +553,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            J = (x,p) -> jacobian(Π, x, p),
+            # J = (x,p) -> jacobian(Π, x, p),
+            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
             d2F = (x,p,h1,h2)    -> d2F(Π,x,p,h1,h2).u,
-            d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
+            d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁★, nothing, :none)
@@ -1334,7 +1335,7 @@ function predictor(nf::PeriodDoublingPO{ <: Trapeze},
     orbitguess0c = get_time_slices(pb, nf.po)
     ζc = reshape(nf.ζ, N, M)
     orbitguess_c = @. orbitguess0c + ampfactor * ζc
-    orbitguess_c = hcat(orbitguess_c[:,begin:end-1], orbitguess0c .- ampfactor .*  ζc, orbitguess_c[:,1])
+    orbitguess_c = hcat(orbitguess_c[:, begin:end-1], orbitguess0c .- ampfactor .*  ζc, orbitguess_c[:, 1])
     # orbitguess_c = hcat(orbitguess_c, orbitguess0c .- ampfactor .*  ζc)
     # we append twice the period
     orbitguess = vcat(vec(orbitguess_c), 2nf.T)

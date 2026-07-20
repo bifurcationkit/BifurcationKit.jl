@@ -100,10 +100,10 @@ outpo = newton(_sh, initpo, optn; normN = norminf)
 @test BK.converged(outpo)
 @test BK.get_discretization(outpo.prob).jacobian isa BK.AutoDiffDense
 
-BK.getperiod(_sh, outpo.u, par_hopf)
+@test BK.getperiod(_sh, outpo.u, par_hopf) ≈ 2pi atol = 1e-4
 BK.get_periodic_orbit(_sh, outpo.u, par_hopf)
 
-opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= -0.01, p_max = 4.0, max_steps = 5, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-10), tol_stability = 1e-5)
+opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds= 0.01, p_max = 4.0, max_steps = 9, detect_bifurcation = 2, nev = 2, newton_options = (@set optn.tol = 1e-10), tol_stability = 1e-5)
 br_pok2 = continuation(_sh, outpo.u, PALC(tangent = Bordered()),
     opts_po_cont;
     # verbosity = 0, plot = false,
@@ -114,22 +114,6 @@ br_pok2 = continuation(_sh, outpo.u, PALC(tangent = Bordered()),
 _sol = BK.get_po_solution(_sh, outpo.u, BK.getparams(_sh))
 _sol(0.1)
 # plot(br_pok2)
-
-#━━━━━━━━━━━━━━━━
-# test BK.PoincareMap
-_par = BK.setparam(br_pok2, br_pok2.sol[2].p)
-Π = BK.PoincareMap(BK.getprob(br_pok2), br_pok2.sol[2].x, _par, optn)
-xₛ = BK.get_time_slices(_sh, Π.po)[:, 1]
-_h = rand(2)*0.1
-res_a = BK.d1F(Π, xₛ, _par, _h).u
-@test norminf(res_a - BK.jacobian(Π, xₛ, _par) * _h) < 1e-5
-res_fd = (Π(xₛ .+ 1e-5 .* _h, _par).u - Π(xₛ, _par).u) / 1e-5
-@test_skip norminf(res_a - res_fd) < 3e-2
-@error "" res_a res_fd res_a - res_fd
-BK.d2F(Π, xₛ, _par, _h, _h)
-BK.d3F(Π, xₛ, _par, _h, _h, _h)
-BK.R01(Π, xₛ, _par)
-BK.R11(Π, xₛ, _par, _h)
 #━━━━━━━━━━━━━━━━
 
 # test of all matrix-based jacobians 

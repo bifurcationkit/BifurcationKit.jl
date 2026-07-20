@@ -98,7 +98,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ######### Differential of the flow
-function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k...)
+function _dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k...)
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
     # the use of concrete_solve makes it compatible with Zygote
@@ -106,7 +106,7 @@ function dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
-function dflow_fdSerial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
+function _dflow_finitediff_Serial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
     sol1 = _flow(x .+ δ .* dx, pars, tm, pb, alg; kwargs...).u
     sol2 = _flow(x           , pars, tm, pb, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
@@ -116,7 +116,7 @@ end
 # differential of the flow when a problem is passed for the Monodromy
 # default behavior (the FD case is handled by dispatch)
 function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: ODEProblem}
-    dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
+    _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
 function vjp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: ODEProblem}
@@ -139,7 +139,7 @@ end
 # when no ODEProblem is passed for the monodromy, we use finite differences
 function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
-        return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+        return _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
         sol1 = evolve(fl, x .+ δ .* dx, pars, tm; kw...)
         sol2 = evolve(fl, x           , pars, tm; kw...)
@@ -174,16 +174,16 @@ end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
-        return dflow_fdSerial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
-    else
-        return dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
+        return _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+    else # monodromy based on stacked system [vf, jvp(vf)]
+        return _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
     end
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; kw...) where {T1 <: EnsembleProblem}
-    dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
+    _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
-    dflow_fdSerial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+    _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end

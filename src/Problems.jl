@@ -118,7 +118,7 @@ struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td
     δ::Tδ
     "optionally sets whether the function is inplace or not. You can use `in_bisection(state)` to inquire whether the current state is in bisection mode."
     inplace::Bool
-    "jet of the vector field"
+    "jet of the vector field."
     jet::Tjet
 end
 
@@ -209,52 +209,59 @@ const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<
 
     $(TYPEDFIELDS)
     """
-    @with_kw_noshow struct Jet{Tδ, TR01trait, $(_type_jet...)}
+    @with_kw_noshow struct Jet{Tδ, $(_type_jet...)}
         δ::Tδ
-        R01Trait::TR01trait
         $(map(i -> :( $(_field_jet[i])::$(_type_jet[i]) = nothing ), 1:length(_type_jet))...)
     end
 end
 
 # getters for the jet
 for Rij in _field_jet
-    fname = Symbol(:has_, Rij)
+    has_fname = Symbol(:has_, Rij)
     fname_trait = Symbol(:has_, Rij, :_trait)
     @eval begin
-        $fname(::Nothing) = false
-        $fname_trait(::Nothing) = TraitNoUserPassed()
+        $has_fname(::Nothing) = false
+        $fname_trait(::Nothing) = FiniteDifferences()
 
-        $fname(jet::Jet) = ~isnothing(jet.$(Rij))
-        $fname(pb::BifFunction) = $fname(pb.jet)
+        $has_fname(jet::Jet) = ~isnothing(jet.$(Rij))
+        $has_fname(pb::BifFunction) = $has_fname(pb.jet)
         $fname_trait(pb::BifFunction) = $fname_trait(pb.jet)
         
-        $fname(pb::AbstractAllJetBifProblem) = $fname(pb.VF)
+        $has_fname(pb::AbstractAllJetBifProblem) = $has_fname(pb.VF)
         $fname_trait(pb::AbstractAllJetBifProblem) = $fname_trait(pb.VF)
     end
 
-    if (Rij in (:R01, :R01!)) == false
-        @eval begin
-            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : TraitNoUserPassed()
-            $(Rij)(jet::Jet, args...; kwargs...) = jet.$(Rij)(args...; kwargs...)
-            @inline $(Rij)(::TraitUserPassed, pb::BifFunction, args...; kwargs...) = $(Rij)(pb.jet, args...; kwargs...)
-            @inline $(Rij)(::TraitUserPassed, pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)(TraitUserPassed(), pb.VF, args...; kwargs...)
-            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+    @eval begin
+        $fname_trait(jet::Jet) = if jet.$(Rij) == AutoDiff()
+            AutoDiff()
+        elseif jet.$(Rij) == FiniteDifferences() || isnothing(jet.$(Rij))
+            FiniteDifferences()
+        else
+            TraitUserPassed()
         end
-    else
-        @eval begin
-            $fname_trait(jet::Jet) = ~isnothing(jet.$(Rij)) ? TraitUserPassed() : jet.R01Trait
-            @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
-        end
+        $(Rij)(jet::Jet, args...; kwargs...) = jet.$(Rij)(args...; kwargs...)
+        @inline $(Rij)(::TraitUserPassed, pb::BifFunction, args...; kwargs...) = $(Rij)(pb.jet, args...; kwargs...)
+        @inline $(Rij)(::TraitUserPassed, pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)(TraitUserPassed(), pb.VF, args...; kwargs...)
+        @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
     end
 end
 
-function R01!(::Union{TraitNoUserPassed, Nothing},
+function R01!(::AutoDiff,
                 prob::AbstractAllJetBifProblem,
                 dpF,
                 x0,
                 par,
                 p::Number; δ = nothing)
     _copyto!(dpF, ForwardDiff.derivative(z -> residual(prob, x0, set(par, getlens(prob), z)), p))
+end
+
+function R01(::AutoDiff,
+                prob::AbstractAllJetBifProblem,
+                x,
+                par; δ = nothing)
+    dFdp = VI.zero(x)
+    R01!(AutoDiff(), prob, dFdp, x, par, _get(par, getlens(prob)))
+    return dFdp
 end
 
 function R01!(::FiniteDifferences,
@@ -264,7 +271,7 @@ function R01!(::FiniteDifferences,
                 par,
                 p::Number, res_f = nothing; δ = getdelta(prob))
     # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-    ϵ = getdelta(prob)
+    ϵ = δ
     𝒯 = VI.scalartype(x)
     _copyto!(dFdp, residual(prob, x, set(par, getlens(prob), p + ϵ))) #TODO with VI??
     if isnothing(res_f)
@@ -272,6 +279,55 @@ function R01!(::FiniteDifferences,
     end
     dFdp = minus!!(dFdp, res_f)
     dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
+end
+
+function R01(::FiniteDifferences,
+                prob::AbstractAllJetBifProblem,
+                x,
+                par; δ = getdelta(prob))
+    dFdp = VI.zero(x)
+    R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)))
+    return dFdp
+end
+
+function R02(::FiniteDifferences,
+                prob::AbstractAllJetBifProblem,
+                x0,
+                par; δ = getdelta(prob))
+    lens = getlens(prob)
+    p = _get(par, getlens(prob))
+        (residual(prob, x0, set(par, lens, p + δ)) .- 
+    2 .* residual(prob, x0, set(par, lens, p + 0)) .+
+         residual(prob, x0, set(par, lens, p - δ))) ./ (δ^2)
+end
+
+function R02(::AutoDiff,
+                prob::AbstractAllJetBifProblem,
+                x,
+                par; δ = nothing)
+    p = _get(par, getlens(prob))
+    ∂(z -> residual(prob, x, set(par, getlens(prob), z)), Val(2))(p)
+end
+
+function R11(::FiniteDifferences,
+                prob::AbstractAllJetBifProblem,
+                x0,
+                par,
+                dx; δ = getdelta(prob))
+    lens = getlens(prob)
+    p = _get(par, getlens(prob))
+    (apply(jacobian(prob, x0, set(par, lens, p + δ)), dx) .- 
+               apply(jacobian(prob, x0, set(par, lens, p - δ)), dx)) ./ (2δ)
+end
+
+function R11(::AutoDiff,
+                prob::AbstractAllJetBifProblem,
+                x0,
+                par,
+                dx; δ = getdelta(prob))
+    lens = getlens(prob)
+    p = _get(par, getlens(prob))
+    ForwardDiff.derivative(x -> apply(jacobian(prob, x0, set(par, lens, x)), dx), p)
 end
 
 const _dict_doc_string_prob = Dict(
@@ -454,6 +510,8 @@ for (op, at, kd) in (
                          inplace = false,
                          update! = update_default,
                          R01 = AutoDiff(),
+                         R02 = AutoDiff(),
+                         R11 = FiniteDifferences(),
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
@@ -480,12 +538,7 @@ for (op, at, kd) in (
                 end
 
                 # type unstable but simplifies the types a lot
-                jet = if (isempty(kwargs_jet) && R01 === AutoDiff()) 
-                    nothing 
-                else
-                    R01Trait = R01 === FiniteDifferences() ? R01 : nothing
-                    Jet(;δ = delta, R01Trait, kwargs_jet...)
-                end
+                jet = Jet(;δ = delta, R01 , R02, R11, kwargs_jet...)
                 vf = BifFunction(Foop,
                                 Finp,
                                 jvp,

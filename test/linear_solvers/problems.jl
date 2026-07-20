@@ -3,17 +3,25 @@ using Test, BifurcationKit
 const BK = BifurcationKit
 
 let
-    prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]), R11 =(x,p,dx,dp) -> dx .* dp)
-    @test BK.has_R01(prob) == false
-    BK.R01!(prob, prob.u0, prob.u0, prob.params, 0.1)
-    BK.residual(prob, prob.u0, prob.params)
-    BK.jacobian(prob, prob.u0, prob.params)
-    prob.VF.jet.R11(prob.u0, prob.params, 1,1)
-    BK.R11(prob.VF.jet, prob.u0, prob.params, 1,1)
-    BK.R11(prob, prob.u0, prob.params, 1,1)
-    prob = BifurcationProblem((o,x,p)-> o .= x, rand(2), rand(2), (@optic _[1]); inplace = true)
-    prob = BifurcationProblem((o,x,p)-> o .= x, rand(2), rand(2), (@optic _[1]); R01 = BK.FiniteDifferences())
-    BK.R01!(prob, prob.u0, prob.u0, prob.params, 0.1)
+    prob_ana = BifurcationProblem((x,p)->[x[1]^2*p[1],sum(x)], rand(2), rand(2), (@optic _[1]), 
+        R11 = (x,p,dx) -> [dx[1], 0], 
+        R01 = (x,p) -> [x[1]^2,0], 
+        R02 = (x,p) -> [0,0])
+    BK.residual(prob_ana, prob_ana.u0, prob_ana.params)
+    BK.jacobian(prob_ana, prob_ana.u0, prob_ana.params)
+    @test BK.has_R01(prob_ana) == true
+    BK.R01!(prob_ana, prob_ana.u0, prob_ana.u0, prob_ana.params, 0.1)
+    BK.R01(prob_ana, prob_ana.u0, prob_ana.params)
+    BK.R02(prob_ana, prob_ana.u0, prob_ana.params)
+    BK.R11(prob_ana, prob_ana.u0, prob_ana.params, prob_ana.u0)
+
+    for rij in (BK.AutoDiff(), BK.FiniteDifferences())
+        prob = BifurcationProblem((x,p)->[x[1]^2*p[1],sum(x)], rand(2), rand(2), (@optic _[1]); R01 = rij, R02 = rij)
+        BK.R01!(prob, prob.u0, prob.u0, prob.params, 0.1)
+        BK.R01(prob, prob.u0, prob.params)
+        BK.R02(prob, prob.u0, prob.params)
+        BK.R11(prob, prob.u0, prob.params, prob.u0)
+    end
     ######################################################################
     # test show of wrapped problem
     prob = BifurcationProblem((x,p)->[x[1]^2+p[1],sum(x)], rand(2), rand(2), (@optic _[1]))
