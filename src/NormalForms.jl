@@ -285,40 +285,24 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 
     # we compute the reduced equation: a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
     # coefficient of p
-    if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
-        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
-    else
-        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-        R02 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-          2 .* residual(prob, x0, set(parbif, lens, p + 0)) .+
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
-    end
-    a01 = VI.inner(R01, ζ★)
+    r01 = R01(prob, x0, parbif)
+    r02 = R02(prob, x0, parbif)
+
+    a01 = VI.inner(r01, ζ★)
     verbose && println("├─── a01   = ", a01)
 
     # coefficient of p, Golub. Schaeffer Vol 1 page 33, eq 3.22 (b)
-    Ψ01, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-R01, ζ, ζ★), zero(𝒯))
+    # -L⋅Ψ01 = r
+    Ψ01, _, cv, it  = bls(L, ζ★, ζ, zero(𝒯), E(-r01, ζ, ζ★), zero(𝒯))
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
 
     # coefficient of x*p
-    if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p) # TODO: this line makes it type unstable
-    else
-        R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
-               dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
-    end
-    b11 = VI.inner(R11 .+ R2(ζ, Ψ01), ζ★)
+    r11 = R11(prob, x0, parbif, ζ)
+    b11 = VI.inner(r11 .+ R2(ζ, Ψ01), ζ★)
 
     # coefficient of p² (see markdown)
-    if autodiff
-        R11Ψ = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), Ψ01), p)
-    else
-        R11Ψ = (dF(prob, x0, set(parbif, lens, p + δ), Ψ01) - 
-                dF(prob, x0, set(parbif, lens, p - δ), Ψ01)) ./ (2δ)
-    end
-    a2v =  R02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
+    R11Ψ = R11(prob, x0, parbif, Ψ01)
+    a2v =  r02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
     a02 = VI.inner(a2v, ζ★)
     verbose && println("├─── a02   = ", a02)
     verbose && println("├─── b11   = ", b11)
@@ -766,19 +750,11 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     # coefficients of p
     ∂gᵢ∂p = Vector{𝒯vec}(undef, N)
     δ = getdelta(prob)
-    if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
-        R02 = ∂(z -> residual(prob, x0, set(parbif, lens, z)), Val(2))(p)
-    else
-        R01 = (residual(prob_vf, x0, set(parbif, lens, p + δ)) .- 
-               residual(prob_vf, x0, set(parbif, lens, p - δ))) ./ (2δ)
-        R02 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-          2 .* residual(prob, x0, set(parbif, lens, p + 0)) .+
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (δ^2)
-    end
+    r01 = R01(prob, x0, parbif)
+    r02 = R02(prob, x0, parbif)
    
     for ii in eachindex(ζ★s)
-        ∂gᵢ∂p[ii] = VI.inner(R01, ζ★s[ii])
+        ∂gᵢ∂p[ii] = VI.inner(r01, ζ★s[ii])
     end
     verbose && printstyled(color=:green, "──▶ a01 (∂/∂p) = ", ∂gᵢ∂p, "\n")
 
@@ -786,28 +762,17 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     ∂²gᵢ∂xⱼ∂pₖ = zeros(𝒯vec, N, N)
     ∂²gᵢ∂p² = zeros(𝒯vec, N)
     for jj in eachindex(ζs)
-        if autodiff
-            R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζs[jj]), p)
-        else
-            R11 = (dF(prob_vf, x0, set(parbif, lens, p + δ), ζs[jj])  .- 
-                   dF(prob_vf, x0, set(parbif, lens, p - δ), ζs[jj])) ./ (2δ)
-        end
-
-        Ψ01, _, cv, it  = bls(-E_nd(R01, ζs, ζ★s))
+        r11 = R11(prob, x0, parbif, ζs[jj])
+        Ψ01, _, cv, it  = bls(-E_nd(r01, ζs, ζ★s))
         ~cv && @debug "[Normal form Nd Ψ01] linear solver did not converge"
-        tmp = R11 .+ R2(ζs[jj], Ψ01)
+        tmp = r11 .+ R2(ζs[jj], Ψ01)
         for ii in 1:N
             ∂²gᵢ∂xⱼ∂pₖ[ii, jj] = VI.inner(tmp, ζ★s[ii])
         end
 
         # coefficient of p²
-        if autodiff
-            R11Ψ = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), Ψ01), p)
-        else
-            R11Ψ = (dF(prob, x0, set(parbif, lens, p + δ), Ψ01) - 
-                    dF(prob, x0, set(parbif, lens, p - δ), Ψ01)) ./ (2δ)
-        end
-        a2v = R02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
+        R11Ψ = R11(prob, x0, parbif, Ψ01)
+        a2v = r02 .+ 2 .* R11Ψ .+ R2(Ψ01, Ψ01)
         ∂²gᵢ∂p²[jj] = VI.inner(a2v, ζ★s[jj])
     end
     verbose && (printstyled(color=:green, "\n──▶ a02 (∂²/∂p²)  = \n"); Base.display( ∂²gᵢ∂p² ))
@@ -1025,25 +990,14 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1))
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
+    r01 = R01(prob, x0, parbif)
 
     # −L⋅Ψ001 = R01 #AD
-    if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
-    else
-        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    end
-    Ψ001, cv, it = ls(L, -R01)
+    Ψ001, cv, it = ls(L, -r01)
     ~cv && @debug "[Hopf Ψ001] Linear solver for J did not converge. it = $it"
 
     # a = ⟨R11(ζ) + 2R20(ζ, Ψ001), ζ∗⟩
-    if autodiff
-        av = ForwardDiff.derivative(z -> R1(set(parbif, lens, z))(ζ), p)
-    else
-        av = (R1(set(parbif, lens, p + δ))(ζ) .-
-              R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
-    end
-    av .+= 2 .* R2(ζ, Ψ001)
+    av = R11(prob, x0, parbif, ζ) .+ 2 .* R2(ζ, Ψ001)
     a = VI.inner(av, ζ★)
 
     # (2iω − L)⋅Ψ200 = R20(ζ, ζ)
@@ -1312,20 +1266,14 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     E(x) = x .- LA.dot(ζ★, x) .* ζ
 
     # coefficient of x*p
-    if ~autodiff
-        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-        R11 = (apply(jacobian(prob, x0, set(parbif, lens, p + δ)), ζ) .- 
-               apply(jacobian(prob, x0, set(parbif, lens, p - δ)), ζ)) ./ (2δ)
-    else
-        R01 = ForwardDiff.derivative(x -> residual(prob, x0, set(parbif, lens, x)), p)
-        R11 = ForwardDiff.derivative(x -> apply(jacobian(prob, x0, set(parbif, lens, x)), ζ), p)
-    end
+    r01 = R01(prob, x0, parbif)
+    r11 = R11(prob, x0, parbif, ζ)
 
     # (I − L)⋅Ψ01 = R01
-    Ψ01, cv, it = ls(L, -E(R01); a₀ = -1)
+    # no need for bordered linear solver
+    Ψ01, cv, it = ls(L, -E(r01); a₀ = -1)
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
-    a = LA.dot(ζ★, R11 .+ R2(ζ, Ψ01))
+    a = LA.dot(ζ★, r11 .+ R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
     verbose && println("──▶ a  = ", a)
 
@@ -1395,28 +1343,21 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     # we use ---Maps to be able to call on complex valued arrays
-    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1))
+    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1)) # this is R11
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
     a = nothing
 
     # (I−L)⋅Ψ001 = R001
+    # no need for bordered linear solver
     if detailed
-        R001 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-                residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
+        R001 = R01(prob, x0, parbif)
         Ψ001, cv, it = ls(L, -R001; a₁ = -1)
         ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
         # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
-        # av = (dF(prob, x0, set(parbif, lens, p + δ), ζ) .-
-            #   dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
-        if autodiff
-            av = ForwardDiff.derivative(z -> R1(set(parbif, lens, z))(ζ), p)
-        else
-            av = (R1(set(parbif, lens, p + δ))(ζ) .-
-                  R1(set(parbif, lens, p - δ))(ζ)) ./ (2δ)
-        end
+        av = R11(prob, x0, parbif, ζ)
         av .+= 2 .* R2(ζ, Ψ001)
         a = LA.dot(ζ★, av) * cis(-ω)
         verbose && println("──▶ a  = ", a)
@@ -1586,29 +1527,18 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
 
     # coefficient of p
     δ = getdelta(prob)
-    if autodiff
-        R01 = ForwardDiff.derivative(z -> residual(prob, x0, set(parbif, lens, z)), p)
-    else
-        R01 = (residual(prob, x0, set(parbif, lens, p + δ)) .- 
-               residual(prob, x0, set(parbif, lens, p - δ))) ./ (2δ)
-    end
-    a01 = LA.dot(R01, ζ★)
+    r01 = R01(prob, x0, parbif)
+    a01 = LA.dot(r01, ζ★)
 
-    Ψ01, cv, it = ls(L, E(R01); a₀ = -1)
+    Ψ01, cv, it = ls(L, E(r01); a₀ = -1)
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
 
     verbose && println("┌── Normal form:   a01⋅δμ + b11⋅x⋅δμ + b20⋅x²/2 + b30⋅x³/6")
     verbose && println("├─── a01    = ", a01)
 
     # coefficient of x*p
-    if autodiff
-        R11 = ForwardDiff.derivative(z -> dF(prob, x0, set(parbif, lens, z), ζ), p)
-    else
-        R11 = (dF(prob, x0, set(parbif, lens, p + δ), ζ) - 
-               dF(prob, x0, set(parbif, lens, p - δ), ζ)) ./ (2δ)
-    end
-
-    b11 = LA.dot(R11 .- R2(ζ, Ψ01), ζ★)
+    r11 = R11(prob, x0, parbif, ζ)
+    b11 = LA.dot(r11 .- R2(ζ, Ψ01), ζ★)
     verbose && println("├─── b11   = ", b11)
 
     # coefficient of x^2
