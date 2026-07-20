@@ -205,6 +205,71 @@ end
 """
 $(TYPEDSIGNATURES)
 
+Derivative ``\\frac{\\partial}{\\partial p}`` of the Poincaré return map ``\\Pi`` and return time `t_\\Sigma`.
+
+Returns `(∂Π/∂p, ∂t/∂p)`.
+"""
+function R01(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars)
+    sh = get_discretization(Π.probpo)
+    normal = Π.Σ.normal
+    lens = getlens(sh)
+    p₀ = _get(pars, lens)
+
+    Πx, tΣ = Π(x, pars)
+    Fx₀ = vector_field(sh.flow, Πx, pars)
+
+    ∂ϕ_∂p = ForwardDiff.derivative(p -> evolve(sh.flow, x, set(pars, lens, p), tΣ).u, p₀) # TODO there is an issue with parellel = true
+    ∂t_∂p = -LA.dot(normal, ∂ϕ_∂p) / LA.dot(normal, Fx₀)
+    ∂Π_∂p = @. ∂ϕ_∂p + Fx₀ * ∂t_∂p
+    return (u = ∂Π_∂p, t = ∂t_∂p)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Mixed partial derivative ``\\frac{\\partial}{\\partial p} [\\frac{\\partial \\Pi}{\\partial x} \\cdot h_1]`` of the Poincaré return map.
+"""
+function R11(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁)
+    sh = get_discretization(Π.probpo)
+    normal = Π.Σ.normal
+    lens = getlens(sh)
+    p₀ = _get(pars, lens)
+
+    Πx, tΣ = Π(x, pars)
+    Fx₀ = vector_field(sh.flow, Πx, pars)
+    VF(z) = vector_field(sh.flow, z, pars)
+    dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
+
+    # ∂Π/∂p and ∂t/∂p
+    ∂ϕ_∂p = ForwardDiff.derivative(p -> evolve(sh.flow, x, set(pars, lens, p), tΣ).u, p₀)
+    ∂t_∂p = -LA.dot(normal, ∂ϕ_∂p) / LA.dot(normal, Fx₀)
+    r01 = R01(Π, x, pars)
+    ∂Π_∂p = r01.u; ∂t_∂p = r01.t
+
+    # d1F at the base point
+    y₀ = evolve(sh.flow, Val(:SerialdFlow), x, pars, h₁, tΣ).du
+    ∂th₀ = -LA.dot(normal, y₀) / LA.dot(normal, Fx₀)
+
+    # ∂y/∂p = ∂²ϕ/∂x∂p·h₁ + dvf(Πx, y₀) * ∂t/∂p
+    ∂²ϕ_∂x∂p_h₁ = ForwardDiff.derivative(p -> evolve(sh.flow, Val(:SerialdFlow), x, set(pars, lens, p), h₁, tΣ).du, p₀)
+    ∂y_∂p = ∂²ϕ_∂x∂p_h₁ .+ dvf(Πx, y₀) .* ∂t_∂p
+
+    # ∂Fx/∂p = dvf(Πx, ∂Π_∂p) + ∂VF/∂p
+    # ∂VF_∂p = ForwardDiff.derivative(p -> vector_field(sh.flow, Πx, set(pars, lens, p)), p₀)
+    ∂VF_∂p = (vector_field(sh.flow, Πx, set(pars, lens, p₀ + 1e-8)) .- 
+              vector_field(sh.flow, Πx, set(pars, lens, p₀ - 1e-8))) ./ (2e-8)
+    ∂Fx_∂p = dvf(Πx, ∂Π_∂p) .+ ∂VF_∂p
+
+    # ∂(∂th)/∂p = -(n·∂y/∂p * n·Fx₀ - n·y₀ * n·∂Fx_∂p) / (n·Fx₀)²
+    n_Fx₀ = LA.dot(normal, Fx₀)
+    ∂∂th_∂p = -(LA.dot(normal, ∂y_∂p) * n_Fx₀ - LA.dot(normal, y₀) * LA.dot(normal, ∂Fx_∂p)) / n_Fx₀^2
+
+    return (u = (@. ∂y_∂p + ∂∂th_∂p * Fx₀ + ∂th₀ * ∂Fx_∂p), t = nothing)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
 Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
 function jacobian(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x::AbstractVector{𝒯}, pars) where {𝒯}

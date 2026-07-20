@@ -115,6 +115,23 @@ _sol = BK.get_po_solution(_sh, outpo.u, BK.getparams(_sh))
 _sol(0.1)
 # plot(br_pok2)
 
+#━━━━━━━━━━━━━━━━
+# test BK.PoincareMap
+_par = BK.setparam(br_pok2, br_pok2.sol[2].p)
+Π = BK.PoincareMap(BK.getprob(br_pok2), br_pok2.sol[2].x, _par, optn)
+xₛ = BK.get_time_slices(_sh, Π.po)[:, 1]
+_h = rand(2)*0.1
+res_a = BK.d1F(Π, xₛ, _par, _h).u
+@test norminf(res_a - BK.jacobian(Π, xₛ, _par) * _h) < 1e-5
+res_fd = (Π(xₛ .+ 1e-5 .* _h, _par).u - Π(xₛ, _par).u) / 1e-5
+@test_skip norminf(res_a - res_fd) < 3e-2
+@error "" res_a res_fd res_a - res_fd
+BK.d2F(Π, xₛ, _par, _h, _h)
+BK.d3F(Π, xₛ, _par, _h, _h, _h)
+BK.R01(Π, xₛ, _par)
+BK.R11(Π, xₛ, _par, _h)
+#━━━━━━━━━━━━━━━━
+
 # test of all matrix-based jacobians 
 # \dot z = (r + iν)z - (1+iβ)|z|^2 z, r>0
 # limit cycle :
@@ -370,7 +387,7 @@ for M in (1,2), jacobianPO in (BK.AutoDiffMF(), BK.MatrixFree(), BK.AutoDiffDens
     jacPOps = jacobianPO isa BK.AutoDiffMF ? BK.FiniteDifferences() : jacobianPO
     _parallel = jacPOps isa BK.MatrixFree ? false : false
 
-    local br_psh = continuation(br, 1,(@set opts_po_cont.ds = 0.005), 
+    local br_psh = continuation(br, 1, (@set opts_po_cont.ds = 0.005), 
             PoincareShooting(M, prob, Vern9(); abstol=1e-10, reltol=1e-9, parallel = _parallel, jacobian = jacPOps, update_section_every_step = 2); 
             normC = norminf,
             linear_algo = BorderingBLS(solver = (@set ls.N = M), check_precision = false),
