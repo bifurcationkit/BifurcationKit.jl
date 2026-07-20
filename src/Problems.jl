@@ -247,7 +247,7 @@ for Rij in _field_jet
 end
 
 function R01!(::AutoDiff,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 dpF,
                 x0,
                 par,
@@ -256,7 +256,7 @@ function R01!(::AutoDiff,
 end
 
 function R01(::AutoDiff,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x,
                 par; δ = nothing)
     dFdp = VI.zero(x)
@@ -265,7 +265,7 @@ function R01(::AutoDiff,
 end
 
 function R01!(::FiniteDifferences,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 dFdp,
                 x,
                 par,
@@ -282,7 +282,7 @@ function R01!(::FiniteDifferences,
 end
 
 function R01(::FiniteDifferences,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x,
                 par; δ = getdelta(prob))
     dFdp = VI.zero(x)
@@ -291,7 +291,7 @@ function R01(::FiniteDifferences,
 end
 
 function R02(::FiniteDifferences,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x0,
                 par; δ = getdelta(prob))
     lens = getlens(prob)
@@ -302,7 +302,7 @@ function R02(::FiniteDifferences,
 end
 
 function R02(::AutoDiff,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x,
                 par; δ = nothing)
     p = _get(par, getlens(prob))
@@ -310,7 +310,7 @@ function R02(::AutoDiff,
 end
 
 function R11(::FiniteDifferences,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x0,
                 par,
                 dx; δ = getdelta(prob))
@@ -321,7 +321,7 @@ function R11(::FiniteDifferences,
 end
 
 function R11(::AutoDiff,
-                prob::AbstractAllJetBifProblem,
+                prob::AbstractBifurcationProblem,
                 x0,
                 par,
                 dx; δ = getdelta(prob))
@@ -345,10 +345,10 @@ plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
 # create specific problems where pretty much is available
 for (op, at, kd) in (
-                (:BifurcationProblem, AbstractBifurcationProblem, nothing),
-                (:ODEBifProblem, AbstractBifurcationProblem, nothing),
-                (:DAEBifProblem, AbstractBifurcationProblem, nothing),
-                (:PDEBifProblem, AbstractBifurcationProblem, nothing),
+                (:BifurcationProblem, nothing, nothing), # <: AbstractAllJetBifProblem
+                (:ODEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
+                (:DAEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
+                (:PDEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
 
                 (:FoldMAProblem, AbstractMABifurcationProblem, nothing),
                 (:HopfMAProblem, AbstractMABifurcationProblem, nothing),
