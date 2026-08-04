@@ -1,4 +1,5 @@
-using BifurcationKit, Plots
+using BifurcationKit
+import Plots: plot
 BifurcationKit.set_plot_backend!(BK.BK_Plots())
 const BK = BifurcationKit
 
@@ -14,8 +15,8 @@ let
     opts = ContinuationPar(p_min = -3., detect_bifurcation = 3)
     prob = ODEBifProblem(F_simple, zeros(10), -1.5, (@optic _))
     br = continuation(prob, PALC(tangent=Bordered()), opts, plot = true)
-    BK.plot(br)
-    BK.plot(br, br)
+    plot(br)
+    plot(br, br)
     BK.plot_eigenvals(br, true)
     BK.plot_eigenvals(br, false)
 end

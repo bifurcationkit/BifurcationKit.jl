@@ -1,9 +1,10 @@
 # using Revise
-using Plots
+import Plots: plot
 using Test
 using Core.Compiler: return_type # for type stability testing
 using BifurcationKit, LinearAlgebra
 const BK = BifurcationKit
+BifurcationKit.set_plot_backend!(BK.BK_Plots())
 
 ####################################################################################################
 Fbp(x, p) = [x[1] * (3.23 .* p.μ - p.x2 * x[1] + p.x3 * x[1]^2) + x[2], 
@@ -23,7 +24,7 @@ let
 
     prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ); J = Jbp)
     br = continuation(prob, PALC(), opts_br; normC = norminf)
-    plot(br)
+    BK.plot(br)
 
     @test br.specialpoint[1].interval[1] < 0
     @test br.specialpoint[1].interval[2] > 0
