@@ -314,23 +314,28 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
 end
 get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
+@inline __get_index_for_record_shooting(sol::Vector, i::Int) = sol[i]
+@inline __get_index_for_record_shooting(sol::RecursiveArrayTools.VectorOfArray, i::Int) = sol.u[i]
+@inline __get_index_for_record_shooting(sol::SciMLBase.EnsembleSolution, i::Int) = sol.u[i]
+
 function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars; kode...)
     M = get_mesh_size(sh)
     if ~isparallel(sh)
-        sol = RecursiveArrayTools.VectorOfArray([evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M])
+        sol_ode = [evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M]
     else # threaded version
-        sol = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
+        sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
     end
-    time = sol.u[1].t
-    u = RecursiveArrayTools.VectorOfArray(sol.u[1].u)
+    times = __get_index_for_record_shooting(sol_ode, 1).t
+
+    us = RecursiveArrayTools.VectorOfArray(__get_index_for_record_shooting(sol_ode, 1).u)
     for ii in 2:M
-        append!(time, sol.u[ii].t .+ time[end])
-        append!(u.u, sol.u[ii].u)
+        append!(times, __get_index_for_record_shooting(sol_ode, ii).t .+ times[end])
+        append!(us.u, __get_index_for_record_shooting(sol_ode, ii).u)
     end
-    return BVPSolution(t = time, u = u)
+    return BVPSolution(t = times, u = us)
 end
 
-function get_po_solution(sh::Shooting, x, pars; kode...)
+function get_po_solution(sh::Shooting, x::AbstractVector, pars; kode...)
     T = getperiod(sh, x)
     M = get_mesh_size(sh)
     N = div(length(x) - 1, M)

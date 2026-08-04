@@ -1,3 +1,6 @@
+_vector_field_prm(sh::Shooting, x, p) = vector_field(sh.flow, x, p)
+_vector_field_prm(coll::Collocation, x, p) = residual(coll.prob_vf, x, p)
+
 """
 $(TYPEDEF)
 
@@ -41,9 +44,9 @@ Constructor for the Poincaré return map from a shooting-based periodic orbit pr
 """
 function PoincareMap(wrap::PeriodicOrbitFunctionalSh, po, par, optn)
     sh = get_discretization(wrap)
-    Π = PoincaréMap(wrap, po, deepcopy(sh.section), optn)
-    poc = get_time_slices(sh, po)
-    @views update!(Π.Σ, vector_field(sh.flow, poc[:, begin], par), poc[:, begin])
+    Π = PoincaréMap(wrap, _copy(po), deepcopy(sh.section), optn)
+    po_m = get_time_slices(sh, Π.po)
+    @views update!(Π.Σ, _vector_field_prm(sh, _copy(po_m[:, begin]), par), _copy(po_m[:, begin]))
     Π.Σ.normal ./= norm(sh.section.normal)
     return Π
 end
@@ -55,12 +58,11 @@ Constructor for the Poincaré return map. Return a `PoincaréMap`.
 """
 function PoincareMap(wrap::PeriodicOrbitFunctionalColl, po, par, optn)
     coll = get_discretization(wrap)
-    N, m, Ntst = size(coll)
+    N, _, _ = size(coll)
     Σ = SectionSS(rand(N), rand(N))
-    poc = get_time_slices(coll, po)
-    @views update!(Σ, residual(coll.prob_vf, po[1:N], par), po[1:N])
+    update!(Σ, residual(coll.prob_vf, po[1:N], par), po[1:N]) # do not put @views to prevent shadowing
     Σ.normal ./= norm(Σ.normal)
-    return PoincaréMap(wrap, po, Σ, optn)
+    return PoincaréMap(wrap, _copy(po), Σ, optn)
 end
 
 """
@@ -77,8 +79,8 @@ function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, 
     T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
     tₘ = _extract_period(x)   # estimate of the last bit for the return time
 
-    # extract the orbit guess and reshape it into a matrix as it's more convenient to handle
     poc = get_time_slices(sh, Π.po)
+    # extract the orbit guess and reshape it into a matrix as it is more convenient to handle
     # unknowns are po₁, po₂, ..., poₘ, period
     @assert size(poc) == (N, M+1)
 
@@ -190,7 +192,7 @@ end
 
 function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
     coll = get_discretization(Π.probpo)
-    N,_,_ = size(coll)
+    N, _, _ = size(coll)
     T⁰ = getperiod(coll, Π.po)
     tₘ = _extract_period(solΠ)
     tᵣ = tₘ
@@ -329,7 +331,7 @@ function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
     ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product is not zero, $(abs(LA.dot(normal, y)))"
+    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product <normal, y> is not zero, $(abs(LA.dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end

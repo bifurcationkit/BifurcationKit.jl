@@ -58,7 +58,7 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
     fl = Flow(prob1::ODEProblem, alg1, prob2::ODEProblem, alg2; kwargs...)
 
 """
-@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tad, Tse, Tprob, TprobMono, Tfs, Tcb, Tδ} <: AbstractFlow
+@with_kw struct Flow{TF, Tf, Tts, Tff, Td, Tad, Tse, TR01, TR11, TR20, TR30, Tfs, Tcb, Tδ} <: AbstractFlow
     "The vector field `(x, p) -> F(x, p)` associated to a Cauchy problem. Used for the differential of the shooting problem."
     F::TF = nothing
 
@@ -80,11 +80,24 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
     "[Optional] Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
     jvpSerial::Tse = nothing
 
-    "[Internal] store the ODEProblem associated to the flow of the Cauchy problem"
-    prob::Tprob = nothing
+    "[Optional] Derivatives of the flow with respect to the parameter `lens`.
+    `R01(x, pars, t, lens, p)` returns `∂ₚφ(x, p, t)`, the derivative of the flow map with respect to the parameter `lens` evaluated at `p`, as a vector of the size of `x`.
+    It is used by the Poincaré return map and the normal forms. Optional; use `nothing` as default."
+    R01::TR01 = nothing
 
-    "[Internal] store the ODEProblem associated to the flow of the variational problem"
-    probMono::TprobMono = nothing
+    "[Optional] Derivatives of the flow with respect to the parameter `lens`.
+    `R11(x, pars, dx, t, lens, p)` returns `∂ₚ[dφ(x, p, t)⋅dx]`, the mixed derivative of the JVP with respect to the parameter, as a vector of the size of `x`.
+    It is used by the Poincaré return map and the normal forms. Optional; use `nothing` as default."
+    R11::TR11 = nothing
+
+    "[Optional] Higher-order differentials of the flow with respect to `x`.
+    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)(h1, h2)`, the second differential of the flow map applied to `h1`, `h2`"
+    R20::TR20 = nothing
+
+    "[Optional] Higher-order differentials of the flow with respect to `x`.
+    `R30(x, pars, h1, h2, h3, t)` returns `d³φ(x, p, t)(h1, h2, h3)`, the third differential of the flow map applied to `h1`, `h2`, `h3`.
+     Both are used by the normal forms. Optional; use `nothing` as default."
+    R30::TR30 = nothing
 
     "[Internal] Serial version of the flow"
     flowSerial::Tfs = nothing
@@ -104,8 +117,12 @@ getdelta(fl::Flow) = fl.delta
 
 evolve(fl::Flow, x, p, t; k...)                          = fl.flow(x, p, t; k...)
 jvp(fl::Flow, x, p, dx, t; k...)                         = fl.jvp(x, p, dx, t; k...)
+vjp(fl::Flow, x, p, dx, t; k...)                         = fl.vjp(x, p, dx, t; k...)
 evolve(fl::Flow, ::Val{:Full}, x, p, t; k...)            = fl.flowFull(x, p, t; k...)
 
 # for Poincaré Shooting
 evolve(fl::Flow, ::Val{:SerialTimeSol}, x, p, t; k...)   = fl.flowSerial(x, p, t; k...)
 evolve(fl::Flow, ::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.jvpSerial(x, p, dx, t; k...)
+
+R01(fl::Flow, x, pars, t, lens, p) = fl.R01(x, pars, t, lens, p)
+R11(fl::Flow, x, pars, dx, t, lens, p) = fl.R11(x, pars, dx, t, lens, p)

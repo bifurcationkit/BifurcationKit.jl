@@ -36,7 +36,7 @@ has_monodromy_DE(::FlowDE{Tprob, Talg, Tjac, TprobMono}) where {Tprob, Talg, Tja
 """
 $(TYPEDSIGNATURES)
 
-Creates a `Flow` variable based on a `prob::ODEProblem` and ODE solver `alg`. The vector field `F` has to be passed, this will be resolved in the future as it can be recovered from `prob`. Also, the derivative of the flow is estimated with finite differences.
+Creates a `::FlowDE <: AbstractFlow` variable based on a `prob::ODEProblem` and ODE solver `alg`. Also, the derivative of the flow is estimated with finite differences.
 """
 function Flow(prob::Union{ODEProblem, EnsembleProblem, DAEProblem}, alg; kwargs...)
     # this constructor takes into account a parameter passed to the vector field
@@ -76,7 +76,7 @@ function _flow(x, pars, tm, pb::ODEProblem, alg; kwargs...)
     return (t = sol.t[end], u = sol.u[end])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-######### methods for the flow
+# methods for the flow
 # this function takes into account a parameter passed to the vector field
 # Putting the options `save_start = false` seems to give bugs with Sundials
 function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: ODEProblem}
@@ -97,7 +97,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     return sol.u
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-######### Differential of the flow
+# Differential of the flow
 function _dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k...)
     n = length(x)
     _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
@@ -154,7 +154,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...)
     return SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: EnsembleProblem}
+function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractMatrix, pars, tm; kw...) where {T1 <: EnsembleProblem}
     # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
     _prob_func = (prob, ctx_or_i, _rest...) -> begin
         ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
@@ -186,4 +186,23 @@ end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
     _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+end
+
+function R01(fl::FlowDE, x, pars, tΣ, lens, p₀)
+    ForwardDiff.derivative(p -> evolve(fl, Val(:SerialTimeSol), x, set(pars, lens, p), tΣ).u, p₀)
+end
+
+function R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀)
+    δ = 1e-4#getdelta(disc)
+    ∂²ϕ_∂x∂p_h₁ = ( evolve(fl, Val(:SerialdFlow), x, set(pars, lens, p₀ + δ), dx, tΣ).du .- 
+                    evolve(fl, Val(:SerialdFlow), x, set(pars, lens, p₀ - δ), dx, tΣ).du) ./ (2δ)
+    return ∂²ϕ_∂x∂p_h₁
+end
+
+function R20(fl::FlowDE, x, pars, h1, h2, t)
+    ForwardDiff.derivative(ϵ -> evolve(fl, Val(:SerialdFlow), x .+ ϵ .* h2, pars, h1, t).du, 0)
+end
+
+function R30(fl::FlowDE, x, pars, h1, h2, h3, t)
+    ForwardDiff.derivative(ϵ -> R20(fl, x .+ ϵ .* h3, pars, h1, h2, t), 0)
 end
