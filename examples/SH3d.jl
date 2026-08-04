@@ -118,7 +118,7 @@ const w = rand(Nx*Ny*Nz)
 prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
     J = (x, p) -> (dx -> dF_sh(x, p, dx)),
     # J = (x, p) -> J_sh(x, p),
-    plot_solution = (ax, x, p; ax1=nothing) -> contour3dMakie!(ax, x),
+    plot_solution = (ax, x, p; ax1=nothing,iter, state) -> contour3dMakie!(ax, x),
     record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8), nw = norm(x .* w) / sqrt(length(x))),
     issymmetric = true)
 

@@ -287,7 +287,7 @@ function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix{𝒯}, x_bar::Abs
     end
 
     # jacobian of the flow
-    dflow = (_J, _x, _T) -> monodromy_matrix!(_J, psh.flow, _x, par, _T)
+    dflow = (_J, _x, _T) -> monodromy_matrix!(_J, psh.flow, _x, par, _T; callback = nothing)
 
     # initialize some temporaries
     Jtmp = zeros(𝒯, N, N)
@@ -308,8 +308,8 @@ function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix{𝒯}, x_bar::Abs
         @views dflow(Jtmp, xc[:, im1], tΣ)
         Jtmp .= Jtmp .- F * normal' * Jtmp ./ VI.inner(F, normal)
         # projection with Rm, Em
-        ForwardDiff.jacobian!(Rm, x-> R(psh.section, x, ii), zeros(N))
-        ForwardDiff.jacobian!(Em, x-> E(psh.section, x, im1), zeros(Nm1))
+        ForwardDiff.jacobian!(Rm, x -> R(psh.section, x, ii), zeros(N))
+        ForwardDiff.jacobian!(Em, x -> E(psh.section, x, im1), zeros(Nm1))
         J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (im1-1)*Nm1+1:(im1-1)*Nm1+Nm1] .= -Rm * Jtmp * Em
         if M == 1
             J[(ii-1)*Nm1+1:(ii-1)*Nm1+Nm1, (ii-1)*Nm1+1:(ii-1)*Nm1+Nm1] .+= In

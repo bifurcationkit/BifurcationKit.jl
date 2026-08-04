@@ -487,7 +487,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
     ads = abs(ds)
     dsfactor = one(𝒯)
     g(x,p) = (a01 + a02*p/2)*p + (b11*p + b20*x/2 + b30*x^2/6)*x
-    Θ = LinRange(0,2pi, 10_000_000)
+    Θ = LinRange(0, 2pi, 10_000_000)
     solutions = Vector{𝒯}[]
     θ = Θ[end-1]
     pred_val = g(ads*cos(θ), ads*sin(θ))
@@ -663,7 +663,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     verbose && println("──▶ analyse bifurcation at p = ", bifpt.param)
 
     options = getcontparams(br).newton_options
-    ls = options.linsolver
 
     if ~(bifpt.x isa 𝒯eigvec)
         @error "The type of the equilibrium $(typeof(bifpt.x)) does not match the one of the eigenvectors $(𝒯eigvec).\nYou can keep your choice by using the option `𝒯eigvec` in `get_normal_form` to specify the type of the equilibrum."

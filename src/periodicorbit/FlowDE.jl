@@ -37,11 +37,11 @@ import SciMLBase
     R11::TR11 = nothing
 
     "[Optional] Higher-order differentials of the flow with respect to `x`.
-    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)(h1, h2)`, the second differential of the flow map applied to `h1`, `h2`. Used by the normal forms."
+    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)[h1, h2]`, the second differential of the flow map applied to `h1`, `h2`. Used by the normal forms."
     R20::TR20 = nothing
 
     "[Optional] Higher-order differentials of the flow with respect to `x`.
-    `R30(x, pars, h1, h2, h3, t)` returns `d³φ(x, p, t)(h1, h2, h3)`, the third differential of the flow map applied to `h1`, `h2`, `h3`.
+    `R30(x, pars, h1, h2, h3, t)` returns `d³φ(x, p, t)[h1, h2, h3]`, the third differential of the flow map applied to `h1`, `h2`, `h3`.
     Used by the normal forms."
     R30::TR30 = nothing
 
@@ -117,8 +117,8 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # monodromy matrix
-function monodromy_matrix!(J, fl::FlowDE, x, pars, tm)
-    ForwardDiff.jacobian!(J, z -> evolve(fl, Val(:SerialTimeSol), z, pars, tm).u, x)
+function monodromy_matrix!(J, fl::FlowDE, x, pars, tm; k_de...)
+    ForwardDiff.jacobian!(J, z -> evolve(fl, Val(:SerialTimeSol), z, pars, tm; k_de...).u, x)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Differential of the flow, aka JVP

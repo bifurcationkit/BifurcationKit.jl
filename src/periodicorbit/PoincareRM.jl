@@ -193,7 +193,6 @@ function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }
     resultm[:, end] .= x₁ .- (@views um[:, 1])
     return vcat(vec(resultm), Π.Σ(um[:, end], T))
 end
-end
 
 function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ

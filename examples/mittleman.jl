@@ -113,7 +113,6 @@ kwargsC = (verbosity = 3,
     callback_newton = cb,
     finalise_solution = finSol,
     normC = norminf,
-    autodiff = false,
     )
 
 opts_br = ContinuationPar(dsmin = 0.0001, dsmax = 0.05, ds = 0.005, p_max = 3.5, p_min = 0.01, detect_bifurcation = 3, nev = 50, newton_options = (@set opt_newton.verbose = false), max_steps = 250, tol_stability = 1e-6, n_inversion = 6)
