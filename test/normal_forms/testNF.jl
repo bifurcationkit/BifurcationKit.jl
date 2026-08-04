@@ -24,7 +24,10 @@ let
 
     prob = ODEBifProblem(Fbp, [0., 0], (μ = -0.2, ν = 0, x2 = 1.12, x3 = 0.234, γ = 4.4323), (@optic _.μ); J = Jbp)
     br = continuation(prob, PALC(), opts_br; normC = norminf)
-    BK.plot(br)
+    try
+        plot(br)
+    catch
+    end
 
     @test br.specialpoint[1].interval[1] < 0
     @test br.specialpoint[1].interval[2] > 0

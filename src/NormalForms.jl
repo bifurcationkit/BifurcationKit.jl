@@ -737,7 +737,8 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     as = (ζ★s[1], ζ★s[2])
     bs = (ζs[1], ζs[2])
     cs = zeros(𝒯, 2, 2)
-    # bls(z) = (ls(L, z)[1], 0, true,1)
+    # ls = options.linsolver
+    # bls(z) = (ls(L, z)[1], 0, true,1) 
     bls(z) = solve_bls_block(bls_block, L, as, bs, cs, z, zeros(𝒯, 2))
 
     # eigenvector eltype
@@ -885,7 +886,6 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
                     normN = norminf,
                     perturb = identity,
                     optn::NewtonPar = NewtonPar(;max_iterations = maxiter, verbose)
-                    
                     ) where 𝒯
 
     # kernel dimension
