@@ -34,7 +34,7 @@ end
 
 function (Π::PoincaréMap)(xₛ, par)
     solΠ = _solve(Π, xₛ, par)
-    _extend(Π, solΠ, par)
+    _extend(Π, solΠ, par, xₛ)
 end
 
 """
@@ -79,38 +79,38 @@ function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, 
     T⁰ = getperiod(sh, Π.po)  # period of the reference periodic orbit
     tₘ = _extract_period(x)   # estimate of the last bit for the return time
 
-    poc = get_time_slices(sh, Π.po)
     # extract the orbit guess and reshape it into a matrix as it is more convenient to handle
+    po_m = get_time_slices(sh, Π.po)
     # unknowns are po₁, po₂, ..., poₘ, period
-    @assert size(poc) == (N, M+1)
+    @assert size(po_m) == (N, M+1)
 
-    xc = get_time_slices(Π, x)
-    # unknowns are x₂,...,xₘ,tΣ
+    xm = get_time_slices(Π, x)
+    # unknowns are x₂, ..., xₘ, tΣ
 
     # variable to hold the computed result
     out = similar(x, typeof(x[1] * x₁[1] * _get(par, getlens(sh))))
-    outc = get_time_slices(Π, out)
+    outm = get_time_slices(Π, out)
 
     if M == 0
         𝒯 = typeof(x[1] * x₁[1])
         # this type promotion is for ForwardDiff
-        out[1] = Π.Σ(evolve(sh.flow, 𝒯.(x₁), par, tₘ * T⁰).u, T⁰)
+        out[1] = Π.Σ(_evolve_flow_prm(Π, 𝒯.(x₁), par, tₘ * T⁰).u, T⁰)
         return out
     end
 
     if ~isparallel(sh)
-        outc[:, 1] .= evolve(sh.flow, x₁, par, sh.ds[1] * T⁰).u .- xc[:, 1]
+        outm[:, 1] .= _evolve_flow_prm(Π, x₁, par, sh.ds[1] * T⁰).u .- xm[:, 1]
         for ii in 1:M-1
-            outc[:, ii+1] .= evolve(sh.flow, xc[:, ii], par, sh.ds[ii] * T⁰).u .- xc[:, ii+1]
+            outm[:, ii+1] .= _evolve_flow_prm(Π, xm[:, ii], par, sh.ds[ii] * T⁰).u .- xm[:, ii+1]
         end
-        out[end] = Π.Σ(evolve(sh.flow, xc[:, M], par, tₘ * T⁰).u, T⁰)
+        out[end] = Π.Σ(_evolve_flow_prm(Π, xm[:, M], par, tₘ * T⁰).u, T⁰)
     else
         # call jacobian of the flow
-        solOde = evolve(sh.flow, hcat(x₁, xc), par, sh.ds .* T⁰)
+        solOde = _evolve_flow_prm(Π, hcat(x₁, xm), par, sh.ds .* T⁰)
         for ii in 1:M
-            outc[:, ii] .= @views solOde[ii][2] .- xc[:, ii]
+            outm[:, ii] .= @views solOde[ii][2] .- xm[:, ii]
         end
-        out[end] = Π.Σ(evolve(sh.flow, xc[:, M], par, tₘ * T⁰)[1][2], T⁰)
+        out[end] = Π.Σ(_evolve_flow_prm(Π, xm[:, M], par, tₘ * T⁰)[1][2], T⁰)
     end
     out
 end
@@ -142,45 +142,64 @@ function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, solΠ, par)
+"""
+    _extend(Π::PoincaréMap{<:PeriodicOrbitFunctionalSh}, solΠ, par, xₛ) -> (u, t)
+
+Extract the return point and return time from the Newton solution `solΠ` of the Poincaré return map. It returns the flow `xₛ` stopped at the section.
+
+- For simple shooting (`sh.M == 1`), the return point is obtained by evolving `xₛ` for `tₘ * T⁰`.
+- For multiple shooting (`sh.M > 1`), the return point is obtained by evolving the last intermediate
+  mesh point of `solΠ` for `tₘ * T⁰`.
+- The return time is `T⁰ + (tₘ - sh.ds[end]) * T⁰`.
+"""
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, solΠ, par, xₛ)
     sh = get_discretization(Π.probpo)
-    # we get the return time
     T⁰ = getperiod(sh, Π.po)
     tₘ = _extract_period(solΠ)
-    tᵣ = getperiod(sh, Π.po) + (tₘ - sh.ds[end]) * T⁰
-    # we get the return point
+    tᵣ = T⁰ + (tₘ - sh.ds[end]) * T⁰
     M = get_mesh_size(sh)
     if M == 1
-        xs = copy(BifurcationKit.get_time_slices(sh, Π.po)[:, 1])
-        xᵣ = evolve(sh.flow, xs, par, tₘ * T⁰).u
+        # xs = copy(get_time_slices(sh, Π.po)[:, 1])
+        # xᵣ = _evolve_flow_prm(sh, xs, par, tₘ * T⁰).u
+        xᵣ = _evolve_flow_prm(Π, xₛ, par, tₘ * T⁰).u
     elseif ~isparallel(sh)
-        xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰).u
+        xᵣ = _evolve_flow_prm(Π, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰).u
     else
-        xᵣ = evolve(sh.flow, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰)[1].u
+        xᵣ = _evolve_flow_prm(Π, get_time_slices(Π, solΠ)[:, end], par, tₘ * T⁰)[1].u
     end
     return (u = xᵣ, t = tᵣ)
 end
 
-@views function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, u, par, x₁)
-    # collocation problem
-    coll = get_discretization(Π.probpo)
-    N,_,_ = size(coll)
+"""
+$(TYPEDSIGNATURES)
 
-    uc = get_time_slices(coll, u)
-    T = getperiod(coll, u, nothing)
+Evaluate the Poincaré return map functional for a collocation-based periodic orbit discretization.
+The unknown `u = (u₁, …, u_{m⋅Ntst+1}, T)` contains the time slices `uᵢ ∈ ℝᴺ` of the orbit and the return time `T` as its last entry. Given a starting point `x₁` on the section `Σ`, the functional returns the residual of the system:
+
+- the collocation residual of the vector field on the interior mesh points (computed with `po_residual_bare!`), so the orbit satisfies `ẋ = F(x)`;
+- the section condition `x₁ - u[:, 1] = 0` at the first time slice, so the orbit starts at `x₁`;
+- the section condition `Σ(u[end-N:end-1], T) = 0` at the last time slice, so the return point lies on the hyperplane `Σ`.
+
+The periodicity condition of the bare collocation problem is replaced by these section conditions.
+"""
+function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, u::AbstractVector, par, x₁)
+    coll = get_discretization(Π.probpo)
+    um = get_time_slices(coll, u)
+    T = getperiod(coll, u, nothing) # we know that it hits the section after time T
     𝒯 = promote_type(VI.scalartype(u), VI.scalartype(x₁))
-    result = 𝒯.(u)
-    resultc = get_time_slices(coll, result)
-    po_residual_bare!(coll, resultc, uc, T, get_Ls(coll.mesh_cache), par)
-    resultc[:, end] .= x₁ .- uc[:, 1]
-    return vcat(vec(resultc), Π.Σ(u[end-N:end-1], T))
+    result = similar(u, 𝒯)
+    resultm = get_time_slices(coll, result)
+    po_residual_bare!(coll, resultm, um, T, get_Ls(coll.mesh_cache), par)
+    resultm[:, end] .= x₁ .- (@views um[:, 1])
+    return vcat(vec(resultm), Π.Σ(um[:, end], T))
+end
 end
 
 function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this function computes the poincare return map
     # we construct the initial guess
-    x₀ = Π.po
+    x₀ = _copy(Π.po)
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
@@ -190,7 +209,15 @@ function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     return solΠ.u
 end
 
-function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
+"""
+    _extend(Π::PoincaréMap{<:PeriodicOrbitFunctionalColl}, solΠ, par, xₛ) -> (u, t)
+
+Extract the return point and return time from the Newton solution `solΠ` of the Poincaré return map computed by collocation.
+
+- The return point is the last time slice of the orbit: `solΠ[end-N:end-1]` where `N` is the state space dimension.
+- The return time is the last entry `tₘ = solΠ[end]` of the solution, which is the period of the collocation solution (the time needed to go from `xₛ` back to the section `Σ`).
+"""
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par, xₛ)
     coll = get_discretization(Π.probpo)
     N, _, _ = size(coll)
     T⁰ = getperiod(coll, Π.po)
@@ -199,15 +226,19 @@ function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par)
     return (u = solΠ[end-N:end-1], t = tᵣ)
 end
 
+_evolve_flow_prm(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, args...) = evolve(get_discretization(Π.probpo).flow, args...)
+_R01_evolve_flow_prm(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x, pars, t, lens, p₀)      = R01(get_discretization(Π.probpo).flow, x, pars, t, lens, p₀)
+_R11_evolve_flow_prm(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x, pars, dx, t, lens, p₀)  = R11(get_discretization(Π.probpo).flow, x, pars, dx, t, lens, p₀)
+_R20_evolve_flow_prm(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x, pars, dx1, dx2, t)      = R20(get_discretization(Π.probpo).flow, x, pars, dx1, dx2, t)
+_R30_evolve_flow_prm(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x, pars, dx1, dx2, dx3, t) = R30(get_discretization(Π.probpo).flow, x, pars, dx1, dx2, dx3, t)
 # JVP of ::PoincaréMap
-function d1F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h)
+function d1F(Π::PoincaréMap, x, pars, h)
     @assert length(x) == length(h)
-    sh = get_discretization(Π.probpo)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-
     Πx, tΣ = Π(x, pars)
-    Fx = vector_field(sh.flow, Πx, pars)
-    y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
+    Fx = _vector_field_prm(disc, Πx, pars)
+    y = _evolve_flow_prm(Π, Val(:SerialdFlow), x, pars, h, tΣ).du
     # differential of return time
     ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
     out = @. y + ∂th * Fx
@@ -221,16 +252,16 @@ Derivative ``\\frac{\\partial}{\\partial p}`` of the Poincaré return map ``\\Pi
 
 Returns `(∂Π/∂p, ∂t/∂p)`.
 """
-function R01(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars)
-    sh = get_discretization(Π.probpo)
+function R01(Π::PoincaréMap, x, pars)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-    lens = getlens(sh)
+    lens = getlens(disc)
     p₀ = _get(pars, lens)
 
     Πx, tΣ = Π(x, pars)
-    Fx₀ = vector_field(sh.flow, Πx, pars)
+    Fx₀ = _vector_field_prm(disc, Πx, pars)
 
-    ∂ϕ_∂p = ForwardDiff.derivative(p -> evolve(sh.flow, x, set(pars, lens, p), tΣ).u, p₀) # TODO there is an issue with parellel = true
+    ∂ϕ_∂p = _R01_evolve_flow_prm(Π, x, pars, tΣ, lens, p₀)
     ∂t_∂p = -LA.dot(normal, ∂ϕ_∂p) / LA.dot(normal, Fx₀)
     ∂Π_∂p = @. ∂ϕ_∂p + Fx₀ * ∂t_∂p
     return (u = ∂Π_∂p, t = ∂t_∂p)
@@ -242,34 +273,33 @@ $(TYPEDSIGNATURES)
 Mixed partial derivative ``\\frac{\\partial}{\\partial p} [\\frac{\\partial \\Pi}{\\partial x} \\cdot h_1]`` of the Poincaré return map.
 """
 function R11(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁)
-    sh = get_discretization(Π.probpo)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-    lens = getlens(sh)
+    lens = getlens(disc)
     p₀ = _get(pars, lens)
 
     Πx, tΣ = Π(x, pars)
-    Fx₀ = vector_field(sh.flow, Πx, pars)
-    VF(z) = vector_field(sh.flow, z, pars)
+    Fx₀ = _vector_field_prm(disc, Πx, pars)
+    VF(z) = _vector_field_prm(disc, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     # ∂Π/∂p and ∂t/∂p
-    ∂ϕ_∂p = ForwardDiff.derivative(p -> evolve(sh.flow, x, set(pars, lens, p), tΣ).u, p₀)
-    ∂t_∂p = -LA.dot(normal, ∂ϕ_∂p) / LA.dot(normal, Fx₀)
     r01 = R01(Π, x, pars)
     ∂Π_∂p = r01.u; ∂t_∂p = r01.t
 
     # d1F at the base point
-    y₀ = evolve(sh.flow, Val(:SerialdFlow), x, pars, h₁, tΣ).du
+    y₀ = _evolve_flow_prm(Π, Val(:SerialdFlow), x, pars, h₁, tΣ).du
     ∂th₀ = -LA.dot(normal, y₀) / LA.dot(normal, Fx₀)
 
     # ∂y/∂p = ∂²ϕ/∂x∂p·h₁ + dvf(Πx, y₀) * ∂t/∂p
-    ∂²ϕ_∂x∂p_h₁ = ForwardDiff.derivative(p -> evolve(sh.flow, Val(:SerialdFlow), x, set(pars, lens, p), h₁, tΣ).du, p₀)
+    ∂²ϕ_∂x∂p_h₁ = _R11_evolve_flow_prm(Π, x, pars, h₁, tΣ, lens, p₀)
     ∂y_∂p = ∂²ϕ_∂x∂p_h₁ .+ dvf(Πx, y₀) .* ∂t_∂p
 
     # ∂Fx/∂p = dvf(Πx, ∂Π_∂p) + ∂VF/∂p
-    # ∂VF_∂p = ForwardDiff.derivative(p -> vector_field(sh.flow, Πx, set(pars, lens, p)), p₀)
-    ∂VF_∂p = (vector_field(sh.flow, Πx, set(pars, lens, p₀ + 1e-8)) .- 
-              vector_field(sh.flow, Πx, set(pars, lens, p₀ - 1e-8))) ./ (2e-8)
+    # ∂VF_∂p = ForwardDiff.derivative(p -> _vector_field_prm(disc, Πx, set(pars, lens, p)), p₀)
+    δ = getdelta(disc)
+    ∂VF_∂p = (_vector_field_prm(disc, Πx, set(pars, lens, p₀ + δ)) .- 
+              _vector_field_prm(disc, Πx, set(pars, lens, p₀ - δ))) ./ (2δ)
     ∂Fx_∂p = dvf(Πx, ∂Π_∂p) .+ ∂VF_∂p
 
     # ∂(∂th)/∂p = -(n·∂y/∂p * n·Fx₀ - n·y₀ * n·∂Fx_∂p) / (n·Fx₀)²
@@ -285,19 +315,19 @@ $(TYPEDSIGNATURES)
 Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
 """
 function jacobian(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
-    sh = get_discretization(Π.probpo)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
 
     Πx, tΣ = Π(x, pars)
-    Fx = vector_field(sh.flow, Πx, pars)
+    Fx = _vector_field_prm(disc, Πx, pars)
     # monodromy matrix
     N = length(x)
-    𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(sh))))
+    𝒯p = promote_type(𝒯, typeof(_get(pars, getlens(disc))))
     Mono = zeros(𝒯p, N, N)
     h = zeros(𝒯p, N)
     for i in eachindex(h)
         h[i] += 1
-        y = evolve(sh.flow, Val(:SerialdFlow), x, pars, h, tΣ).du
+        y = _evolve_flow_prm(Π, Val(:SerialdFlow), x, pars, h, tΣ).du
         # differential of return time
         ∂th = - LA.dot(normal, y) / LA.dot(normal, Fx)
         out = @. y + ∂th * Fx
@@ -309,25 +339,24 @@ end
 
 function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂)
     @assert length(x) == length(h₁) == length(h₂)
-    sh = get_discretization(Π.probpo)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
-    VF(z) = vector_field(sh.flow, z, pars)
+    VF(z) = _vector_field_prm(disc, z, pars)
     dvf(z, h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
 
     Πx, tΣ = Π(x, pars)
-    Fx = vector_field(sh.flow, Πx, pars)
+    Fx = _vector_field_prm(disc, Πx, pars)
     ∂Πh2, ∂th2 = d1F(Π, x, pars, h₂) # not good, we recompute a lot
 
-    ∂ϕ(z,h) = evolve(sh.flow, Val(:SerialdFlow), z, pars, h, tΣ).du
-    ∂2ϕ(z,h1,h2) = ForwardDiff.derivative(t -> ∂ϕ(z .+ t .* h2, h1), 0)
+    ∂ϕ(z,h) = _evolve_flow_prm(Π, Val(:SerialdFlow), z, pars, h, tΣ).du
+    ∂2ϕ(z,h1,h2) = _R20_evolve_flow_prm(Π, z, pars, h1, h2, tΣ)
 
     ∂ϕh1 = ∂ϕ(x,h₁)
     ∂2ϕh12 = ∂2ϕ(x,h₁,h₂)
 
     # differentials of return times
     ∂th1 = -LA.dot(normal, ∂ϕh1) / LA.dot(normal, Fx)
-    y = dvf(Πx, ∂Πh2) .* ∂th1 .+
-        ∂2ϕh12 .+ dvf(Πx, ∂ϕh1) .* ∂th2
+    y = dvf(Πx, ∂Πh2) .* ∂th1 .+ ∂2ϕh12 .+ dvf(Πx, ∂ϕh1) .* ∂th2
     ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
@@ -338,17 +367,17 @@ end
 
 function d3F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h₂, h₃)
     @assert length(x) == length(h₁) == length(h₂) == length(h₃)
-    sh = get_discretization(Π.probpo)
+    disc = get_discretization(Π.probpo)
     normal = Π.Σ.normal
     Πx, tΣ = Π(x, pars)
 
-    VF(z) = vector_field(sh.flow, z, pars)
+    VF(z) = _vector_field_prm(disc, z, pars)
     dvf(z,h) = ForwardDiff.derivative(t -> VF(z .+ t .* h), 0)
     d2vf(z,h1,h2) = ForwardDiff.derivative(t -> dvf(z .+ t .* h2, h1), 0)
 
-    ∂ϕ(z,h) = evolve(sh.flow, Val(:SerialdFlow), z, pars, h, tΣ).du
-    ∂2ϕ(z,h1,h2) = ForwardDiff.derivative(t -> ∂ϕ(z .+ t .* h2, h1), 0)
-    ∂3ϕ(z,h1,h2,h3) = ForwardDiff.derivative(t -> ∂2ϕ( z .+ t .* h3, h1, h2), 0)
+    ∂ϕ(z,h) = _evolve_flow_prm(Π, Val(:SerialdFlow), z, pars, h, tΣ).du
+    ∂2ϕ(z,h1,h2) = _R20_evolve_flow_prm(Π, z, pars, h1, h2, tΣ)
+    ∂3ϕ(z,h1,h2,h3) = _R30_evolve_flow_prm(Π, z, pars, h1, h2, h3, tΣ)
 
     _, ∂th1 = d1F(Π, x, pars, h₁)
     ∂Πh2, ∂th2 = d1F(Π, x, pars, h₂)
