@@ -307,7 +307,8 @@ function plot_branch_cont(contres::ContResult,
                             state::AbstractContinuationState, 
                             iter::ContIterable)
     if iter.plot && mod(state.step, getcontparams(iter).plot_every_step) == 0
-        return plot_branch_cont(contres, 
+        return plot_branch_cont(get_plot_backend(),
+                                contres, 
                                 state, 
                                 iter, 
                                 plot_solution(iter))
