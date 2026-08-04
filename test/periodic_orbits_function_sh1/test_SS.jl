@@ -33,7 +33,7 @@ let
     section(x::BorderedArray, T, dx, dT) = section(vec(x.u[:,:]), T, vec(dx.u[:,:]), dT)
     par = nothing
 
-    fl = BK.Flow(vf, flow, dflow); @reset fl.flowFull = flow
+    fl = BK.Flow(;F = vf, flow, jvp = dflow, flowFull = flow)
     BK.evolve(fl, Val(:Full), rand(N), par, 0.)
 
     _sh = BK.Shooting(M = M, flow = fl,
@@ -85,7 +85,7 @@ let
     flow(x, p, t) = (u = x ./ (1 .- t .* x), t = t)
     dflow(x, p, dx, t) = (flow(x, p, t)..., du = dx ./ (1 .- t .* x).^2)
 
-    fl = BK.Flow(vf, flow, dflow)
+    fl = BK.Flow(;F = vf, flow, jvp = dflow)
 
     _sh = BK.Shooting(M = M, flow = fl,
                 ds = LinRange(0,1,M+1) |> diff ,

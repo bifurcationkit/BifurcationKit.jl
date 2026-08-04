@@ -85,7 +85,7 @@ function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = conv
         apply!(tmp, sh, dudiag, sh.l1, /)
         return (-1) .* du .+ tmp
     end
-    res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 6, issymmetric = true, krylovdim = 50, atol = 1e-12)
+    res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 12, issymmetric = true, krylovdim = 50, atol = convert(T, 1e-12))
     return res, true, info.numops
 end
 

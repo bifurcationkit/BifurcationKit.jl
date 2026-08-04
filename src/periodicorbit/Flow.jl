@@ -8,25 +8,25 @@ function getdelta(::AbstractFlow) end
 
 # these functions are used in the Standard Shooting method
 # the function implements the flow (or semigroup) `(x, p, t) -> flow(x, p, t)` associated to an autonomous Cauchy problem. Only the last time point must be returned in the form Named Tuple `(u = ..., t = t)`. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, x, par, Inf)`.
-function evolve(::AbstractFlow, x, par, δt; k...) end
+function evolve(::AbstractFlow, x, par, t; k...) end
 
 # The differential `dflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> jvp(x, p, dx, t)`. One important thing is that we require `jvp(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = jvp(x, p, dx, t))`, the last component being the value of the derivative of the flow.
-function jvp(::AbstractFlow, x, par, dx, δt; k...) end
+function jvp(::AbstractFlow, x, par, dx, t; k...) end
 
 # The adjoint differential `vjp` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> vjp(x, p, dx, t)`. One important thing is that we require `vjp(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = vjp(x, p, dx, t))`, the last component being the value of the derivative of the flow.
-function vjp(::AbstractFlow, x, par, dx, δt; k...) end
+function vjp(::AbstractFlow, x, par, dx, t; k...) end
 
 # [Optional] The function implements the flow (or semigroup) associated to an autonomous Cauchy problem `(x, p, t) -> flow(x, p, t)`. The whole solution on the time interval [0,t] must be returned. It is not strictly necessary to provide this, it is mainly used for plotting on the user side. In the case of Poincaré Shooting, one must be able to call the flow like `evolve(fl, Val(:Full), x, par, Inf)`.
-function evolve(::AbstractFlow, ::Val{:Full}, x, par, δt; k...) end
+function evolve(::AbstractFlow, ::Val{:Full}, x, par, t; k...) end
 
 # [Optional / Internal] Serial version of the flow. Used for Matrix based jacobian (Shooting and Poincaré Shooting) and diff_poincare_map. Must return a Named Tuple `(u = ..., t = t)`
-function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, δt; k...) end
+function evolve(fl::AbstractFlow, ::Val{:SerialTimeSol}, x, par, t; k...) end
 
 # [Optional] Flow which returns the tuple `(t, u(t))`. Optional, mainly used for plotting on the user side.
-function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, δt; k...) end
+function evolve(::AbstractFlow, ::Val{:TimeSol}, x, par, t; k...) end
 
 # [Optional] Serial version of `dflow`. Used internally for parallel multiple shooting. Returns a named Tuple `(u = ..., du = ..., t = t)`
-function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, tΣ; kwargs...) end
+function evolve(::AbstractFlow, ::Val{:SerialdFlow}, x, par, dx, t; kwargs...) end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Structures related to computing ODE/PDE Flows
@@ -77,26 +77,26 @@ Finally, you can pass two `ODEProblem` where the second one is used to compute t
     "The adjoint differential `vjpflow` of the flow *w.r.t.* `x`, `(x, p, dx, t) -> vjpflow(x, p, dx, t)`. One important thing is that we require `vjpflow(x, p, dx, t)` to return a Named Tuple: `(t = t, u = flow(x, p, t), du = vjpflow(x, p, dx, t))`, the last component being the value of the derivative of the flow."
     vjp::Tad = nothing
 
-    "[Optional] Serial version of dflow. Used internally when using parallel multiple shooting. Please use `nothing` as default."
+    "[Optional] Serial version of dflow. Used internally by parallel multiple shooting. Please use `nothing` as default."
     jvpSerial::Tse = nothing
 
     "[Optional] Derivatives of the flow with respect to the parameter `lens`.
     `R01(x, pars, t, lens, p)` returns `∂ₚφ(x, p, t)`, the derivative of the flow map with respect to the parameter `lens` evaluated at `p`, as a vector of the size of `x`.
-    It is used by the Poincaré return map and the normal forms. Optional; use `nothing` as default."
+    It is used by the Poincaré return map and the normal forms."
     R01::TR01 = nothing
 
     "[Optional] Derivatives of the flow with respect to the parameter `lens`.
     `R11(x, pars, dx, t, lens, p)` returns `∂ₚ[dφ(x, p, t)⋅dx]`, the mixed derivative of the JVP with respect to the parameter, as a vector of the size of `x`.
-    It is used by the Poincaré return map and the normal forms. Optional; use `nothing` as default."
+    It is used by the Poincaré return map and the normal forms."
     R11::TR11 = nothing
 
     "[Optional] Higher-order differentials of the flow with respect to `x`.
-    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)(h1, h2)`, the second differential of the flow map applied to `h1`, `h2`"
+    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)(h1, h2)`, the second differential of the flow map applied to `h1`, `h2`. Used by the normal forms."
     R20::TR20 = nothing
 
     "[Optional] Higher-order differentials of the flow with respect to `x`.
     `R30(x, pars, h1, h2, h3, t)` returns `d³φ(x, p, t)(h1, h2, h3)`, the third differential of the flow map applied to `h1`, `h2`, `h3`.
-     Both are used by the normal forms. Optional; use `nothing` as default."
+    Used by the normal forms."
     R30::TR30 = nothing
 
     "[Internal] Serial version of the flow"

@@ -83,7 +83,7 @@ sn_codim2_test = continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T),
 @test sn_codim2_test.specialpoint[3].param ≈ -0.00045281 rtol = 1e-5
 @test sn_codim2_test.specialpoint[4].param ≈ -0.02135893 rtol = 1e-5
 
-@test sn_codim2_test.eig[1].eigenvecs != nothing
+@test sn_codim2_test.eig[1].eigenvecs !== nothing
 
 hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, max_steps = 100) ;
     normC = norminf,
@@ -96,7 +96,7 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
 
 @test hp_codim2_test.specialpoint[2].param ≈ +0.02627393 rtol = 1e-5
 @test hp_codim2_test.specialpoint[3].param ≈ -0.02627430 atol = 1e-8
-@test hp_codim2_test.eig[1].eigenvecs != nothing
+@test hp_codim2_test.eig[1].eigenvecs !== nothing
 ####################################################################################################
 """
 This function test if the eigenvalues are well computed during a branch of Hopf/Fold.
@@ -173,7 +173,7 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     @test sn_codim2.specialpoint[3].type == :zh
     @test sn_codim2.specialpoint[4].type == :bt
 
-    @test sn_codim2.eig[1].eigenvecs != nothing
+    @test sn_codim2.eig[1].eigenvecs !== nothing
 
     btpt = get_normal_form(sn_codim2, 1; nev = 4, verbose = true)
     @test norm(eigvals(BK.jacobian(br.prob, btpt.x0, btpt.params))[1:2], Inf) < 0.02

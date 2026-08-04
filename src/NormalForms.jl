@@ -499,7 +499,6 @@ function _predictor(bp::AbstractSimpleBranchPoint,
         end
         pred_val = val
     end
-    @assert length(solutions) == 4 #!! huh
     dotps = [VI.inner(τ.u, bp.ζ) * sol[1] + sol[2] * τ.p for sol in solutions]
     I = argmin(abs.(dotps))
     pnew = bp.p + solutions[I][2]
@@ -747,7 +746,6 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
     # coefficients of p
     ∂gᵢ∂p = Vector{𝒯vec}(undef, N)
-    δ = getdelta(prob)
     r01 = R01(prob, x0, parbif)
     r02 = R02(prob, x0, parbif)
    
@@ -972,7 +970,6 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
                             L = nothing)
-    δ = getdelta(prob)
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
     cζ = conj(pt.ζ)
@@ -984,7 +981,6 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     end
 
     # we use ---Maps to be able to call on complex valued arrays
-    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1))
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) ./2)
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) ./6 )
     r01 = R01(prob, x0, parbif)
@@ -1077,7 +1073,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
-    𝒯 = VI.scalartype(x0)
     eigRes = br.eig
 
     # eigenvalue
@@ -1217,7 +1212,7 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
                     2 .* real.(A(t)^2 .* Ψ200)
     end
 
-    return (
+    return (;
             orbit = orbit ,
             Ψ001 = Ψ001,
             amp = 2amp,
@@ -1264,8 +1259,10 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     r11 = R11(prob, x0, parbif, ζ)
 
     # (I − L)⋅Ψ01 = R01
-    # no need for bordered linear solver
-    Ψ01, cv, it = ls(L, -E(r01); a₀ = -1)
+    # no need for bordered linear solver since L has eigenvalue -1 (I-L is invertible) 
+    # and 0 (for PRM; 1 is not a VP of dΠ)
+    # Also, (I − L)⋅Ψ01 = E(R01) makes the PD normal form phase dependent it seems, so let's not do it.
+    Ψ01, cv, it = ls(L, -r01; a₀ = -1)
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
     a = LA.dot(ζ★, r11 .+ R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
@@ -1327,7 +1324,6 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                             ls::AbstractLinearSolver;
                             detailed = false, # TODO use Val{...}
                             verbose::Bool = false)
-    δ = getdelta(prob)
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
     cζ = conj.(pt.ζ)
@@ -1336,7 +1332,6 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     # we use ---Maps to be able to call on complex valued arrays
-    R1 = p -> LinearMap(dx1 -> dF(prob, x0, p, dx1)) # this is R11
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
     R3 = TrilinearMap((dx1, dx2, dx3) -> d3F(prob, x0, parbif, dx1, dx2, dx3) )
 
@@ -1495,7 +1490,6 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     parbif = bp.params
     ζ = bp.ζ |> real
     ζ★ = bp.ζ★ |> real
-    δ = getdelta(prob)
 
     abs(LA.dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier 1 not normalized, dot = $(LA.dot(ζ, ζ))"
     abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier 1 not normalized, dot = $(LA.dot(ζ★, ζ))"
@@ -1517,7 +1511,6 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     #         x + a⋅(p - pbif) + x⋅(b1⋅(p - pbif) + b2⋅x/2 + b3⋅x^2/6)
 
     # coefficient of p
-    δ = getdelta(prob)
     r01 = R01(prob, x0, parbif)
     a01 = LA.dot(r01, ζ★)
 

@@ -1,7 +1,7 @@
 using SciMLBase: remake, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace as isinplace_sciml
 import SciMLBase
 
-@with_kw_noshow struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, Tδ} <: AbstractFlow
+@with_kw_noshow struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, TR20, TR30, Tδ} <: AbstractFlow
     "Store the ODEProblem associated to the flow of the Cauchy problem"
     odeprob::Tprob
 
@@ -10,6 +10,8 @@ import SciMLBase
 
     "Store the ODEProblem associated to the flow of the variational problem"
     odeprob_mono::TprobMono = nothing
+
+    "ODE time stepper passed to DifferentialEquations.solve"
     alg_mono::TalgMono = nothing
 
     "Keyword arguments passed to DifferentialEquations.solve"
@@ -18,14 +20,30 @@ import SciMLBase
     "Store possible callback"
     callback::Tcb
 
-    "How the monodromy is computed"
+    "How the monodromy (matrix) is computed"
     jacobian::Tjac = nothing
 
     "adjoint of the monodromy (matrix-free)."
     vjp::Tvjp = nothing
 
+    "[Optional] Derivatives of the flow with respect to the parameter `lens`.
+    `R01(x, pars, t, lens, p)` returns `∂ₚφ(x, p, t)`, the derivative of the flow map with respect to the parameter `lens` evaluated at `p`, as a vector of the size of `x`.
+    It is used by the Poincaré return map and the normal forms."
     R01::TR01 = nothing
+
+    "[Optional] Derivatives of the flow with respect to the parameter `lens`.
+    `R11(x, pars, dx, t, lens, p)` returns `∂ₚ[dφ(x, p, t)⋅dx]`, the mixed derivative of the JVP with respect to the parameter, as a vector of the size of `x`.
+    It is used by the Poincaré return map and the normal forms."
     R11::TR11 = nothing
+
+    "[Optional] Higher-order differentials of the flow with respect to `x`.
+    `R20(x, pars, h1, h2, t)` returns `d²φ(x, p, t)(h1, h2)`, the second differential of the flow map applied to `h1`, `h2`. Used by the normal forms."
+    R20::TR20 = nothing
+
+    "[Optional] Higher-order differentials of the flow with respect to `x`.
+    `R30(x, pars, h1, h2, h3, t)` returns `d³φ(x, p, t)(h1, h2, h3)`, the third differential of the flow map applied to `h1`, `h2`, `h3`.
+    Used by the normal forms."
+    R30::TR30 = nothing
 
     "delta used in finite differences w.r.t. to parameter. Used for example in PALC."
     delta::Tδ
@@ -98,18 +116,23 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     return sol.u
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Differential of the flow
-function _dflowMonoSerial(x::AbstractVector, pars, dx, tm, pb::ODEProblem, alg; k...)
+# monodromy matrix
+function monodromy_matrix!(J, fl::FlowDE, x, pars, tm)
+    ForwardDiff.jacobian!(J, z -> evolve(fl, Val(:SerialTimeSol), z, pars, tm).u, x)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Differential of the flow, aka JVP
+function _dflow_jvp_serial(x::AbstractVector, pars, dx, tm, pb_monodromy_jvp::ODEProblem, alg; k...)
     n = length(x)
-    _prob = remake(pb; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
+    _prob = remake(pb_monodromy_jvp; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
     # the use of concrete_solve makes it compatible with Zygote
     sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...).u[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
 end
 
-function _dflow_finitediff_Serial(x, pars, dx, tm, pb::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
-    sol1 = _flow(x .+ δ .* dx, pars, tm, pb, alg; kwargs...).u
-    sol2 = _flow(x           , pars, tm, pb, alg; kwargs...).u
+function _dflow_finitediff_serial(x, pars, dx, tm, ode_prob::ODEProblem, alg; δ = convert(VI.scalartype(x), 1e-9), kwargs...)
+    sol1 = _flow(x .+ δ .* dx, pars, tm, ode_prob, alg; kwargs...).u
+    sol2 = _flow(x           , pars, tm, ode_prob, alg; kwargs...).u
     return (t = tm, u = sol2, du = (sol1 .- sol2) ./ δ)
 end
 
@@ -117,7 +140,7 @@ end
 # differential of the flow when a problem is passed for the Monodromy
 # default behavior (the FD case is handled by dispatch)
 function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: ODEProblem}
-    _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
+    _dflow_jvp_serial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
 function vjp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <: ODEProblem}
@@ -140,7 +163,7 @@ end
 # when no ODEProblem is passed for the monodromy, we use finite differences
 function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
     if T1 <: ODEProblem
-        return _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+        return _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else
         sol1 = evolve(fl, x .+ δ .* dx, pars, tm; kw...)
         sol2 = evolve(fl, x           , pars, tm; kw...)
@@ -175,26 +198,27 @@ end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,T3}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem, T2, Tjac, T3}
     if T3 === Nothing
-        return _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+        return _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
     else # monodromy based on stacked system [vf, jvp(vf)]
-        return _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
+        return _dflow_jvp_serial(x, pars, dx, tm, fl.odeprob_mono, fl.alg_mono; fl.kwargsDE..., kw...)
     end
 end
 
 function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; kw...) where {T1 <: EnsembleProblem}
-    _dflowMonoSerial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
+    _dflow_jvp_serial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
 function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
-    _dflow_finitediff_Serial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+    _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end
 
 function R01(fl::FlowDE, x, pars, tΣ, lens, p₀)
     ForwardDiff.derivative(p -> evolve(fl, Val(:SerialTimeSol), x, set(pars, lens, p), tΣ).u, p₀)
 end
 
-function R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀)
-    δ = 1e-4#getdelta(disc)
+function R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀::𝒯) where {𝒯}
+    # If we were to use ForwardDiff, it would return a section R11
+    δ = convert(𝒯, 1e-4)
     ∂²ϕ_∂x∂p_h₁ = ( evolve(fl, Val(:SerialdFlow), x, set(pars, lens, p₀ + δ), dx, tΣ).du .- 
                     evolve(fl, Val(:SerialdFlow), x, set(pars, lens, p₀ - δ), dx, tΣ).du) ./ (2δ)
     return ∂²ϕ_∂x∂p_h₁

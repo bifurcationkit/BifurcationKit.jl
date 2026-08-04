@@ -53,11 +53,11 @@ Note that you can generate this guess from a function solution using `generate_s
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
     flow::Tf = Flow()                # should be a Flow
     "`sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M == 1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane."
-    section::Tsection = SectionPS(M) # Poincaré sections
+    section::Tsection = SectionPS(M)
     "`δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead."
-    δ::Float64 = 0e-8                # Numerical value used for the Matrix-Free Jacobian by finite differences.
+    δ::Float64 = 1e-8
     "`parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`."
-    parallel::Bool = false           # whether we use DE in Ensemble mode for multiple shooting
+    parallel::Bool = false
     "`par` parameters of the model"
     par::Tpar = nothing
     "`lens` parameter axis"
@@ -118,7 +118,6 @@ function getperiod(psh::PoincareShooting, x_bar, par)
 
     # variable to hold the computed result
     xc = similar(x_bar, Nm1 + 1, M)
-    outc = similar(xc)
 
     period = zero(VI.scalartype(x_barm))
 
@@ -271,7 +270,7 @@ function po_jvp(psh::PoincareShooting, x_bar::AbstractVector, par, dx_bar::Abstr
 end
 
 # inplace computation of the matrix of the jacobian of the shooting problem, only serial for now
-function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix, x_bar::AbstractVector, par)
+function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix{𝒯}, x_bar::AbstractVector, par) where {𝒯}
     M = get_mesh_size(psh)
     Nm1 = div(length(x_bar), M)
     N = Nm1 + 1
@@ -288,14 +287,14 @@ function po_jacobian!(psh::PoincareShooting, J::AbstractMatrix, x_bar::AbstractV
     end
 
     # jacobian of the flow
-    dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(psh.flow, Val(:SerialTimeSol), z, par, _T; callback = nothing).u, _x)
+    dflow = (_J, _x, _T) -> monodromy_matrix!(_J, psh.flow, _x, par, _T)
 
     # initialize some temporaries
-    Jtmp = zeros(N, N)
+    Jtmp = zeros(𝒯, N, N)
     normal = copy(psh.section.normals[1])
-    F = zeros(N)
-    Rm = zeros(Nm1, N)
-    Em = zeros(N, Nm1)
+    F = zeros(𝒯, N)
+    Rm = zeros(𝒯, Nm1, N)
+    Em = zeros(𝒯, N, Nm1)
 
     # put the matrices by blocks
     In = LA.I(Nm1)

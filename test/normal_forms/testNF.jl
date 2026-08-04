@@ -50,6 +50,7 @@ let
     pred = predictor(bp, 0.1)
     @test norm(pred.x0) < 1e-10
     # @test pred.x1[1] ≈ 3.23 * 0.1 / prob.params.x2 rtol=1e-5
+    BK._predictor(bp, 0.1)
 
     bp = BK.get_normal_form(br, 1; verbose=false)
     @test BK.istranscritical(bp) == true

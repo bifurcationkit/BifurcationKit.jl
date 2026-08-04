@@ -532,6 +532,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     # vector of M for the eigenvalue 1, then, we find that
     # eigenvector(P) = E ∘ eigenvector(M)
     # E(x) = x .- dot(ζ₁, x) .* ζ₁
+    # Also 0 ∈ Σ(dΠ) because Π projects on the section
 
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
     _nrm > optn.tol && @warn "[PD-NF-PRM] Residual seems large = $_nrm"
@@ -549,11 +550,11 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     ev₋₁ ./= sqrt(LA.dot(ev₋₁, ev₋₁))
     ev₋₁★ ./= LA.dot(ev₋₁, ev₋₁★)
 
+    # careful: we used jacobian for dΠ, so let's use the same here and not finite_differences.
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            # J = (x,p) -> jacobian(Π, x, p),
-            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
+            J = (x,p) -> jacobian(Π, x, p),
             d2F = (x,p,h1,h2)    -> d2F(Π,x,p,h1,h2).u,
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
             )

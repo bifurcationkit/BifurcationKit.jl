@@ -266,7 +266,7 @@ function po_jacobian!(sh::Shooting, J::AbstractMatrix, x::AbstractVector, pars)
     xc = get_time_slices(sh, x)
 
     # jacobian of the flow
-    dflow = (_J, _x, _T) -> ForwardDiff.jacobian!(_J, z -> evolve(sh.flow, Val(:SerialTimeSol), z, pars, _T).u, _x)
+    dflow = (_J, _x, _T) -> monodromy_matrix!(_J, sh.flow, _x, pars, _T)
 
     # put the matrices by blocks
     In = LA.I(N)
