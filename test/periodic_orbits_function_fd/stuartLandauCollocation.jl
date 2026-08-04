@@ -32,7 +32,7 @@ function Jsl!(J, u, p, t = 0)
 
     return J
 end
-Jsl(u, p, t = 0) = Jsl!(zeros(2,2), u, p, t)
+Jsl(u, p, t = 0) = Jsl!(spzeros(2,2), u, p, t)
 ####################################################################################################
 par_sl = (r = 0.1, μ = 0., ν = 1.0, c3 = 1.0)
 u0 = [.001, .001]
@@ -343,8 +343,8 @@ end
 ####################################################################################################
 # test Hopf aBS
 let
-    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7)
-    for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), ), use_nf in (true, false)
+    optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7, nev = 10)
+    for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), BK.FullSparseInplace()), use_nf in (true, false)
         useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
         _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
         for lspo in (BK.MatrixBLS(), BK.COPBLS())

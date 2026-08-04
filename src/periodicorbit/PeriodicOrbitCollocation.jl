@@ -982,7 +982,7 @@ end
 ####
 function _generate_jacobian(coll::Collocation, J::FullSparseInplace, orbitguess, pars; k...)
     _J = po_analytical_jacobian_sparse(coll, orbitguess, pars)
-    indx = _get_blocks_from_sparse_matrix(coll, _J)
+    indx = get_blocks(coll, _J)
     return (FullSparseInplace(), _J, indx)
 end
 

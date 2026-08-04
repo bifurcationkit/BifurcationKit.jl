@@ -158,8 +158,8 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, ds= -0.001, dsmin = 1e-4, max_steps
 
 br_po = continuation(
     br, 2, opts_po_cont,
-    Shooting(1, probsh, ODE.Vern9(), probsh_monodromy, ODE.Vern9(); parallel = false, abstol = 1e-12, reltol = 1e-10, jacobian = BK.AutoDiffDenseAnalytical());
-    # verbosity = 3,    plot = true,
+    Shooting(10, probsh, ODE.Vern9(), probsh_monodromy, ODE.Vern9(); parallel = false, abstol = 1e-12, reltol = 1e-10);
+    # verbosity = 2,    plot = true,
     record_from_solution = recordPO,
     plot_solution = plotPO,
     callback_newton = BK.cbMaxNorm(10),
