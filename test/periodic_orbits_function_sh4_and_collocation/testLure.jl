@@ -229,9 +229,8 @@ br_po_pd = continuation(br_po, 1, setproperties(br_po.contparams, max_steps = 5,
 # plot(br_po, br_po_pd)
 #######################################
 opts_po_cont_ps = @set opts_po_cont.newton_options.tol = 1e-11
-# @set opts_po_cont_ps.dsmax = 0.0025
-br_po = continuation(br, 2, opts_po_cont_ps,
-    PoincareShooting(3, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
+br_po = continuation(br, 2, ContinuationPar(opts_po_cont_ps; p_min = -0.9),
+    PoincareShooting(5, probsh, ODE.Vern9(); parallel = false, update_section_every_step = 1, jacobian = BK.AutoDiffDenseAnalytical());
     # verbosity = 3, plot=true,
     callback_newton = BK.cbMaxNorm(10),
     record_from_solution = recordPO,
