@@ -168,7 +168,7 @@ br = @time continuation(
 
 BK.plot(br)
 ####################################################################################################
-get_normal_form(br, 3; nev = 25)
+get_normal_form(br, 3; nev = 25, bls = BorderingBLS(solver = optnew.linsolver, check_precision = false))
 
 br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,

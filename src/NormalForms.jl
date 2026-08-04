@@ -733,7 +733,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     R2(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
     R3(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
 
-    # bordered linear solver
+    # bordered linear solver, it should be multiple and not just 2
     as = (ζ★s[1], ζ★s[2])
     bs = (ζs[1], ζs[2])
     cs = zeros(𝒯, 2, 2)

@@ -153,10 +153,8 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     # initialise variables
     x = _copy(z_pred.u)
     p = z_pred.p
-    x_pred = _copy(x)
     res_f = residual(prob, x, set(par, paramlens, p))
 
-    dX = _copy(res_f) # copy(res_f)
     # dFdp = (F(x, p + ϵ) - res_f) / ϵ
     dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
     minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
@@ -176,7 +174,6 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
     compute = callback((;x, res_f, residual = res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 
-    X = BorderedArray(x, p)
     if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
         ϕ = _copy(τ0)
         VI.scale!(ϕ,  one(𝒯) / norm(ϕ))

@@ -220,7 +220,8 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
                     J = (x,p) -> jacobian(Π,x,p),
                     jvp = (x,p,dx) -> apply(jacobian(Π,x,p), dx),
                     d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
-                    d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
+                    d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
+                    R01 = FiniteDifferences(),
     )
 
     ζ★ = nothing
@@ -381,6 +382,9 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
             # d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
             d2F = d2Π,
             d3F = d3Π,
+            R01 = FiniteDifferences(),
+            R02 = FiniteDifferences(),
+            R11 = FiniteDifferences(),
             )
 
     ζ★ = nothing
@@ -557,6 +561,8 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
             J = (x,p) -> jacobian(Π, x, p),
             d2F = (x,p,h1,h2)    -> d2F(Π,x,p,h1,h2).u,
             d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
+            R11 = (x,p,h1) -> BifurcationKit.R11(Π,x,p,h1).u,
+            R01 = (x,p) -> BifurcationKit.R01(Π,x,p).u,
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁★, nothing, :none)
@@ -699,7 +705,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     Aₛ   = copy(u₀ₛ)
     Bₛ   = copy(u₀ₛ)
     Cₛ   = copy(u₀ₛ)
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
       Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
         Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
@@ -769,7 +775,7 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     # computation of c
     # we need B(t, v₁(t), h₂(t))
-    for i=1:size(Bₛ, 2)
+    for i in axes(Bₛ, 2)
         Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
     end
                 # _plot(vcat(vec( Bₛ ),1), label = "Bₛ for h2")
@@ -783,7 +789,7 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     # computation of a₀₁
     ∂Fu₀ₛ = copy(u₀ₛ)
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         ∂Fu₀ₛ[:, i] .= dₚF(u₀ₛ[:, i], par)
     end
     a₀₁ = 2∫(ψ₁★ₛ, ∂Fu₀ₛ)
@@ -791,7 +797,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # computation of h₀₁
     #                     ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
     rhsₛ = copy(u₀ₛ)
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         rhsₛ[:, i] .= ∂Fu₀ₛ[:, i] .- a₀₁ .* Fu₀ₛ[:, i]
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
@@ -810,7 +816,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     #                   < w★, -B(t,h01,w) - R11*w + c11*w + a01*wdot > = 0
     # hence:
     #                   c11 = < w★, B(t,h01,w) + R11*w + c11*w - a01*wdot >
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ R11(u₀ₛ[:, i], par, v₁★ₛ[:, i])
     end
 
@@ -870,11 +876,10 @@ function period_doubling_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
     probΠ = BifurcationProblem(
             (x,p) -> Π(x,p).u,
             xₛ, pars, lens ;
-            J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
-            # d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
-            # d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
+            J = (x, p) -> finite_differences(z -> Π(z, p).u, x),
             d2F = d2Π,
             d3F = d3Π,
+            R01 = FiniteDifferences(),
             )
 
     pd1 = PeriodDoubling(xₛ, nothing, pd0.p, pars, lens, ev₋₁, ev₋₁p, nothing, :none)
@@ -1112,7 +1117,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     Aₛ   = copy(v₁ₛ)
     Bₛ   = copy(v₁ₛ)
     Cₛ   = copy(v₁ₛ)
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
       Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
@@ -1156,7 +1161,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     # compute h20
     # solution of (D-T A(t) + 2iθ   )h = B(v1, v1)
     # written     (D-T(A(t) - 2iθ/T))h = B
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
     end
     rhs = vcat(vec(Bₛ), 0)
@@ -1176,7 +1181,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     #########
     # compute h11
     # solution of (D-TA(t))h = B - a₁F
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
     rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
@@ -1205,7 +1210,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     #########
     # compute d
     # d = <v1★, C(v,v,v)  +  2B(h11, v)  +  B(h20, cv)  +  C(v,v,cv)>/2 + ...
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₁₁ₛ[:, i], v₁ₛ[:, i])
         Cₛ[:, i] .= C(u₀ₛ[:, i], par,  v₁ₛ[:, i], v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     end
@@ -1213,7 +1218,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
     @debug "[NS-Iooss] B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
 
-    for i = 1:size(u₀ₛ, 2)
+    for i in axes(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₂₀ₛ[:, i], conj(v₁ₛ[:, i]))
         Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
     end
@@ -1301,7 +1306,8 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
             xₛ, pars, lens ;
             J = (x,p) -> jacobian(Π, x, p),
             d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
-            d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u
+            d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
+            R01 = FiniteDifferences(),
             )
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)

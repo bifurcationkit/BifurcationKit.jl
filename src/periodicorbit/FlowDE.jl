@@ -208,15 +208,19 @@ function evolve(fl::FlowDE{T1}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx,
     _dflow_jvp_serial(x, pars, dx, tm, fl.odeprob_mono.prob, fl.alg_mono; fl.kwargsDE..., kw...)
 end
 
-function evolve(fl::FlowDE{T1,T2,Tjac,Nothing,T4,T5,T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
+function evolve(fl::FlowDE{T1, T2, Tjac, Nothing, T4, T5, T6}, ::Val{:SerialdFlow}, x::AbstractArray, pars, dx, tm; δ = convert(eltype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,T2,T4,T5,T6, Tjac}
     _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob.prob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
 end
 
-function R01(fl::FlowDE, x, pars, tΣ, lens, p₀)
+R01(fl::FlowDE, x, pars, tΣ, lens, p₀) = fl.R01(x, pars, tΣ, lens, p₀)
+
+function R01(fl::FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Nothing}, x, pars, tΣ, lens, p₀) where {Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp}
     ForwardDiff.derivative(p -> evolve(fl, Val(:SerialTimeSol), x, set(pars, lens, p), tΣ).u, p₀)
 end
 
-function R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀::𝒯) where {𝒯}
+R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀) = fl.R11(x, pars, dx, tΣ, lens, p₀)
+
+function R11(fl::FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, Nothing}, x, pars, dx, tΣ, lens, p₀::𝒯) where {Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, 𝒯}
     # If we were to use ForwardDiff, it would return a section R11
     δ = convert(𝒯, 1e-4)
     ∂²ϕ_∂x∂p_h₁ = ( evolve(fl, Val(:SerialdFlow), x, set(pars, lens, p₀ + δ), dx, tΣ).du .- 

@@ -58,6 +58,12 @@ function flow(x0, prob0, tm, p = prob0.p)
     return sol[end]
 end
 
+function my_R01(x, pars, tΣ, lens, p₀)
+    zero(x)
+end
+
+@reset probsh.flow.R01 = my_R01
+
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
 eigpo = EigKrylovKit(x₀ = rand(4))
 optnpo = NewtonPar(verbose = true, linsolver = lspo, eigsolver = eigpo)
