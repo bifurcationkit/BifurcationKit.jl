@@ -67,7 +67,7 @@ When used with newton, you have access to the following linear solvers:
     "roots."
     roots::Vector{vectype}
 
-    "accumulator"
+    "accumulator ∈(Val(:Prod), Val(:Mean))"
     accumulator::Tac
 
     "[internal] to reduce allocations during computation."

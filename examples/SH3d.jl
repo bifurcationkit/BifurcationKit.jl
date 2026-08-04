@@ -168,7 +168,7 @@ br = @time continuation(
 
 BK.plot(br)
 ####################################################################################################
-get_normal_form(br, 3; nev = 25, bls = BorderingBLS(solver = optnew.linsolver, check_precision = false))
+bp=get_normal_form(br, 3; nev = 30, bls = BorderingBLS(solver = optnew.linsolver, check_precision = false), scaleζ = norminf, verbose = true)
 
 br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,
@@ -180,6 +180,7 @@ br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 1
         end
         true
     end,
+    scaleζ = norminf,
     # callback_newton = cb,
     normC = norminf)
 

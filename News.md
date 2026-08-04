@@ -3,6 +3,47 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
+## [Unreleased]
+
+### Breaking changes
+- 🚦🚦🚦 `update!(prob, x)` becomes `restore_problem!(prob, x, pars)`
+- `getlinsolver`/`getbls` become `get_bordered_linsolver`
+- `OneParamCont`, `TwoParamCont`, `TwoParamPeriodicOrbitCont` become `AbstractOneParamCont`, `AbstractTwoParamCont`, `AbstractTwoParamPeriodicOrbitCont`
+- `_getsolution` becomes `saved_solution`
+- `tangent` field in `MoorePenrose` becomes `predictor`
+- remove `autodiff` keyword argument for computing normal forms
+- `FlowDE` construction is now keyword-based
+- merge BT `nfsupp` into `nf`
+
+### Added
+- add derivatives of the flow w.r.t. the parameter and higher-order differentials `R01`, `R11`, `R20`, `R30` to `Flow`/`FlowDE`, computed with ForwardDiff by default and usable in the Poincaré return map and the normal forms
+- use `monodromy_matrix!` in Shooting and Poincaré Shooting
+- rework the Poincaré return map around `_evolve_flow_prm`; add `R01`, `R11`, `R20`, `R30` methods for `PoincaréMap` and collocation
+- rework the Jet traits: `R01`/`R02`/`R11` are now computed by dispatch on `AutoDiff()`/`FiniteDifferences()` and generalized to any `AbstractBifurcationProblem`
+- save/restore of the Poincaré section for `PoincareShooting` (`POSavedSolutionAndState_PSH`, `BVPSavedSolutionAndState_PSH`), fixing issue #334
+- add `Accumulator` to `DeflationOperator`
+- add eigenvalue solvers `EigenWave` and `GEigenWave` for waves
+- add `__sort_spectrum` and correct the spectrum sorting of `DefaultEig`
+- add mechanism to switch the plot backend: `set_plot_backend!`, `get_plot_backend` with `BK_Plots()`, `BK_Makie()`, `BK_NoPlot()`
+- Makie: add `plot_stability_segments`
+- Plots: add `:dots` style for the unstable part of the branch
+- add defaults to `ContState` fields and `EmptyContState`
+- refactor the generalized eigenvalue computation into `GeneralizedEigenSolver.jl` and the tangents into `Tangents.jl`
+- use an out-of-place formulation for waves
+
+## [0.8.0]
+
+- add a new BVP interface: `BVPModel`, `PeriodicOrbitModel`, `DiscretizedBVP`, `discretize`, `generate_solution`, the discretizers `Shooting`, `Trapeze`, `Collocation` and the problem `BVPBifProblem`
+- add mesh adaptation for BVP problems
+- add user-specified time interval for BVP problems
+- add `BoundaryValueProblemCont` for the continuation of BVP problems
+- add wrapper for deflated continuation of BVP problems
+- add `TimeMesh` structure to support non-uniform meshes for `Trapeze`
+- `SolPeriodicOrbit` becomes `BVPSolution`, `POSolution` becomes `POInterpolation`, `POSolutionAndState` becomes `POSavedSolutionAndState`
+- rename `Trap` into `Trapeze` in the BVP interface
+- `jacobian = :auto` becomes `jacobian = AutoDiffDense()` in BVP Shooting
+- add `normal_form` alias for `get_normal_form`
+
 ## [0.7.3]
 - Remove `AbstractPeriodicOrbitDiscretization`, make subtypes inherit directly from `AbstractBoundaryValueDiscretization`
 - `AbstractPODifferentialDiscretization` → `AbstractDifferentialDiscretization`
