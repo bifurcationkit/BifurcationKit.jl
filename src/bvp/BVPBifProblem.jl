@@ -136,7 +136,7 @@ residual(prob::BVPBifProblem, x, p) = bvp_residual(get_bvp(prob), x, p)
 
 # Adjoint Support (required for branch switching and normal forms)
 # For now, we assume no easy adjoint is available for arbitrary BVPs
-import ..BifurcationKit: has_adjoint, getdelta, BifFunction, dF, d2F, d3F
+import ..BifurcationKit: has_adjoint, getdelta, BifFunction, dF, d2F, d3F, R01, R02, R11, R01, R11
 has_adjoint(::BVPBifProblem) = false
 getdelta(::BVPBifProblem) = 1e-8 # TODO remove this hack
 
@@ -154,6 +154,10 @@ function d3F(prob::BVPBifProblem, x, p, dx1, dx2, dx3)
 end
 # Jacobian - dispatch on AutoDiffDense (default behavior)
 jacobian(prob::BVPBifProblem, x, p) = bvp_jacobian(get_bvp(prob), prob.jacobian, x, p)
+
+R01(prob::BVPBifProblem, x, p; δ = getdelta(prob)) = R01(BK.FiniteDifferences(), prob, x, p; δ)
+R02(prob::BVPBifProblem, x, p; δ = getdelta(prob)) = R02(BK.FiniteDifferences(), prob, x, p; δ)
+R11(prob::BVPBifProblem, x, p, dx; δ = getdelta(prob)) = R11(BK.FiniteDifferences(), prob, x, p, dx; δ)
 
 # is_symmetric defaults to false
 is_symmetric(::BVPBifProblem) = false
