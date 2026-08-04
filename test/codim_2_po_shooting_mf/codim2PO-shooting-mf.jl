@@ -25,6 +25,8 @@ opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_
 ################################################################################
 import OrdinaryDiffEq as ODE
 using OrdinaryDiffEqRosenbrock: Rodas5
+
+let
 prob_de = ODE.ODEProblem(Pop!, z0, (0, 600.), par_pop)
 alg = Rodas5()
 sol = ODE.solve(prob_de, alg)
@@ -167,3 +169,4 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
 #     plot!(pd_po_sh, vars = (:ϵ, :b0), branchlabel = "PD")
 #     plot!(fold_po_sh1, vars = (:ϵ, :b0), branchlabel = "FOLD")
 #     plot!(fold_po_sh2, vars = (:ϵ, :b0), branchlabel = "FOLD")
+end

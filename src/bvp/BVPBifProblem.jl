@@ -136,7 +136,7 @@ residual(prob::BVPBifProblem, x, p) = bvp_residual(get_bvp(prob), x, p)
 
 # Adjoint Support (required for branch switching and normal forms)
 # For now, we assume no easy adjoint is available for arbitrary BVPs
-import ..BifurcationKit: has_adjoint, getdelta, BifFunction, dF, d2F, d3F, R01, R02, R11, R01, R11
+import ..BifurcationKit: has_adjoint, getdelta, BifFunction, dF, d2F, d3F, R01, R02, R11
 has_adjoint(::BVPBifProblem) = false
 getdelta(::BVPBifProblem) = 1e-8 # TODO remove this hack
 

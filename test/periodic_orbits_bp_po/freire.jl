@@ -36,11 +36,11 @@ begin
     for M in (1,15)
         probsh = ODE.ODEProblem(freire!, zeros(3), (0, 1), par_freire; abstol = 1e-12, reltol = 1e-10)
         br_po = continuation(br, 1,
-        ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-        Shooting(M, probsh, Rodas5(), parallel = true);
-        record_from_solution,
-        δp = 0.001, 
-        )
+            ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
+            Shooting(M, probsh, Rodas5(), parallel = true);
+            record_from_solution,
+            δp = 0.001, 
+            )
         @test br_po.specialpoint[1].type == :bp
         @test br_po.specialpoint[2].type == :bp
         # plot(br, br_po)
@@ -52,10 +52,10 @@ begin
         @test_skip bp.nf.nf.b30 ≈ 20811   rtol = 1e-5
         
         br_po_bp = continuation(deepcopy(br_po), 2;
-        δp = -0.001, ampfactor = 0.01,
-        use_normal_form = false, detailed = Val(false),
-        record_from_solution,
-        )
+            δp = -0.001, ampfactor = 0.01,
+            use_normal_form = false, detailed = Val(false),
+            record_from_solution,
+            )
         
         @test br_po_bp.specialpoint[1].type == :ns
         @test br_po_bp.specialpoint[2].type == :pd

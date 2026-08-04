@@ -3,7 +3,6 @@ using ForwardDiff, Test
 using BifurcationKit, LinearAlgebra
 import OrdinaryDiffEq as ODE
 using OrdinaryDiffEqVerner: Vern9
-using SciMLBase: EnsembleProblem
 const BK = BifurcationKit
 const FD = ForwardDiff
 
@@ -38,7 +37,6 @@ br = continuation(prob_vf, PALC(), optconteq)
 prob = ODE.ODEProblem(Fsl!, u0, (0., 100.), par_hopf)
 probMono = ODE.ODEProblem(FslMono!, vcat(u0, u0), (0., 100.), par_hopf)
 BK._apply_vector_field(ODE.ODEProblem(Fsl!, u0, (0., 100.), par_sl), zeros(2), u0, par_sl)
-BK._apply_vector_field(EnsembleProblem(ODE.ODEProblem((x,p,t)->Fsl!(similar(x), x, p), u0, (0., 100.), par_sl)), u0, par_sl)
 ####################################################################################################
 sol = ODE.solve(prob, Vern9(), abstol=1e-9, reltol=1e-6)
 # plot(sol[1,:], sol[2,:])
