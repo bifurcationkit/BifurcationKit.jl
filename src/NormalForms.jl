@@ -1247,7 +1247,6 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     parbif = set(pt.params, lens, p)
     ζ = pt.ζ |> real
     ζ★ = pt.ζ★ |> real
-    δ = getdelta(prob)
 
     abs(LA.dot(ζ, ζ)  - 1) > 1e-5 && @warn "eigenvector for multiplier -1 not normalized, dot = $(LA.dot(ζ, ζ))"
     abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(LA.dot(ζ★, ζ))"

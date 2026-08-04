@@ -126,3 +126,6 @@ evolve(fl::Flow, ::Val{:SerialdFlow}, x, p, dx, t; k...) = fl.jvpSerial(x, p, dx
 
 R01(fl::Flow, x, pars, t, lens, p) = fl.R01(x, pars, t, lens, p)
 R11(fl::Flow, x, pars, dx, t, lens, p) = fl.R11(x, pars, dx, t, lens, p)
+
+R20(fl::Flow, x, pars, h1, h2, t) = fl.R20(x, pars, h1, h2, t)
+R30(fl::Flow, x, pars, h1, h2, h3, t) = fl.R30(x, pars, h1, h2, h3, t)

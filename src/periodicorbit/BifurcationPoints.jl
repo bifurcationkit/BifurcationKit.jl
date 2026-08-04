@@ -58,7 +58,7 @@ function Base.show(io::IO, pd::PeriodDoublingPO)
             print(io, "├─ type: ")
             printstyled("$(pd.nf.type)\n", color=:cyan, bold = true)
             println(io, "├─ Normal form (Iooss):\n├\t∂τ = 1 + a₀₁⋅δp + a₂⋅ξ²\n├\t∂ξ =  ξ⋅(c₁₁⋅δp + c₃⋅ξ²)")
-            if get(pd.nf.nf, :a₀₁, nothing) != nothing
+            if get(pd.nf.nf, :a₀₁, nothing) !== nothing
                 println(io, "├─── a₀₁ = ", pd.nf.nf.a₀₁,
                           "\n├─── a₂  = ", pd.nf.nf.a,
                           "\n├─── c₁₁ = ", pd.nf.nf.c₁₁,

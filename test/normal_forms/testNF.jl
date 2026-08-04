@@ -54,7 +54,7 @@ let
     bp = BK.get_normal_form(br, 1; verbose=false)
     @test BK.istranscritical(bp) == true
     @test BK.type(bp) == :Transcritical
-    @test BK.type(nothing) == nothing
+    @test BK.type(nothing) === nothing
 
     prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
     bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)

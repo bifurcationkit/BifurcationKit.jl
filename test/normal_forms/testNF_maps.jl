@@ -121,7 +121,7 @@ let
         BK.type(nf)
 
         nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = false)
-        @test nf.nf.a == nothing
+        @test nf.nf.a === nothing
         BK.type(nf)
     end
 end

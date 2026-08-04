@@ -18,7 +18,6 @@ import SciMLBase
     "Store possible callback"
     callback::Tcb
 
-    # SHOULD BE USED!!!
     "How the monodromy is computed"
     jacobian::Tjac = nothing
 
@@ -201,10 +200,13 @@ function R11(fl::FlowDE, x, pars, dx, tΣ, lens, p₀)
     return ∂²ϕ_∂x∂p_h₁
 end
 
-function R20(fl::FlowDE, x, pars, h1, h2, t)
+R20(fl::FlowDE, x, pars, h1, h2, t) = fl.R20(x, pars, h1, h2, t)
+R30(fl::FlowDE, x, pars, h1, h2, h3, t) = fl.R30(x, pars, h1, h2, h3, t)
+
+function R20(fl::FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, Nothing}, x, pars, h1, h2, t)where {Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11}
     ForwardDiff.derivative(ϵ -> evolve(fl, Val(:SerialdFlow), x .+ ϵ .* h2, pars, h1, t).du, 0)
 end
 
-function R30(fl::FlowDE, x, pars, h1, h2, h3, t)
+function R30(fl::FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, TR20, Nothing}, x, pars, h1, h2, h3, t) where {Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, TR20}
     ForwardDiff.derivative(ϵ -> R20(fl, x .+ ϵ .* h3, pars, h1, h2, t), 0)
 end

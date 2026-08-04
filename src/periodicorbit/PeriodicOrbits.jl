@@ -54,7 +54,7 @@ get_periodic_orbit(br::AbstractBranchResult, ind::Int) = get_periodic_orbit(getp
 
 Base.size(pb::AbstractFiniteDifferencesDiscretization) = (pb.M, pb.N)
 on_gpu(pb::AbstractFiniteDifferencesDiscretization) = pb.ongpu
-has_hessian(pb::AbstractFiniteDifferencesDiscretization) = pb.d2F == nothing
+has_hessian(pb::AbstractFiniteDifferencesDiscretization) = pb.d2F === nothing
 isinplace(pb::AbstractFiniteDifferencesDiscretization) = isinplace(pb.prob_vf)
 
 function applyJ(pb, dest, x, p, dx) #TODO REMOVE?
