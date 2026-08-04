@@ -335,7 +335,7 @@ brpo_pd_sh = continuation(probsh2, cish, PALC(), ContinuationPar(opts_po_cont, m
     verbosity = 3, plot = true,
     argspo...
     )
-pd = get_normal_form(brpo_pd_sh, 1; autodiff = false, detailed = Val(true))
+pd = get_normal_form(brpo_pd_sh, 1; detailed = Val(true))
 BK.predictor(pd, 0.1,0.1)
 
 #########

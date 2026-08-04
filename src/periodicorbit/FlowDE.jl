@@ -25,7 +25,7 @@ struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, Tδ} <: 
     "adjoint of the monodromy (matrix-free)."
     vjp::Tvjp
 
-    "delta used in finite differences wrt to parameter. Used for example in PALC."
+    "delta used in finite differences w.r.t. to parameter. Used for example in PALC."
     delta::Tδ
 end
 

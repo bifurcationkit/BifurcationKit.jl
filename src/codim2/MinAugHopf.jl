@@ -622,7 +622,7 @@ function test_bt_gh(iter, state)
     ζ★ ./= VI.inner(ζ, ζ★)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(𝐏𝐛)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
-    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false, autodiff = false) # TODO!! WE NEED A KWARGS here
+    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false) # TODO!! WE NEED A KWARGS here
     # lyapunov coefficient
     𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.

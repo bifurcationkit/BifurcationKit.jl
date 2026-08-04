@@ -194,7 +194,7 @@ function po_residual(psh::PoincareShooting, x_bar::AbstractVector, par; verbose 
             outc[:, ii] .= xm[:, ii] .- evolve(psh.flow, xm[:, im1], par, Inf).u
         end
     else
-        solOde = evolve(psh.flow, xm, par, repeat([Inf64], M))
+        solOde = evolve(psh.flow, xm, par, repeat([Inf], M))
         for ii in 1:M
             im1 = ii == 1 ? M : ii - 1
             # We need the callback to be active here!!!

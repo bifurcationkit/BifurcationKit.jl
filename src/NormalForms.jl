@@ -106,7 +106,7 @@ Compute the reduced equation / normal form of the bifurcation point located at `
 - `ζs` list of vectors spanning the kernel of the jacobian at the bifurcation point. Useful for enforcing the kernel basis used for the normal form.
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalize the kernel basis. Indeed, the kernel vectors are normalized using `norm`, the normal form coefficients can be super small and can imped its analysis. Using `scaleζ = norminf` can help sometimes.
-- `autodiff = true` whether to use ForwardDiff for the differentiations. Used for example for Bogdanov-Takens (BT) point.
+- `autodiff = true` whether to use ForwardDiff for the differentiations. Only used for the codim 2 normal forms (e.g. Bogdanov-Takens (BT), Zero-Hopf (ZH), Hopf-Hopf (HH) points).
 - `detailed = Val(true)` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is "long", for example for a Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify bordered linear solver. Needed to compute the reduced equation Taylor expansion of Branch/BT points. Indeed, it is required to solve `L⋅u = rhs` where `L` is the jacobian at the bifurcation point, `L` is thus singular and we rely on a bordered linear solver to solve this system.
 - `bls_block = bls` specify bordered linear solver when the border has dimension > 1 (1 for `bls`). (see `bls` option above).
@@ -158,7 +158,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     kwargs_nf = (;nev, verbose, lens, scaleζ)
 
     if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, start_with_eigen, bls, bls_adjoint)
+        return hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, start_with_eigen, bls, bls_adjoint)
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf...)
     elseif bifpt.type == :bt
@@ -170,9 +170,9 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :hh
         return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
-        return get_normal_form1d(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls)
+        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls)
     end
-    return get_normal_formNd(prob, br, id_bif, Teigvec ; autodiff, kwargs_nf..., ζs, ζs_ad, bls_block)
+    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block)
 end
 
 @inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
@@ -199,7 +199,6 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     ζ::Tevecs = nothing,
                     ζ_ad::Tevecs_ad = nothing,
 
-                    autodiff::Bool = true,
                     detailed::Bool = true,
 
                     bls = MatrixBLS(),
@@ -650,8 +649,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
                             bls_block = MatrixBLS(),
 
-                            scaleζ = LA.norm,
-                            autodiff = false
+                            scaleζ = LA.norm
                             ) where {𝒯eigvec, Tevecs, Tevecs_ad}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
@@ -973,7 +971,6 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
                             pt::Hopf, 
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
-                            autodiff = true,
                             L = nothing)
     δ = getdelta(prob)
     (;x0, p, lens, ω, ζ, ζ★) = pt
@@ -1058,7 +1055,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                           nev::Int = length(eigenvalsfrombif(br, ind_hopf)),
                           verbose::Bool = false,
                           lens = getlens(br),
-                          autodiff = true,
                           detailed::Val{detailed_type} = Val(true),
                           start_with_eigen::Val{start_with_eigen_type} = Val(true),
                           scaleζ = LA.norm,
@@ -1151,7 +1147,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                         ),
                 Symbol("?")
         )
-    return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, autodiff)
+    return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L)
 end
 
 """
@@ -1245,8 +1241,7 @@ The `BifurcationProblem` must represent xₙ₊₁ = F(xₙ, pars).
 """
 function period_doubling_normal_form(prob::AbstractBifurcationProblem,
                                      pt::PeriodDoubling, 
-                                     ls::AbstractLinearSolver; 
-                                     autodiff = false,
+                                     ls::AbstractLinearSolver;
                                      verbose::Bool = false)
     (;x0, p, lens) = pt
     parbif = set(pt.params, lens, p)
@@ -1331,8 +1326,7 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
                             pt::NeimarkSacker,
                             ls::AbstractLinearSolver;
-                            autodiff = false,
-                            detailed = false,
+                            detailed = false, # TODO use Val{...}
                             verbose::Bool = false)
     δ = getdelta(prob)
     (;x0, p, lens, ω, ζ, ζ★) = pt
@@ -1420,7 +1414,6 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
                     lens = getlens(br),
                     Teigvec::Type = _getvectortype(br),
                     detailed = true,
-                    autodiff = true,
                     scaleζ = LA.norm)
 
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
@@ -1478,7 +1471,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
         (a = zero(Complex{VI.scalartype(x0)}), b = zero(Complex{VI.scalartype(x0)}) ),
         :SuperCritical
     )
-    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed, autodiff)
+    return neimark_sacker_normal_form(prob, nspt, options.linsolver ; verbose, detailed)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -1494,8 +1487,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
                     ls::AbstractLinearSolver;
                     verbose = false,
                     tol_fold = 1e-3,
-                    scaleζ = LA.norm,
-                    autodiff = false)
+                    scaleζ = LA.norm)
 
     verbose && println("━"^53*"\n┌─ Normal form Computation for 1d kernel")
     verbose && println("├─ analyse bifurcation at p = ", bp.p)

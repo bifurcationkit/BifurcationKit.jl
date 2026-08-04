@@ -163,7 +163,6 @@ br_po = continuation(
     opts_po_cont,
     Shooting(Mt, prob_sp, ETDRK2(krylov = true); abstol = 1e-10, reltol = 1e-8, jacobian = BK.FiniteDifferencesMF(),) ;
     verbosity = 3, plot = true, ampfactor = 1.5, δp = 0.01,
-    autodiff_nf = false,
     linear_algo = MatrixFreeBLS(@set ls.N = Mt*2n+2),
     finalise_solution = (z, tau, step, contResult; k...) ->begin
         BK.haseigenvalues(contResult) && Base.display(contResult.eig[end].eigenvals)

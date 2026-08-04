@@ -146,7 +146,7 @@ end
 # test automatic branch switching
 @info "Single Shooting aBS"
 _probsh = Shooting(1, prob, Vern9();  abstol = 1e-10, reltol = 1e-9, lens = (@optic _.r))
-br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0, autodiff_nf = false)
+br_pok2 = continuation(br, 1, opts_po_cont, _probsh; normC = norminf, verbosity = 0)
 
 @test BK.get_discretization(BK.getprob(br_pok2)).jacobian isa BK.AutoDiffDense
 @test BK.getprob(br_pok2) isa BK.PeriodicOrbitFunctionalSh

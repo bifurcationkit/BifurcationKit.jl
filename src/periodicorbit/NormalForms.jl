@@ -226,7 +226,7 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
     ζ★ = nothing
     bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
     if detailed_type
-        bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose, autodiff)
+        bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, bp, sh, true)
     end
     return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, nothing, sh, true)
@@ -386,7 +386,7 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
     ζ★ = nothing
     bp1 = BranchPointMap(xₛ, nothing, bp0.p, pars, lens, ev, ev★, nothing, :none)
     if detailed
-        bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose, autodiff)
+        bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         (;v₁, v₀, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
         return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp, coll, true)
     end
@@ -511,6 +511,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Poinc
     return PeriodDoublingPO(pd0.x0, period, real.(ζs), ζ★, pd0, psh, true)
 end
 
+# We must be able to pass R01 and R11 for Matrix-Free return maps.
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 pd0::PeriodDoubling,
                                 (ζ₋₁, ζs),
@@ -519,7 +520,6 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
                                 verbose = false,
                                 lens = getlens(pbwrap),
                                 δ = getdelta(pbwrap),
-                                autodiff = false,
                                 kwargs_nf...)
     sh = get_discretization(pbwrap)
     pars = pd0.params
@@ -536,7 +536,6 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shoot
     _nrm = norminf(Π(xₛ, pars).u - xₛ)
     _nrm > optn.tol && @warn "[PD-NF-PRM] Residual seems large = $_nrm"
 
-    # dΠ = finite_differences(x -> Π(x, pars).u, xₛ; δ)
     dΠ = jacobian(Π, xₛ, pars)
     F = LA.eigen(dΠ)
 
@@ -1018,6 +1017,7 @@ function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
             J = (x,p) -> finite_differences(z -> Π(z,p).u, x),
             d2F = d2Π,
             d3F = d3Π,
+            R01 = FiniteDifferences(),
             )
 
     ns1 = NeimarkSacker(xₛ, nothing, ns0.p, ns0.ω, pars, lens, ev, evp, nothing, :none)

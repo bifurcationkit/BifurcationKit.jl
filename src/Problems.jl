@@ -184,8 +184,6 @@ function d3F(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc
 end
 #####
 
-#####
-
 const _type_jet  = vcat(:T01!, vec([ Symbol("T", i, j)  for i=0:3, j=1:7 if i+i<7]))
 const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<7]))
 
@@ -243,6 +241,17 @@ for Rij in _field_jet
         @inline $(Rij)(::TraitUserPassed, pb::BifFunction, args...; kwargs...) = $(Rij)(pb.jet, args...; kwargs...)
         @inline $(Rij)(::TraitUserPassed, pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)(TraitUserPassed(), pb.VF, args...; kwargs...)
         @inline $(Rij)(pb::AbstractAllJetBifProblem, args...; kwargs...) = $(Rij)($fname_trait(pb.VF.jet), pb, args...; kwargs...)
+    end
+end
+
+function Base.show(io::IO, jet::Jet; prefix = "")
+    color = :cyan; bold = true
+    println(io, prefix * "┌─ Tayor jet [fields not shown are nothing]")
+    for Rij in _field_jet
+        rij = getproperty(jet, Rij)
+        if ~isnothing(rij)
+            println(io, "├─ " * String(Rij) * " = ", rij)
+        end
     end
 end
 

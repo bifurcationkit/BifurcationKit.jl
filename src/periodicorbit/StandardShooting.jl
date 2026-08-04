@@ -314,7 +314,7 @@ function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
 end
 get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
-function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars;kode...)
+function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars; kode...)
     M = get_mesh_size(sh)
     if ~isparallel(sh)
         sol = RecursiveArrayTools.VectorOfArray([evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M])

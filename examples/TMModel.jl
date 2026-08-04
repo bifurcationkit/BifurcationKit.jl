@@ -131,8 +131,7 @@ br_po_coll = @time BK.continuation_from_hopf_point(
     # verbosity = 2,
     δp = 1e-3,
     # plot = true,
-    args_po...,
-    autodiff_nf = false
+    args_po...
     )
 
 plot(br_po_coll)

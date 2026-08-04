@@ -389,7 +389,6 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
 - `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intended.
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
@@ -404,7 +403,6 @@ function continuation(br::AbstractBranchResult,
                       bif_prob = getprob(br),
                       detailed::Val{detailed_type} = Val(true),
                       use_normal_form = true,
-                      autodiff_nf = true,
                       nev = length(eigenvalsfrombif(br, ind_bif)),
                       kwargs...) where {detailed_type}
     # compute the normal form of the branch point
@@ -412,7 +410,7 @@ function continuation(br::AbstractBranchResult,
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
     detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
-    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, autodiff = autodiff_nf)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed)
     return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 
@@ -530,14 +528,12 @@ Branch switching from the curve of Hopf bifurcation points to the curve of perio
 
 # Keyword arguments
 - `lens` parameter axis to be used for the continuation
-- `autodiff_nf` whether to use automatic differentiation for the computation of the normal form.
 """
 function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                       ind_pt::Int,
                       options_cont::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization;
                       lens = getlens(br_hopf),
-                      autodiff_nf = true,
                       nev::Int = length(eigenvals(br_hopf, ind_pt)),
                       kwargs...) where {Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
@@ -594,7 +590,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                 )
 
     # we compute the Hopf normal form
-    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L, autodiff = autodiff_nf)
+    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L)
     @debug "[PO from Hopf curve]" nf params nf.nf.b/br_hopf[ind_pt].l1
     if ~(nf.nf.b ≈ br_hopf[ind_pt].l1)
         @warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")

@@ -12,8 +12,8 @@ function Pop!(du, X, p, t = 0)
     du[1] = r * (1 - x/K) * x - p * y
     du[2] = e * p * y - d * y
     s = u^2 + v^2
-    du[3] = u-2pi * v - s * u
-    du[4] = 2pi * u + v - s * v
+    du[3] = u - 2pi * v - s * u
+    du[4] =     2pi * u + v - s * v
     du
 end
 

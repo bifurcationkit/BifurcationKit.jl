@@ -245,7 +245,6 @@ br_po = continuation(
     # arguments for continuation
     ContinuationPar(opts_po_cont; detect_bifurcation = 3, ds = 0.01),
     poTrapMF;
-    autodiff_nf = false, # for Hopf normal form
     verbosity = 3, 
     plot = true,
     # callback_newton = (x, f, J, res, iteration, itl, options; kwargs...) -> (println("--> amplitude = ", BK.amplitude(x, n, M; ratio = 2));true),

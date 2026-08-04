@@ -141,7 +141,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                             verbose,
                             scaleζ,
                             bls,
-                            autodiff,
                             tol_fold)
 
     # compute predictor for a point on new branch

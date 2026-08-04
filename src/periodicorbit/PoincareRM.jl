@@ -37,7 +37,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Constructor for the Poincaré return map. Return a `PoincaréMap`.
+Constructor for the Poincaré return map from a shooting-based periodic orbit problem. The Poincaré section `Σ` is initialized by deep-copying the section from the discretization, then updated so that its center is the first point of the orbit `po` and its normal is the vector field at that point (subsequently normalized). Returns a `PoincaréMap`.
 """
 function PoincareMap(wrap::PeriodicOrbitFunctionalSh, po, par, optn)
     sh = get_discretization(wrap)
@@ -63,6 +63,12 @@ function PoincareMap(wrap::PeriodicOrbitFunctionalColl, po, par, optn)
     return PoincaréMap(wrap, po, Σ, optn)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate the Poincaré return map functional for a shooting-based periodic orbit discretization.
+Returns the residual vector: the differences between consecutive time slices after flow integration, and the section condition at the final point.
+"""
 function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, par, x₁)
     sh = get_discretization(Π.probpo)
 
@@ -107,6 +113,11 @@ function poincaré_functional(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, 
     out
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Solve the Poincaré return map for a shooting-based periodic orbit. Given a point `xₛ` on the section Σ, find the return point after flow integration by solving `poincaré_functional` with Newton's method.
+"""
 function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
     @assert (Π.po isa AbstractVector) "The case of a general AbstractArray for the state space is not handled yet."
     # xₛ is close to / belongs to the hyperplane Σ
@@ -116,7 +127,7 @@ function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
     M = get_mesh_size(sh)
     N = div(length(Π.po) - 1, M)
     # we construct the initial guess
-    x₀ = Π.po[N+1:end]
+    x₀ = Π.po[N+1:end] # careful! Don't use views otherwise Π.po is overwritten
     x₀[end] = sh.ds[end]
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
     ## TODO needs a jacobian
@@ -165,15 +176,14 @@ end
 
 function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, xₛ, par)
     # xₛ is close to / belongs to the hyperplane Σ
-    # for x near po, this computes the poincare return map
+    # for x near po, this function computes the poincare return map
     # we construct the initial guess
     x₀ = Π.po
-
     mapΠ(x, p) = poincaré_functional(Π, x, p, xₛ)
     probΠ = BifurcationProblem(mapΠ,
                                 x₀,
                                 par)
-    solΠ = solve(probΠ, Newton(), NewtonPar())
+    solΠ = solve(probΠ, Newton(), Π.options)
     ~solΠ.converged && @error "Newton failed!! We did not succeed in computing the Poincaré return map. Residuals = $(solΠ.residuals)"
     return solΠ.u
 end
@@ -376,6 +386,6 @@ function d3F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
     ∂3t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     out = y .+ ∂3t .* Fx
 
-    abs(LA.dot(normal, out)) > 1e-10 && @error "This product is not zero $(abs(LA.dot(normal, out))) > 1e-10"
+    abs(LA.dot(normal, out)) > 1e-10 && @error "This product <normal, out> is not zero $(abs(LA.dot(normal, out))) > 1e-10"
     return (u = out, t = ∂3t)
 end
