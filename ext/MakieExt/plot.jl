@@ -170,7 +170,8 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
     ax1
 end
 
-function plot_branch_cont(contres::ContResult,
+function plot_branch_cont(::BK_Makie,
+                          contres::ContResult,
                           state,
                           iter,
                           plotuserfunction; 

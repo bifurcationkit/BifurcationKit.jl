@@ -3,7 +3,8 @@ $(SIGNATURES)
 
 Plot the branch of solutions during the continuation. It is called internally.
 """
-function plot_branch_cont(contres::ContResult, 
+function plot_branch_cont(::Union{BK_NoPlot, BK_Plots},
+                          contres::ContResult, 
                           state, 
                           iter, 
                           plotuserfunction)
