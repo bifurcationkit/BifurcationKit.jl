@@ -130,7 +130,7 @@ function PoincareShooting(M::Int,
                             kwargs...)
     kwargsSh = [k for k in kwargs if first(k) ∈ fieldnames(PoincareShooting)]
     kwargsDE = setdiff(kwargs, kwargsSh)
-    return PoincareShooting(;
+    psh = PoincareShooting(;
                 M = M,
                 flow = (par = par, prob = prob, alg = alg, kwargs = kwargsDE),
                 kwargsSh...,
