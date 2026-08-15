@@ -246,7 +246,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :cusp
         return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., start_with_eigen, bls, bls_adjoint)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
+        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad, start_with_eigen)
     elseif bifpt.type == :gh
         return bautin_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed)
     elseif bifpt.type == :zh

@@ -569,6 +569,13 @@ let
         @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
         @test mapreduce(isapprox, &, btpt.nf, btpt1.nf)
 
+        # same normal form but with the Jordan basis computed with a bordered linear system
+        btpt_bd = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false, start_with_eigen = Val(false))
+        @test norm(btpt_bd.nf.b * sign(sum(btpt_bd.ζ[1])) - par.b, Inf) < 1e-5
+        @test norm(btpt_bd.nf.a * sign(sum(btpt_bd.ζ[1])) - par.a, Inf) < 1e-5
+        @test isapprox(abs.(btpt_bd.ζ[1]), [1, 0])
+        @test isapprox(abs.(btpt_bd.ζ[2]), [0, 1];rtol = 1e-6)
+
         HC = BK.predictor(btpt, Val(:HopfCurve), 0.)
         HC.hopf(0.)
         SN = BK.predictor(btpt, Val(:FoldCurve), 0.)

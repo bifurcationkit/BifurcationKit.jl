@@ -513,6 +513,7 @@ Compute the Bogdanov-Takens normal form.
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.
 - `bls` specify Bordered linear solver for dF.
 - `bls_adjoint` specify Bordered linear solver for transpose(dF).
+- `start_with_eigen = Val(true)` whether to seed the construction of the Jordan basis using the eigensolver (`Val(true)`) or using random vectors and a bordered linear system (`Val(false)`).
 """
 function bogdanov_takens_normal_form(_prob,
                                     br::AbstractBranchResult, ind_bif::Int,
@@ -529,7 +530,8 @@ function bogdanov_takens_normal_form(_prob,
                                     bls_adjoint = bls,
                                     bls_block = bls,
                                     detailed::Val{detailed_type} = Val(true),
-                                    autodiff = true) where {𝒯eigvec, detailed_type}
+                                    autodiff = true,
+                                    start_with_eigen::Val{start_with_eigen_type} = Val(true)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
     # functional
@@ -568,45 +570,48 @@ function bogdanov_takens_normal_form(_prob,
 
     # and corresponding eigenvectors
     eigsolver = getsolver(optionsN.eigsolver)
-    if isnothing(ζs) # do we have a basis for the kernel?
-        if haseigenvector(br) == false # are the eigenvector saved in the branch?
-            verbose && @info "No eigenvector recorded, computing them on the fly"
-            # we recompute the eigen-elements if there were not saved during the computation of the branch
-            _λ0, _ev, _ = eigsolver(L, nev)
-            Ivp = sortperm(_λ0, by = abs)
-            _λ = _λ0[Ivp]
-            verbose && (println("──▶ (λs, λs (recomputed)) = "); display(( _λ[1:N])))
-            if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
-                @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
-                display(_λ[1:N] .- 0)
-            end
-            ζs = [_copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
-        else
-            # "zero" eigenvalues at bifurcation point
-            rightEv = br.eig[bifpt.idx].eigenvals
-            # indev = br.specialpoint[ind_bif].ind_ev
-            # find the 2 eigenvalues closest to zero
-            Ind = sortperm(abs.(rightEv))
-            ind0 = Ind[1]
-            ind1 = Ind[2]
-            verbose && (println("────▶ eigenvalues = ", rightEv[Ind[1:2]]))
-            ζs = [_copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
-        end
-    end
-    ###########################
-    # Construction of the basis (ζ0, ζ1), (ζ★0, ζ★1). We follow the procedure described in Al-Hdaibat et al. 2016 on page 972.
-
-    # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
-    ###########################
-    vr = real.(ζs[1])
     Lᵗ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
-    if isnothing(ζs_ad) # do we have a basis for the kernel of the adjoint?
-        _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
-        Ivp = sortperm(_λ★, by = abs)
-        # in case the prob is HopfMA, we enforce real values
-        vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+
+    if start_with_eigen_type
+        if isnothing(ζs) # do we have a basis for the kernel?
+            if haseigenvector(br) == false # are the eigenvector saved in the branch?
+                verbose && @info "No eigenvector recorded, computing them on the fly"
+                # we recompute the eigen-elements if there were not saved during the computation of the branch
+                _λ0, _ev, _ = eigsolver(L, nev)
+                Ivp = sortperm(_λ0, by = abs)
+                _λ = _λ0[Ivp]
+                verbose && (println("──▶ (λs, λs (recomputed)) = "); display(( _λ[1:N])))
+                if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
+                    @warn "We did not find the correct eigenvalues (see 1st col). We found the eigenvalues displayed in the second column:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
+                    display(_λ[1:N] .- 0)
+                end
+                ζs = [_copy(geteigenvector(eigsolver, _ev, ii)) for ii in Ivp[1:N]]
+            else
+                # "zero" eigenvalues at bifurcation point
+                rightEv = br.eig[bifpt.idx].eigenvals
+                # indev = br.specialpoint[ind_bif].ind_ev
+                # find the 2 eigenvalues closest to zero
+                Ind = sortperm(abs.(rightEv))
+                ind0 = Ind[1]
+                ind1 = Ind[2]
+                verbose && (println("────▶ eigenvalues = ", rightEv[Ind[1:2]]))
+                ζs = [_copy(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in (ind0, ind1)]
+            end
+        end
+        vr = real.(ζs[1])
+        if isnothing(ζs_ad) # do we have a basis for the kernel of the adjoint?
+            _λ★, _ev★, _ = eigsolver(Lᵗ, nev)
+            Ivp = sortperm(_λ★, by = abs)
+            # in case the prob is HopfMA, we enforce real values
+            vl = real.(geteigenvector(eigsolver, _ev★, Ivp[1]))
+        else
+            vl = real(ζs_ad[1])
+        end
     else
-        vl = real(ζs_ad[1])
+        # compute the seed vectors for the bordered systems with random vectors
+        verbose && println("──▶ Compute the kernel basis using a bordered linear system")
+        vr = isnothing(ζs) ? _randn(x0) : real.(ζs[1]); VI.scale!(vr, 1 / scaleζ(vr))
+        vl = isnothing(ζs_ad) ? _randn(x0) : real.(ζs_ad[1]); VI.scale!(vl, 1 / scaleζ(vl))
     end
 
     zerov = real.(𝐌𝐚.zero)
@@ -722,7 +727,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
 
     # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+    ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
