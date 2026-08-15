@@ -146,7 +146,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                          bls_adjoint = bls,
                          bls_block = bls,
 
-                         start_with_eigen = Val(true), # FIND A BETTER NOUN
+                         start_with_eigen = Val(true), # TODO FIND A BETTER name
                         ) where {𝒯eigvec}
     bifpt = br.specialpoint[id_bif]
 

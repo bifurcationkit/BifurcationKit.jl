@@ -57,15 +57,15 @@ function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at
     return (; v, w, itv, itw, JAd_at_xp)
 end
 
-function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, a, b, _zero, 𝒯)
+function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, a, b, _zero_vector, 𝒯)
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
-    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯))
+    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge."
 
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero, one(𝒯))
+    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
 
     return (; v, w, itv, itw)
