@@ -35,7 +35,7 @@ alg = PALC(tangent = Bordered())
 br = @time continuation( prob, alg, optscont; plot = true, verbosity = 0)
 
 # try Moore-Penrose
-br_mp = @time continuation( prob, MoorePenrose(tangent = alg), optscont; plot = true, verbosity = 0)
+br_mp = @time continuation( prob, MoorePenrose(predictor = alg), optscont; plot = true, verbosity = 0)
 ###################################################################################################
 # Example with deflation technique
 deflationOp = DeflationOperator(2, 1.0, [sol.u])
@@ -120,7 +120,7 @@ brmf = @time continuation(prob2, PALC(tangent = Bordered(), bls = BorderingBLS(l
 plot(brmf,color=:blue)
 
 alg = brmf.alg
-brmf = @time continuation(prob2, MoorePenrose(tangent = alg, method = BifurcationKit.iterative), (@set opts_cont_mf.newton_options = optnewton_mf))
+brmf = @time continuation(prob2, MoorePenrose(predictor = alg, method = BifurcationKit.iterative), (@set opts_cont_mf.newton_options = optnewton_mf))
 
 plot(brmf,color=:blue)
 

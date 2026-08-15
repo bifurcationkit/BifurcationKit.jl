@@ -4,7 +4,7 @@
 $(TYPEDEF)
 
 Moore-Penrose continuation algorithm.
-The predictor uses the tangent from `tangent` (default `PALC()`).
+The tangent used by the predictor is computed by `predictor` (default `PALC()`).
 The corrector solves the extended system `(F(x,p)=0, τ⋅(x-x₀,p-p₀)=0)` using a Moore-Penrose inverse.
 
 Available linear solvers for `method`:
@@ -113,7 +113,7 @@ function corrector!(state::AbstractContinuationState,
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
     end
-    sol = newton_moore_penrose(it, state, getdot(algo); normN = it.normC, callback = it.callback_newton, kwargs...)
+    sol = newton_moore_penrose(it, state; normN = it.normC, callback = it.callback_newton, kwargs...)
 
     # update fields
     _update_field_but_not_solution!(state, sol)
@@ -127,8 +127,7 @@ function corrector!(state::AbstractContinuationState,
 end
 
 function newton_moore_penrose(iter::AbstractContinuationIterable,
-                             state::AbstractContinuationState, 
-                             dotθ;
+                             state::AbstractContinuationState;
                              normN = norm,
                              callback = cb_default,
                              kwargs...)
@@ -154,10 +153,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     x = _copy(z_pred.u)
     p = z_pred.p
     res_f = residual(prob, x, set(par, paramlens, p))
-
-    # dFdp = (F(x, p + ϵ) - res_f) / ϵ
-    dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    minus!!(dFdp, res_f); VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = R01(prob, x, set(par, paramlens, p))
 
     res = normN(res_f)
     residuals = [res]
@@ -181,12 +177,9 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
-        # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!!(dFdp, one(𝒯) / ϵ)
-
-        # compute jacobian
+        R01!(prob, dFdp, x, par, p)
         J = jacobian(prob, x, set(par, paramlens, p))
+
         if method === direct || method === pInv
             Jb = hcat(J, dFdp)
 
@@ -218,18 +211,18 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         res = normN(res_f)
 
         if method === iterative
-            # compute jacobian
             J = jacobian(prob, x, set(par, paramlens, p))
             _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
             dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!!(dFdp, 1 / ϵ)
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
-            # ϕ .= A \ vcat(zero(x),1)
+            # ϕ .= A \ vcat(zero(x), 1)
             u, up, flag, itlinear2 = linsolver(J, dFdp, ϕ.u, ϕ.p, zero(x), one(𝒯), one(𝒯), one(𝒯)) # reminder: ξu, ξp
             ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             ϕ.u .= u; ϕ.p = up
             # VI.scale!(ϕ,  one(𝒯) / norm(ϕ))
             itlinear = (itlinear1 .+ itlinear2)
         end
+        itlineartot += sum(itlinear)
         push!(residuals, res)
 
         verbose && print_nonlinear_step(step, res, itlinear)

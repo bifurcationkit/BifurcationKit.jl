@@ -623,12 +623,13 @@ function period_doubling_normal_form_iooss(pbwrap,
     # identity matrix for collocation problem
     Icoll = I(coll, saved_solution(pd.x0), par)
 
-    F(u, pars) = residual(coll.prob_vf, u, pars)
-    dₚF(u, pars) = R01(coll.prob_vf, u, pars)
-    A(u, pars, du) = dF(coll.prob_vf, u, pars, du)
-    R11vf(u, pars, du) = R11(coll.prob_vf, u, pars, du)
-    B(u, pars, du1, du2)      = d2F(coll.prob_vf, u, pars, du1, du2)
-    C(u, pars, du1, du2, du3) = d3F(coll.prob_vf, u, pars, du1, du2, du3)
+    VF = coll.prob_vf
+    F(u, pars) = residual(VF, u, pars)
+    dₚF(u, pars) = R01(VF, u, pars)
+    A(u, pars, du) = dF(VF, u, pars, du)
+    R11vf(u, pars, du) = R11(VF, u, pars, du)
+    B(u, pars, du1, du2)      = d2F(VF, u, pars, du1, du2)
+    C(u, pars, du1, du2, du3) = d3F(VF, u, pars, du1, du2, du3)
 
     _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)  # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
@@ -767,7 +768,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # computation of c
     # we need B(t, v₁(t), h₂(t))
     for i in axes(Bₛ, 2)
-        Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
+        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], h₂ₛ[:, i])
     end
 
     c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
@@ -1054,8 +1055,8 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     #########
     # compute v1
     # we first compute the NS floquet eigenvector
-    # we use an extended linear system for this
-     # J = D  -  T*A(t) + iθ/T
+    # we use an extended linear system for this with periodic BC
+    # J = D  -  T*A(t) + iθ/T
     θ = abs(ns.ω)
     J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯})
 
@@ -1075,7 +1076,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     vr = J  \ rhs
     v₁  = @view vr[begin:end-1]
     v₁ ./= sqrt(∫(vr, vr))
-    v₁ₛ = get_time_slices(coll, vcat(v₁,1))
+    v₁ₛ = get_time_slices(coll, vcat(v₁, 1))
                 if _NRMDEBUG; v₁ₛ .*= (-0.4238149014771724 - 0.32924318979676237im)/v₁ₛ[1,1]; end
     # re-scale the eigenvector
     v₁ₛ ./= sqrt(∫(v₁ₛ, v₁ₛ))
@@ -1083,7 +1084,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     @assert ∫(v₁ₛ, v₁ₛ) ≈ 1
 
     #########
-    # compute ϕ1star
+    # compute ϕ1star, with periodic BC
     # Jϕ = D  +  T * Aᵗ(t)
     Jϕ = po_analytical_jacobian(coll, ns.x0, par; _transpose = Val(true), ρF = -1)
     Jϕ[end-N:end-1, 1:N] .= -LA.I(N)
@@ -1169,10 +1170,10 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                 # _plot(imag(vcat(vec(Bₛ),1+im)),label="Bₛ")
 
     #########
-    # compute h11
-    # solution of (D-TA(t))h = B - a₁F
     for i in axes(u₀ₛ, 2)
         Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
+    # compute h11 with periodic BC
+    # solution of (d/dt - A)h = B(v1, v1̄) - a₁F, with ∫(ϕ1★, h11) = 0
     end
     rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
     rhs = vcat(vec(rhsₛ), 0)

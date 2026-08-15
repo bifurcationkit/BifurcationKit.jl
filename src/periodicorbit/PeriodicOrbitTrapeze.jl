@@ -10,32 +10,34 @@ const _trapezoid_jacobian_type = (Dense(),
                                   AutoDiffMF())
 
 const DocStrjacobianPOTrap = """
-Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_trapezoid_jacobian_type`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. Can be used when the sparsity can change.
-- For `jacobian = FullSparseInplace()`, this is the same as for `FullLU()` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `FullLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-- For `jacobian = Dense()`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
-- For `jacobian = AutoDiffDense()`, evaluate the jacobian using ForwardDiff
-- For `jacobian = BorderedLU()`, we take advantage of the bordered shape of the linear solver and use a LU decomposition to invert `dG` using a bordered linear solver.
-- For `jacobian = BorderedSparseInplace()`, this is the same as for `BorderedLU()` but the cyclic matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `:BorderedLU`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
-- For `jacobian = FullMatrixFree()`, a matrix free linear solver is used for `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which affects negatively the convergence properties of GMRES.
-- For `jacobian = BorderedMatrixFree()`, a matrix free linear solver is used but for `Jc` only (see docs): it means that `options.linsolver` is used to invert `Jc`. These two Matrix-Free options thus expose different part of the jacobian `dG` in order to use specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
-- For `jacobian = AutoDiffMF()`, the evaluation map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a Matrix-Free differential.
+These methods only differ in the linear algebra used to invert the jacobian `dG` of the functional `G` (see [`Trapeze`](@ref)); the discretization is otherwise the same. The value of `jacobian` must belong to `$_trapezoid_jacobian_type`.
+- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each Newton iteration. This is the right choice when the sparsity pattern can change.
+- For `jacobian = FullSparseInplace()`, this is the same as for `FullLU()` but the sparse matrix `dG` is updated inplace. This method allocates much less and, in some cases, is significantly faster than `FullLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+- For `jacobian = Dense()`, same as above but the matrix `dG` is dense, and it is also updated inplace. This option is useful to study ODEs of small dimension.
+- For `jacobian = AutoDiffDense()`, the jacobian is evaluated using automatic differentiation (ForwardDiff).
+- For `jacobian = BorderedLU()`, we take advantage of the bordered shape of `dG` and invert it with a bordered linear solver based on a LU decomposition of the cyclic matrix.
+- For `jacobian = BorderedSparseInplace()`, this is the same as for `BorderedLU()` but the cyclic matrix `Jc` is updated inplace. This method allocates much less and, in some cases, is significantly faster than `BorderedLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
+- For `jacobian = FullMatrixFree()`, a matrix-free linear solver (given by `options.linsolver`) is used to invert `dG`: note that a preconditioner is very likely required here because of the cyclic shape of `dG` which negatively affects the convergence properties of GMRES.
+- For `jacobian = BorderedMatrixFree()`, a matrix-free linear solver is used as well but only for `Jc` (see the docs): `options.linsolver` is then used to invert `Jc`. These two matrix-free options thus expose different parts of the jacobian `dG` in order to apply specific preconditioners. For example, an ILU preconditioner on `Jc` could remove the constraints in `dG` and lead to poor convergence. Of course, for these last two methods, a preconditioner is likely to be required.
+- For `jacobian = AutoDiffMF()`, the evaluation map of the differential is derived using automatic differentiation. Thus, unlike the previous two cases, the user does not need to pass a matrix-free differential.
 """
 
 """
 $(TYPEDEF)
 
-This composite type implements Finite Differences based on a Trapeze rule (aka Crank-Nicolson, order 2 in time) to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
+This composite type implements a finite-difference discretization based on the Trapeze rule (aka Crank-Nicolson, order 2 in time) to locate periodic orbits / BVP. More details (maths, notations, linear systems) can be found [here](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/periodicOrbitTrapeze/).
 
-The scheme is as follows. We first consider a partition of ``[0, 1]`` given by ``0 < s_0 < \\cdots < s_m = 1`` and one looks for `T = x[end]` such that
+The scheme is as follows. We discretize the time on `M` slices ``x_{1},\\cdots,x_{M}``, each of dimension `N`, and one looks for the period `T = x[end]` such that the following Crank-Nicolson relations hold for ``i = 1, \\cdots, M-1``
 
- ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,\\ i = 1, \\cdots, m-1``
+ ``M_a\\cdot\\left(x_{i} - x_{i-1}\\right) - \\frac{T\\cdot h_i}{2} \\left(F(x_{i}) + F(x_{i-1})\\right) = 0,``
 
-with ``u_{0} := u_{m-1}`` and the periodicity condition ``u_{m} - u_{1} = 0`` and
+where we used the cyclic convention ``x_{0} := x_{M-1}`` and where ``h_i = s_i - s_{i-1}`` are the normalized steps of the mesh `mesh` (``s_0 = 0 < s_1 < \\cdots < s_M = 1``). The orbit is finally closed by the periodicity condition ``x_{M} - x_{1} = 0``. Here ``M_a`` is a mass matrix (the identity by default, see field `massmatrix`) and ``F`` stands for the residual of the vector field encoded in `prob_vf`.
 
-where ``h_1 = s_i - s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of the periodic orbit is constrained by using a section (but you could use your own)
+The phase of the periodic orbit, which removes the indeterminacy due to the invariance of periodic orbits under time shifts, is constrained by using a section (but you could use your own)
 
  ``\\sum_i\\langle x_{i} - x_{\\pi,i}, \\phi_{i}\\rangle=0.``
+
+The pair ``(\\phi, x_{\\pi})`` is stored in the fields `ϕ` and `xπ`: ``x_\\pi`` is a reference state on the orbit while ``\\phi`` are the (normalized) normal vectors of the section. It is updated automatically during continuation by `updatesection!` every `update_section_every_step` steps.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -44,15 +46,19 @@ $(TYPEDFIELDS)
 
 Here are some useful methods you can apply to `pb::Trapeze`:
 
-- `length(pb)` gives the number `M * N` of unknowns in the time-discretized state (without the period `T`, which is stored as `x[end]`).
+- `length(pb)` gives the number `M * N` of unknowns of the time-discretized state (without the period `T`, which is stored as `x[end]`).
 - `get_mesh_size(pb)` returns the number `M` of time slices.
+- `get_state_dim(pb)` returns the dimension `N` of a time slice.
 - `get_times(pb)` returns the normalized times `sᵢ` at which the orbit is discretized, i.e. the cumulative sum of the mesh steps.
-- `get_time_slices(pb, x)` returns the orbit guess `x` as an `N x M` matrix.
-- `get_mass_matrix(pb)` returns the mass matrix, defaulting to the identity if none was provided.
+- `get_time_slices(pb, x)` returns the state part of the guess `x` (i.e. `x[1:M*N]`, the period is dropped) reshaped as an `N x M` matrix.
+- `get_time_step(pb, i)` returns the `i`-th normalized mesh step `hᵢ`.
+- `get_mass_matrix(pb)` returns the mass matrix, defaulting to a sparse identity matrix if none was provided. Passing `true` as a second argument returns instead an identity matrix of the form `I(N)`.
 - `hasmassmatrix(pb)` returns `true` if a mass matrix was provided.
 - `getparams(pb)`, `getlens(pb)` and `setparam(pb, p)` give access to the parameters of the underlying vector field.
+- `getperiod(pb, x)` returns the period `T = x[end]` of the guess `x`.
 - `getdelta(pb)` returns the step `δ` used for finite differences.
-- `generate_solution(pb, orbit, period)` generates a guess from a function `t -> orbit(t)`.
+- `generate_solution(pb, orbit, period)` generates a guess from a function `t -> orbit(t)` for `t ∈ [0, 2π]` and a period `period`.
+- `generate_ci_problem(pb, bifprob, sol, tspan)` generates a `Trapeze` problem together with a guess from an `ODE` solution `sol`.
 - `get_periodic_orbit(pb, x, pars)` computes the full periodic orbit, mainly for plotting purposes.
 
 # Constructors
@@ -61,20 +67,28 @@ The structure can be created by calling `Trapeze(;kwargs...)`. For example, you 
 
     Trapeze(M = 100)
 
-# Orbit guess
-An orbit guess `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
+A more realistic way to build the problem is to provide the bifurcation problem together with the number of time slices `M` (or a non-uniform mesh given by a vector of steps) and the dimension `N` of a time slice:
 
-Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`. You can evaluate the residual of the functional `G` on an orbit guess using `po_residual(pb, orbitguess, p)` and its jacobian with the methods listed in the `# Functional` section below.
+    Trapeze(prob_vf, M::Int, N::Int)
+    Trapeze(prob_vf, ϕ, xπ, M::Int, N::Int, ls = DefaultLS(); kwargs...)
+
+In the second form, `ϕ` and `xπ` (see above) provide the initial section; they are stored into vectors of length `N * M`, the extra entries (if the provided vectors are shorter) being set to `0`. The keyword `massmatrix` allows to specify a mass matrix. When the discretization is created with a vector field, the residual `F` of `prob_vf` and its jacobian are used to assemble the functional `G`.
+
+# Orbit guess
+An orbit guess `orbitguess` must be a vector of size `M * N + 1` where `N` is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
+
+Note that you can generate this guess from a function solution using `generate_solution` or from an `ODEProblem` solution using `generate_ci_problem`. You can evaluate the residual of the functional `G` on an orbit guess using `po_residual(pb, orbitguess, p)` and its jacobian with the methods listed in the `# Functional` section below.
 
 # Functional
- A functional, hereby called `G`, encodes this problem. The following methods are available
+A functional, hereby called `G`, encodes this problem. The following methods are available
 
-- `po_residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
-- `po_jvp(pb, orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
-- `po_jacobian_sparse(pb, orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. It is called `A_γ` in the docs.
+- `po_residual(pb, orbitguess, p)` evaluates the functional `G` on `orbitguess`
+- `po_residual!(pb, out, orbitguess, p)` same as `po_residual` but writes the result into `out`
+- `po_jvp(pb, orbitguess, p, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`
+- `po_jacobian_sparse(pb, orbitguess, p)` returns the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. It is called ``A_γ`` in the docs.
 - `po_jacobian_sparse!(pb, J, orbitguess, p)`. Same as `po_jacobian_sparse` but overwrites `J` inplace. Note that the sparsity pattern must be the same independently of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `po_jacobian_sparse`.
-- `jacobian_cyclic_sparse(pb, orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
-- `jacobian_block_diag(pb, orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
+- `jacobian_cyclic_sparse(pb, orbitguess, p)` returns the sparse cyclic matrix ``J_c`` (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
+- `jacobian_block_diag(pb, orbitguess, p)` returns the block diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`, i.e. the matrices ``I - (T\\,h_i/2)\\,J(x_i)`` associated to each slice (the last block being the identity). Its inverse is a natural block Jacobi preconditioner.
 
 # Jacobian
 $DocStrjacobianPOTrap
@@ -83,40 +97,40 @@ $DocStrjacobianPOTrap
     For these methods to work on the GPU, for example with `CuArrays` in mode `allowscalar(false)`, we face the issue that the function `_extract_period_fdtrap` won't be well defined because it is a scalar operation. Note that you must pass the option `ongpu = true` for the functional to be evaluated efficiently on the gpu.
 """
 @with_kw_noshow struct Trapeze{Tprob, vectype, Tls <: AbstractLinearSolver, T, Tmass, Tjac} <: AbstractFiniteDifferencesDiscretization
-    "Bifurcation problem."
+    "Vector field (or bifurcation problem) whose residual `F` and jacobian are used to assemble the functional `G`. `nothing` is allowed to build a bare discretization."
     prob_vf::Tprob = nothing
 
-    "Used to set a section for the phase constraint equation, of size N*M."
+    "Normal vectors `ϕ` of the phase constraint, of size `N * M` (see the section equation in the documentation of `Trapeze`)."
     ϕ::vectype = nothing
 
-    "Used in the section for the phase constraint equation, of size N*M."
+    "Reference point `xπ` of the phase constraint, of size `N * M` (see the section equation in the documentation of `Trapeze`)."
     xπ::vectype = nothing
 
     "Number of time slices."
     M::Int = 0
 
-    "Mesh, see `TimeMesh`."
+    "Mesh of (normalized) time steps, see `TimeMesh`."
     mesh::TimeMesh{T} = TimeMesh(M)
 
-    "Dimension of the problem in case of an `AbstractVector`."
+    "Dimension of the problem in case of an `AbstractVector` state space."
     N::Int = 0
 
-    "Linear solver for each time slice, i.e. to solve `J⋅sol = rhs`. This is only needed for the computation of the Floquet multipliers in a matrix-free setting."
+    "Linear solver used to invert the jacobian of a single time slice, i.e. to solve `J⋅sol = rhs`. Only needed in a matrix-free setting (e.g. `BorderedMatrixFree()`) or for the computation of the Floquet multipliers."
     linsolver::Tls = DefaultLS()
 
-    "Whether the computation takes place on the gpu (Experimental)."
+    "Whether the computation takes place on the gpu (Experimental). When `true`, the functional returns `vcat(out[begin:end-1], phase_cond)` which is compatible with `CuArrays` in the mode `allowscalar(false)`."
     ongpu::Bool = false
 
     "Whether the vector field is autonomous, i.e. does not depend explicitly on time."
     isautonomous::Bool = true
 
-    "Mass matrix. You can pass for example a sparse matrix. Default: identity matrix."
+    "Mass matrix ``M_a`` of the time discretization. You can pass for example a sparse matrix. Default: `nothing`, i.e. the identity matrix."
     massmatrix::Tmass = nothing
 
-    "Updates the section every `update_section_every_step` step during continuation."
+    "Frequency at which the phase constraint is updated during continuation, see `updatesection!`."
     update_section_every_step::UInt = 1
 
-    "Type of jacobian used in Newton iterations (see below)."
+    "Type of jacobian used in Newton iterations (see the `# Jacobian` section in the documentation of `Trapeze`)."
     jacobian::Tjac = Dense()
 
     @assert jacobian in _trapezoid_jacobian_type "$jacobian is not defined for `Trapeze`. Pick one in $_trapezoid_jacobian_type"
@@ -222,6 +236,21 @@ Trapeze(prob_vf,
 
 
 # do not type h::Number because this will annoy CUDA
+"""
+$(TYPEDSIGNATURES)
+
+Low-level building block of the Crank-Nicolson scheme implemented by `Trapeze`. Given the two consecutive slices `u1`, `u2` and the (scaled) time step `h`, it stores in `dest` the residual
+
+``M_a\\,(u_1 - u_2) - h\\,(F(u_1) + F(u_2))``
+
+of the current time slice. The vector `tmp` is a buffer which, on entry, must contain ``F(u_2)`` (it is overwritten with ``F(u_1)`` or ``J(u_1)\\,du_1``); this avoids evaluating the vector field twice since the scheme is applied slice by slice in a cyclic way.
+
+- if `applyf = Val(true)` (default), ``F(u_1)`` is evaluated with the vector field;
+- if `applyf = Val(false)`, the jacobian action ``J(u_1)\\,du_1`` is used instead (this is the matrix-free expression of the jacobian);
+- if `linear = Val(false)`, the mass term ``M_a\\,(du_1 - du_2)`` is dropped. This is used to accumulate the derivative of the residual with respect to the period `T` inside `po_jvp!`.
+
+The 3-argument version (`u1`, `u2`, `h`) simply duplicates the slices for the directions `du1 = u1`, `du2 = u2`.
+"""
 function potrap_scheme!(trap,
                         dest,
                         u1, u2,
@@ -260,7 +289,11 @@ potrap_scheme!(trap, dest, u1, u2, par, h, tmp, linear = Val(true); applyf = Val
 """
 $(TYPEDSIGNATURES)
 
-This function implements the functional for finding periodic orbits based on finite differences using the Trapezoidal rule. It works for inplace / out of place vector fields `pb.F`
+Evaluate, inplace, the functional `G` implemented by the `Trapeze` discretization at the guess `u` (of size `M * N + 1`) and store the result in `out`. The functional is given by the block vector
+
+``G(u) = \\big[\\, M_a\\,(x_i - x_{i-1}) - \\tfrac{T\\,h_i}{2}(F(x_i) + F(x_{i-1}))\\ (i=1,\\cdots,M-1),\\; x_M - x_1,\\; \\langle x - x_\\pi, \\phi\\rangle\\,\\big]``
+
+where ``T = x_{M N + 1}`` is the period. It works for inplace / out of place vector fields `pb.F`. On the CPU it writes into and returns `out`; in GPU mode (`ongpu = true`) it returns `vcat(out[begin:end-1], phase_cond)` to avoid scalar operations.
 """
 @views function po_residual!(trap::Trapeze, out, u, par)
     T = getperiod(trap, u, nothing)
@@ -283,8 +316,18 @@ This function implements the functional for finding periodic orbits based on fin
         return out
     end
 end
+"""
+$(TYPEDSIGNATURES)
+
+Allocate a vector and evaluate the functional `G` at the guess `u`, see `po_residual!`.
+"""
 po_residual(trap::Trapeze, u, par) = po_residual!(trap, similar(u), u, par)
 
+"""
+$(TYPEDSIGNATURES)
+
+Evaluate only the `M - 1` first blocks of `G` (i.e. the Crank-Nicolson residuals, see the documentation of [`Trapeze`](@ref)) into the columns `1:M-1` of `outc`. The periodicity condition ``x_M - x_1 = 0`` and the phase condition are **not** handled here; they are added by `po_residual!`.
+"""
 @views function po_residual_bare!(trap::Trapeze, outc, uc::AbstractMatrix, par, T)
     M, N = size(trap)
 
@@ -305,7 +348,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Matrix free expression (jvp) of the jacobian of the problem for computing periodic obits when evaluated at `u` and applied to `du`.
+Matrix-free expression (jvp) of the jacobian ``dG(u)\\cdot du`` of the PO functional, evaluated at `u` and applied to the direction `du` (of size `M * N + 1`, `du[end]` being the direction for the period `T`). The result is stored in `out`.
 """
 @views function po_jvp!(trap::Trapeze, out, u, par, du)
     M, N = size(trap)
@@ -345,6 +388,11 @@ Matrix free expression (jvp) of the jacobian of the problem for computing period
     end
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Allocate a vector and evaluate the jacobian action ``dG(u)\\cdot du``, see `po_jvp!`.
+"""
 po_jvp(trap::Trapeze, u::AbstractVector, par, du) = po_jvp!(trap, similar(du), u, par, du)
 jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(wrap), u, par, du)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -352,7 +400,7 @@ jvp(wrap::PeriodicOrbitFunctionalTrap, u, par, du) = po_jvp(get_discretization(w
 """
 $(TYPEDSIGNATURES)
 
-Function to compute the Matrix-Free version of Aγ, see docs for its expression.
+Matrix-free application of the block ``A_\\gamma`` of the jacobian ``dG`` (see `po_jacobian_block`) to the direction `du` (of size `M * N`): the cyclic part is applied with `Jc` and the closure block ``x_M - \\gamma\\,x_1`` is stored in the last column `outc[:, M]` of `outc`.
 """
 function Aγ!(trap::Trapeze, outc, u0::AbstractVector, par, du::AbstractVector; γ = 1)
     # u0 of size N * M + 1
@@ -373,7 +421,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Function to compute the Matrix-Free version of the cyclic matrix Jc, see docs for its expression.
+Matrix-free application of the cyclic matrix ``J_c`` of the PO functional to the direction `du`. The state part `u0` (of size ``N\\,(M-1)``) gathers the time slices ``x_1,\\cdots,x_{M-1}`` at which the jacobians are evaluated, `T` is the period, `du` is the direction (of size ``N\\,(M-1)``) and `outc` (of size ``N\\times M``) receives the result (only its first `M - 1` columns are used, the last one plays the role of buffer via `tmp`). A vector version of `outc` is returned. This is the building block used by the matrix-free linear solvers, e.g. `FullMatrixFree()` or `BorderedMatrixFree()`.
 """
 function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du::AbstractVector, tmp)
     # tmp plays the role of buffer array
@@ -401,6 +449,11 @@ function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du:
     return vec(outc)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Allocate the buffers and apply the cyclic matrix ``J_c(u_0)\\cdot du`` (of size ``N\\,(M-1)``) to the direction `du`, see `Jc`.
+"""
 function Jc(trap::Trapeze, u0::AbstractVector, par, du::AbstractVector)
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
@@ -413,7 +466,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Matrix by blocks expression of the Jacobian for the PO functional computed at the space-time guess: `u0`
+Return the block-by-block (sparse) expression of the matrix ``A_\\gamma``, i.e. the jacobian of the PO functional `G` w.r.t. the space unknowns only (the period column is **not** included). It is a block matrix with `M` blocks of size ``N\\times N`` whose cyclic part is filled by `po_cylic_block!` and whose last block row encodes the periodicity condition ``x_M - \\gamma\\,x_1 = 0`` (``\\gamma = 1`` for the exact jacobian). See `po_jacobian_sparse` for the full jacobian of `G`.
 """
 function po_jacobian_block(trap::Trapeze, u0::AbstractVector, par; γ = 1)
     # extraction of various constants
@@ -431,7 +484,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function populates Jc with the cyclic matrix using the different Jacobians
+Fill the cyclic (block tridiagonal) part of the block matrix `Jc`, i.e. the jacobian of the Crank-Nicolson relations w.r.t. the space unknowns, using the analytic jacobians ``J(x_i)`` of the vector field evaluated at each slice. The blocks read ``I - (T\\,h_i/2)\\,J(x_i)`` on the diagonal and ``-I - (T\\,h_i/2)\\,J(x_{i-1})`` on the sub-diagonal (with the cyclic convention ``x_0 := x_{M-1}``).
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
     period = _extract_period_fdtrap(trap, u0)
@@ -468,6 +521,11 @@ function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc:
     return Jc
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the cyclic (block tridiagonal) matrix ``J_c(u_0)`` of size ``N\\,(M-1)`` as a `BlockArray`, see `po_cylic_block!`.
+"""
 function po_cylic_block(trap::Trapeze, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(trap)
@@ -475,12 +533,17 @@ function po_cylic_block(trap::Trapeze, u0::AbstractVector, par)
     po_cylic_block!(trap, u0, par, Jc)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the cyclic matrix ``J_c`` (see `po_cylic_block`) converted to a standard sparse matrix. Used internally to build the LU factorizations of the bordered linear solvers.
+"""
 cylic_potrap_sparse(trap::Trapeze, orbitguess0, par) = block_to_sparse(po_cylic_block(trap, orbitguess0, par))
 
 """
 $(TYPEDSIGNATURES)
 
-This method returns the jacobian of the functional G encoded in Trapeze using a Sparse representation.
+Return the sparse matrix of the full jacobian ``dG(u_0)`` of the PO functional `G` at `u_0`. It is assembled from the block matrix ``A_\\gamma`` (see `po_jacobian_block`) to which the derivative ``\\partial_T G`` w.r.t. the period `T` is appended as a last column (computed by finite differences with step `δ`), together with the last row encoding the phase condition ``\\phi^\\top\\,x = 0``.
 """
 function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
     # extraction of various constants
@@ -504,7 +567,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This method returns the jacobian of the functional G encoded in Trapeze using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
+Inplace version of `po_jacobian_sparse`: the jacobian ``dG(u_0)`` is stored in the matrix `J0`, which must have the right size and sparsity pattern. When `J0` is sparse, this assumes that the sparsity pattern of `J0` and of ``dG(u_0)`` are the same (this is the case when only the values of the parameters or of `u_0` change). This method is then significantly faster than `po_jacobian_sparse` as it avoids reallocation.
 """
 @views function po_jacobian_sparse!(trap::Trapeze, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
     M, N = size(trap)
@@ -556,6 +619,11 @@ This method returns the jacobian of the functional G encoded in Trapeze using an
     return J0
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Same as the 3-argument version of `po_jacobian_sparse!` but using the precomputed `indx` of the blocks of the sparse matrix `J0` (as returned by `_get_blocks_from_sparse_matrix`). Only the values of `J0.nzval` are updated, making this the fastest variant. `updateborder = Val(false)` skips the update of the last column / last row (the period and phase parts), which is useful when only the cyclic part ``J_c`` needs to be refreshed, e.g. inside `AγOperatorSparseInplace`.
+"""
 @views function po_jacobian_sparse!(trap::Trapeze,
                             J0,
                             u0::AbstractVector,
@@ -620,6 +688,11 @@ end
     return J0
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the sparse cyclic matrix ``J_c(u_0)`` of size ``N\\,(M-1)`` (see `po_cylic_block`) as a sparse matrix. This corresponds to the space part of ``dG`` without the closure block, the period column and the phase line; it is used to build the (preconditioned) bordered linear solvers.
+"""
 function jacobian_cyclic_sparse(trap::Trapeze, u0::AbstractVector, par, γ = 1)
     # extraction of various constants
     N = trap.N
@@ -631,6 +704,11 @@ function jacobian_cyclic_sparse(trap::Trapeze, u0::AbstractVector, par, γ = 1)
     return Aγ[begin:end-N, begin:end-N]
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the block diagonal of the jacobian ``dG(u_0)``, i.e. a sparse matrix whose `M` diagonal blocks read ``I - (T\\,h_i/2)\\,J(x_i)`` (the last one is the identity). The inverse of this matrix is a natural block Jacobi preconditioner for the (preconditioned) matrix-free solvers of `Trapeze`.
+"""
 function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
     # extraction of various constants
     M, N = size(trap)
@@ -675,7 +753,7 @@ get_periodic_orbit(prob::AbstractFiniteDifferencesDiscretization, x, p::Real) = 
 """
 $(TYPEDSIGNATURES)
 
-This function updates the section during the continuation run.
+Update the section used for the phase constraint at the current guess `x`: the reference point is set to ``x_\\pi = x`` (the state part of the guess) while the normals are taken as the (normalized) vector field evaluated at each time slice, i.e. ``\\phi_i = F(x_i)/M``. This is called automatically during continuation every `update_section_every_step` steps.
 """
 @views function updatesection!(trap::Trapeze, x, pars)
     @debug "Update section TRAP"
@@ -803,7 +881,7 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.sc
     return J # needed to properly call the linear solver.
 end
 
-# this is to use BorderingBLS with check_precision = true
+# this is used to apply the bordered structure of the jacobian with a BorderingBLS linear solver
 #        ┌             ┐
 #  J =   │  Aγ   ∂TGpo │
 #        │  ϕ'     *   │
@@ -918,10 +996,10 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This is the Krylov-Newton Solver for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
+Locate a periodic orbit with a Newton solver applied to the finite-difference functional `G` of the [`Trapeze`](@ref) discretization, i.e. solve ``G(u) = 0``. The returned solution has `u[end] = T` equal to the period of the orbit.
 
 # Arguments:
-- `prob` a problem of type [`Trapeze`](@ref) encoding the functional G.
+- `trap` a problem of type [`Trapeze`](@ref) encoding the functional `G`; its `jacobian` field selects the linear algebra used, see below.
 - `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
 - `options` same as for the regular `newton` method.
 $DocStrjacobianPOTrap
@@ -934,7 +1012,7 @@ newton(trap::Trapeze,
 """
 $(TYPEDSIGNATURES)
 
-This function is similar to `newton(::Trapeze, orbitguess, options; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
+This function is similar to `newton` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton algorithm from converging to the equilibrium point.
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 newton(trap::Trapeze,
         orbitguess::vectype,
@@ -947,17 +1025,19 @@ newton(trap::Trapeze,
 """
 $(TYPEDSIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
+Continue a branch of periodic orbits computed with the finite-difference functional `G` of the [`Trapeze`](@ref) discretization.
 
 # Arguments
-- `prob::Trapeze` encodes the functional G.
-- `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
-- `alg` continuation algorithm
-- `contParams` same as for the regular [`continuation`](@ref) method
-- `linear_algo` same as in [`continuation`](@ref)
+- `trap` a problem of type [`Trapeze`](@ref) encoding the functional `G`.
+- `orbitguess` a guess for a first periodic orbit. See [`Trapeze`](@ref) for more details.
+- `alg` continuation algorithm.
+- `contParams` same as for the regular [`continuation`](@ref) method.
+- `linear_algo` same as in [`continuation`](@ref).
 
 # Keywords arguments
-- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
+- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`.
+- `record_from_solution` function to record the solution, see [`continuation`](@ref).
+- `plot_solution` function to plot the solution, see [`continuation`](@ref).
 
 $DocStrjacobianPOTrap
 
@@ -1036,17 +1116,18 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This is the continuation routine for computing a periodic orbit using a functional G based on finite differences and a Trapezoidal rule.
+Convenience wrapper around `continuation_po` to continue a branch of periodic orbits computed with the [`Trapeze`](@ref) finite-difference functional.
 
 # Arguments
-- `prob::Trapeze` encodes the functional G.
-- `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
+- `trap` a problem of type [`Trapeze`](@ref) encoding the functional `G`.
+- `orbitguess` a guess for a first periodic orbit. See [`Trapeze`](@ref) for more details.
 - `alg` continuation algorithm.
 - `contParams` same as for the regular [`continuation`](@ref) method.
 
 # Keyword arguments
 
-- `linear_algo` same as in [`continuation`](@ref)
+- `linear_algo` same as in [`continuation`](@ref); it defaults to a bordered linear solver based on `contParams.newton_options.linsolver`.
+- `record_from_solution` function used to record the solution on the branch; it defaults to `(u, p; k...) -> (period = u[end],)` so that the period is printed along the branch.
 $DocStrjacobianPOTrap
 
 Note that by default, the method prints the period of the periodic orbit as function of the parameter. This can be changed by providing your `record_from_solution` argument.
@@ -1099,15 +1180,20 @@ using SciMLBase: AbstractTimeseriesSolution
 """
 $(TYPEDSIGNATURES)
 
-Generate a guess and a periodic orbit problem from a solution.
+Generate a guess for the periodic orbit and an updated `Trapeze` problem from an `ODE` solution.
 
 ## Arguments
-- `bifprob` a bifurcation problem to provide the vector field
-- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`)
-- `tspan` a `Tuple` giving the time span (period) of the periodic orbit
+- `trap` a `Trapeze` discretization, used for its mesh and default parameters (its number of time slices `M` is kept).
+- `bifprob` a bifurcation problem to provide the vector field.
+- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`) approximating the periodic orbit.
+- `tspan` a `Tuple (t0, t1)` giving the time span (period) of the periodic orbit. If a single `period::Real` is passed instead, it is interpreted as `tspan = (0, period)`.
+
+## Keywords
+- `optimal_period::Bool = true`: when `true`, the period `tspan[2] - tspan[1]` is refined by minimizing the distance between ``x(t_0)`` and ``x(t_0 + T)`` for ``T`` close to the guess.
+- `ktrap...` additional keywords passed to `setproperties` to update the discretization (e.g. `massmatrix`, `update_section_every_step`, `jacobian`).
 
 ## Output
-- returns a `Trapeze` and an initial guess.
+- returns a `Trapeze` problem (whose `prob_vf` is set from `bifprob`, with the parameters of `sol`, and whose phase section `(ϕ, xπ)` is initialized from the solution) together with the corresponding initial guess for the periodic orbit (with the period appended as its last component). This guess can be fed directly to `newton` or `continuation`.
 """
 function generate_ci_problem(trap::Trapeze,
                             bifprob::AbstractBifurcationProblem,

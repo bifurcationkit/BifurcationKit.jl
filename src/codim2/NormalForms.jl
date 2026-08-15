@@ -1508,8 +1508,8 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # parameters
     lenses = (getlens(𝐌𝐚), lens)
-    lens1, lens2 = lenses
-    p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
+    # lens1, lens2 = lenses
+    # p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
     pt = HopfHopf(
         x0, nothing, nothing,
@@ -1529,13 +1529,13 @@ function hopf_hopf_normal_form(𝐏𝐛,
     # _getp(l::AllOpticTypes) = _get(parbif, l)
     # _setp(l::AllOpticTypes, p::Number) = set(parbif, l, p)
     # _setp(p1::Number, p2::Number) = set(set(parbif, lens1, p1), lens2, p2)
-    if autodiff
-        Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
-    else
-        # finite differences
-        Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- 
-                        residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
-    end
+    # if autodiff
+    #     Jp = (p, l) -> ForwardDiff.derivative( P -> residual(prob_vf, x0, setp(l, P)) , p)
+    # else
+    #     # finite differences
+    #     Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- 
+    #                     residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
+    # end
 
     # second order differential, to be in agreement with Kuznetsov et al.
     B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
@@ -1614,9 +1614,9 @@ $(TYPEDSIGNATURES)
 
 Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 """
-function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; 
+function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::𝒯; 
                     verbose = false, 
-                    ampfactor = one(T)) where T
+                    ampfactor = one(𝒯)) where 𝒯
     (; λ2, λ1, ω0) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
@@ -1657,9 +1657,9 @@ Compute the predictor for the curve of Neimark-Sacker points near the Hopf-Hopf 
 
 Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs.” Physica D: Nonlinear Phenomena 237, no. 23 (December 2008): 3061–68. https://doi.org/10.1016/j.physd.2008.06.006.
 """
-function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::T; 
+function predictor(hh::HopfHopf, ::Val{:NS}, ϵ::𝒯; 
                     verbose = false, 
-                    ampfactor = one(T)) where T
+                    ampfactor = one(𝒯)) where 𝒯
     (;λ1, λ2, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
