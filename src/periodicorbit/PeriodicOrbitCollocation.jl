@@ -1310,13 +1310,15 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
         @warn "[Mesh-adaptation]. Ntst = $Ntst < 2, mesh adaptation is skipped."
         return (success = true, newτsT = nothing, newmesh = nothing, ϕ = τsT)
     end
+    # s^{(k)} is built from the jumps Δv_{i±1/2} = v_{i±1/2} - v_{i-1/2} of the m-th
+    # derivative, which estimate the (m+1)-th derivative of the exact solution.
     sk = zeros(𝒯, Ntst)
-    sk[1] = 2normE(vm[1]) / (τsT[2] - τsT[1])
+    sk[1] = 2normE(vm[2] - vm[1]) / (τsT[3] - τsT[1])
     for i in 2:Ntst-1
-        sk[i] = normE(vm[i])   / (τsT[i+1] - τsT[i-1]) +
-                normE(vm[i+1]) / (τsT[i+2] - τsT[i])
+        sk[i] = normE(vm[i+1] - vm[i])   / (τsT[i+2] - τsT[i]) +
+                normE(vm[i]   - vm[i-1]) / (τsT[i+1] - τsT[i-1])
     end
-    sk[Ntst] = 2normE(vm[end]) / (τsT[end] - τsT[end-2])
+    sk[Ntst] = 2normE(vm[Ntst] - vm[Ntst-1]) / (τsT[Ntst+1] - τsT[Ntst-1])
     ############
     # monitor function
     ϕ = sk.^(1/(m+1))
