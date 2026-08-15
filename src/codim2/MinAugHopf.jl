@@ -57,7 +57,7 @@ Compute the solution of
 and the same for the adjoint system.
 """
 function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp, ω)
-    return __compute_bordered_vectors(𝐇.linbdsolver,
+    return __compute_bordered_vectors_hopf(𝐇.linbdsolver,
                                       𝐇.linbdsolverAdjoint,
                                       J_at_xp,
                                       JAd_at_xp,
@@ -67,7 +67,7 @@ function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at
                                       𝐇.zero)
 end
 
-function __compute_bordered_vectors(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
+function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
     # Todo: use hopf_ma_test
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
     v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
@@ -469,10 +469,10 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
     record_hopf = RecordForHopf(record_from_solution, BifurcationKit.record_from_solution(prob_vf))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         hopfpointguess = vcat(hopfpointguess.u, hopfpointguess.p)
-        prob_hopf = HopfMAProblem(𝐇, jacobian_ma, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
+        prob_hopf = HopfMAProblem(𝐇, jacobian_ma, hopfpointguess, lens2, plot_solution(prob_vf), record_hopf)
         opt_hopf_cont = deepcopy(options_cont)
     else
-        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, lens2, prob_vf.plotSolution, record_hopf)
+        prob_hopf = HopfMAProblem(𝐇, nothing, hopfpointguess, lens2, plot_solution(prob_vf), record_hopf)
         opt_hopf_cont = @set options_cont.newton_options.linsolver = HopfLinearSolverMinAug()
     end
 
@@ -554,34 +554,13 @@ function continuation_hopf(prob,
 
         # computation of adjoint eigenvalue
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-        # jacobian at bifurcation point
         L = jacobian(prob, bifpt.x, parbif)
-
-        # jacobian adjoint at bifurcation point
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
         ζ★, λ★ = get_adjoint_basis(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
         VI.add!(ζad, ζ★, 1 / VI.inner(ζ★, ζ), 0)
     else
-        # we use a minimally augmented formulation to set the initial vectors
-        # we start with a vector similar to an eigenvector, we must ensure that
-        # it is complex valued
-        _u0 = getu0(getprob(br))
-        ζ = VI.scale(_copy(_u0), one(Complex{VI.scalartype(_u0)}))
-        a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
-        b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
-
-        L = jacobian(prob, bifpt.x, parbif)
-        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-
-        (; v, w, itv, itw) = __compute_bordered_vectors(bdlinsolver, bdlinsolver_adjoint, L, L★, ω, a, b, VI.zerovector(a))
-
-        @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*v) norminf(apply(L,v) + complex(0,ω)*v)
-
-        @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*w) norminf(apply(L★,w) + complex(0,ω)*w)
-
-        ζad = VI.scale(w,  1 / normC(w))
-        ζ   = VI.scale(v,  1 / normC(v))
+        (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
 
     return continuation_hopf(getprob(br), alg,
@@ -593,6 +572,34 @@ function continuation_hopf(prob,
                     bdlinsolver,
                     bdlinsolver_adjoint,
                     kwargs...)
+end
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Hopf bifurcation point
+using the minimally augmented formulation. We start from a complexified version of the
+initial guess `u0` and, if needed, draw random vectors for the bordered linear solvers.
+"""
+function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    # we use a minimally augmented formulation to set the initial vectors
+    # we start with a vector similar to an eigenvector, we must ensure that
+    # it is complex valued
+    ζ = VI.scale(_copy(bifpt.x), one(Complex{VI.scalartype(bifpt.x)}))
+    a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
+    b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
+
+    L = jacobian(prob, bifpt.x, parbif)
+    L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
+
+    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+
+    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*Mass*v) norminf(apply(L,v) + complex(0,ω)*v)
+
+    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*adjoint(Mass)*w) norminf(apply(L★,w) + complex(0,ω)*w)
+
+    ζad = VI.scale(w,  1 / normC(w))
+    ζ   = VI.scale(v,  1 / normC(v))
+    return (; ζ, ζad)
 end
 
 function test_bt_gh(iter, state)

@@ -411,10 +411,10 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     record_fold = RecordForFold(record_from_solution, BifurcationKit.record_from_solution(prob))
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
-        prob_fold = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, lens2, prob.plotSolution, record_fold)
+        prob_fold = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, lens2, plot_solution(prob), record_fold)
         opt_fold_cont = deepcopy(options_cont)
     else
-        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, lens2, prob.plotSolution, record_fold)
+        prob_fold = FoldMAProblem(𝐅, nothing, foldpointguess, lens2, plot_solution(prob), record_fold)
         opt_fold_cont = @set options_cont.newton_options.linsolver = FoldLinearSolverMinAug()
     end
 
