@@ -89,12 +89,12 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
     ind1, ind2 = get_plot_vars(brs[1], vars)
     if length(brs) == 0; return; end
     # handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
-    bptps = Any[(type = pt.type, param = getproperty(pt, ind1), printsol = getproperty(pt.printsol, ind2)) for pt in brs[1].specialpoint if ((pt.type != :none)&&(pt.type != :endpoint))]
+    bptps = Any[(type = pt.type, param = getproperty(brs[1][pt.idx], ind1), printsol = getproperty(brs[1][pt.idx], ind2)) for pt in brs[1].specialpoint if ((pt.type != :none)&&(pt.type != :endpoint)&&(pt.idx <= length(brs[1])))]
     for ii=2:length(brs)
         _ind1, _ind2 = get_plot_vars(brs[ii], vars)
         for pt in brs[ii].specialpoint
-            if (pt.type != :none) && (pt.type != :endpoint)
-                push!(bptps, (type = pt.type, param = getproperty(pt, _ind1), printsol = getproperty(pt.printsol, _ind2)))
+            if (pt.type != :none) && (pt.type != :endpoint) && (pt.idx <= length(brs[ii]))
+                push!(bptps, (type = pt.type, param = getproperty(brs[ii][pt.idx], _ind1), printsol = getproperty(brs[ii][pt.idx], _ind2)))
             end
         end
     end
