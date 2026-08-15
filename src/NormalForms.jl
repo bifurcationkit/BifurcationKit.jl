@@ -1,4 +1,4 @@
-function get_adjoint_basis(L★, λs::AbstractVector, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
+function _get_adjoint_kernel_basis_nd_from_eigensolver(L★, λs::AbstractVector, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
     𝒯 = VI.scalartype(λs)
     # same as function below but for a list of eigenvalues
     # we compute the eigen-elements of the adjoint of L
@@ -28,7 +28,7 @@ $(TYPEDSIGNATURES)
 
 Return a left eigenvector for an eigenvalue closest to `λ`. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
 """
-function get_adjoint_basis(L★, λ::Number, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
+function _get_adjoint_kernel_basis_1d_from_eigensolver(L★, λ::Number, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
     λ★, ev★, cv, = eigsolver(L★, nev)
     ~cv && @warn "Eigen Solver did not converge"
     I = argmin(abs.(λ★ .- λ))
@@ -43,6 +43,53 @@ end
 """
 $(TYPEDSIGNATURES)
 
+# Compute the right (resp. left) null vector of the 1d kernel of `L` (resp. `L★`)
+# using a bordered linear system, see `__compute_bordered_vectors_fold`.
+function _get_kernel_basis_1d_from_bls(L, L★, bls, bls_adjoint, x0, 𝒯, scaleζ; verbose = false)
+    verbose && println("──▶ Compute the kernel basis using a bordered linear system")
+    a = _randn(x0); VI.scale!(a, 1 / scaleζ(a))
+    b = _randn(x0); VI.scale!(b, 1 / scaleζ(b))
+    (; v, w) = __compute_bordered_vectors_fold(bls, bls_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
+    return real.(v), real.(w)
+end
+
+# Compute the right (resp. left) kernel basis `(ζ, ζ★)` of the 1d bifurcation point using
+# the eigensolver, together with the left eigenvalue `λ★`. `ζ` and `ζ_ad` are optional
+# user provided bases for the right / left kernel of `L`, they are recomputed if `nothing`.
+function _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, eigsolver, nev, verbose, 𝒯eigvec, x0, parbif;
+                                               ζ = nothing, ζ_ad = nothing)
+    # corresponding eigenvector, it must be real
+    if isnothing(ζ) # do we have a basis for the kernel?
+        if ~haseigenvector(br)
+            # we recompute the eigen-elements if there were not saved during the computation of the branch
+            nev_required = max(nev, bifpt.ind_ev + 2)
+            verbose && @info "Eigen-elements not saved in the branch. Recomputing $nev_required of them..."
+            _λ, _ev, _ = eigsolver(L, nev_required)
+            if ~(_λ[bifpt.ind_ev] ≈ λ)
+                error("We did not find the correct eigenvalue $λ. We found $(_λ)")
+            end
+            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, _ev, bifpt.ind_ev)))
+        else
+            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
+        end
+    end
+    ζ = VI.scale!!(ζ, 1 / scaleζ(ζ))
+
+    # extract eigen-elements for adjoint(L), needed to build spectral projector
+    if isnothing(ζ_ad)
+        if is_symmetric(prob)
+            λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+            ζ★ = _copy(ζ)
+        else
+            L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
+            ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
+        end
+    else
+        λ★ = conj(λ)
+        ζ★ = _copy(ζ_ad)
+    end
+    return ζ, ζ★, λ★
+end
 Bi-orthogonalise the two sets of vectors.
 
 # Optional argument
@@ -110,6 +157,7 @@ Compute the reduced equation / normal form of the bifurcation point located at `
 - `detailed = Val(true)` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is "long", for example for a Bogdanov-Takens point.
 - `bls = MatrixBLS()` specify bordered linear solver. Needed to compute the reduced equation Taylor expansion of Branch/BT points. Indeed, it is required to solve `L⋅u = rhs` where `L` is the jacobian at the bifurcation point, `L` is thus singular and we rely on a bordered linear solver to solve this system.
 - `bls_block = bls` specify bordered linear solver when the border has dimension > 1 (1 for `bls`). (see `bls` option above).
+- `start_with_eigen = Val(true)` whether to compute the basis of the kernel (the eigenvectors) using the eigensolver (`Val(true)`) or using a bordered linear system (`Val(false)`). The latter can be more robust for large scale problems where the eigensolver fails. It requires `bls`, `bls_adjoint` and possibly `bls_block` to be provided.
 
 # Available method(s)
 
@@ -170,7 +218,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :hh
         return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
-        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls)
+        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint, start_with_eigen)
     end
     return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block)
 end
@@ -202,7 +250,9 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     detailed::Bool = true,
 
                     bls = MatrixBLS(),
-                    ) where {𝒯eigvec, Tevecs, Tevecs_ad}
+                    bls_adjoint = bls,
+                    start_with_eigen::Val{start_with_eigen_type} = Val(true),
+                    ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type}
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     plens = get_lens_symbol(lens)
@@ -237,35 +287,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     end
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
-    # corresponding eigenvector, it must be real
-    if Tevecs == Nothing # do we have a basis for the kernel?
-        if ~haseigenvector(br)
-            # we recompute the eigen-elements if there were not saved during the computation of the branch
-            nev_required = max(nev, bifpt.ind_ev + 2)
-            verbose && @info "Eigen-elements not saved in the branch. Recomputing $nev_required of them..."
-            _λ, _ev, _ = options.eigsolver(L, nev_required)
-            if ~(_λ[bifpt.ind_ev] ≈ λ)
-                error("We did not find the correct eigenvalue $λ. We found $(_λ)")
-            end
-            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)))
-        else
-            ζ = convert(𝒯eigvec, real(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
-        end
-    end
-    ζ = VI.scale!!(ζ, 1 / scaleζ(ζ))
-
-    # extract eigen-elements for adjoint(L), needed to build spectral projector
-    if Tevecs_ad == Nothing
-        if is_symmetric(prob)
-            λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-            ζ★ = _copy(ζ)
-        else
-            _Lt = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
-            ζ★, λ★ = get_adjoint_basis(_Lt, conj(λ), options.eigsolver; nev, verbose)
-        end
+    if start_with_eigen_type
+        ζ, ζ★, λ★ = _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, options.eigsolver, nev, verbose, 𝒯eigvec, x0, parbif;
+                                                          ζ, ζ_ad)
     else
+        # compute the (right / left) basis vectors of the kernel using a bordered linear system
+        L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
+        ζ, ζ★ = _get_kernel_basis_1d_from_bls(L, L★, bls, bls_adjoint, x0, 𝒯, scaleζ; verbose)
+        ζ = convert(𝒯eigvec, ζ)
         λ★ = conj(λ)
-        ζ★ = _copy(ζ_ad)
     end
 
     ζ★ = convert(𝒯eigvec, real(ζ★))
