@@ -390,9 +390,9 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     eigsolver = HopfEig(getsolver(opt_ns_cont.newton_options.eigsolver), prob_ns)
 
     # change the plot and record functions
-    # _kwargs = (;plot_solution = plot_solution)
-    # _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
-    # prob_ns = re_make(prob_ns, plot_solution = _plotsol)
+    _kwargs = (;plot_solution = plot_solution)
+    _plotsol = modify_po_plot(prob_ns, getparams(prob_ns), getlens(prob_ns) ; _kwargs...)
+    prob_ns = re_make(prob_ns, plot_solution = _plotsol)
 
     # define event for detecting codim 2 bifurcations. Couple it with user passed events
     event_user = get(kwargs, :event, nothing)
@@ -409,7 +409,7 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     event,
                     normC,
                     )
-    # _correct_event_labels(br_ns_po)
+    _correct_event_labels(br_ns_po)
 end
 
 function test_for_ns_ch(iter, state)
