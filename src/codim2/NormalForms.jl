@@ -20,7 +20,10 @@ function cusp_normal_form(_prob,
                             verbose = false,
                             ζs = nothing,
                             lens = getlens(br),
-                            scaleζ = norm) where {𝒯eigvec}
+                            scaleζ = norm,
+                            bls = nothing,
+                            bls_adjoint = nothing,
+                            start_with_eigen::Val{start_with_eigen_type} = Val(true)) where {𝒯eigvec, start_with_eigen_type}
     if br.specialpoint[ind_bif].type != :cusp 
         error("The provided index does not refer to a Cusp Point")
     end
@@ -38,7 +41,8 @@ function cusp_normal_form(_prob,
 
     # linear solvers
     ls = 𝐌𝐚.linsolver
-    bls = 𝐌𝐚.linbdsolver
+    bls = isnothing(bls) ? 𝐌𝐚.linbdsolver : bls
+    bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
     # kernel dimension
     N = 1
@@ -69,27 +73,34 @@ function cusp_normal_form(_prob,
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
 
-    # eigenvectors
-    # we recompute the eigen-elements if they were not saved
-    verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
-    eigsolver = getsolver(options.eigsolver)
-    _λ0, _ev0, _ = eigsolver(L, nev)
-    Ivp = sortperm(_λ0, by = abs)
-    _λ = _λ0[Ivp]
-    if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
-        @warn "We did not find the correct eigenvalues. We found the eigenvalues:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
-        display(_λ[1:N] .- 0)
-    end
-    ζ = real.(geteigenvector(eigsolver, _ev0, Ivp[1]))
-    ζ ./= scaleζ(ζ)
+    if start_with_eigen_type
+        # eigenvectors
+        # we recompute the eigen-elements if they were not saved
+        verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
+        eigsolver = getsolver(options.eigsolver)
+        _λ0, _ev0, _ = eigsolver(L, nev)
+        Ivp = sortperm(_λ0, by = abs)
+        _λ = _λ0[Ivp]
+        if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
+            @warn "We did not find the correct eigenvalues. We found the eigenvalues:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
+            display(_λ[1:N] .- 0)
+        end
+        ζ = real.(geteigenvector(eigsolver, _ev0, Ivp[1]))
+        ζ ./= scaleζ(ζ)
 
-    # extract eigen-elements for adjoint(L), needed for spectral projector
-    if is_symmetric(prob_vf)
-        λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-        ζ★ = copy(ζ)
+        # extract eigen-elements for adjoint(L), needed for spectral projector
+        if is_symmetric(prob_vf)
+            λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+            ζ★ = copy(ζ)
+        else
+            L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
+            ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
+        end
     else
-        _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-        ζ★, λ★ = get_adjoint_basis(_Jt, conj(λ), eigsolver; nev, verbose)
+        # compute the (right / left) basis vectors of the kernel using a bordered linear system
+        L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
+        ζ, ζ★ = _get_kernel_basis_1d_from_bls(L, L★, bls, bls_adjoint, x0, 𝒯, scaleζ; verbose)
+        λ★ = conj(λ)
     end
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)

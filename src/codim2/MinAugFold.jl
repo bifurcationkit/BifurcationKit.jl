@@ -258,12 +258,12 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        ζstar, = get_adjoint_basis(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
+        ζstar, = _get_adjoint_kernel_basis_1d_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec .= real.(ζstar)
 
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        ζstar, = get_adjoint_basis(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
+        ζstar, = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         VI.scale!(eigenvec_ad, 1 / normN(eigenvec_ad))
     end
@@ -499,7 +499,7 @@ function continuation_fold(prob,
         L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
 
         # computation of zero adjoint eigenvector
-        ζ★, λ★ = get_adjoint_basis(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
+        ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
         VI.scale!(ζad, 1 / real(VI.inner(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else

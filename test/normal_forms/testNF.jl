@@ -504,6 +504,10 @@ let
     show(cuspnf)
     BK.type(cuspnf)
     @test cuspnf.nf.c == par.c
+
+    # same normal form but with the kernel basis computed with a bordered linear system
+    cuspnf_bd = get_normal_form(sn_codim2, ind[1]; start_with_eigen = Val(false))
+    @test cuspnf_bd.nf.c ≈ par.c atol = 1e-8
 end
 ####################################################################################################
 # test for the Bogdanov-Takens normal form

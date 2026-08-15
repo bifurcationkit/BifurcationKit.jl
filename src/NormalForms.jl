@@ -244,7 +244,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     if bifpt.type == :hopf
         return hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, start_with_eigen, bls, bls_adjoint)
     elseif bifpt.type == :cusp
-        return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf...)
+        return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., start_with_eigen, bls, bls_adjoint)
     elseif bifpt.type == :bt
         return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
     elseif bifpt.type == :gh
@@ -1188,13 +1188,12 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     if start_with_eigen_type
-        ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev, verbose)
+        ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
     else
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
         (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
-        ζ = v
-        ζ★ = w
+        ζ = v; ζ★ = w
         λ★ = conj(λ)
     end
 
@@ -1523,7 +1522,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
-    ζ★, λ★ = get_adjoint_basis(L★, conj(λ), options.eigsolver; nev = nev, verbose = verbose)
+    ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev."
