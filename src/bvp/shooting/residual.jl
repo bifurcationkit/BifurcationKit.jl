@@ -2,7 +2,7 @@
 $(TYPEDSIGNATURES)
 
 Compute the residual for shooting discretization.
-Calls BifurcationKit's po_residual_bare! and adds phase condition.
+Calls `bvp_residual_bare!` which implements the shooting matching conditions together with the boundary condition `g` of the `BVPModel`.
 """
 function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     model = get_model(d_bvp)

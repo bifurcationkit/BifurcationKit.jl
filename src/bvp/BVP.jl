@@ -32,7 +32,7 @@ disc = BK.Trapeze(M=100)
 bvp = BK.discretize(model, disc)
 
 # 5. Generate initial guess
-x0 = BK.generate_solution(bvp, t -> [cos(t), sin(t)], 2π)
+x0 = BK.generate_solution(bvp, t -> [cos(t), sin(t)])
 
 # 6. Create BVP bifurcation problem
 prob = BK.BVPBifProblem(bvp, x0, (ω=1.0,), (@optic _.ω))

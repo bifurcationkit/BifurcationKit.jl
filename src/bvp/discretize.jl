@@ -31,7 +31,7 @@ disc = Trapeze(M=100)
 bvp = discretize(model, disc)
 
 # Use with continuation
-prob = BifurcationProblem(bvp, x0, params, (@optic _.ω))
+prob = BVPBifProblem(bvp, x0, params, (@optic _.ω))
 ```
 """
 function discretize end

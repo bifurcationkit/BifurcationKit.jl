@@ -37,9 +37,9 @@ using OrdinaryDiffEq
 disc = Shooting(M=4, alg=Tsit5())
 
 ## Constructor
-- `M::Int = 1`: Number of shooting intervals (M=1 is simple shooting)
-- `alg = nothing`: ODE solver algorithm
-- `parallel::Bool = false`: Use parallel integration
+- `M::Int`: Number of shooting intervals (M=1 is simple shooting)
+- `alg`: ODE solver algorithm
+- `parallel::Bool`: Use parallel integration
 ```
 """
 Base.@kwdef struct Shooting{Talg} <: AbstractDiscretizer
@@ -84,7 +84,7 @@ struct Trapeze{Tjac, Tmesh} <: AbstractDiscretizer
     "Time mesh over M-1 intervals (normalized to sum to 1)"
     mesh::Tmesh
 
-    "Jacobian computation method (:auto, :dense, :sparse, :matrixfree)"
+    "Jacobian computation method (`AutoDiffDense()`, `Dense()`, `DenseAnalytical()`, `FullSparse()`)"
     jacobian::Tjac
 end
 
@@ -95,8 +95,8 @@ Create a trapezoidal discretizer.
 
 ## Keyword Arguments
 - `M::Int = 100`: Number of time slices
-- `mesh = nothing`: Optional normalized step vector over `M-1` intervals
-- `jacobian = :auto`: Jacobian computation method
+- `mesh = TimeMesh(M - 1)`: Optional normalized step vector over `M-1` intervals
+- `jacobian = AutoDiffDense()`: Jacobian computation method
 """
 function Trapeze(; M::Int=100, mesh=TimeMesh(M - 1), jacobian = AutoDiffDense())
     @assert M >= 2 "Trapeze requires at least M=2 time slices"

@@ -66,18 +66,18 @@ Create a `BVPBifProblem` from a discretized BVP.
 - `lens`: [Optional] Optic for the continuation parameter (e.g., `@optic _.μ`)
 
 ## Keyword Arguments
-- `jacobian`: Jacobian type (default: `DenseAnalytical()`)
-- `record_from_solution`: Function to record from solution (default records period)
+- `jacobian`: Jacobian type (default: `AutoDiffDense()`)
+- `record_from_solution`: Function to record from solution (default: `nothing`, falls back to recording the norm)
 - `plot_solution`: Function to plot solution (default: Nothing)
 - `update!`: Function to update the problem (default: `update_default`)
 
 ## Example
 ```julia
-model = BVPBifProblem(F, g; n=2)
+model = BVPModel(F, g; n=2)
 disc = Trapeze(M=100)
 d_bvp = discretize(model, disc)
 
-x0 = generate_solution(d_bvp, t -> [cos(t), sin(t)], 2π)
+x0 = generate_solution(d_bvp, t -> [cos(t), sin(t)])
 prob = BVPBifProblem(d_bvp, x0, (μ=1.0,), (@optic _.μ))
 
 # Now use with newton/continuation
