@@ -4,37 +4,57 @@ import Base: iterate
 """
 $(TYPEDEF)
 
-Define a continuation iterator. This allows for example to do:
+Iterator over the steps of a continuation procedure. Calling [`continuation`](@ref) is equivalent to iterating over a `ContIterable` while saving the states in a [`ContResult`](@ref). Constructing the iterator manually allows a finer control of the continuation procedure:
 
 ```
-iter = ContIterable(prob, alg, opts; kwargs...)
+iter = ContIterable(prob, alg, contparams; kwargs...)
 for state in iter
     println("Continuation step = ", state.step)
 end
 ```
 
-More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
+The first iteration computes the initial point on the branch, its tangent and its stability. Each subsequent iteration performs one continuation step: Newton correction of the predicted point, step size adaptation and computation of the next predictor. Iteration stops when the number of steps reaches `contparams.max_steps`, when the parameter exits `[p_min, p_max]`, when the corrector fails or when the user requests it (for example via `finalise_solution`, see [`continuation`](@ref)).
+
+# Fields
+
+$(TYPEDFIELDS)
 
 # Useful functions
+- `getprob(iter)` returns the bifurcation problem
+- `getalg(iter)` returns the continuation algorithm
+- `getcontparams(iter)` returns the continuation parameters
 - `setparam(iter, p::Real)` set parameter with lens `iter.prob.lens` to `p`
 - `is_event_active(iter)` whether the event detection is active
 - `compute_eigenelements(iter)` whether to compute eigen elements
 - `save_eigenvectors(iter)` whether to save eigen vectors
-- `getcontparams(iter)` get the full continuation parameters
-- `isindomain(iter, p)` whether `p` in is domain [p_min, p_max]. (See [`ContinuationPar`](@ref))
-- `is_on_boundary(iter, p)` whether `p` in is {p_min, p_max}
+- `isindomain(iter, p)` whether `p` is in the domain [p_min, p_max]
+- `is_on_boundary(iter, p)` whether `p` is on the boundary {p_min, p_max}
+- `length(iter)` the maximum number of continuation steps
+
+More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 """
 Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+    "type of solution computed during continuation, e.g. `EquilibriumCont` or `PeriodicOrbitCont`"
     kind::Tkind
+    "bifurcation problem to be continued, see [`BifurcationProblem`](@ref)"
     prob::Tprob
+    "continuation algorithm, e.g. [`PALC`](@ref) or [`MoorePenrose`](@ref)"
     alg::Talg
+    "continuation parameters, see [`ContinuationPar`](@ref)"
     contparams::ContinuationPar{T, S, E}
+    "whether to plot the branch during continuation"
     plot::Bool = false
+    "structure for event detection"
     event::Tevent = nothing
+    "norm used in the nonlinear solver to measure the size of the corrections"
     normC::TnormC
+    "function called at the end of each continuation step, see [`continuation`](@ref)"
     finalise_solution::Tfinalisesolution
+    "callback called after each newton iteration, see [`continuation`](@ref)"
     callback_newton::TcallbackN
+    "level of verbosity, must belong to {0,1,2,3}"
     verbosity::UInt8 = 2
+    "name of the file where the branch is saved if `save_to_file = true` in [`ContinuationPar`](@ref)"
     filename::String
 end
 
@@ -113,10 +133,10 @@ end
 """
 $(TYPEDEF)
 
-Mutable structure containing the state of the continuation procedure. The fields are meant to change during the continuation procedure. 
+Mutable structure holding the current state of the continuation procedure: the current solution `z`, its tangent `τ`, the predictor `z_pred` and the current step size `ds`. It is created internally by the iterator [`ContIterable`](@ref) and updated at each continuation step (Newton correction, eigen-solver, step size control, predictor). It is also passed as a keyword argument to user callbacks like `finalise_solution` (see [`continuation`](@ref)).
 
 !!! danger
-    If you mutate these (internal) fields yourself, you can break the continuation procedure. Use the methods below to access the fields knowing that they do not yield copies.
+    If you mutate these (internal) fields yourself, you can break the continuation procedure. Use the methods below to access the fields, knowing that they do not yield copies.
 
 # Internal fields
 
@@ -124,13 +144,13 @@ $(TYPEDFIELDS)
 
 # Useful functions
 - `copy(state)` returns a copy of `state`.
-- `copyto!(dest, state)`  copy `state` into `dest`.
-- `getsolution(state)` returns the current solution (x, p).
+- `copyto!(dest, state)` copy `state` into `dest`.
+- `getsolution(state)` returns the current solution `(x, p)`.
 - `gettangent(state)` return the tangent at the current solution.
 - `getpredictor(state)` return the predictor at the current solution.
 - `getx(state)` returns the x component of the current solution.
 - `getp(state)` returns the p component of the current solution.
-- `get_previous_solution(state)` returns the previous solution (x, p).
+- `get_previous_solution(state)` returns the previous solution `(x, p)`.
 - `getpreviousx(state)` returns the x component of the previous solution.
 - `getpreviousp(state)` returns the p component of the previous solution.
 - `is_stable(state)` whether the current state is stable.
@@ -138,16 +158,16 @@ $(TYPEDFIELDS)
 - `getparams(iter, state)` return the current parameter set.
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
-    "predictor."
+    "predictor, i.e. the initial guess for the next Newton correction."
     z_pred::Tv
-    "tangent to the curve."
+    "tangent to the curve at the current solution."
     τ::Tv
     "current solution."
     z::Tv
-    "previous solution."
+    "previous solution on the branch."
     z_old::Tv
 
-    "Boolean for newton correction."
+    "whether the newton correction converged at the current continuation step."
     converged::Bool = false
     "Number of newton iteration (in corrector)."
     itnewton::Int64 = 0
@@ -175,7 +195,7 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     eigvals::Teigvals = nothing
     "current eigenvectors."
     eigvecs::Teigvec  = nothing
-    "store the current event values."
+    "current and previous values of the event function."
     eventValue::Tcb = nothing
     "whether the state is in bisection for locating special points."
     in_bisection::Bool = false
@@ -567,6 +587,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
                         status, interval_event = locate_event!(it.event, it, state, it.verbosity > 2)
                     end
                     success, event_pt = get_event_type(it.event, it, state, it.verbosity, status, interval_event)
+                    # we halt continuation as it will mess up the event detection
                     state.stopcontinuation |= ~success
                     event_pt = finalise_event!(event_pt, it.event, it, state, success)
                     if event_pt.type != :none
