@@ -78,7 +78,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
 
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
-    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
+    _options_cont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
     # arguments
     args = (br, ind_bif, lens2, _options_cont)
     kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)

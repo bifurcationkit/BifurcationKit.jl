@@ -187,7 +187,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
 
     # return the normal form coefficients
     @reset pt.nf = (; a, b)
-    if detailed_type == false # TODO! THIS MAKES IT TYPE UNSTABLE
+    if detailed_type == false
         return pt
     end
 

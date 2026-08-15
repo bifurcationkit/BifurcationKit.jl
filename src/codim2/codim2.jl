@@ -255,7 +255,22 @@ function getparams(br::AbstractResult{Tkind}, ind::Int) where Tkind <: AbstractT
     return _set(getparams(br), get_lenses(br), (p1, p2))
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function detect_codim2_parameters(detect_codim2_bifurcation, options_cont; 
+"""
+$(TYPEDSIGNATURES)
+
+Modify the continuation parameters so that codim 2 bifurcations are detected during the continuation.
+
+# Arguments
+- `detect_codim2_bifurcation::Int` ∈ {0, 1, 2}: 0 = no detection, 1 = detect without precise location, 2 = locate the codim 2 points with bisection.
+- `options_cont` current continuation parameters.
+
+# Return
+When `detect_codim2_bifurcation > 0`, a `ContinuationPar` with `detect_bifurcation = 0`, `detect_event = detect_codim2_bifurcation` and `detect_fold = false`. Otherwise `options_cont` is returned unchanged.
+
+!!! warn
+    If `update_minaug_every_step = 0`, the detection may not be faithful: a warning is issued.
+"""
+function modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; 
                                     update_minaug_every_step = 1, 
                                     kwargs...)
     if detect_codim2_bifurcation > 0
@@ -267,7 +282,9 @@ function detect_codim2_parameters(detect_codim2_bifurcation, options_cont;
                     detect_event = detect_codim2_bifurcation,
                     detect_fold = false)
     else
-        return options_cont
+        return ContinuationPar(options_cont;
+                                detect_event = 0
+                                )
     end
 end
 
@@ -411,7 +428,7 @@ function continuation(br::AbstractBranchResult,
     end
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
-    _options_cont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
+    _options_cont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
     if br.specialpoint[ind_bif].type == :hopf
         return continuation_hopf(prob, br, ind_bif, lens2, _options_cont;
@@ -436,6 +453,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         ampfactor::Real = 1,
                         nev = options_cont.nev,
                         detect_codim2_bifurcation::Int = 0,
+                        update_minaug_every_step = 1,
                         Teigvec = _getvectortype(br),
                         scaleζ = norm,
                         start_with_eigen = false,
@@ -464,7 +482,8 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
 
     # continuation parameters
     compute_eigen_elements = options_cont.detect_bifurcation > 0
-    optionsCont = detect_codim2_parameters(detect_codim2_bifurcation, options_cont; kwargs...)
+    optionsCont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
+
 
     # scalar type
     Ty = eltype(Teigvec)
@@ -514,6 +533,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
             compute_eigen_elements,
+            update_minaug_every_step,
             kwargs...
             )
         return Branch(branch, nf)
@@ -547,6 +567,7 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
             optionsCont;
             bdlinsolver = prob_ma.linbdsolver,
             compute_eigen_elements,
+            update_minaug_every_step,
             kwargs...
             )
         return Branch(branch, nf)
