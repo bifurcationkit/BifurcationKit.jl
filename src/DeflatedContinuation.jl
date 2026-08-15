@@ -248,6 +248,36 @@ function _deflated_continuation(prob::AbstractBifurcationProblem,
     return deflatedContinuation(iter, deflationOp, contParams, verbosity, plot)
 end
 
+# get a new solution based on Deflated Newton
+function _DC_get_new_solution(dc_iter::DefContIterable,
+                              _st::DCState,
+                              _p::Real,
+                              _idb,
+                              deflationOp::DeflationOperator,
+                              contParams::ContinuationPar)
+    cont_iter = dc_iter.it
+    alg = dc_iter.alg
+    par = getparams(cont_iter.prob)
+    lens = getlens(cont_iter)
+    optnewton = contParams.newton_options
+    u0 = _copy(getx(_st)) # maybe we can remove this copy?
+    prob_df = re_make(cont_iter.prob;
+                        u0 = alg.perturb_solution(u0, _p, _idb),
+                        params = set(par, lens, _p))
+    local soln = solve(prob_df, deflationOp,
+            setproperties(optnewton; max_iterations = alg.max_iter_defop);
+            normN = cont_iter.normC,
+            callback = cont_iter.callback_newton,
+            fromDeflatedNewton = true)
+    # we confirm that the residual for the non deflated problem is small
+    # this should be the case unless the user pass "bad" options
+    @reset soln.converged = soln.converged && cont_iter.normC(residual(cont_iter.prob, soln.u, prob_df.params)) < optnewton.tol
+    if minimum(cont_iter.normC(soln.u - rt) for rt in deflationOp.roots) < optnewton.tol
+        @reset soln.converged = false
+    end
+    return soln
+end
+
 function deflatedContinuation(dc_iter::DefContIterable,
                             deflationOp::DeflationOperator,
                             contParams,
@@ -264,26 +294,6 @@ function deflatedContinuation(dc_iter::DefContIterable,
 
     # extract the newton options
     optnewton = contParams.newton_options
-
-    # function to get new solutions based on Deflated Newton
-    function _DC_get_new_solution(_st::DCState, _p::Real, _idb)
-        u0 = _copy(getx(_st)) # maybe we can remove this copy?
-        prob_df = re_make(cont_iter.prob;
-                            u0 = alg.perturb_solution(u0, _p, _idb),
-                            params = set(par, lens, _p))
-        local soln = solve(prob_df, deflationOp,
-                setproperties(optnewton; max_iterations = alg.max_iter_defop);
-                normN = cont_iter.normC,
-                callback = cont_iter.callback_newton,
-                fromDeflatedNewton = true)
-        # we confirm that the residual for the non deflated problem is small
-        # this should be the case unless the user pass "bad" options
-        @reset soln.converged = soln.converged && cont_iter.normC(residual(cont_iter.prob, soln.u, prob_df.params)) < optnewton.tol
-        if minimum(cont_iter.normC(soln.u - rt) for rt in deflationOp.roots) < optnewton.tol
-            @reset soln.converged = false
-        end
-        return soln
-    end
 
     nstep = 0
     while ((contParams.p_min < current_param < contParams.p_max) || nstep == 0) &&
@@ -329,7 +339,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
                     _success = true
                     verbosity >= 2 && println("├───▶ Deflating branch $idb")
                     while _success
-                        sol1 = _DC_get_new_solution(dcstate, current_param, idb)
+                        sol1 = _DC_get_new_solution(dc_iter, dcstate, current_param, idb, deflationOp, contParams)
                         _success = converged(sol1)
                         if _success && cont_iter.normC(sol1.u - getx(dcstate)) < optnewton.tol
                             @error "Same solution found for identical parameter value!!"
