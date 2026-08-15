@@ -1,6 +1,6 @@
 function get_normal_form(prob::AbstractBifurcationProblem,
                         br::AbstractResult{ <: AbstractTwoParamPeriodicOrbitCont}, id_bif::Int ;
-                        nev = length(eigenvalsfrombif(br, id_bif)),
+                        nev = 1,
                         verbose = false,
                         ζs = nothing,
                         lens = getlens(br),
@@ -40,10 +40,6 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
     @eval begin
         function $(Symbol(op, :_normal_form))(𝐏𝐛::AbstractMABifurcationProblem{Tprob}, 
                                 br,ind_bif;
-                                nev = length(eigenvalsfrombif(br, ind_bif)),
-                                lens = getlens(br),
-                                Teigvec = vectortype(br),
-                                scaleζ = norminf,
                                 kwargs_nf...) where {Tprob}
             𝐌𝐚 = 𝐏𝐛.prob
             powrap = 𝐌𝐚.prob_vf
@@ -51,7 +47,6 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
             x0, parbif = get_bif_point_codim2(br, ind_bif)
             restore_problem!(powrap, x0, parbif)
 
-            bifpt = br.specialpoint[ind_bif]
             po = get_periodic_orbit(powrap, x0, parbif)
             period = getperiod(powrap, x0, parbif)
 
