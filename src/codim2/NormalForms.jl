@@ -12,10 +12,10 @@ Compute the Cusp normal form.
 - `δ = getdelta(_prob)` used for finite differences
 - `verbose` bool to print information
 """
-function cusp_normal_form(_prob,
+function cusp_normal_form(𝐏𝐛,
                             br::AbstractBranchResult, ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            δ = getdelta(_prob),
+                            δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
@@ -32,7 +32,7 @@ function cusp_normal_form(_prob,
     verbose && println("━"^53*"\n──▶ Cusp Normal form computation")
 
     # MA problem formulation
-    𝐌𝐚 = get_formulation(_prob)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
 
     # get the vector field
     prob_vf = 𝐌𝐚.prob_vf
@@ -57,11 +57,10 @@ function cusp_normal_form(_prob,
     eigRes = br.eig
 
     # eigenvalue
-    if bifpt.ind_ev > 0
-        λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
-    else
-        λ = rightmost(eigRes[bifpt.idx].eigenvals)[1]
-    end
+    # the index of the null eigenvalue is not recorded for the Cusp special point (it is
+    # detected through an event), we recover it as the eigenvalue closest to the origin
+    ind_ev = bifpt.ind_ev > 0 ? bifpt.ind_ev : argmin(abs.(eigRes[bifpt.idx].eigenvals))
+    λ = real(eigRes[bifpt.idx].eigenvals[ind_ev])
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
@@ -73,28 +72,12 @@ function cusp_normal_form(_prob,
     L = jacobian(prob_vf, x0, parbif)
 
     if start_with_eigen_type
-        # eigenvectors
-        # we recompute the eigen-elements if they were not saved
-        verbose && @info "Eigen-elements not saved in the branch. Recomputing them..."
-        eigsolver = getsolver(options.eigsolver)
-        _λ0, _ev0, _ = eigsolver(L, nev)
-        Ivp = sortperm(_λ0, by = abs)
-        _λ = _λ0[Ivp]
-        if norm(_λ[1:N] .- 0, Inf) > br.contparams.tol_stability
-            @warn "We did not find the correct eigenvalues. We found the eigenvalues:\n $(display(( _λ[1:N]))).\n Difference between the eigenvalues:"
-            display(_λ[1:N] .- 0)
-        end
-        ζ = real.(geteigenvector(eigsolver, _ev0, Ivp[1]))
-        ζ ./= scaleζ(ζ)
-
-        # extract eigen-elements for adjoint(L), needed for spectral projector
-        if is_symmetric(prob_vf)
-            λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-            ζ★ = copy(ζ)
-        else
-            L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-            ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
-        end
+        # compute the (right / left) kernel basis using the eigensolver
+        # note that 𝒯eigvec is the type of the states of the MA branch (a BorderedArray) while
+        # the equilibrium states / kernel vectors are of type `typeof(x0)`
+        ζ, ζ★, λ★ = _get_kernel_basis_1d_from_eigensolver(prob_vf, br, bifpt, L, λ, scaleζ,
+                                                          getsolver(options.eigsolver), nev, verbose,
+                                                          typeof(x0), x0, parbif; ind_ev)
     else
         # compute the (right / left) basis vectors of the kernel using a bordered linear system
         L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
@@ -514,10 +497,10 @@ Compute the Bogdanov-Takens normal form.
 - `bls_adjoint` specify Bordered linear solver for transpose(dF).
 - `start_with_eigen = Val(true)` whether to seed the construction of the Jordan basis using the eigensolver (`Val(true)`) or using random vectors and a bordered linear system (`Val(false)`).
 """
-function bogdanov_takens_normal_form(_prob,
+function bogdanov_takens_normal_form(𝐏𝐛,
                                     br::AbstractBranchResult, ind_bif::Int,
                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                    δ = getdelta(_prob),
+                                    δ = getdelta(𝐏𝐛),
                                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
                                     ζs = nothing,
@@ -525,17 +508,18 @@ function bogdanov_takens_normal_form(_prob,
                                     lens = getlens(br),
                                     scaleζ = norm,
                                     # bordered linear solver
-                                    bls = _prob.prob.linbdsolver,
+                                    bls = 𝐏𝐛.prob.linbdsolver,
                                     bls_adjoint = bls,
                                     bls_block = bls,
                                     detailed::Val{detailed_type} = Val(true),
                                     autodiff = true,
-                                    start_with_eigen::Val{start_with_eigen_type} = Val(true)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
+                                    start_with_eigen::Val{start_with_eigen_type} = Val(true)
+                                    ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
 
     # functional
     # get the MA problem
-    𝐌𝐚 = get_formulation(_prob)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
@@ -653,10 +637,10 @@ function bogdanov_takens_normal_form(_prob,
                 bls_block)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function bautin_normal_form(_prob::HopfMAProblem,
+function bautin_normal_form(𝐏𝐛::HopfMAProblem,
                             br::AbstractBranchResult, ind_bif::Int,
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                            δ = getdelta(_prob),
+                            δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
@@ -668,7 +652,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
     # get the MA problem
-    𝐌𝐚 = get_formulation(_prob)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
@@ -975,16 +959,16 @@ end
 _get_frequency(x) = nothing
 _get_frequency(x::MASolutionFreq) = x.ω
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function zero_hopf_normal_form(_prob,
+function zero_hopf_normal_form(𝐏𝐛,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                δ = getdelta(_prob),
+                                δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,
                                 lens = getlens(br),
                                 scaleζ = norm,
-                                bls = _prob.prob.linbdsolver,
+                                bls = 𝐏𝐛.prob.linbdsolver,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
@@ -997,21 +981,20 @@ function zero_hopf_normal_form(_prob,
     𝒯 = VI.scalartype(Teigvec)
     ϵ = 𝒯(δ)
 
-    # get the MA problem
-    prob_ma = get_formulation(_prob)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
 
     # get the initial vector field
-    prob_vf = prob_ma.prob_vf
-    if ~(prob_ma isa AbstractMinimallyAugmentedFormulation)
-        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(prob_ma))")
+    prob_vf = 𝐌𝐚.prob_vf
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐌𝐚))")
     end
 
     # linear solver
-    ls = prob_ma.linsolver
+    ls = 𝐌𝐚.linsolver
 
     # bordered linear solver
-    bls = prob_ma.linbdsolver
-    bls_adjoint = isnothing(bls_adjoint) ? prob_ma.linbdsolverAdjoint : bls_adjoint
+    bls = 𝐌𝐚.linbdsolver
+    bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
     # kernel dimension
     N = 3
@@ -1125,7 +1108,7 @@ function zero_hopf_normal_form(_prob,
     @assert LA.dot(p1, q1) ≈ 1
 
     # parameters
-    lenses = (getlens(prob_ma), lens)
+    lenses = (getlens(𝐌𝐚), lens)
     lens1, lens2 = lenses
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
 
@@ -1207,7 +1190,7 @@ function zero_hopf_normal_form(_prob,
     hasNS = real(g110) * f011 < 0 
 
     # additional definitions for the parameter unfolding
-    VF = prob_ma.prob_vf
+    VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(prob_vf, x, p)
 
     _A1(q, lens) = (apply_jacobian(VF, x0, setp(lens, _get(parbif, lens) + ϵ), q) .-
@@ -1372,10 +1355,10 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
     )
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function hopf_hopf_normal_form(_prob,
+function hopf_hopf_normal_form(𝐏𝐛,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                                δ = getdelta(_prob),
+                                δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 ζs = nothing,
@@ -1395,7 +1378,7 @@ function hopf_hopf_normal_form(_prob,
     ϵ = 𝒯(δ)
 
     # get the MA problem
-    𝐌𝐚 = get_formulation(_prob)
+    𝐌𝐚 = get_formulation(𝐏𝐛)
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
