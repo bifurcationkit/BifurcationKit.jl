@@ -9,13 +9,6 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
 
         # Internal fields
         $(TYPEDFIELDS)
-
-        # Associated methods
-
-        ## Predictor
-
-        You can call `predictor(bp, ds; kwargs...)` on such bifurcation point `bp`
-        to find the zeros of the normal form polynomials.
         """
         mutable struct $op{Tprob, Tv, 𝒯, Tpar, Tlens, Tevr, Tevl, Tnf} <: AbstractCodim2BifurcationPointOfPO
             "Bifurcation point (periodic orbit)"

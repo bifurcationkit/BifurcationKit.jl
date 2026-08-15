@@ -35,7 +35,7 @@ $(TYPEDFIELDS)
 - `eigenvec(br, ind, indev)` returns the indev-th eigenvector for the ind-th continuation step.
 - `get_normal_form(br, ind)` compute the normal form of the ind-th points in `br.specialpoint`.
 - `getlens(br)` return the parameter axis used for the branch.
-- `getlenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD).
+- `get_lenses(br)` return the parameter two axis used for the branch when 2 parameters continuation is used (Fold, Hopf, NS, PD).
 - `get_solx(br, k)` returns the k-th solution on the branch.
 - `get_solp(br, k)` returns the parameter  value associated with k-th solution on the branch.
 - `getparams(br)` Parameters passed to continuation and used in the equation `F(x, par) = 0`.
@@ -50,7 +50,7 @@ $(TYPEDFIELDS)
 - `get_solution(br, ind)` returns the ind-th solution.
 ```
 julia> br[1]
-(x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, θ = 0.5, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
+(x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
 ```
 which provides the value `param` of the parameter of the current point, its stability, information on the newton iterations, etc. The fields can be retrieved using `propertynames(br.branch)`. This information is stored in `br.branch` which is a `StructArray`. You can thus extract the vector of parameters along the branch as
 ```
@@ -80,7 +80,7 @@ julia> br.param
                                     Tparc,
                                     Tprob,
                                     Talg} <: AbstractResult{Tkind, Tprob}
-    "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, θ, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
+    "holds the low-dimensional information about the branch. More precisely, `branch[i+1]` contains the following information `(record_from_solution(u, param), param, itnewton, itlinear, ds, n_unstable, n_imag, stable, step)` for each continuation step `i`.\n
   - `itnewton` number of Newton iterations.
   - `itlinear` total number of linear iterations during newton (corrector).
   - `n_unstable` number of eigenvalues with positive real part for each continuation step (to detect stationary bifurcation).
@@ -92,7 +92,7 @@ julia> br.param
     "A vector with eigen-elements at each continuation step."
     eig::Vector{NamedTuple{(:eigenvals, :eigenvecs, :converged, :step), Tuple{Teigvals, Teigvec, Bool, Int64}}}
 
-    "Vector of solutions sampled along the branch. This is set by the argument `save_sol_every_step::Int64` (default 0) in [`ContinuationPar`](@ref)."
+    "Vector of solutions sampled along the branch. This is set by the argument `save_sol_every_step::Int64` (default 1) in [`ContinuationPar`](@ref)."
     sol::Tsol
 
     "The parameters used for the call to `continuation` which produced this branch. Must be a [`ContinuationPar`](@ref)."
@@ -307,10 +307,12 @@ $(TYPEDSIGNATURES)
 [Internal] Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
 
 # Arguments
+- `iter` continuation iterator
+- `state` continuation state, used to get the initial eigen-elements
+- `printsol` value returned by `record_from_solution`
 - `br` result from `get_state_summary`
-- `par`: parameters
-- `lens`: lens to specify the continuation parameter
-- `eiginfo`: eigen-elements (eigvals, eigvecs)
+- `x0` initial solution
+- `contparams::ContinuationPar` parameters of the continuation
 """
 function _contresult(iter,
                      state,

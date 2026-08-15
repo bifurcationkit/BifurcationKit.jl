@@ -205,8 +205,8 @@ get_wrap_po(pb::PDMAProblem) = get_wrap_po(get_formulation(pb))
 $(SIGNATURES)
 
 This function turns an initial guess for a PD point into a solution to the PD problem based on a Minimally Augmented formulation. The arguments are as follows
-- `prob::AbstractBifurcationFunction`
-- `pdpointguess` initial guess (x_0, p_0) for the PD point. It should be a `BorderedArray` as returned by the function `PDPoint`
+- `prob::AbstractBifurcationProblem`
+- `pdpointguess` initial guess (x_0, p_0) for the PD point. It should be a `BorderedArray` as returned by the function `pd_point`
 - `par` parameters used for the vector field
 - `eigenvec` guess for the 0 eigenvector
 - `eigenvec_ad` guess for the 0 adjoint eigenvector
@@ -216,13 +216,6 @@ This function turns an initial guess for a PD point into a solution to the PD pr
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
-
-# Simplified call
-Simplified call to refine an initial guess for a PD point. More precisely, the call is as follows
-
-    newton_pd(br::AbstractBranchResult, ind_pd::Int; options = br.contparams.newton_options, kwargs...)
-
-The parameters / options are as usual except that you have to pass the branch `br` from the result of a call to `continuation` with detection of bifurcations enabled and `index` is the index of bifurcation point in `br` you want to refine. You can pass newton parameters different from the ones stored in `br` by using the argument `options`.
 
 !!! tip "Jacobian transpose"
     The adjoint of the jacobian `J` is computed internally when `Jᵗ = nothing` by using `transpose(J)` which works fine when `J` is an `AbstractArray`. In this case, do not pass the jacobian adjoint like `Jᵗ = (x, p) -> transpose(d_xF(x, p))` otherwise the jacobian will be computed twice!

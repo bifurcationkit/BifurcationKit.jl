@@ -75,8 +75,8 @@ $(TYPEDFIELDS)
 
 # Constructors
 
-- `COPBLS()`
-- `COPBLS(coll::Collocation; cache::COPCACHE, solver = nothing, J = nothing)`
+- `COPLS()`
+- `COPLS(coll::Collocation)`
 
 # Related
 
@@ -98,7 +98,7 @@ $(TYPEDFIELDS)
 # Constructors
 
 - `COPBLS()`
-- `COPBLS(coll::Collocation; N = 0, cache::COPCACHE, solver = nothing, J = nothing)`
+- `COPBLS(coll::Collocation; cache::COPCACHE, solver = nothing, J = nothing)`
 
 # Related
 
@@ -134,10 +134,11 @@ Solve the linear system associated with the collocation problem for computing pe
 - `coll::Collocation` collocation problem
 - `J::Matrix`
 - `rhs0::Vector`
+- `cop_cache::COPCACHE{dim}` cache for the COP method
 
 ## Optional arguments
-- `_DEBUG = false` use a debug mode in which the condensation of parameters is performed without an analytical formula.
-- `_USELU = false` use LU factorization instead of gaussian elimination and backward substitution to solve the linear problem.
+- `_DEBUG::Val{debug} = Val(false)` use a debug mode in which the condensation of parameters is performed without an analytical formula.
+- `_USELU::Val{uselu} = Val(false)` use LU factorization instead of gaussian elimination and backward substitution to solve the linear problem.
 """
 @views function solve_cop(coll::Collocation, 
                           J, 

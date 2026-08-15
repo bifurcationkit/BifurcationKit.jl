@@ -69,7 +69,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`.
+This function generates an initial guess for the solution of the problem `pb` based on the orbit `t -> orbit(t)` for t ∈ [0, 2π] and the period `period`. Used also in `generate_ci_problem`. Note that `period` is only appended at the end of the guess for non-`PoincareShooting` discretizations.
 """
 function generate_solution(pb::AbstractBoundaryValueDiscretization, orbit, period)
     M = get_mesh_size(pb)
@@ -251,9 +251,8 @@ Note that the linear solver has to be appropriately set up in `options`.
 
 Similar to [`newton`](@ref) except that `prob` is either a [`Shooting`](@ref) or a [`PoincareShooting`](@ref). These two problems have specific options to be tuned, we refer to their link for more information and to the tutorials.
 
-- `prob` a problem of type `<: AbstractShootingDiscretization` encoding the shooting functional G.
+- `disc` a problem of type `<: AbstractShootingDiscretization` encoding the shooting functional G.
 - `orbitguess` a guess for the periodic orbit. See [`Shooting`](@ref) and See [`PoincareShooting`](@ref) for information regarding the shape of `orbitguess`.
-- `par` parameters to be passed to the functional
 - `options` same as for the regular [`newton`](@ref) method.
 
 # Optional argument
@@ -383,11 +382,11 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 
 # Optional arguments
 
-- `alg = getalg(br)` continuation algorithm
+- `alg = getalg(br)` continuation algorithm used for the bifurcated branch. It is inherited from the branch `br`.
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
-- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `nev` number of eigenvalues to be computed to get the right eigenvector
 - all `kwargs` from [`continuation`](@ref)
 
@@ -613,15 +612,15 @@ Branch switching at a bifurcation point of periodic orbits (PO) specified by a `
 # Optional arguments
 - `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `usedeflation = true` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
+- `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - `use_normal_form = true` if `false`, the predictor is based on the couple `δp, ampfactor`.
 
 ## For normal form
-- `detailed = false` whether to fully compute the normal form or a very simplified version.
+- `detailed = true` whether to fully compute the normal form or a very simplified version.
 - `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
 
 ## For continuation
-- `linear_algo = BorderingBLS()`, same as for [`continuation`](@ref)
+- `linear_algo = nothing`, same as for [`continuation`](@ref); when `nothing`, a `BorderingBLS` is built from `_contParams.newton_options.linsolver`.
 - `kwargs` keywords arguments used for a call to the regular [`continuation`](@ref) and the ones specific to periodic orbits (POs).
 """
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},

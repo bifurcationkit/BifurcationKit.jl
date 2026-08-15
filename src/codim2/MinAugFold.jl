@@ -183,8 +183,8 @@ jacobian_adjoint(pb::FoldMAProblem, args...) = jacobian_adjoint(get_formulation(
 $(TYPEDSIGNATURES)
 
 This function turns an initial guess for a Fold point into a solution to the Fold problem based on a Minimally Augmented formulation. The arguments are as follows
-- `prob::AbstractBifurcationFunction`
-- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
+- `prob::AbstractBifurcationProblem`
+- `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as returned by the function `fold_point`
 - `par` parameters used for the vector field
 - `eigenvec` guess for the right null vector
 - `eigenvec_ad` guess for the left null vector
@@ -334,7 +334,7 @@ end
 $(TYPEDSIGNATURES)
 
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
-- `prob::AbstractBifurcationFunction`
+- `prob::AbstractBifurcationProblem`
 - `foldpointguess` initial guess `(x_0, p1_0)` for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
 - `par` set of parameters
 - `lens1` parameter axis for parameter 1

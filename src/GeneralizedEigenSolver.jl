@@ -91,7 +91,7 @@ More information is available at [Arpack.jl](https://github.com/JuliaLinearAlgeb
 
 # Constructor
 
-`EigArpack(sigma = nothing, which = :LR; kwargs...)`
+`GEigArpack(; kw...)` where the keyword arguments are forwarded to the inner `EigArpack`.
 """
 struct GEigArpack{T, Tb} <: AbstractGEigenSolver
     "Arpack eigensolver."
@@ -165,7 +165,7 @@ Create an generalised eigen solver based on [ArnoldiMethod.jl](https://github.co
 $(TYPEDFIELDS)
 
 !!! danger "Restriction to B positive definite"
-    The method from KryloKit.jl is restricted to B being positive definite.
+    The method from ArnoldiMethod.jl is restricted to B being positive definite.
 """
 @with_kw struct GEigArnoldiMethod{T, Tb} <: AbstractMFGEigenSolver
     "Eigensolver."

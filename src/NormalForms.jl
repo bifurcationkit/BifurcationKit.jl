@@ -1028,7 +1028,6 @@ Compute the Hopf normal form.
 - `prob::AbstractBifurcationProblem` bifurcation problem
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_hopf` index of the bifurcation point in `br`
-- `options` options for the Newton solver
 
 # Optional arguments
 - `nev::Int` number of eigenvalues to compute to estimate the spectral projector
@@ -1389,12 +1388,11 @@ Compute the Neimark-Sacker normal form.
 - `prob::AbstractBifurcationProblem` bifurcation problem
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_ns` index of the bifurcation point in `br`
-- `options` options for the Newton solver
 
 # Optional arguments
-- `nev = 5` number of eigenvalues to compute to estimate the spectral projector
+- `nev` number of eigenvalues to compute to estimate the spectral projector (defaults to `length(eigenvalsfrombif(br, ind_ns))`)
 - `verbose` bool to print information
-- `detailed = false` compute the coefficient a in the normal form
+- `detailed = true` compute the coefficient a in the normal form
 - `Teigvec` vector type of the eigenvectors
 - `scaleζ = norm` norm to normalise the eigenvectors
 

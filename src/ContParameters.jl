@@ -10,7 +10,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
 - `max_steps = 100` maximum number of continuation steps
 - `newton_options::NewtonPar`: options for the Newton algorithm
 - `save_to_file = false`: save to file. A name is automatically generated or can be defined in [`continuation`](@ref). This requires `using JLD2`.
-- `save_sol_every_step::Int64 = 0` at which continuation steps do we save the current solution
+- `save_sol_every_step::Int64 = 1` at which continuation steps do we save the current solution
 - `plot_every_step = 10` at which continuation steps do we plot the current solution
 
 ## Handling eigen-elements, their computation is triggered by the argument `detect_bifurcation` (see below)
@@ -24,7 +24,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
 - `detect_bifurcation::Int` ∈ {0, 1, 2, 3} If set to 0, nothing is done. If set to 1, the eigen-elements are computed. If set to 2, the bifurcations points are detected during the continuation run, but not located precisely. If set to 3, a bisection algorithm is used to locate the bifurcations points (slower). The possibility to switch off detection is a useful option. Indeed, it may happen that there are a lot of bifurcation points and this can saturate the memory of memory limited devices (e.g. on GPU)
 - `dsmin_bisection = 1e-16` minimal `ds` for the bisection algorithm for locating bifurcation points
 - `n_inversion = 2` number of sign inversions in bisection algorithm
-- `max_bisection_steps = 15` maximum number of bisection steps
+- `max_bisection_steps = 25` maximum number of bisection steps
 - `tol_bisection_eigenvalue = 1e-16` tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps
 
 ## Handling `ds` adaptation (see [`continuation`](@ref) for more information)

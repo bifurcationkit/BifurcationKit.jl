@@ -43,14 +43,13 @@ You are asked to pass a scalar product like `dot` to build a `DeflationOperator`
 
     `DeflationOperator(p, CustomDist(dist), α, roots)`
 
-Note that passing `CustomDist(dist, true)` will trigger the use of automatic differentiation for the gradient of `M`.
+The option `autodiff` of the constructors above also applies when a custom distance is used.
 
 # Linear solvers / jacobians
 
 When used with newton, you have access to the following linear solvers:
 
 - custom solver `DeflatedProblemCustomLS()` which requires solving two linear systems `J⋅x = rhs`.
-- for other linear solvers `<: AbstractLinearSolver`, a matrix free method is used for the deflated functional.
 - if passed `Val(:autodiff)`, then `ForwardDiff.jl` is used to compute the jacobian Matrix of the deflated problem.
 - if passed `Val(:fullIterative)`, then a full matrix free method is used for the deflated problem.
 """

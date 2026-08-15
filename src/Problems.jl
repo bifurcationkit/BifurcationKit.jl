@@ -197,7 +197,7 @@ const _field_jet = vcat((:R01!) ,vec([Symbol('R', i, j) for i=0:3, j=1:7 if i+i<
 
     More precisely
 
-    Rᵢⱼ(x,p) = 1/i!j! dⁱₓdʲₚF(x, p)
+    Rᵢⱼ(x,p) = dⁱₓdʲₚF(x, p)
 
     ## Note
 
@@ -388,7 +388,7 @@ for (op, at, kd) in (
             - `setparam(pb, p0)` calls `set(pb.params, pb.lens, p0)`
             - `record_from_solution(pb)` calls `pb.recordFromSolution`
             - `plot_solution(pb)` calls `pb.plotSolution`
-            - `is_symmetric(pb)` calls `is_symmetric(pb.prob)`
+            - `is_symmetric(pb)` calls `is_symmetric(pb.VF)`
             - `getdelta(prob)`
 
             # Constructors

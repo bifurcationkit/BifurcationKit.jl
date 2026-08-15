@@ -8,11 +8,9 @@ $(TYPEDFIELDS)
 
 # Constructor(s)
 
-    Multiple(alg, x0, α, n)
+    Multiple(alg, x0, α, nb)
 
-    Multiple(pred, x0, α, n)
-
-    Multiple(x0, α, n)
+    Multiple(x0, α, nb)
 """
 @with_kw mutable struct Multiple{T <: Real, Tvec, Tpred <: PALC} <: AbstractContinuationAlgorithm
     "Tangent predictor used."

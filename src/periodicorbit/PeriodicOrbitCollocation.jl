@@ -219,7 +219,7 @@ Note that mesh adaptation modifies `getmesh(coll)` in place. The mesh is stored 
 
 - `residual(PeriodicOrbit(coll), orbitguess, p)` evaluates the functional G on `orbitguess`
 - `residual!(PeriodicOrbit(coll), out, orbitguess, p)` evaluates the functional G on `orbitguess`
-- `jacobian(PeriodicOrbit(coll), orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
+- `jacobian(probPO, orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`, where `probPO = PeriodicOrbitFunctionalColl(coll)` is the wrapped problem.
 """
 @with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractDifferentialDiscretization
     "Bifurcation problem."
@@ -399,7 +399,7 @@ Generate a guess and a periodic orbit problem from a solution.
 ## Arguments
 - `pb` a `Collocation`
 - `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
+- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`)
 - `period` estimate of the period of the periodic orbit
 - `cache_In = false` saves memory by not allocating the identity matrix inside `POCollCache` (see `save_mem`).
 - `optimal_period = true` optimizes the period
@@ -1031,7 +1031,7 @@ function _jacobian_po(wrap::PeriodicOrbitFunctionalColl, J::Tuple{FullSparseInpl
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DocStringJacobianPOColl = """
-- `jacobian` Specify the choice of the linear algorithm, which must belong to `(AutoDiffDense(), )`. This is used to select a way of inverting the jacobian dG
+- `jacobian` Specify the choice of the linear algorithm, which must belong to `$_pocoll_jacobian_types`. This is used to select a way of inverting the jacobian dG
     - For `AutoDiffDense()`. The jacobian is formed as a dense Matrix. You can use a direct solver or an iterative one using `options`. The jacobian is formed inplace.
     - For `DenseAnalytical()` Same as for `AutoDiffDense` but the jacobian is formed using a mix of AD and analytical formula.
 """
@@ -1081,7 +1081,7 @@ newton(coll::Collocation,
 """
     $(TYPEDSIGNATURES)
 
-This function is similar to `newton(::Collocation, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
+This function is similar to `newton(::Collocation, orbitguess, options; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """# TODO: this is an abomination! coll is a discretization method, not a problem
 function newton(coll::Collocation,
                 orbitguess,
@@ -1240,8 +1240,9 @@ Perform mesh adaptation of the periodic orbit problem. If the adaptation is succ
 
 Return a `NamedTuple` with fields:
 - `success::Bool`: whether the mesh adaptation succeeded.
-- `newτsT`: the new time mesh scaled by the period (as a fraction of the period). It is `nothing` if the mesh is not updated (e.g. when `Ntst < 2` or the monitor function is too small).
+- `newτsT`: the new time mesh scaled by the period (i.e. the mesh values in `[0, T]`); the fraction-of-period mesh is `newmesh` in [`_compute_error!`](@ref). It is `nothing` if the mesh is not updated (e.g. when `Ntst < 2` or the monitor function is too small).
 - `ϕ`: the monitor function used for the equipartition.
+- `sol`: the interpolated solution on the new mesh.
 
 See page 367 of [1] and also [2].
 

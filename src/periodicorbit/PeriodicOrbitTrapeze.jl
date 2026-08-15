@@ -11,7 +11,7 @@ const _trapezoid_jacobian_type = (Dense(),
 
 const DocStrjacobianPOTrap = """
 Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_trapezoid_jacobian_type`. This is used to select a way of inverting the jacobian `dG` of the functional G.
-- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. This is the default algorithm. Can be used when the sparsity can change.
+- For `jacobian = FullLU()`, we use the default linear solver based on a sparse matrix representation of `dG`. This matrix is assembled at each newton iteration. Can be used when the sparsity can change.
 - For `jacobian = FullSparseInplace()`, this is the same as for `FullLU()` but the sparse matrix `dG` is updated inplace. This method allocates much less. In some cases, this is significantly faster than using `FullLU()`. Note that this method can only be used if the sparsity pattern of the jacobian is always the same.
 - For `jacobian = Dense()`, same as above but the matrix `dG` is dense. It is also updated inplace. This option is useful to study ODE of small dimension.
 - For `jacobian = AutoDiffDense()`, evaluate the jacobian using ForwardDiff
@@ -71,7 +71,7 @@ Note that you can generate this guess from a function solution using `generate_s
 
 - `po_residual(pb, orbitguess, p)` evaluates the functional G on `orbitguess`
 - `po_jvp(pb, orbitguess, p, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
-- `po_jacobian_sparse(pb, orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess` without the constraints. It is called `A_γ` in the docs.
+- `po_jacobian_sparse(pb, orbitguess, p)` return the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. It is called `A_γ` in the docs.
 - `po_jacobian_sparse!(pb, J, orbitguess, p)`. Same as `po_jacobian_sparse` but overwrites `J` inplace. Note that the sparsity pattern must be the same independently of the values of the parameters or of `orbitguess`. In this case, this is significantly faster than `po_jacobian_sparse`.
 - `jacobian_cyclic_sparse(pb, orbitguess, p)` return the sparse cyclic matrix Jc (see the docs) of the jacobian `dG(orbitguess)` at `orbitguess`
 - `jacobian_block_diag(pb, orbitguess, p)` return the diagonal of the sparse matrix of the jacobian `dG(orbitguess)` at `orbitguess`. This allows to design Jacobi preconditioner. Use `blockdiag`.
@@ -927,7 +927,6 @@ This is the Krylov-Newton Solver for computing a periodic orbit using a function
 # Arguments:
 - `prob` a problem of type [`Trapeze`](@ref) encoding the functional G.
 - `orbitguess` a guess for the periodic orbit. See [`Trapeze`](@ref) for more details.
-- `par` parameters to be passed to the functional.
 - `options` same as for the regular `newton` method.
 $DocStrjacobianPOTrap
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
@@ -939,7 +938,7 @@ newton(trap::Trapeze,
 """
 $(TYPEDSIGNATURES)
 
-This function is similar to `newton(probPO, orbitguess, options, jacobianPO; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
+This function is similar to `newton(::Trapeze, orbitguess, options; kwargs...)` except that it uses deflation in order to find periodic orbits different from the ones stored in `defOp`. We refer to the mentioned method for a full description of the arguments. The current method can be used in the vicinity of a Hopf bifurcation to prevent the Newton-Krylov algorithm from converging to the equilibrium point.
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 newton(trap::Trapeze,
         orbitguess::vectype,
@@ -1108,8 +1107,8 @@ Generate a guess and a periodic orbit problem from a solution.
 
 ## Arguments
 - `bifprob` a bifurcation problem to provide the vector field
-- `sol` basically, and `ODEProblem`
-- `tspan = (0, 1)` estimate of the time span (period) of the periodic orbit
+- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`)
+- `tspan` a `Tuple` giving the time span (period) of the periodic orbit
 
 ## Output
 - returns a `Trapeze` and an initial guess.

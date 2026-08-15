@@ -5,11 +5,11 @@ Compute the Cusp normal form.
 
 # Arguments
 - `_prob` bifurcation problem
-- `pt::Cusp` Cusp bifurcation point
-- `ls` linear solver
+- `br` branch from a call to `continuation`, with `br.specialpoint[ind_bif]` a Cusp point
+- `ind_bif` index of the Cusp bifurcation point in `br`
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences
+- `δ = getdelta(_prob)` used for finite differences
 - `verbose` bool to print information
 """
 function cusp_normal_form(_prob,
@@ -128,12 +128,12 @@ $(TYPEDSIGNATURES)
 Compute the Bogdanov-Takens normal form.
 
 # Arguments
-- `prob_ma` a `FoldProblemMinimallyAugmented` or `HopfProblemMinimallyAugmented`
+- `prob_ma` a `FoldMinimallyAugmentedFormulation` or `HopfMinimallyAugmentedFormulation`
 - `pt::BogdanovTakens` BogdanovTakens bifurcation point
-- `ls` linear solver
+- `bls` bordered linear solver
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences
+- `δ = getdelta(prob_ma)` used for finite differences
 - `verbose` bool to print information
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
@@ -490,14 +490,13 @@ Compute the Bogdanov-Takens normal form.
 - `prob` bifurcation problem, typically `getprob(br)`
 - `br` branch result from a call to [`continuation`](@ref)
 - `ind_bif` index of the bifurcation point in `br`
-- `options` options for the Newton solver
 
 # Optional arguments
-- `δ = 1e-8` used for finite differences with respect to parameters
-- `nev = 5` number of eigenvalues to compute to estimate the spectral projector
+- `δ = getdelta(prob)` used for finite differences with respect to parameters
+- `nev` number of eigenvalues to compute to estimate the spectral projector (defaults to `length(eigenvalsfrombif(br, ind_bif))`)
 - `verbose` bool to print information
 - `autodiff = true` Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
-- `detailed = true` Whether to compute only a simplified normal form where not all coefficients are computed.
+- `detailed = true` Whether to compute the full normal form or only a simplified one where not all coefficients are computed (`detailed = false`).
 - `ζs` list of vectors spanning the kernel of `dF` at the bifurcation point. Useful to enforce the basis for the normal form.
 - `ζs_ad` list of vectors spanning the kernel of `transpose(dF)` at the bifurcation point. Useful to enforce the basis for the normal form. The vectors must be listed so that the corresponding eigenvalues are equals to the ones associated to each vector in ζs. 
 - `scaleζ` function to normalise the kernel basis. Indeed, when used with large vectors and `norm`, it results in ζs and the normal form coefficient being super small.

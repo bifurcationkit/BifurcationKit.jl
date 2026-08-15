@@ -54,7 +54,7 @@ function BTMinimallyAugmentedFormulation(prob, a, b,
 end
 
 """
-For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newtonBT`.
+For an initial guess from the index of a BT bifurcation point located in ContResult.specialpoint, returns a point which will be refined using `newton_bt`.
 """
 function bt_point(br::AbstractResult{<: AbstractTwoParamCont, Tprob}, index::Int) where {Tprob}
     bptype = br.specialpoint[index].type
@@ -248,8 +248,8 @@ jacobian_adjoint(BTpb::BTMAProblem, args...) = jacobian_adjoint(BTpb.prob, args.
 $(TYPEDSIGNATURES)
 
 This function turns an initial guess for a BT point into a solution to the BT problem based on a Minimally Augmented formulation. The arguments are as follows
-- `prob::AbstractBifurcationFunction`
-- `btpointguess` initial guess (x_0, p_0) for the BT point. It should be a `BorderedArray` as returned by the function `BTPoint`
+- `prob::AbstractBifurcationProblem`
+- `btpointguess` initial guess (x_0, p_0) for the BT point. It should be a `BorderedArray` as returned by the function `bt_point`
 - `par` parameters used for the vector field
 - `eigenvec` guess for the 0 eigenvector
 - `eigenvec_ad` guess for the 0 adjoint eigenvector
@@ -258,7 +258,7 @@ This function turns an initial guess for a BT point into a solution to the BT pr
 # Optional arguments:
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
-- `jacobian_ma::Symbol = true` how the linear system (for newton) is solved. Can be (AutoDiff(), FiniteDifferences(), MinAug())
+- `jacobian_ma::AbstractJacobianType = AutoDiff()` how the linear system (for newton) is solved. Can be (AutoDiff(), FiniteDifferences(), MinAug())
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
@@ -355,8 +355,6 @@ This function turns an initial guess for a Bogdanov-Takens point into a solution
 # Optional arguments:
 - `options::NewtonPar`, default value `br.contparams.newton_options`
 - `normN = norm`
-- `options` You can pass newton parameters different from the ones stored in `br` by using this argument `options`.
-- `jacobian_ma::Symbol = true` specify the way the (newton) linear system is solved. Can be (:autodiff, :finitedifferences, :minaug)
 - `bdlinsolver` bordered linear solver for the constraint equation
 - `start_with_eigen = false` whether to start the Minimally Augmented problem with information from eigen elements. If `start_with_eigen = false`, then:
 

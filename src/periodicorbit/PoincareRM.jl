@@ -311,7 +311,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the monodromy matrix of the Poincaré Return Map. It returns a `Matrix{𝒯}`.
+Compute the monodromy matrix of the Poincaré Return Map. It returns a dense matrix `Matrix{𝒯p}` where `𝒯p` is the promotion of the type `𝒯` of `x` with the type of the parameter value.
 """
 function jacobian(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x::AbstractVector{𝒯}, pars) where {𝒯}
     disc = get_discretization(Π.probpo)

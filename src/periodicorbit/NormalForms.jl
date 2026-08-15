@@ -4,16 +4,15 @@ $(TYPEDSIGNATURES)
 Compute the normal form (NF) of bifurcations of periodic orbits. We detail the additional keyword arguments specific to periodic orbits.
 
 # Optional arguments
-- `prm = true` compute the normal form using Poincaré return map (PRM). If false, use the Iooss normal form. 
+- `prm = false` compute the normal form using Poincaré return map (PRM). If false, use the Iooss normal form. 
 - `nev = length(eigenvalsfrombif(br, id_bif))`,
 - `verbose = false`,
-- `ζs = nothing`, pass the eigenvectors
 - `lens = getlens(br)`,
 - `Teigvec = _getvectortype(br)` type of the eigenvectors (can be useful for GPU)
 - `scaleζ = norm`, scale the eigenvector
 - `autodiff = false` use autodiff or finite differences in some part of the normal form computation
 - `detailed = true` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is long.
-- `δ = getdelta(prob)` delta used for derivatives based on finite differences.
+- `δ = getdelta(wrap)` delta used for derivatives based on finite differences.
 
 # Notes
 

@@ -229,9 +229,10 @@ $(TYPEDSIGNATURES)
 Generate a guess and a periodic orbit problem from a solution.
 
 ## Arguments
-- `bifprob` a bifurcation problem to provide the vector field
+- `shooting` a [`Shooting`](@ref) discretization
+- `prob_bif` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
-- `sol` basically an `ODEProblem` or a function `t -> sol(t)`
+- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`)
 - `optimal_period = true` optimizes the period
 - `tspan::Tuple` estimate of the period of the periodic orbit
 - `alg` algorithm for solving the Cauchy problem

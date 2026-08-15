@@ -14,7 +14,7 @@ Available linear solvers for `method`:
 
 # Constructors
 
-`MoorePenrose(;tangent = PALC(), method = direct, ls = nothing)`
+`MoorePenrose(;predictor = PALC(), method = direct, ls = nothing)`
 
 # Internal fields
 

@@ -34,7 +34,7 @@ for multiple shooting . Here `prob` is an `Union{ODEProblem, EnsembleProblem}` w
 where `normals` (resp. `centers`) is a list of normals (resp. centers) which defines a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps.
 
 ## Computing the functionals
-A functional, hereby called `G` encodes this shooting problem. You can then call `po_residual(pb, orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+A functional, hereby called `G` encodes this shooting problem. You can then call `po_residual(pb, orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size `M * (N - 1)` where `N` is the number of unknowns in the state space and `M` is the number of Poincaré maps (the coordinates are the projections on the Poincaré sections, hence the `- 1`). Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
 Note that you can generate this guess from a function solution using `generate_solution`.
 
@@ -54,7 +54,7 @@ Note that you can generate this guess from a function solution using `generate_s
     flow::Tf = Flow()                # should be a Flow
     "`sections`: function or callable struct which implements a Poincaré section condition. The evaluation `sections(x)` must return a scalar number when `M == 1`. Otherwise, one must implement a function `section(out, x)` which populates `out` with the `M` sections. See [`SectionPS`](@ref) for type of section defined as a hyperplane."
     section::Tsection = SectionPS(M)
-    "`δ = 1e-8` used to compute the jacobian of the functional by finite differences. If set to `0`, an analytical expression of the jacobian is used instead."
+    "`δ = 1e-8` used to compute the jacobian of the functional by finite differences."
     δ::Float64 = 1e-8
     "`parallel = false` whether the shooting are computed in parallel (threading). Only available through the use of Flows defined by `EnsembleProblem`."
     parallel::Bool = false
@@ -384,12 +384,12 @@ Generate a periodic orbit problem from a solution.
 ## Arguments
 - `bifprob` a bifurcation problem to provide the vector field
 - `prob_de::ODEProblem` associated to `sol`
-- `sol` basically, and `ODEProblem
-- `period` estimate of the period of the periodic orbit
-- `k` kwargs arguments passed to the constructor of `Shooting`
+- `sol` an `AbstractTimeseriesSolution` (e.g. the output of `solve` on an `ODEProblem`)
+- `tspan` a `Tuple` giving the time span (period) of the periodic orbit (or pass a `period::Real` directly)
+- `k` kwargs arguments passed to the constructor of `PoincareShooting`
 
 ## Output
-- returns a `Shooting` and an initial guess.
+- returns a `PoincareShooting` and an initial guess.
 """
 function generate_ci_problem(psh::PoincareShooting,
                             bifprob::AbstractBifurcationProblem,

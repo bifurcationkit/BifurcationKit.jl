@@ -238,7 +238,7 @@ is constructed by passing to the constructor `ContinuousEvent`, `DiscreteEvent` 
 
 # Example
 
-     BifurcationKit.SetOfEvents(BK.FoldDetectCB, BK.BifDetectCB)
+     BifurcationKit.SetOfEvents(BK.FoldDetectEvent, BK.BifDetectEvent)
 
 You can pass as many events as you like.
 

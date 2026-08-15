@@ -20,7 +20,7 @@ More information is available on the [website](https://bifurcationkit.github.io/
 - `is_event_active(iter)` whether the event detection is active
 - `compute_eigenelements(iter)` whether to compute eigen elements
 - `save_eigenvectors(iter)` whether to save eigen vectors
-- `getparams(iter)` get full list of continuation parameters
+- `getcontparams(iter)` get the full continuation parameters
 - `isindomain(iter, p)` whether `p` in is domain [p_min, p_max]. (See [`ContinuationPar`](@ref))
 - `is_on_boundary(iter, p)` whether `p` in is {p_min, p_max}
 """
@@ -629,13 +629,13 @@ $(TYPEDSIGNATURES)
 Compute the continuation curve associated to the functional `F` which is stored in the bifurcation problem `prob`. General information is available in [Continuation methods: introduction](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/IntroContinuation/).
 
 # Arguments:
-- `prob::AbstractBifurcationFunction` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
+- `prob::AbstractBifurcationProblem` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
 - `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(),...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
 - `contparams::ContinuationPar` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution/branch/spectrum while computing the branch
-- `bothside = true` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
+- `bothside = false` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
 - `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`solve`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)

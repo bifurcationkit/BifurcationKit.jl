@@ -189,7 +189,7 @@ struct EigArnoldiMethod{T, Tby, Tw, Tkw, vectype} <: AbstractIterativeEigenSolve
     "How do we sort the computed eigenvalues, defaults to real."
     by::Tby
 
-    "Key words arguments passed to EigArpack."
+    "Keyword arguments passed to `ArnoldiMethod.partialschur`."
     kwargs::Tkw
 
     "Example of vector used for Krylov iterations."

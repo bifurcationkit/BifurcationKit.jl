@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-For an initial guess from the index of a NS bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newtonFold`.
+For an initial guess from the index of a NS bifurcation point located in `ContResult.specialpoint`, returns a point which can be refined using `newton_fold`.
 """
 function ns_point(br::AbstractBranchResult, index::Int)
     bptype = br.specialpoint[index].type

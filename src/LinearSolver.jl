@@ -120,7 +120,7 @@ end
 $(TYPEDEF)
 
 [Mainly for debugging] This solver is used to test Moore-Penrose continuation. 
-This is defined as an iterative pseudo-inverse linear solver. Used to solve `J * x = rhs`.
+It is a direct solver based on the backslash operator, used to solve `J * x = rhs`.
 
 # Internal fields
 $(TYPEDFIELDS)
