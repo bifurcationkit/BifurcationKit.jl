@@ -741,6 +741,17 @@ let
         BK.type(hh)
         BK.predictor(hh, Val(:HopfCurve), 0.01)
         BK.predictor(hh, Val(:NS), 0.01)
+
+        # same normal form but with the kernel basis computed with a bordered linear system
+        hh_bd = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true), start_with_eigen = Val(false))
+        @test abs(imag(hh_bd.nf.λ1) - imag(hh.nf.λ1)) < 1e-7
+        @test abs(imag(hh_bd.nf.λ2) - imag(hh.nf.λ2)) < 1e-7
+        L = BK.jacobian(prob, hh_bd.x0, hh_bd.params)
+        ω1 = imag(hh_bd.nf.λ1); ω2 = imag(hh_bd.nf.λ2)
+        @test norm(L * hh_bd.ζ.q1 - im * ω1 * hh_bd.ζ.q1, Inf) < 1e-7
+        @test norm(L * hh_bd.ζ.q2 - im * ω2 * hh_bd.ζ.q2, Inf) < 1e-7
+        @test dot(hh_bd.ζ★.p1, hh_bd.ζ.q1) ≈ 1 atol = 1e-7
+        @test dot(hh_bd.ζ★.p2, hh_bd.ζ.q2) ≈ 1 atol = 1e-7
         # @test hh.nf.G2100 == par_hh.G2100
         # @test hh.nf.G0021 == par_hh.G0021
         # @test hh.nf.G1110 == par_hh.G1110

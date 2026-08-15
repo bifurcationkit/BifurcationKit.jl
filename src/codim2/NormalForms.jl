@@ -1382,8 +1382,11 @@ function hopf_hopf_normal_form(_prob,
                                 ζs = nothing,
                                 lens = getlens(br),
                                 scaleζ = norm,
+                                bls = nothing,
+                                bls_adjoint = nothing,
                                 autodiff = true,
-                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type}
+                                start_with_eigen::Val{start_with_eigen_type} = Val(true),
+                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
@@ -1404,6 +1407,10 @@ function hopf_hopf_normal_form(_prob,
 
     # linear solver
     ls = 𝐌𝐚.linsolver
+
+    # bordered linear solvers
+    bls = isnothing(bls) ? 𝐌𝐚.linbdsolver : bls
+    bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
     # kernel dimension
     N = 4
@@ -1426,59 +1433,91 @@ function hopf_hopf_normal_form(_prob,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
+    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
 
     # p0, ω0 = getp(bifpt.x, 𝐌𝐚)
     p0 = bifpt.x.p1
     ω0 = abs(bifpt.x.ω)
 
-    # right eigenvector
-    # TODO IMPROVE THIS
-    if true#haseigenvector(br) == false
-        # we recompute the eigen-elements if there were not saved during the computation of the branch
-        verbose && @info "Recomputing eigenvector on the fly"
-        _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-        # imaginary eigenvalue iω0
+    # right / left eigenvectors
+    if start_with_eigen_type
+        # right eigenvector
+        # TODO IMPROVE THIS
+        if true#haseigenvector(br) == false
+            # we recompute the eigen-elements if there were not saved during the computation of the branch
+            verbose && @info "Recomputing eigenvector on the fly"
+            _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+            # imaginary eigenvalue iω0
+            _ind0 = argmin(abs.(_λ .- im * ω0))
+            λ1 = _λ[_ind0]
+            verbose && @info "The first eigenvalue  is $(λ1), ω0 = $ω0"
+            q1 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
+            tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
+            # imaginary eigenvalue iω1
+            _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
+            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
+            λ2 = _λ[_ind2[_indIm]]
+            verbose && @info "The second eigenvalue is $(λ2)"
+            q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
+        else
+            @assert false "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
+        end
+
+        # for easier debugging, we normalise the case to ω1 > ω2 > 0
+        if imag(λ1) < 0
+            λ1 = conj(λ1)
+            q1 = conj(q1)
+        end
+
+        if imag(λ2) < 0
+            λ2 = conj(λ2)
+            q2 = conj(q2)
+        end
+
+        if imag(λ1) < imag(λ2)
+            q1, q2 = q2, q1
+            λ1, λ2 = λ2, λ1
+        end
+
+        q1 ./= scaleζ(q1)
+        q2 ./= scaleζ(q2)
+
+        cq1 = conj(q1); cq2 = conj(q2)
+        ω1 = imag(λ1); ω2 = imag(λ2);
+
+        # left eigen-elements
+        p1, λ★1 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+        p2, λ★2 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+    else
+        # compute the basis of the kernel using bordered linear systems
+        verbose && println("──▶ Compute the kernel basis using a bordered linear system")
+        # the frequencies of the two Hopf pairs: ω0 is stored in the special point, the
+        # second one is recovered from the eigenvalues (only the eigenvalues are computed)
+        _λ, _, _ = optionsN.eigsolver.eigsolver(L, nev)
         _ind0 = argmin(abs.(_λ .- im * ω0))
         λ1 = _λ[_ind0]
-        verbose && @info "The first eigenvalue  is $(λ1), ω0 = $ω0"
-        q1 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
         tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
-        # imaginary eigenvalue iω1
         _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
         _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
         λ2 = _λ[_ind2[_indIm]]
-        verbose && @info "The second eigenvalue is $(λ2)"
-        q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
-    else
-        @assert false "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
+        if imag(λ1) < 0; λ1 = conj(λ1); end
+        if imag(λ2) < 0; λ2 = conj(λ2); end
+        if imag(λ1) < imag(λ2); λ1, λ2 = λ2, λ1; end
+        ω1 = imag(λ1); ω2 = imag(λ2)
+
+        M = getmassmatrix(prob_vf, x0, parbif)
+        a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
+        b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω1, a1, b1, VI.zerovector(a1))
+        q1, p1 = bdv.v, bdv.w
+        a2 = _randn(complex.(x0)); VI.scale!(a2, 1 / scaleζ(a2))
+        b2 = _randn(complex.(x0)); VI.scale!(b2, 1 / scaleζ(b2))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω2, a2, b2, VI.zerovector(a2))
+        q2, p2 = bdv.v, bdv.w
+        q1 ./= scaleζ(q1)
+        q2 ./= scaleζ(q2)
+        cq1 = conj(q1); cq2 = conj(q2)
     end
-
-    # for easier debugging, we normalise the case to ω1 > ω2 > 0
-    if imag(λ1) < 0
-        λ1 = conj(λ1)
-        q1 = conj(q1)
-    end
-
-    if imag(λ2) < 0
-        λ2 = conj(λ2)
-        q2 = conj(q2)
-    end
-
-    if imag(λ1) < imag(λ2)
-        q1, q2 = q2, q1
-        λ1, λ2 = λ2, λ1
-    end
-
-    q1 ./= scaleζ(q1)
-    q2 ./= scaleζ(q2)
-
-    cq1 = conj(q1); cq2 = conj(q2)
-    ω1 = imag(λ1); ω2 = imag(λ2);
-
-    # left eigen-elements
-    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    p1, λ★1 = get_adjoint_basis(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-    p2, λ★2 = get_adjoint_basis(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
 
     # normalise left eigenvectors
     p1 ./= LA.dot(q1, p1)
