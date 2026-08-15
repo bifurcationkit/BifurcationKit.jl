@@ -240,9 +240,8 @@ function update!(𝐏𝐛::NSMAProblem, iter, state)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     𝐍𝐒 = get_formulation(𝐏𝐛)
-    𝒯 = eltype(𝐍𝐒)
     success = converged(state)
-    if (~mod_counter(step, 𝐍𝐒.update_minaug_every_step) || success == false) || in_bisection(state)
+    if (~mod_counter(state.step, 𝐍𝐒.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐍𝐒, iter, state)
     end

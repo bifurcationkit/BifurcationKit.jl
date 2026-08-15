@@ -255,7 +255,7 @@ function update!(𝐏𝐛::PDMAProblem, iter, state)
     # if not, we do not update the problem with bad information!
     𝐏𝐝 = get_formulation(𝐏𝐛)
     success = converged(state)
-    if (~mod_counter(step, 𝐏𝐝.update_minaug_every_step) || success == false) || in_bisection(state)
+    if (~mod_counter(state.step, 𝐏𝐝.update_minaug_every_step) || success == false) || in_bisection(state)
         # we call the user update
         return update!(𝐏𝐝, iter, state)
     end
