@@ -716,8 +716,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
         # compute the eigenvectors using a bordered linear system
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
-        M = getmassmatrix(prob_vf, x0, parbif)
-        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(_λ0)
     end
@@ -968,6 +967,35 @@ end
 # point was detected during a Hopf curve continuation, it is not available otherwise
 _get_frequency(x) = nothing
 _get_frequency(x::MASolutionFreq) = x.ω
+
+# frequency ω₁ of the imaginary pair ±iω₁ at a Zero-Hopf point, i.e. the eigenvalue(s)
+# closest to the imaginary axis, excluding the null eigenvalue
+function _get_hfreq_from_eigenvalues(eigenvals)
+    _ind0 = argmin(abs.(eigenvals))
+    tol_ev = max(1e-10, 10abs(imag(eigenvals[_ind0])))
+    _ind2 = [ii for ii in eachindex(eigenvals) if ((abs(imag(eigenvals[ii])) > tol_ev) & (ii != _ind0))]
+    _indIm = argmin(abs(real(eigenvals[ii])) for ii in _ind2)
+    return abs(imag(eigenvals[_ind2[_indIm]]))
+end
+
+# frequency of the Hopf pair of a Zero-Hopf point: the frequency recorded by the Hopf
+# continuation if available, otherwise recovered from the eigenvalues at the bifurcation point
+function _get_hopf_frequency(br, ind_bif, bifpt)
+    ω = _get_frequency(bifpt)
+    isnothing(ω) || return abs(ω)
+    return _get_hfreq_from_eigenvalues(eigenvalsfrombif(br, ind_bif))
+end
+
+# extract the two imaginary eigenvalues of a Hopf-Hopf point from a list of eigenvalues:
+# λ1 is the eigenvalue closest to iω0, λ2 the other imaginary pair closest to the imaginary axis
+function _extract_hopf_hopf_eigenpairs(eigenvals, ω0)
+    _ind0 = argmin(abs.(eigenvals .- im * ω0))
+    λ1 = eigenvals[_ind0]
+    tol_ev = max(1e-10, 10abs(ω0 - imag(λ1)))
+    _ind2 = [ii for ii in eachindex(eigenvals) if abs(abs(imag(eigenvals[ii])) - abs(ω0)) > tol_ev]
+    _indIm = argmin(abs(real(eigenvals[ii])) for ii in _ind2)
+    return _ind0, _ind2[_indIm], λ1, eigenvals[_ind2[_indIm]]
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function zero_hopf_normal_form(𝐏𝐛,
                                 br::AbstractBranchResult, ind_bif::Int,
@@ -1036,14 +1064,8 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # right / left eigenvectors
     if start_with_eigen_type
-        # frequency of the Hopf pair, recovered from the eigenvalues recorded at the
-        # bifurcation point: the imaginary pair ±iω1 is the one closest to the imaginary axis
-        rightEv = eigenvalsfrombif(br, ind_bif)
-        _ind0 = argmin(abs.(rightEv))
-        tol_ev = max(1e-10, 10abs(imag(rightEv[_ind0])))
-        _ind2 = [ii for ii in eachindex(rightEv) if ((abs(imag(rightEv[ii])) > tol_ev) & (ii != _ind0))]
-        _indIm = argmin(abs(real(rightEv[ii])) for ii in _ind2)
-        ωh = abs(imag(rightEv[_ind2[_indIm]]))
+        # frequency of the Hopf pair (±iω₁)
+        ωh = _get_hopf_frequency(br, ind_bif, bifpt)
         verbose && @info "Frequency of the Hopf pair: ω1 = $ωh"
 
         # right eigenvectors (null q0 + imaginary q1) via the eigensolver
@@ -1069,17 +1091,8 @@ function zero_hopf_normal_form(𝐏𝐛,
     else
         # compute the basis of the kernel using bordered linear systems
         verbose && println("──▶ Compute the kernel basis using a bordered linear system")
-        # frequency of the Hopf pair, taken from the branch if available (Zero-Hopf detected
-        # during a Hopf curve continuation) or computed on the fly otherwise
-        ωh = _get_frequency(bifpt)
-        if isnothing(ωh)
-            _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-            _ind0 = argmin(abs.(_λ))
-            tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
-            _ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
-            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
-            ωh = imag(_λ[_ind2[_indIm]])
-        end
+        # frequency of the Hopf pair (±iω₁)
+        ωh = _get_hopf_frequency(br, ind_bif, bifpt)
         abs(ωh) < 1e-12 && @warn "The frequency of the Hopf pair is close to zero ω ≈ $ωh. The bordered system for the complex eigenvector may be ill-conditioned."
 
         # real null vector q0 and left null vector p0
@@ -1091,8 +1104,7 @@ function zero_hopf_normal_form(𝐏𝐛,
         # complex eigenvectors ±iω
         a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
         b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
-        M = getmassmatrix(prob_vf, x0, parbif)
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ωh, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ωh, a1, b1, VI.zerovector(a1))
         q1, p1 = bdv.v, bdv.w
         λI = Complex{𝒯}(0, ωh)
         λ0 = zero(Complex{𝒯})
@@ -1369,7 +1381,8 @@ function hopf_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
+                                detailed::Val{detailed_type} = Val(false)
+                                ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
@@ -1406,7 +1419,6 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    eigRes = br.eig
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
@@ -1430,18 +1442,11 @@ function hopf_hopf_normal_form(𝐏𝐛,
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             verbose && @info "Recomputing eigenvector on the fly"
             _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-            # imaginary eigenvalue iω0
-            _ind0 = argmin(abs.(_λ .- im * ω0))
-            λ1 = _λ[_ind0]
+            _ind0, _indIm, λ1, λ2 = _extract_hopf_hopf_eigenpairs(_λ, ω0)
             verbose && @info "The first eigenvalue  is $(λ1), ω0 = $ω0"
             q1 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
-            tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
-            # imaginary eigenvalue iω1
-            _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
-            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
-            λ2 = _λ[_ind2[_indIm]]
             verbose && @info "The second eigenvalue is $(λ2)"
-            q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
+            q2 = geteigenvector(optionsN.eigsolver, _ev, _indIm)
         else
             @assert false "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
         end
@@ -1477,25 +1482,17 @@ function hopf_hopf_normal_form(𝐏𝐛,
         # the frequencies of the two Hopf pairs: ω0 is stored in the special point, the
         # second one is recovered from the eigenvalues (only the eigenvalues are computed)
         _λ, _, _ = optionsN.eigsolver.eigsolver(L, nev)
-        _ind0 = argmin(abs.(_λ .- im * ω0))
-        λ1 = _λ[_ind0]
-        tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
-        _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
-        _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
-        λ2 = _λ[_ind2[_indIm]]
+        _ind0, _indIm, λ1, λ2 = _extract_hopf_hopf_eigenpairs(_λ, ω0)
         if imag(λ1) < 0; λ1 = conj(λ1); end
         if imag(λ2) < 0; λ2 = conj(λ2); end
         if imag(λ1) < imag(λ2); λ1, λ2 = λ2, λ1; end
         ω1 = imag(λ1); ω2 = imag(λ2)
 
-        M = getmassmatrix(prob_vf, x0, parbif)
         a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
         b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω1, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, _Jt, ω1, a1, b1, VI.zerovector(a1))
         q1, p1 = bdv.v, bdv.w
-        a2 = _randn(complex.(x0)); VI.scale!(a2, 1 / scaleζ(a2))
-        b2 = _randn(complex.(x0)); VI.scale!(b2, 1 / scaleζ(b2))
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω2, a2, b2, VI.zerovector(a2))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, _Jt, ω2, a1, b1, VI.zerovector(a1))
         q2, p2 = bdv.v, bdv.w
         q1 ./= scaleζ(q1)
         q2 ./= scaleζ(q2)

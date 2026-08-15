@@ -325,10 +325,8 @@ function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
-    𝐌𝐚 = get_formulation(getprob(br))
     𝒯 = _getvectortype(br)
     bifpt = br.specialpoint[ind]
-    step = bifpt.step
     # get the biurcation point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
         x0 = convert(𝒯.parameters[1], saved_solution(bifpt.x.x))

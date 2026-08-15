@@ -312,7 +312,6 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     𝒯 = VI.scalartype(x0)
-    δ = getdelta(prob)
 
     L = jacobian(prob, x0, parbif)
 

@@ -682,18 +682,27 @@ let
         br_codim2 = continuation(br, 2, (@optic _.β2), opts2; verbosity = 0, start_with_eigen = true, detect_codim2_bifurcation = 0, update_minaug_every_step = 1)
 
         @test br_codim2.specialpoint[1].type == :zh
+        # first mode: kernel basis computed with the eigensolver
         zh = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true))
         @test zh.nf.G200 ≈ par_zh.G200
         @test zh.nf.G110 ≈ par_zh.G110
         @test zh.nf.G011/2 ≈ par_zh.G011
+        # the frequency of the Hopf pair is recovered from the branch eigenvalues
+        @test zh.nf.ω ≈ 1 rtol = 1e-2
         BK.type(zh)
 
-        # same normal form but with the kernel basis computed with a bordered linear system
+        # second mode: same normal form but with the kernel basis computed with a bordered linear system
         zh_bd = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true), start_with_eigen = Val(false))
         s = sign(dot(zh_bd.ζ.q0, zh.ζ.q0))
         @test zh_bd.nf.G200 ≈ s * par_zh.G200 rtol = 1e-1 atol = 1e-2
         @test zh_bd.nf.G110 ≈ s * par_zh.G110 rtol = 1e-1 atol = 1e-2
         @test zh_bd.nf.G011/2 ≈ s * par_zh.G011 rtol = 1e-1 atol = 1e-2
+        @test zh_bd.nf.ω ≈ 1 rtol = 1e-2
+
+        # both modes must give consistent coefficients (up to the sign of the kernel basis)
+        @test zh_bd.nf.G200 ≈ s * zh.nf.G200 rtol = 1e-1 atol = 1e-2
+        @test zh_bd.nf.G110 ≈ s * zh.nf.G110 rtol = 1e-1 atol = 1e-2
+        @test zh_bd.nf.G011/2 ≈ s * zh.nf.G011/2 rtol = 1e-1 atol = 1e-2
 
         pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
         pred.EigenVec(0.1)
@@ -755,9 +764,34 @@ let
         @test norm(L * hh_bd.ζ.q2 - im * ω2 * hh_bd.ζ.q2, Inf) < 1e-7
         @test dot(hh_bd.ζ★.p1, hh_bd.ζ.q1) ≈ 1 atol = 1e-7
         @test dot(hh_bd.ζ★.p2, hh_bd.ζ.q2) ≈ 1 atol = 1e-7
-        # @test hh.nf.G2100 == par_hh.G2100
-        # @test hh.nf.G0021 == par_hh.G0021
-        # @test hh.nf.G1110 == par_hh.G1110
-        # @test hh.nf.G1011 == par_hh.G1011
+
+        # The normal form coefficients (G2100, G0021, G1011, G1110) are expressed in the
+        # basis of the numerically computed eigenvectors (normalized with `scaleζ = norm`) and
+        # the two Hopf pairs are ordered so that `imag(λ1) > imag(λ2)`. They are therefore not
+        # equal to the coefficients of the amplitude equation `Fhh`, which are expressed in the
+        # "physical" coordinates w1 = u1 + i u2, w2 = u3 + i u4 (and are not relabeled). Hence
+        # one cannot test e.g. `hh.nf.G2100 == par_hh.G2100`.
+        # Instead we check that the reduced vector field reconstructed from the normal form
+        # reproduces the actual vector field on the center manifold. Because `Fhh` is already a
+        # normal form (no quadratic terms), the center manifold is flat, u = 2Re(z1 q1 + z2 q2),
+        # and the reduced dynamics read
+        #   ż1 = λ1 z1 + G2100/2 z1|z1|² + G1011 z1|z2|²
+        #   ż2 = λ2 z2 + G0021/2 z2|z2|² + G1110 z2|z1|²
+        # evaluated at the bifurcation point (hh.params, where β1 ≈ β2 ≈ 0) and for small z,
+        # so that the quintic terms of `Fhh` (not part of this normal form) are negligible:
+        #   u̇ = 2Re(ż1 q1 + ż2 q2) == Fhh(u).
+        Fval(u, p) = _F === Fhh ? _F(u, p) : _F(similar(u), u, p)
+        q1, q2 = hh.ζ.q1, hh.ζ.q2
+        λ1, λ2 = hh.nf.λ1, hh.nf.λ2
+        G2100, G0021, G1011, G1110 = hh.nf.G2100, hh.nf.G0021, hh.nf.G1011, hh.nf.G1110
+        parbif = hh.params
+        for z1 in (1e-3, 5e-4), z2 in (1e-3, 5e-4)
+            u = 2 .* real.(z1 .* q1 .+ z2 .* q2)
+            Fexact = Fval(u, parbif)
+            nf1 = λ1 * z1 + G2100 / 2 * z1 * abs2(z1) + G1011 * z1 * abs2(z2)
+            nf2 = λ2 * z2 + G0021 / 2 * z2 * abs2(z2) + G1110 * z2 * abs2(z1)
+            Frecon = 2 .* real.(nf1 .* q1 .+ nf2 .* q2)
+            @test Fexact ≈ Frecon atol = 1e-12
+        end
     end
 end
