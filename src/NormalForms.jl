@@ -856,6 +856,50 @@ end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
 
+# find the zeros of the normal form (reduced equation) on one side of the bifurcation point,
+# using deflated newton on the vertices of the hypercube `igs`
+function _get_roots_from_red_eqn(bp, _ds, n, 𝒯;
+                                 deflation_Op, igs, amp_igs, ampfactor,
+                                 nbfailures, optn, normN, perturb, J,
+                                 callback = cbMaxNorm(1e100))
+    # we need one deflation operator per side of the bifurcation point, careful for aliasing
+    deflationOp = deepcopy(deflation_Op)
+    prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, _ds)),
+                                (rand(𝒯, n) .- 𝒯(1//2)),
+                                nothing)
+    if ~isnothing(J)
+        @reset prob.VF.J = J
+    end
+
+    failures = 0
+    for ci in igs
+        if norm(ci) > 0
+            prob.u0 .= [ci...] * amp_igs
+            outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN, callback)
+            if converged(outdef1)
+                push!(deflationOp, ampfactor .* outdef1.u)
+            else
+                failures += 1
+            end
+        end
+    end
+
+    failures = 0
+    # we allow for nbfailures of nonlinear deflation
+    while failures < nbfailures
+        outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN, callback)
+        if converged(outdef1)
+            push!(deflationOp, ampfactor .* outdef1.u)
+        else
+            failures += 1
+        end
+        prob.u0 .= outdef1.u .+ 𝒯(1//10) .* (rand(𝒯, n) .- 𝒯(1//2))
+    end
+
+    return deflationOp.roots
+end
+
+
 """
 $(TYPEDSIGNATURES)
 
@@ -897,46 +941,8 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
     end
     callback = cbMaxNorm(1e100)
 
-    # find zeros of the normal on each side of the bifurcation point
-    function _get_roots_from_red_eqn(_ds)
-        # we need one deflation operator per side of the bifurcation point, careful for aliasing
-        deflationOp = deepcopy(deflation_Op)
-        prob = BifurcationProblem((z, p) -> perturb(bp(Val(:reducedForm), z, _ds)),
-                                    (rand(𝒯, n) .- 𝒯(1//2)), 
-                                    nothing)
-        if ~isnothing(J)
-            @reset prob.VF.J = J
-        end
-
-        failures = 0
-        for ci in igs
-            if norm(ci) > 0
-                prob.u0 .= [ci...] * amp_igs
-                outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN, callback)
-                if converged(outdef1)
-                    push!(deflationOp, ampfactor .* outdef1.u)
-                else
-                    failures += 1
-                end
-            end
-        end
-
-        failures = 0
-        # we allow for nbfailures of nonlinear deflation
-        while failures < nbfailures
-            outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN, callback)
-            if converged(outdef1)
-                push!(deflationOp, ampfactor .* outdef1.u)
-            else
-                failures += 1
-            end
-            prob.u0 .= outdef1.u .+ 𝒯(1//10) .* (rand(𝒯, n) .- 𝒯(1//2))
-        end
-
-        return deflationOp.roots
-    end
-    rootsNFm = _get_roots_from_red_eqn(-abs(δp))
-    rootsNFp = _get_roots_from_red_eqn(abs(δp))
+    rootsNFm = _get_roots_from_red_eqn(bp, -abs(δp), n, 𝒯; deflation_Op, igs, amp_igs, ampfactor, nbfailures, optn, normN, perturb, J, callback)
+    rootsNFp = _get_roots_from_red_eqn(bp, abs(δp), n, 𝒯; deflation_Op, igs, amp_igs, ampfactor, nbfailures, optn, normN, perturb, J, callback)
     println("\n──▶ BS from Non simple branch point")
     printstyled(color=:green, "──▶ we find $(length(rootsNFm)) (resp. $(length(rootsNFp))) roots before (resp. after) the bifurcation point counting the trivial solution (reduced equation).\n    These need to be transformed as solutions of the full functional.\n")
     return (before = rootsNFm, after = rootsNFp)
