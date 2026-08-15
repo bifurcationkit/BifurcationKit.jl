@@ -566,7 +566,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
 
     # left eigen-elements
     _Jt = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
-    ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\nYou can perhaps increase the number of computed eigenvalues, the number is nev = $nev."

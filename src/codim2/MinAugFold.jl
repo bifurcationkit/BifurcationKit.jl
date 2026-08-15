@@ -258,12 +258,12 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
         L = jacobian(prob, bifpt.x, parbif)
 
         # computation of zero eigenvector
-        ζstar, = _get_adjoint_kernel_basis_1d_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
+        ζstar, = _get_target_eigenvector_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec .= real.(ζstar)
 
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        ζstar, = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
+        ζstar, = _get_target_eigenvector_from_eigensolver(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
         eigenvec_ad .= real.(ζstar)
         VI.scale!(eigenvec_ad, 1 / normN(eigenvec_ad))
     end
@@ -499,7 +499,7 @@ function continuation_fold(prob,
         L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
 
         # computation of zero adjoint eigenvector
-        ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
+        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, 0, br.contparams.newton_options.eigsolver; nev = nev, verbose = options_cont.newton_options.verbose)
         ζad = real.(ζ★)
         VI.scale!(ζad, 1 / real(VI.inner(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
@@ -531,7 +531,6 @@ function _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver
     # we use a minimally augmented formulation to set the initial vectors
     a = isnothing(a) ? _randn(_copy(u0)) : a; VI.scale!(a, 1 / normC(a))
     b = isnothing(b) ? _randn(_copy(u0)) : b; VI.scale!(b, 1 / normC(b))
-    @error "" typeof(bifpt.x) typeof(prob)
 
     𝒯 = typeof(bifpt.param)
     L = jacobian(prob, u0, parbif)

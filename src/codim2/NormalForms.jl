@@ -23,7 +23,8 @@ function cusp_normal_form(_prob,
                             scaleζ = norm,
                             bls = nothing,
                             bls_adjoint = nothing,
-                            start_with_eigen::Val{start_with_eigen_type} = Val(true)) where {𝒯eigvec, start_with_eigen_type}
+                            start_with_eigen::Val{start_with_eigen_type} = Val(true)
+                            ) where {𝒯eigvec, start_with_eigen_type}
     if br.specialpoint[ind_bif].type != :cusp 
         error("The provided index does not refer to a Cusp Point")
     end
@@ -44,10 +45,8 @@ function cusp_normal_form(_prob,
     bls = isnothing(bls) ? 𝐌𝐚.linbdsolver : bls
     bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
-    # kernel dimension
-    N = 1
-
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
+    N = 1 # kernel dimension
     nev = min(2N, nev)
 
     # newton parameters
@@ -94,7 +93,7 @@ function cusp_normal_form(_prob,
             ζ★ = copy(ζ)
         else
             L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-            ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
+            ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
         end
     else
         # compute the (right / left) basis vectors of the kernel using a bordered linear system
@@ -727,7 +726,7 @@ function bautin_normal_form(_prob::HopfMAProblem,
 
     # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
@@ -1081,8 +1080,8 @@ function zero_hopf_normal_form(_prob,
         λ0 = _λ[_ind0]
 
         # left eigen-elements
-        p0, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ0), optionsN.eigsolver.eigsolver; nev, verbose)
-        p1, λ★1 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
+        p0, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ0), optionsN.eigsolver.eigsolver; nev, verbose)
+        p1, λ★1 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
     else
         # compute the basis of the kernel using bordered linear systems
         verbose && println("──▶ Compute the kernel basis using a bordered linear system")
@@ -1486,8 +1485,8 @@ function hopf_hopf_normal_form(_prob,
         ω1 = imag(λ1); ω2 = imag(λ2);
 
         # left eigen-elements
-        p1, λ★1 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
-        p2, λ★2 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev = nev, verbose = verbose)
+        p1, λ★1 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev, verbose)
+        p2, λ★2 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev, verbose)
     else
         # compute the basis of the kernel using bordered linear systems
         verbose && println("──▶ Compute the kernel basis using a bordered linear system")

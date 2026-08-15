@@ -313,7 +313,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
         # computation of adjoint eigenvector
         _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζstar, _ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ), options.eigsolver; nev, verbose = false)
+        ζstar, _ = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ), options.eigsolver; nev, verbose = false)
         ζad .= ζstar ./ VI.inner(ζstar, ζ)
     end
 
@@ -557,7 +557,7 @@ function continuation_hopf(prob,
         L = jacobian(prob, bifpt.x, parbif)
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
+        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
         VI.add!(ζad, ζ★, 1 / VI.inner(ζ★, ζ), 0)
     else
         (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)

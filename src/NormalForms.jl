@@ -1,43 +1,43 @@
-function _get_adjoint_kernel_basis_nd_from_eigensolver(L★, λs::AbstractVector, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
-    𝒯 = VI.scalartype(λs)
+function _get_target_eigenvectors_nd_from_eigensolver(L, λs_target::AbstractVector, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
+    𝒯 = VI.scalartype(λs_target)
     # same as function below but for a list of eigenvalues
-    # we compute the eigen-elements of the adjoint of L
-    λ★, ev★, cv, = eigsolver(L★, nev)
-    ~cv && @warn "Adjoint eigen solver did not converge"
-    verbose && Base.display(λ★)
-    # vectors to hold eigen-elements for the adjoint of L
-    λ★s = Vector{𝒯}()
-    # This is a horrible hack to get the type of the left eigenvectors
-    ζ★s = Vector{typeof(geteigenvector(eigsolver, ev★, 1))}()
+    # we compute the eigen-elements of L
+    σ, ev, cv, = eigsolver(L, nev)
+    ~cv && @warn "eigen solver did not converge"
+    verbose && Base.display(σ)
+    # vectors to hold eigen-elements of L
+    σs = Vector{𝒯}()
+    # This is a horrible hack to get the type of the eigenvectors
+    ζs = Vector{typeof(geteigenvector(eigsolver, ev, 1))}()
 
-    for (idvp, λ) in pairs(λs)
-        I = argmin(abs.(λ★ .- λ))
-        abs(real(λ★[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(λ★[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
+    for (idvp, λ) in pairs(λs_target)
+        I = argmin(abs.(σ .- λ))
+        abs(real(σ[I])) > 1e-2 && @warn "Did not converge to the requested eigenvalues. We found $(real(σ[I])) !≈ 0. This might not lead to precise normal form computation. You can perhaps increase the argument `nev`."
         verbose && println("──▶ VP[$idvp] paired with VP★[$I]")
-        ζ★ = geteigenvector(eigsolver, ev★, I)
-        push!(ζ★s, _copy(ζ★))
-        push!(λ★s, λ★[I])
-        # we modify λ★ so that it is not used twice
-        λ★[I] = 1e9 # typemax(𝒯) does not work for complex numbers here
+        ζ = geteigenvector(eigsolver, ev, I)
+        push!(ζs, _copy(ζ))
+        push!(σs, σ[I])
+        # we modify σ so that it is not used twice
+        σ[I] = 1e9 # typemax(𝒯) does not work for complex numbers here
     end
-    return ζ★s, λ★s
+    return ζs, σs
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Return a left eigenvector for an eigenvalue closest to `λ`. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
+Return a right eigenvector for an eigenvalue closest to `λtarget`. `nev` indicates how many eigenvalues must be computed by the eigensolver. Indeed, for iterative solvers, it may be needed to compute more than one eigenvalue.
 """
-function _get_adjoint_kernel_basis_1d_from_eigensolver(L★, λ::Number, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
-    λ★, ev★, cv, = eigsolver(L★, nev)
+function _get_target_eigenvector_from_eigensolver(L, λtarget::Number, eigsolver::AbstractEigenSolver; nev = 3, verbose = false)
+    λ, ev, cv, = eigsolver(L, nev)
     ~cv && @warn "Eigen Solver did not converge"
-    I = argmin(abs.(λ★ .- λ))
-    verbose && (println("┌── left eigenvalues = "); display(λ★))
-    verbose && println( "├── right eigenvalue = ", λ, 
-                      "\n└──  left eigenvalue = ", λ★[I])
-    abs(real(λ★[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ★[I])) !≈ 0.  You can perhaps increase the argument `nev`."
-    ζ★ = geteigenvector(eigsolver, ev★, I)
-    return copy(ζ★), λ★[I]
+    I = argmin(abs.(λ .- λtarget))
+    verbose && (println("┌──  right eigenvalues = "); display(λ))
+    verbose && println( "├──  target eigenvalue = ", λtarget, 
+                      "\n└── closest eigenvalue = ", λ[I])
+    abs(real(λ[I])) > 1e-2 && @warn "The bifurcating eigenvalue is not that close to Re = 0. We found $(real(λ[I])) !≈ 0.  You can perhaps increase the argument `nev`."
+    ζ = geteigenvector(eigsolver, ev, I)
+    return copy(ζ), λ[I]
 end
 
 """
@@ -50,7 +50,7 @@ Compute a basis of the kernel of `L` (resp. its adjoint `L★`) by solving the b
 │ Bᵀ  0 ││σ │   │ eⱼ│
 └       ┘└  ┘   └   ┘
 ```
-for `j = 1,...,N` where the columns of `A` (`as`) and `B` (`bs`) are random vectors. The `j`-th column of the returned `ζs` (resp. `ζ★s`) is thus a vector spanning the kernel of `L` (resp. `L★`), the bases are then biorthogonalized in `get_normal_formNd`.
+for `j = 1,...,N`, where `eⱼ` is the `j`-th vector of the canonical basis of ℝᴺ (the `j`-th column of the identity `I_N`), and where the columns of `A` (`as`) and `B` (`bs`) are random vectors. The `j`-th column of the returned `ζs` (resp. `ζ★s`) is thus a vector spanning the kernel of `L` (resp. `L★`), the bases are then biorthogonalized in `get_normal_formNd`.
 """
 function __compute_nd_basis_from_bls(bls_block, bls_block_adjoint, L, L★, x0, 𝒯, N::Int)
     as = ntuple(_ -> _randn(x0), N)
@@ -113,7 +113,7 @@ function _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, 
             ζ★ = _copy(ζ)
         else
             L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
-            ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
+            ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), eigsolver; nev, verbose)
         end
     else
         λ★ = conj(λ)
@@ -252,7 +252,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :zh
         return zero_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, start_with_eigen)
     elseif bifpt.type == :hh
-        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
+        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, start_with_eigen)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
         return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint, start_with_eigen)
     end
@@ -324,8 +324,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     verbose && println("├─ smallest eigenvalue at bifurcation = ", λ)
 
     if start_with_eigen_type
-        ζ, ζ★, λ★ = _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, options.eigsolver, nev, verbose, 𝒯eigvec, x0, parbif;
-                                                          ζ, ζ_ad)
+        ζ, ζ★, λ★ = _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, options.eigsolver, nev, verbose, 𝒯eigvec, x0, parbif; ζ, ζ_ad)
     else
         # compute the (right / left) basis vectors of the kernel using a bordered linear system
         L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
@@ -785,7 +784,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                 ζ★s = _copy.(ζs)
             else
                 L★ = is_symmetric(prob_vf) ? L : (has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L))
-                ζ★s, λ★s = _get_adjoint_kernel_basis_nd_from_eigensolver(L★, conj.(λs), options.eigsolver; nev, verbose)
+                ζ★s, λ★s = _get_target_eigenvectors_nd_from_eigensolver(L★, conj.(λs), options.eigsolver; nev, verbose)
             end
         end
     else
@@ -1188,7 +1187,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     if start_with_eigen_type
-        ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
+        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
     else
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
@@ -1522,7 +1521,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
-    ζ★, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
+    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Neimark-Sacker point to be very close to the imaginary part:\nλ ≈ $λ,\nλ★ ≈ $λ★?\n You can perhaps increase the (argument) number of computed eigenvalues, the number is `nev` = $nev."

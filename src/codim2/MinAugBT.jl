@@ -402,13 +402,13 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
 
         # computation of zero eigenvector
         λ = zero(VI.scalartype(x0))
-        ζ0, = _get_adjoint_kernel_basis_1d_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev, verbose = false)
+        ζ0, = _get_target_eigenvector_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver.eigsolver; nev, verbose = false)
         ζ .= real.(ζ0)
         VI.scale!(ζ, 1/normN(ζ))
 
         # computation of adjoint eigenvector
         Lt = has_adjoint(prob_ma.prob_vf) ? jacobian_adjoint(prob_ma.prob_vf, x0, parbif) : transpose(L)
-        ζstar, = _get_adjoint_kernel_basis_1d_from_eigensolver(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
+        ζstar, = _get_target_eigenvector_from_eigensolver(Lt, λ, br.contparams.newton_options.eigsolver.eigsolver; nev = nev, verbose = false)
         ζad .= real.(ζstar)
         VI.scale!(ζad, 1/normN(ζad))
     else
