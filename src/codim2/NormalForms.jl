@@ -681,7 +681,6 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    eigRes = br.eig
 
     # eigenvalue
     ω = abs(bifpt.x.ω)
@@ -710,15 +709,15 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
+    L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
     if start_with_eigen_type
-        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ0), optionsN.eigsolver.eigsolver; nev, verbose)
+        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(_λ0), optionsN.eigsolver.eigsolver; nev, verbose)
     else
         # compute the eigenvectors using a bordered linear system
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
         M = getmassmatrix(prob_vf, x0, parbif)
-        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(_λ0)
     end
@@ -1018,7 +1017,6 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
-    eigRes = br.eig
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
@@ -1034,49 +1032,40 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
-    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
+    L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
 
     # right / left eigenvectors
     if start_with_eigen_type
-        # right eigenvector
-        # TODO IMPROVE THIS
-        if true #haseigenvector(br) == false
-            # we recompute the eigen-elements if there were not saved during the computation of the branch
-            verbose && @info "Recomputing eigenvector on the fly"
-            _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-            # null eigenvalue
-            _ind0 = argmin(abs.(_λ))
-            verbose && @info "The eigenvalue is $(_λ[_ind0])"
-            abs(_λ[_ind0]) > br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
-            q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
-            # imaginary eigenvalue
-            tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
-            # imaginary eigenvalue iω1
-            _ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
-            verbose && (@info "Eigenvalue :" _λ _ind2)
-            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
-            λI = _λ[_ind2[_indIm]]
-            q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
-            verbose && @info "Second eigenvalue = $(λI)"
-        else
-            error("This case has not been done. Please open an issue on the website.")
-            ζ = _copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
-        end
+        # frequency of the Hopf pair, recovered from the eigenvalues recorded at the
+        # bifurcation point: the imaginary pair ±iω1 is the one closest to the imaginary axis
+        rightEv = eigenvalsfrombif(br, ind_bif)
+        _ind0 = argmin(abs.(rightEv))
+        tol_ev = max(1e-10, 10abs(imag(rightEv[_ind0])))
+        _ind2 = [ii for ii in eachindex(rightEv) if ((abs(imag(rightEv[ii])) > tol_ev) & (ii != _ind0))]
+        _indIm = argmin(abs(real(rightEv[ii])) for ii in _ind2)
+        ωh = abs(imag(rightEv[_ind2[_indIm]]))
+        verbose && @info "Frequency of the Hopf pair: ω1 = $ωh"
+
+        # right eigenvectors (null q0 + imaginary q1) via the eigensolver
+        ζs, σs = _get_target_eigenvectors_nd_from_eigensolver(L,
+                       [zero(𝒯), Complex(0, ωh)], optionsN.eigsolver.eigsolver; nev, verbose)
+        q0, q1 = ζs[1], ζs[2]
+        λ0, λI = σs[1], σs[2]
 
         # normalise for easier debugging
         if imag(λI) < 0
             λI = conj(λI)
             q1 = conj(q1)
         end
-
         q0 = real(q0)
         q0 ./= scaleζ(q0)
         cq1 = conj(q1)
-        λ0 = _λ[_ind0]
 
         # left eigen-elements
-        p0, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ0), optionsN.eigsolver.eigsolver; nev, verbose)
-        p1, λ★1 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
+        p0s, λ★s = _get_target_eigenvectors_nd_from_eigensolver(L★,
+                        [conj(λ0), conj(λI)], optionsN.eigsolver.eigsolver; nev, verbose)
+        p0, p1 = p0s[1], p0s[2]
+        λ★, λ★1 = λ★s[1], λ★s[2]
     else
         # compute the basis of the kernel using bordered linear systems
         verbose && println("──▶ Compute the kernel basis using a bordered linear system")
@@ -1096,14 +1085,14 @@ function zero_hopf_normal_form(𝐏𝐛,
         # real null vector q0 and left null vector p0
         a0 = _randn(x0); VI.scale!(a0, 1 / scaleζ(a0))
         b0 = _randn(x0); VI.scale!(b0, 1 / scaleζ(b0))
-        bdv = __compute_bordered_vectors_fold(bls, bls_adjoint, L, _Jt, a0, b0, VI.zerovector(a0), 𝒯)
+        bdv = __compute_bordered_vectors_fold(bls, bls_adjoint, L, L★, a0, b0, VI.zerovector(a0), 𝒯)
         q0, p0 = bdv.v, bdv.w
 
         # complex eigenvectors ±iω
         a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
         b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
         M = getmassmatrix(prob_vf, x0, parbif)
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ωh, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ωh, a1, b1, VI.zerovector(a1))
         q1, p1 = bdv.v, bdv.w
         λI = Complex{𝒯}(0, ωh)
         λ0 = zero(Complex{𝒯})
@@ -1255,7 +1244,7 @@ function zero_hopf_normal_form(𝐏𝐛,
     β1 = -f011
     β2 = (2real(g021)*(real(g110)-f200) + real(g110)*f111) / (2*f200) |> real
 
-    @set pt.nf = (;ω = imag(λI), λ0 = _λ[_ind0], dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011, g110, f011, τ1, τ2 )
+    @set pt.nf = (;ω = imag(λI), λ0, dFp, h200, h110, h020, h011, G111, G021, v10, v01, x, β1, β2, h00010, h00001, hasNS, G200, G110, G011, g110, f011, τ1, τ2 )
 end
 
 """
