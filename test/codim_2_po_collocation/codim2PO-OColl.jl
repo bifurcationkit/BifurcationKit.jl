@@ -27,7 +27,7 @@ end
 let
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 z0 = [0.1,0.1,1,0]
-prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]))
+prob = BifurcationProblem(Pop!, z0, par_pop, (@optic _.b0); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], u = x[3]), R01 = BK.FiniteDifferences())
 opts_br = ContinuationPar(p_min = 0., p_max = 20.0, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 4, max_steps = 20000)
 ################################################################################
 prob_de = ODEProblem(Pop!, z0, (0,600.), par_pop)
@@ -41,7 +41,7 @@ argspo = (record_from_solution = record_po_coll_codim2,)
 ################################################################################
 for _meshadapt in (false, true)
 coll, ci = generate_ci_problem(Collocation(30, 4), prob, sol, 2.; use_adapted_mesh = true)
-coll, ci = generate_ci_problem(Collocation(40, 3; meshadapt = _meshadapt), prob, sol, 2.)
+coll, ci = generate_ci_problem(Collocation(30, 4; meshadapt = _meshadapt), prob, sol, 2.)
 
 solpo = newton(coll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -110,7 +110,7 @@ end
 par_pop2 = @set par_pop.b0 = 0.4
 sol2 = OrdinaryDiffEq.solve(remake(prob_de, p = par_pop2, u0 = [0.1,0.1,1,0], tspan=(0,1000)), Rodas5())
 sol2 = OrdinaryDiffEq.solve(remake(sol2.prob, tspan = (0, 10), u0 = sol2.u[end]), Rodas5())
-probcoll, ci = generate_ci_problem(Collocation(26, 3), re_make(prob, params = sol2.prob.p), sol2, 1.2)
+probcoll, ci = generate_ci_problem(Collocation(30, 4), re_make(prob, params = sol2.prob.p), sol2, 1.2)
 
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
@@ -153,16 +153,21 @@ end
 ################################################################################
 # test of the implementation of the jacobian for the PD case
 if _meshadapt == false
-pd_po_coll2 = continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
+prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
+brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, p_min = 1e-3);
+    argspo...,
+    bothside = true,
+    )
+pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
-                    detect_codim2_bifurcation = 1,
+                    detect_codim2_bifurcation = 2,
                     start_with_eigen = false,
                     usehessian = false,
                     jacobian_ma = BK.MinAug(),
                     normC = norminf,
-                    callback_newton = BK.cbMaxNorm(10),
-                    bothside = true,
+                    callback_newton = BK.cbMaxNorm(1),
+                    # bothside = true,
                     )
 _probpd = pd_po_coll2.prob
 _x = pd_po_coll2.sol[end].x
@@ -211,7 +216,7 @@ _param = @set _param.ϵ = _p2
 _Jnsad = ForwardDiff.jacobian(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
 # _Jnsad = BK.finite_differences(x -> BK.residual(_probns, x, _param), vcat(_solpo, _p1, _ω))
 
-_duu = rand(317)
+_duu = rand(length(_solpo))
 _dp = rand()
 _sol = BK.NSMALinearSolver(_solpo, _p1, _ω, _probns.prob, _param, _duu, _dp, 1.)
 _solfd = _Jnsad \ vcat(_duu, _dp, 1)
@@ -225,4 +230,55 @@ J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-7
 end
 end
+end
+
+function SL!(du, u, p, t = 0)
+    (;k1, k2, k3, k4, k5, k6, k7, k₋₇, k8) = p
+    A,B,X,Y = u
+
+    du[1] = -k1*A*B*X - k3*A*B*Y + k7 - k₋₇*A
+    du[2] = -k1*A*B*X - k3*A*B*Y + k8
+    du[3] =  k1*A*B*X - 2*k2*X^2 + 2*k3*A*B*Y - k4*X+k6
+    du[4] = -k3*A*B*Y + 2*k2*X^2 - k5*Y
+    du
+end
+
+let 
+z0 = rand(4)
+par_sl = (k1=0.1631021, k2=1250., k3=0.046875, k4=20., k5=1.104, k6=0.001, k₋₇=0.1175, k7=1.5, k8=0.75)
+bifprob = BK.ODEBifProblem(SL!, z0, par_sl, (@optic _.k8);)
+
+alg_ode = Vern9()
+prob_de = ODEProblem(SL!, z0, (0, 136.), par_sl)
+sol_ode = OrdinaryDiffEq.solve(prob_de, alg_ode)
+prob_de = ODEProblem(SL!, sol_ode.u[end], (0, 30.), sol_ode.prob.p, reltol = 1e-11, abstol = 1e-13)
+sol_ode = OrdinaryDiffEq.solve(prob_de, alg_ode)
+
+probcoll, cicoll = BK.generate_ci_problem( BK.Collocation(50, 4),
+    deepcopy(bifprob), 
+    sol_ode, 
+    16.)
+
+argspo = (;normC = norminf)
+opts_po_cont = BK.ContinuationPar(p_min = 0., p_max = 2.0, 
+    ds = 0.002, dsmax = 0.05, 
+    n_inversion = 6,
+    nev = 4,
+    max_steps = 50, 
+    detect_bifurcation = 3,
+    tol_stability = 1e-5)
+
+br_coll = BK.continuation(deepcopy(probcoll), copy(cicoll), BK.PALC(), opts_po_cont;
+    argspo...,
+    callback_newton = BK.cbMaxNorm(1e1),
+    )
+
+opts_pocl_ns = BK.ContinuationPar(br_coll.contparams, detect_bifurcation = 1, dsmax = 4e-2, max_steps = 40, n_inversion = 6)
+ns_po_cl = BK.continuation(deepcopy(br_coll), 1, (@optic _.k7), opts_pocl_ns;
+        detect_codim2_bifurcation = 2,
+        jacobian_ma = BK.MinAugMatrixBased(),
+        normC = norminf,
+        callback_newton = BK.cbMaxNorm(1e1),
+        )
+@test ns_po_cl.specialpoint[1].type == :ch
 end

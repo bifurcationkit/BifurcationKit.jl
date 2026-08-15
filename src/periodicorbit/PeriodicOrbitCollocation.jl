@@ -473,15 +473,12 @@ $(TYPEDSIGNATURES)
     phase = zero(𝒯y)
 
     n, m, Ntst = size(coll)
-    L, ∂L = get_Ls(coll.mesh_cache)
+    L, _ = get_Ls(coll.mesh_cache)
     ω = get_gauss_weight(coll)
     mesh = getmesh(coll)
 
     guj = zeros(𝒯y, n, m)
-    uj  = zeros(𝒯y, n, m+1)
-
     gvj = zeros(𝒯y, n, m)
-    vj  = zeros(𝒯y, n, m+1)
 
     rg = UnitRange(1, m+1)
     @inbounds for j in 1:Ntst
@@ -518,8 +515,6 @@ function phase_condition(coll::Collocation,
                         uc,
                         Ls,
                         period)
-    𝒯 = VI.scalartype(uc)
-
     puj = get_tmp(coll.cache.gj, uc) # zeros(𝒯, n, m)
     uj  = get_tmp(coll.cache.uj, uc)  #zeros(𝒯, n, m+1)
 
@@ -543,7 +538,7 @@ end
                                     period)
     𝒯 = VI.scalartype(uc)
     phase = zero(𝒯)
-    n, m, Ntst = size(coll)
+    _, m, Ntst = size(coll)
     ω = get_gauss_weight(coll)
     ϕc = get_time_slices(coll.ϕ, size(coll)...)
     rg = axes(uc, 2)[UnitRange(1, m+1)]
@@ -773,7 +768,6 @@ function po_jacobian_block(coll::Collocation,
                                 kwargs...)
     n, m, Ntst = size(coll)
     blocks = n * ones(Int64, n_mesh_pts(m, Ntst) + 1); blocks[end] = 1
-    n_blocks = length(blocks)
     J = BA.BlockArray(array_zeros(𝒯, length(u), length(u)), blocks,  blocks)
     po_jacobian_block!(J, coll, u, pars; kwargs...)
     return J
@@ -881,7 +875,6 @@ end
     # loop over the mesh intervals
     rg = UnitRange(1, m+1)
     rgNx = UnitRange(1, n)
-    rgNy = UnitRange(1, n)
 
     for j in 1:Ntst
         LA.mul!(pj, um[:, rg], L) # pj ≈ (L * uj')'

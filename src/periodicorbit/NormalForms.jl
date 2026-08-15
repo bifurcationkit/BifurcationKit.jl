@@ -620,6 +620,9 @@ function period_doubling_normal_form_iooss(pbwrap,
     lens = getlens(coll)
     𝒯 = eltype(coll)
 
+    # identity matrix for collocation problem
+    Icoll = I(coll, saved_solution(pd.x0), par)
+
     F(u, pars) = residual(coll.prob_vf, u, pars)
     dₚF(u, pars) = R01(coll.prob_vf, u, pars)
     A(u, pars, du) = dF(coll.prob_vf, u, pars, du)
@@ -767,8 +770,6 @@ function period_doubling_normal_form_iooss(pbwrap,
     for i in axes(Bₛ, 2)
         Bₛ[:,i] .= B(u₀ₛ[:,i], par, v₁ₛ[:,i], h₂ₛ[:,i])
     end
-                # _plot(vcat(vec( Bₛ ),1), label = "Bₛ for h2")
-                # _plot(vcat(vec(@. Bₛ * v₁★ₛ ),1), label = "Bₛ*v1star")
 
     c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
                  ∫( v₁★ₛ, Bₛ ) -
@@ -806,7 +807,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     # hence:
     #                   c11 = < w★, B(t,h01,w) + R11*w + c11*w - a01*wdot >
     for i in axes(u₀ₛ, 2)
-        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ R11(u₀ₛ[:, i], par, v₁★ₛ[:, i])
+        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ R11vf(u₀ₛ[:, i], par, v₁★ₛ[:, i])
     end
 
     c₁₁ = ∫(v₁★ₛ, rhsₛ) - a₀₁ * ∫(v₁★ₛ, Aₛ)

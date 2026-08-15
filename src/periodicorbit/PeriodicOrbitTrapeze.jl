@@ -507,54 +507,53 @@ $(TYPEDSIGNATURES)
 This method returns the jacobian of the functional G encoded in Trapeze using an inplace update. In case where the passed matrix J0 is a sparse one, it updates J0 inplace assuming that the sparsity pattern of J0 and dG(orbitguess0) are the same.
 """
 @views function po_jacobian_sparse!(trap::Trapeze, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
-        M, N = size(trap)
-        T = _extract_period_fdtrap(trap, u0)
+    M, N = size(trap)
+    T = _extract_period_fdtrap(trap, u0)
 
-        Iₙ = get_mass_matrix(trap, ~(Tj <: SPA.SparseMatrixCSC))
+    Iₙ = get_mass_matrix(trap, ~(Tj <: SPA.SparseMatrixCSC))
 
-        u0m = get_time_slices(trap, u0)
-        outc = similar(u0m)
+    u0m = get_time_slices(trap, u0)
 
-        tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
+    tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
-        h = T * get_time_step(trap, 1)
-        Jn = Iₙ - (h/2) .* tmpJ
-        # setblock!(Jc, Jn, 1, 1)
-        J0[1:N, 1:N] .= Jn
+    h = T * get_time_step(trap, 1)
+    Jn = Iₙ - (h/2) .* tmpJ
+    # setblock!(Jc, Jn, 1, 1)
+    J0[1:N, 1:N] .= Jn
 
-        Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
-        # setblock!(Jc, Jn, 1, M-1)
-        J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
+    Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
+    # setblock!(Jc, Jn, 1, M-1)
+    J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
-        for ii in 2:M-1
-            h = T * get_time_step(trap, ii)
-            @. Jn = -Iₙ - h/2 * tmpJ
-            # the next lines cost the most
-            # setblock!(Jc, Jn, ii, ii-1)
-            J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
+    for ii in 2:M-1
+        h = T * get_time_step(trap, ii)
+        @. Jn = -Iₙ - h/2 * tmpJ
+        # the next lines cost the most
+        # setblock!(Jc, Jn, ii, ii-1)
+        J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
 
-            tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)
+        tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)
 
-            @. Jn = Iₙ - h/2 * tmpJ
-            # setblock!(Jc, Jn, ii, ii)
-            J0[(ii-1)*N+1:(ii)*N, (ii-1)*N+1:(ii)*N] .= Jn
-        end
+        @. Jn = Iₙ - h/2 * tmpJ
+        # setblock!(Jc, Jn, ii, ii)
+        J0[(ii-1)*N+1:(ii)*N, (ii-1)*N+1:(ii)*N] .= Jn
+    end
 
-        # setblock!(Aγ, -γ * Iₙ, M, 1)
-        # useless to update:
-            # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -Iₙ
-        # setblock!(Aγ,  Iₙ,     M, M)
-        # useless to update:
-            # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
+    # setblock!(Aγ, -γ * Iₙ, M, 1)
+    # useless to update:
+        # J0[(M-1)*N+1:(M)*N, (1-1)*N+1:(1)*N] .= -Iₙ
+    # setblock!(Aγ,  Iₙ,     M, M)
+    # useless to update:
+        # J0[(M-1)*N+1:(M)*N, (M-1)*N+1:(M)*N] .= Iₙ
 
-        # we now set up the last line / column
-        ∂TGpo = (po_residual(trap,vcat(u0[begin:end-1], T + δ), par) .- po_residual(trap,u0, par)) ./ δ
-        J0[:, end] .=  ∂TGpo
+    # we now set up the last line / column
+    ∂TGpo = (po_residual(trap,vcat(u0[begin:end-1], T + δ), par) .- po_residual(trap,u0, par)) ./ δ
+    J0[:, end] .=  ∂TGpo
 
-        # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ
+    # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
+    J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ
 
-        return J0
+    return J0
 end
 
 @views function po_jacobian_sparse!(trap::Trapeze,
@@ -682,7 +681,6 @@ This function updates the section during the continuation run.
     @debug "Update section TRAP"
     M, N = size(trap)
     xc = get_time_slices(trap, x)
-    T = _extract_period_fdtrap(trap, x)
 
     # update the reference point
     trap.xπ .= x[begin:end-1]
@@ -744,7 +742,6 @@ function (A::AγOperatorSparseInplace)(orbitguess::AbstractVector, par)
 end
 
 @views function apply(A::AγOperatorSparseInplace, dx)
-    out = similar(dx)
     M, N = size(A.prob)
     out1 = apply(A.Jc, dx[begin:end-N])
     return vcat(out1, -dx[begin:N] .+ dx[end-N+1:end])
@@ -803,8 +800,7 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.sc
     @views J.∂TGpo .= (po_residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- po_residual(J.Aγ.prob, u0, par)) ./ δ
     # update Aγ
     J.Aγ(u0, par)
-    # return J, needed to properly call the linear solver.
-    return J
+    return J # needed to properly call the linear solver.
 end
 
 # this is to use BorderingBLS with check_precision = true
