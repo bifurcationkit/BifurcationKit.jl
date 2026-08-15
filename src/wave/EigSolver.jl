@@ -74,8 +74,8 @@ function (geig::GEigenWave)(J, nev; kw...)
     return eig(J, nev; kw...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-convert_to_wave_eigen_solver(eigw::EigenWave, eig0::AbstractEigenSolver, B) = eigw
+convert_to_wave_eigen_solver(eigw::EigenWave, ::AbstractEigenSolver, B) = eigw
 convert_to_wave_eigen_solver(eigw::EigenWave{Nothing}, eig0::AbstractEigenSolver, B) = EigenWave(eig0, eigw.matrix_free)
 
-convert_to_wave_eigen_solver(eigw::GEigenWave, eig0::AbstractEigenSolver, B) = eigw
+convert_to_wave_eigen_solver(eigw::GEigenWave, ::AbstractEigenSolver, B) = eigw
 convert_to_wave_eigen_solver(eigw::GEigenWave{Nothing}, eig0::AbstractEigenSolver, B) = GEigenWave(convert_to_GEV(eig0, B), eigw.matrix_free)
