@@ -52,20 +52,23 @@ Compute the solution of
 and the same for the adjoint system.
 """
 function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp)
-    a = 𝐅.a
-    b = 𝐅.b
     𝒯 = eltype(𝐅)
+    (; v, w, itv, itw) = __compute_bordered_vectors_fold(𝐅.linbdsolver, 𝐅.linbdsolverAdjoint, J_at_xp, JAd_at_xp, 𝐅.a, 𝐅.b, 𝐅.zero, 𝒯)
+    return (; v, w, itv, itw, JAd_at_xp)
+end
 
+function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, a, b, _zero, 𝒯)
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
-    v, _, cv, itv = 𝐅.linbdsolver(J_at_xp, a, b, zero(𝒯), 𝐅.zero, one(𝒯))
-    ~cv && @debug "Bordered linear solver for J did not converge. it = $(itv)"
+    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯))
+    ~cv && @debug "Bordered linear solver for J did not converge."
 
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, _, cv, itw = 𝐅.linbdsolverAdjoint(JAd_at_xp, b, a, zero(𝒯), 𝐅.zero, one(𝒯))
+    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
-    return (; v, w, itv, itw, JAd_at_xp)
+
+    return (; v, w, itv, itw)
 end
 
 function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯, par) where 𝒯
@@ -500,27 +503,7 @@ function continuation_fold(prob,
         ζad = real.(ζ★)
         VI.scale!(ζad, 1 / real(VI.inner(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
-        # we use a minimally augmented formulation to set the initial vectors
-        a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
-        b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
-
-        𝒯 = typeof(p)
-        L = jacobian(prob, foldpointguess.u, parbif)
-        # TODO: use _compute_bordered_vectors !!!!
-        newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), VI.zerovector(a), one(𝒯))
-        ~cv && @debug "Bordered linear solver for J did not converge."
-
-        @debug "RIGHT EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, newb))
-
-        L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
-        newa, _, cv, it = bdlinsolver_adjoint(L★, b, a, zero(𝒯), VI.zerovector(a), one(𝒯))
-        ~cv && @debug "Bordered linear solver for J' did not converge."
-
-        @debug "LEFT  EIGENVECTORS" cv it norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, newa))
-
-        ζad = newa; VI.scale!(ζad, 1 / normC(ζad))
-        ζ   = newb; VI.scale!(ζ,   1 / normC(ζ))
-        VI.scale!(ζad, 1 / VI.inner(ζ, ζad))
+        (; ζ, ζad) = _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
 
     return continuation_fold(prob, alg,
@@ -532,6 +515,37 @@ function continuation_fold(prob,
             bdlinsolver,
             bdlinsolver_adjoint,
             kwargs...)
+end
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(SIGNATURES)
+
+Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Fold bifurcation point using the minimally augmented formulation, i.e. by solving a bordered linear system.
+
+# Return
+A named tuple `(; ζ, ζad)` of the normalized right and left eigenvectors, with the normalization `⟨ζ, ζad⟩ = 1`.
+"""
+function _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    # we use a minimally augmented formulation to set the initial vectors
+    a = isnothing(a) ? _randn(_copy(bifpt.x)) : a; VI.scale!(a, 1 / normC(a))
+    b = isnothing(b) ? _randn(_copy(bifpt.x)) : b; VI.scale!(b, 1 / normC(b))
+
+    𝒯 = VI.scalartype(bifpt.x)
+    L = jacobian(prob, bifpt.x, parbif)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
+    M = getmassmatrix(prob, bifpt.x, parbif)
+
+    (; v, w, itv, itw) = __compute_bordered_vectors_fold(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
+
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, v))
+
+    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w))
+
+    ζad = w; VI.scale!(ζad, 1 / normC(ζad))
+    ζ   = v; VI.scale!(ζ,   1 / normC(ζ))
+    VI.scale!(ζad, 1 / VI.inner(ζ, ζad))
+    return (; ζ, ζad)
 end
 
 # Zero-Hopf test function for the Fold functional

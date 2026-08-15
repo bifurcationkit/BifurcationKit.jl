@@ -576,9 +576,8 @@ end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Hopf bifurcation point
-using the minimally augmented formulation. We start from a complexified version of the
-initial guess `u0` and, if needed, draw random vectors for the bordered linear solvers.
+Compute the initial (right / left) eigenvectors `(ζ, ζad)` of the Hopf point
+using the minimally augmented formulation.
 """
 function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     # we use a minimally augmented formulation to set the initial vectors
