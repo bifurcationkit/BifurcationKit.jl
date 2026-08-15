@@ -119,7 +119,7 @@ function initialize!(state::AbstractContinuationState,
     # we want to start at (u0, p0), not at (u1, p1)
     _copyto!(state.z, state.z_old)
     # then update the predictor state.z_pred
-    addtangent!(state, nrm)
+    update_predictor!(state, iter, alg, nrm)
 end
 
 function getpredictor!(state::AbstractContinuationState,
@@ -142,7 +142,7 @@ function _getpredictor_palc!(state::AbstractContinuationState,
         gettangent!(state, iter, alg.tangent, getdot(alg))
     end
     # then update the predictor state.z_pred
-    addtangent!(state, nrm)
+    update_predictor!(state, iter, alg, nrm)
 end
 
 update_predictor!(state::AbstractContinuationState,

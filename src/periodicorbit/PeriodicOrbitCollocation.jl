@@ -1258,7 +1258,7 @@ function compute_error!(coll::Collocation, x::AbstractVector; kw...)
     # update solution
     newsol = generate_solution(coll, sol, period)
     x .= newsol
-    return (;success, newτsT, ϕ)
+    return (;success, newτsT, ϕ, sol)
 end
 
 """
