@@ -258,14 +258,13 @@ function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, 
         # get solution, we copy x because it is overwritten at the end of this function
         sol = BK.BVPInterpolation(deepcopy(d_bvp), copy(old_bvp), nothing)
 
-        (; newmesh, ϕ) = BK._compute_error!(coll, sol, old_bvp, δT;
+        (; success, newmesh, ϕ) = BK._compute_error!(coll, sol, old_bvp, δT;
                             verbosity = disc.verbose_mesh_adapt,
                             K = coll.K,
-                            par = BK.setparam(iter, BK.getp(state)))
+                            )
         # update solution
         newsol = generate_solution(d_bvp, sol)
         old_bvp .= newsol
-        success = true
         if ~success # stop continuation if mesh adaptation fails
             return false
         end

@@ -1249,36 +1249,34 @@ function compute_error!(coll::Collocation, x::AbstractVector; kw...)
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function
     sol = POInterpolation(deepcopy(coll), copy(x))
-    (; newτsT, ϕ) = _compute_error!(coll, sol, x, period; kw...)
+    (;success, newτsT, ϕ) = _compute_error!(coll, sol, x, period; kw...)
     # update solution
     newsol = generate_solution(coll, sol, period)
     x .= newsol
-    success = true
     return (;success, newτsT, ϕ)
 end
 
-function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, ΔT;
+function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
                         normE = norminf,
                         verbosity::Bool = false,
-                        K = 𝒯(Inf),
-                        par = nothing,
-                        kw...) where 𝒯
-    n, m, Ntst = size(coll) # recall that m = ncol
+                        K = 𝒯(Inf)
+                        ) where 𝒯
+    _, m, Ntst = size(coll) # recall that m = ncol
     # we need to estimate yᵐ⁺¹ where y is the true periodic orbit.
     # sol is the piecewise polynomial approximation of y.
     # However, sol is of degree m, hence ∂(sol, m+1) = 0
     # we thus estimate yᵐ⁺¹ using ∂(sol, m)
     dmsol = ∂(sol, Val(m))
     # we find the values of vm := ∂m(x) at the mid points
-    τsT = getmesh(coll) .* ΔT
+    τsT = getmesh(coll) .* period
     vm = [ dmsol( (τsT[i] + τsT[i+1]) / 2 ) for i = 1:Ntst ]
     ############
     # Approx. IA
-    # this is the function s^{(k)} in the above paper [2] on page 63
+    # this is the function s^{(k)} in the above paper [2] on page 63 (eq. (2.13))
     # we want to estimate sk = s^{(m+1)} which is 0 by definition, pol of degree m
-    if isempty(findall(diff(τsT) .<= 0)) == false
+    if any(diff(τsT) .<= 0)
         @error "[Mesh-adaptation]. The mesh is non monotonic!\nPlease report the error to the website of BifurcationKit.jl"
-        return (success = false, newτsT = τsT, ϕ = τsT)
+        return (success = false, newτsT = τsT, newmesh = nothing, ϕ = τsT)
     end
     sk = zeros(𝒯, Ntst)
     sk[1] = 2normE(vm[1]) / (τsT[2] - τsT[1])
@@ -1291,8 +1289,8 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, ΔT;
     # monitor function
     ϕ = sk.^(1/(m+1))
     # if the monitor function is too small, don't do anything
-    if maximum(ϕ) < 1e-7
-        return (;success = true, newmesh = nothing, ϕ)
+    if maximum(ϕ) < convert(𝒯, 1e-7)
+        return (;success = true, newτsT = nothing, newmesh = nothing, ϕ)
     end
     ϕ = max.(ϕ, maximum(ϕ) / K)
     if length(ϕ) != Ntst
@@ -1321,7 +1319,7 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, ΔT;
         newτsT[i+1] = τsT[ind-1] + (θeq - θs[ind-1]) / α
         @assert newτsT[i+1] > newτsT[i] "Error. Please open an issue on the website of BifurcationKit.jl"
     end
-    newmesh = newτsT ./ ΔT
+    newmesh = newτsT ./ period
     newmesh[end] = 1
 
     if verbosity
@@ -1339,7 +1337,7 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, ΔT;
     ############
     # modify meshes
     update_mesh!(coll, newmesh)
-    return (; newmesh, newτsT, ϕ)
+    return (; success = true, newmesh, newτsT, ϕ)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
@@ -1361,7 +1359,6 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
         adapt = compute_error!(coll, old_po;
                     verbosity = coll.verbose_mesh_adapt,
                     K = coll.K,
-                    par = params
                     )
         if ~adapt.success # stop continuation if mesh adaptation fails
             return false
