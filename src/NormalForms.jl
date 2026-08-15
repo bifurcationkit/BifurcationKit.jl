@@ -88,20 +88,20 @@ end
 # the eigensolver, together with the left eigenvalue `λ★`. `ζ` and `ζ_ad` are optional
 # user provided bases for the right / left kernel of `L`, they are recomputed if `nothing`.
 function _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, eigsolver, nev, verbose, 𝒯eigvec, x0, parbif;
-                                               ζ = nothing, ζ_ad = nothing)
+                                               ζ = nothing, ζ_ad = nothing, ind_ev = bifpt.ind_ev)
     # corresponding eigenvector, it must be real
     if isnothing(ζ) # do we have a basis for the kernel?
         if ~haseigenvector(br)
             # we recompute the eigen-elements if there were not saved during the computation of the branch
-            nev_required = max(nev, bifpt.ind_ev + 2)
+            nev_required = max(nev, ind_ev + 2)
             verbose && @info "Eigen-elements not saved in the branch. Recomputing $nev_required of them..."
             _λ, _ev, _ = eigsolver(L, nev_required)
-            if ~(_λ[bifpt.ind_ev] ≈ λ)
+            if ~(_λ[ind_ev] ≈ λ)
                 error("We did not find the correct eigenvalue $λ. We found $(_λ)")
             end
-            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, _ev, bifpt.ind_ev)))
+            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, _ev, ind_ev)))
         else
-            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)))
+            ζ = convert(𝒯eigvec, real(geteigenvector(eigsolver, br.eig[bifpt.idx].eigenvecs, ind_ev)))
         end
     end
     ζ = VI.scale!!(ζ, 1 / scaleζ(ζ))
@@ -109,7 +109,7 @@ function _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, 
     # extract eigen-elements for adjoint(L), needed to build spectral projector
     if isnothing(ζ_ad)
         if is_symmetric(prob)
-            λ★ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+            λ★ = br.eig[bifpt.idx].eigenvals[ind_ev]
             ζ★ = _copy(ζ)
         else
             L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
@@ -1159,11 +1159,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # right eigenvector
     if ~haseigenvector(br)
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        _λ, _ev, _ = options.eigsolver(L, bifpt.ind_ev + 2)
-        if ~(_λ[bifpt.ind_ev] ≈ λ)
-            error("We did not find the correct eigenvalue $λ. We found $(_λ).\nIf you use aBS, pass a higher `nev` (number of eigenvalues) to be computed.")
-        end
-        ζ = geteigenvector(options.eigsolver, _ev, bifpt.ind_ev)
+        ζ, _λ0 = _get_target_eigenvector_from_eigensolver(L, λ, options.eigsolver; nev, verbose)
     else
         ζ = _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
     end

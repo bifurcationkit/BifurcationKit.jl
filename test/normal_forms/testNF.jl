@@ -645,6 +645,9 @@ let
         BK.type(bautin)
 
         @test bautin.nf.l2 ≈ par_sl.c5 * 4 atol = 1e-6
+
+        bautin_bd = BK.get_normal_form(hopf_codim2, 1; nev = 2, start_with_eigen = Val(false))
+        @test bautin_bd.nf.l2 ≈ par_sl.c5 * 4 atol = 1e-6
     end
 end
 ####################################################################################################

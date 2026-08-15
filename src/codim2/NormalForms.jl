@@ -646,7 +646,11 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
                             ζs = nothing,
                             lens = getlens(br),
                             scaleζ = norm,
-                            detailed = false) where {𝒯eigvec}
+                            detailed = false,
+                            bls = MatrixBLS(),
+                            bls_adjoint = bls,
+                            start_with_eigen::Val{start_with_eigen_type} = Val(true)
+                            ) where {𝒯eigvec, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
 
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
@@ -696,21 +700,28 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     if haseigenvector(br) == false
         # we recompute the eigen-elements if there were not saved during the computation of the branch
         verbose && @info "Recomputing eigenvector on the fly"
-        _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-        _ind = argmin(abs.(_λ .- λ))
-        verbose && @info "The eigenvalue is $(_λ[_ind])"
-        abs(_λ[_ind] - λ) > 10br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
-        ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
+        ζ, _λ0 = _get_target_eigenvector_from_eigensolver(L, λ, optionsN.eigsolver.eigsolver; nev, verbose)
     else
         _λ = br.eig[bifpt.idx].eigenvals
         _ind = argmin(abs.(_λ .- λ))
         ζ = _copy(geteigenvector(optionsN.eigsolver, br.eig[bifpt.idx].eigenvecs, _ind))
+        _λ0 = _λ[_ind]
     end
     ζ ./= scaleζ(ζ)
 
     # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+    if start_with_eigen_type
+        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ0), optionsN.eigsolver.eigsolver; nev, verbose)
+    else
+        # compute the eigenvectors using a bordered linear system
+        a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
+        b = ζ
+        M = getmassmatrix(prob_vf, x0, parbif)
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ω, a, b, VI.zerovector(a))
+        ζ = v; ζ★ = w
+        λ★ = conj(_λ0)
+    end
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\n You can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
@@ -972,7 +983,8 @@ function zero_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
+                                detailed::Val{detailed_type} = Val(false)
+                                ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
@@ -1323,9 +1335,9 @@ Compute the predictor for the curve of Neimark-Sacker bifurcations near the Zero
 
 Kuznetsov, Yu A., H. G. E. Meijer, W. Govaerts, and B. Sautois. “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs.” Physica D: Nonlinear Phenomena 237, no. 23 (December 2008): 3061–68. https://doi.org/10.1016/j.physd.2008.06.006.
 """
-function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T; 
+function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::𝒯; 
                     verbose = false, 
-                    ampfactor = one(T)) where T
+                    ampfactor = one(𝒯)) where 𝒯
     (;x, β1, β2, v10, v01, h00010, h00001, h011, ω, h020, g110, f011, hasNS) = zh.nf
     lens1, lens2 = zh.lens
     p1 = _get(zh.params, lens1)
@@ -1350,7 +1362,7 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::T;
     return (;orbit = t -> NS(t),
             hasNS = hasNS,
             params = (@. real(par0 + (β1 * v10 + β2 * v01) * ϵ^2)),
-            T = 2pi / (ω),
+            T = convert(𝒯, 2pi / (ω)),
             k = k
     )
 end
