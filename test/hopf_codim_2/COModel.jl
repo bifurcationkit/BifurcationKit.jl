@@ -53,9 +53,9 @@ sn_codim2 = continuation(br, 3, (@optic _.k),
 @test sn_codim2.specialpoint[3].param ≈ 0.35665351 rtol = 1e-4
 @test sn_codim2.specialpoint[4].param ≈ 0.7223392465523879
 
-@test sn_codim2.specialpoint[2].printsol.k     ≈ 0.971397 rtol = 1e-4
+@test sn_codim2.specialpoint[2].printsol.k  ≈ 0.971397 rtol = 1e-4
 @test sn_codim2.specialpoint[2].printsol.q2 ≈ 1.417628 rtol = 1e-4
-@test sn_codim2.specialpoint[4].printsol.k     ≈ 0.722339 rtol = 1e-4
+@test sn_codim2.specialpoint[4].printsol.k  ≈ 0.722339 rtol = 1e-4
 @test sn_codim2.specialpoint[4].printsol.q2 ≈ 1.161199 rtol = 1e-4
 
 # cusp normal form
@@ -112,8 +112,8 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
         δp = 1e-5,
         normC = norminf,
         update_minaug_every_step = 1,
+        detect_codim2_bifurcation = 2,
         bothside = true,
-        # record_from_solution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
         )
 
 @test hp_from_bt.kind == BK.HopfCont()
@@ -121,23 +121,4 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
 @test hp_from_bt.specialpoint[3].type == :gh
 @test hp_from_bt.specialpoint[4].type == :gh
 @test hp_from_bt.specialpoint[5].type == :bt
-# bt = computeNormalForm(sn_codim2, 3; verbose = true)
-#     display(bt.x0)
-#     show(bt)
-# HC = predictor(bt, Val(:HopfCurve), 0.)
-#
-# plot(sn_codim2, vars=(:q2, :k))
-#     _S = LinRange(0, 1e-7, 1000)
-#     plot!([HC.hopf(s)[1] for s in _S], [HC.hopf(s)[2] for s in _S], linewidth=3, label = "Hpred")
-#     plot!(hp_codim2, vars=(:q2, :k), color = :black)
-#
-# HC.ω(0.01)
-#
-# HC = predictor(bt, Val(:HopfCurve), 0.)
-#     HC.EigenVec(0.01)
-#
-#
-# plot(sn_codim2, vars=(:q2, :x))
-#     plot!(hp_codim2, vars=(:q2, :x))
-#     plot!(hp_from_bt, vars=(:q2, :x), marker = :d)
 end

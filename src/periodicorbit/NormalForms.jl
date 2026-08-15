@@ -663,7 +663,6 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     #########
     # compute v1★
-    # TODO: extract from continuation_pd
     J★ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
     J★[end, :] .= _rand(nj)
     J★[:, end] .= _rand(nj)

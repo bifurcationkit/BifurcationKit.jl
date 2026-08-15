@@ -281,4 +281,5 @@ ns_po_cl = BK.continuation(deepcopy(br_coll), 1, (@optic _.k7), opts_pocl_ns;
         callback_newton = BK.cbMaxNorm(1e1),
         )
 @test ns_po_cl.specialpoint[1].type == :ch
+ch_nf = BK.get_normal_form(ns_po_cl, 1)
 end
