@@ -6,6 +6,42 @@ All notable changes to this project will be documented in this file (hopefully).
 ## [Unreleased]
 
 ### Breaking changes
+- `get_adjoint_basis` is replaced by the methods `_get_kernel_basis_1d_from_eigensolver` / `_get_kernel_basis_1d_from_bls` (resp. the Nd helpers), which now compute the right and left (adjoint) kernel vectors together
+- `__compute_bordered_vectors_fold` / `__compute_bordered_vectors_hopf` are now also used to build the kernel basis of the normal forms (`start_with_eigen = Val(false)`)
+
+### Added
+- add `∫_gauss` to integrate arrays sampled at the Gauss points, i.e. in the row layout of the collocation operator, consistently with `∫`
+- add the keyword `start_with_eigen = Val(true)` to `get_normal_form1d`, `get_normal_formNd` and the codim 2 normal forms (`hopf`, `cusp`, `bogdanov_takens`, `bautin`, `zero_hopf`, `hopf_hopf`): with `start_with_eigen = Val(false)`, the (right/left) kernel basis is built with a bordered linear system (keywords `bls`, `bls_adjoint`, `bls_block`) instead of the eigensolver, which is more robust for large-scale problems. The 1d basis is computed with the bordered-vector solvers `__compute_bordered_vectors_fold` / `__compute_bordered_vectors_hopf` and the Nd basis with `__compute_nd_basis_from_bls`. `bautin_normal_form` also accepts `bls`/`bls_adjoint` like `hopf_normal_form`
+- compute the parameter derivative `dFdp` in the Moore-Penrose algorithm (`newton_moore_penrose`) with the (user provided) `R01`/`R01!` instead of first-order finite differences, and accumulate the number of linear iterations (`itlineartot`)
+
+### Fixed
+- evaluate all the integrands of the NS Iooss normal form (`neimark_sacker_normal_form_iooss`) at the Gauss points and build the RHS of the homological equations `h20`/`h11` in the row layout of the collocation operator. This removes the former `Icoll` mass-matrix pre-scaling and the ad-hoc `h20 ./= 2Ntst` / `h11 ./= 2Ntst` renormalizations.
+- evaluate all the integrands of the PD Iooss normal form (`period_doubling_normal_form_iooss`) at the Gauss points and build the RHS of the homological equations `h₂`/`h₀₁` in the row layout of the collocation operator, normalizing `ψ₁★` with `∫_gauss` so that `<ψ₁★, F(u₀)> = 1/2`. This removes the former `Icoll` mass-matrix pre-scaling and fixes the scaling of the normal form coefficients.
+
+## [0.8.3]
+
+### Breaking changes
+- `detect_codim2_parameters` is renamed `modify_contparams_for_codim2`
+- the method `_compute_bordered_vectors` of the Fold/Hopf/PD/NS MA formulations is refactored into the methods `__compute_bordered_vectors_fold` / `__compute_bordered_vectors_hopf`
+
+### Added
+- add the bordered-vector kernels `__compute_bordered_vectors_fold` / `__compute_bordered_vectors_hopf` which compute the right/left null vectors of the Fold / Hopf jacobians by a bordered linear system (factoring the Fold/Hopf initial eigenvector computation). These methods are also used to build the kernel basis of the normal forms with `start_with_eigen = Val(false)`
+- allow plotting during NS (Neimark-Sacker) continuation
+- Plots backend: plot several codim 1 branches in one figure
+- improve codim 2 continuation of periodic orbits (PD/NS Jacobian borders, events on Fold of PO, simplified `get_normal_form` for codim 2 points of PO)
+
+### Fixed
+- correct `update!` for `NSMAProblem` / `PDMAProblem`
+- robust mesh adaptation for `Collocation` (improved predictor)
+- correct the Hopf predictor at Hopf-Hopf points
+
+## [0.8.2]
+
+- filter infinite eigenvalues in generalized eigenvalue computations (`DefaultEig`)
+
+## [0.8.1]
+
+### Breaking changes
 - 🚦🚦🚦 `update!(prob, x)` becomes `restore_problem!(prob, x, pars)`
 - `getlinsolver`/`getbls` become `get_bordered_linsolver`
 - `OneParamCont`, `TwoParamCont`, `TwoParamPeriodicOrbitCont` become `AbstractOneParamCont`, `AbstractTwoParamCont`, `AbstractTwoParamPeriodicOrbitCont`
