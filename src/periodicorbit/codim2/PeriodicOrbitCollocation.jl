@@ -112,18 +112,12 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
 
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
-    coll = get_discretization(pbwrap)
     par = setparam(br, bifpt.param)
 
     # we put the problem back to the state it was
     restore_problem!(pbwrap, bifpt.x, par)
 
-    # this updates the section
-    coll = deepcopy(coll)
-
     options_foldpo = options_cont
-
-    # perform continuation
     br_fold_po = continuation_fold(getprob(br),
         br, ind_bif, lens2,
         options_foldpo;
@@ -132,6 +126,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
         kind = FoldPeriodicOrbitCont(),
         kwargs...
         )
+    return _correct_event_labels(br_fold_po)
 end
 
 """
@@ -173,6 +168,8 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     N, m, Ntst = size(coll)
 
     # get the PD eigenvectors
+    # TODO: use jacobian_period_doubling?
+    # tODO: merge with Shooting
     jac = jacobian(pbwrap, pdpointguess.u, par)
     J = copy(jac) # careful, we copy in case of use of DenseAnalyticalInplace
     nj = size(J, 1)
@@ -184,7 +181,6 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
-
 
     @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, pdpointguess.u, par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation

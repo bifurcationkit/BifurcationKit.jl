@@ -176,15 +176,8 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
-    biftype = br.specialpoint[ind_bif].type
-    bifpt = br.specialpoint[ind_bif]
-
     pbwrap = getprob(br)
-    sh = get_discretization(pbwrap)
-
     options_foldpo = options_cont
-
-    # perform continuation
     br_fold_po = continuation_fold(
         pbwrap,
         br, ind_bif, lens2,
@@ -192,6 +185,7 @@ function continuation_sh_fold(br::AbstractResult{Tkind, Tprob},
         bdlinsolver,
         kind = FoldPeriodicOrbitCont(),
         kwargs...)
+    return _correct_event_labels(br_fold_po)
 end
 
 """
@@ -213,28 +207,15 @@ function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     start_with_eigen = false,
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
-        verbose = get(kwargs, :verbosity, 0) > 0
 
         bifpt = br.specialpoint[ind_bif]
-        bptype = bifpt.type
         pdpointguess = pd_point(br, ind_bif)
 
         # copy the problem for not mutating the one passed by the user
         pbwrap = getprob(br)
-        sh = deepcopy(get_discretization(pbwrap))
 
         # get the parameters
         par_pd = setparam(br, pdpointguess.p)
-
-        # let us compute the eigenspace
-        λ = (br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-        verbose && print("├─ computing nullspace of Periodic orbit problem...")
-        ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-        # we normalize it by the sup norm because it could be too small / big in L2 norm
-        # TODO: user defined scaleζ
-        ζ ./= norminf(ζ)
-        verbose && println(" Done!")
-
 
         # compute the full eigenvector, version with bordered problem
         ls = options_cont.newton_options.linsolver
@@ -284,13 +265,8 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
 
     # copy the problem for not mutating the one passed by the user
     pbwrap = getprob(br)
-    sh = deepcopy(get_discretization(pbwrap))
-
-    M = get_mesh_size(sh)
-    N = div(length(bifpt.x) - 1, M)
 
     par_ns = setparam(br, bifpt.param)
-    period = getperiod(sh, bifpt.x, par_ns)
 
     # compute the eigenspace
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]

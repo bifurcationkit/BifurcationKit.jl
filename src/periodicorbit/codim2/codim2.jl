@@ -165,7 +165,7 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation
-        conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1)
+        conversion = Dict(:bp => :R1, :hopf => :foldNS, :fold => :cusp, :nd => :nd, :pd => :foldpd, :bt => :R1, :zh => :R1, :btcusp => :R1, :ns => :R1)
     elseif contres.prob.prob isa PeriodDoublingMinimallyAugmentedFormulation
         conversion = Dict(:bp => :foldFlip, :hopf => :pdNS, :pd => :R2, :gpdR2 => :R2)
     elseif contres.prob.prob isa NeimarkSackerMinimallyAugmentedFormulation

@@ -286,9 +286,7 @@ function get_event_type(event::AbstractContinuousEvent,
 
     if isempty(event_index_C) == true
         @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
-        # we halt continuation as it will mess up the detection of events
-        state.stopcontinuation = true
-        return false, EventSpecialPoint(iter, state, Symbol(typeE), status, interval)
+        return false, EventSpecialPoint(iter, state, :error, status, interval)
     end
 
     if has_custom_labels(event)
@@ -323,9 +321,7 @@ function get_event_type(event::AbstractDiscreteEvent,
     end
     if isempty(event_index_D) == true
         @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
-        # we halt continuation as it will mess up the detection of events
-        state.stopcontinuation = true
-        return false, EventSpecialPoint(iter, state, Symbol(typeE), status, interval)
+        return false, EventSpecialPoint(iter, state, :error, status, interval)
     end
     if has_custom_labels(event)
         typeE = labels(event, event_index_D)
@@ -358,9 +354,7 @@ function get_event_type(event::PairOfEvents,
         return get_event_type(event.eventD, iter, state, verbosity, status, interval, nC+1:n; typeE = "userD")
     else
         @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
-        # we halt continuation as it will mess up the detection of events
-        state.stopcontinuation = true
-        return false, EventSpecialPoint(iter, state, :PairOfEvents, status, interval)
+        return false, EventSpecialPoint(iter, state, :error, status, interval)
     end
 end
 
@@ -397,8 +391,6 @@ function get_event_type(event::SetOfEvents,
         return get_event_type(event.eventD[indD], iter, state, verbosity, status, interval, indD+nC; typeE = "userD$indD")
     else
         @error "Error, no event was characterized whereas one was detected.\nPlease open an issue at https://github.com/rveltz/BifurcationKit.jl/issues.\n The events are eventValue = $(state.eventValue)"
-        # we halt continuation as it will mess up the detection of events
-        state.stopcontinuation = true
-        return false, EventSpecialPoint(iter, state, :SetOfEvents, status, interval)
+        return false, EventSpecialPoint(iter, state, :error, status, interval)
     end
 end
