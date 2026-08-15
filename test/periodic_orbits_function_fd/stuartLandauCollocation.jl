@@ -179,6 +179,52 @@ let
     @test BK.∫(coll, _ci1, _ci2, 3) ≈ 3/2 # test vector form
 end
 ####################################################################################################
+# ∫_gauss integrates Gauss-point arrays, it must be consistent with ∫ (node slices)
+# which interpolates to the Gauss points internally
+@views function _gauss_slices(coll, uc)
+    n, m, Ntst = size(coll)
+    Lg, _ = BK.get_Ls(coll.mesh_cache)
+    ug = zeros(eltype(uc), n, m*Ntst)
+    rg = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for j in 1:Ntst
+        ug[:, rg_l] .= uc[:, rg] * Lg
+        rg = rg .+ m
+        rg_l = rg_l .+ m
+    end
+    return ug
+end
+
+let
+    Ntst, m, N = 20, 5, 3
+    coll = Collocation(Ntst, m, prob_vf = probsl, N = N)
+    # exercise the weights with a non-uniform mesh
+    BK.update_mesh!(coll, sort(vcat(0, rand(Ntst-1), 1)))
+
+    _g(t) = [cos(t), sin(2t), exp(sin(t))]
+    _h(t) = [sin(t), cos(3t), exp(-sin(t))]
+    for T in (1., 2pi)
+        _ci1 = BK.generate_solution(coll, _g, T)
+        _ci2 = BK.generate_solution(coll, _h, T)
+        ucs = BK.get_time_slices(coll, _ci1)
+        vcs = BK.get_time_slices(coll, _ci2)
+        ug = _gauss_slices(coll, ucs)
+        vg = _gauss_slices(coll, vcs)
+        @test BK.∫_gauss(coll, ug, vg, T) ≈ BK.∫(coll, ucs, vcs, T)
+    end
+end
+
+let
+    # analytic values: ∫₀¹ cos²(2πt)dt = 1/2, ∫₀^2π sin²(t)dt = π
+    coll = Collocation(100, 10, prob_vf = probsl, N = 1)
+    _ci1 = BK.generate_solution(coll, t -> [cos(2pi*t)], 1.)
+    u1 = _gauss_slices(coll, BK.get_time_slices(coll, _ci1))
+    @test BK.∫_gauss(coll, u1, u1) ≈ 0.5
+
+    _ci2 = BK.generate_solution(coll, t -> [sin(t)], 2pi)
+    u2 = _gauss_slices(coll, BK.get_time_slices(coll, _ci2))
+    @test BK.∫_gauss(coll, u2, u2, 2pi) ≈ pi
+end
+####################################################################################################
 let
     Ntst = 50
     m = 4

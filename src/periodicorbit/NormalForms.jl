@@ -608,7 +608,7 @@ function period_doubling_normal_form_iooss(pbwrap,
                                 lens = getlens(pbwrap),
                                 detailed::Val{detailed_type} = Val(true),
                                 kwargs_nf...) where {detailed_type}
-    # function based on the article
+    # based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis https://doi.org/10.1137/040611306.
     # on page 1243
     # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
@@ -620,9 +620,6 @@ function period_doubling_normal_form_iooss(pbwrap,
     lens = getlens(coll)
     𝒯 = eltype(coll)
 
-    # identity matrix for collocation problem
-    Icoll = I(coll, saved_solution(pd.x0), par)
-
     VF = coll.prob_vf
     F(u, pars) = residual(VF, u, pars)
     dₚF(u, pars) = R01(VF, u, pars)
@@ -633,16 +630,16 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)  # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
+    local ∫_gauss(u, v) = BifurcationKit.∫_gauss(coll, u, v, 1) # integral over Gauss-point arrays
 
-    # we first compute the floquet eigenvector for μ = -1
-    # we use an extended linear system for this
     #########
     # compute v1
+    # we first compute the floquet eigenvector for μ = -1
+    # we use an extended linear system for this
     jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac) # we put copy to not alias FloquetWrapper.jacpb
     nj = size(J, 1)
-    J[end, :] .= _rand(nj)
-    J[:, end] .= _rand(nj)
+    J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
     J[end, end] = 0
     # enforce PD boundary condition
     J[end-N:end-1, 1:N] .= LA.I(N)
@@ -694,17 +691,35 @@ function period_doubling_normal_form_iooss(pbwrap,
     end
 
     u₀ₛ = get_time_slices(coll, pd.x0) # periodic solution at bifurcation
-    Fu₀ₛ = copy(u₀ₛ)
-    Aₛ   = copy(u₀ₛ)
-    Bₛ   = copy(u₀ₛ)
-    Cₛ   = copy(u₀ₛ)
-    for i in axes(u₀ₛ, 2)
-      Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
-        Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
-        Cₛ[:, i] .= C(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i], v₁ₛ[:, i])
+
+    # all the nonlinear terms below are evaluated at the Gauss points
+    # (the row layout of the collocation operator J), interpolating the
+    # node slices with the Lagrange matrix Lg
+    mesh = getmesh(coll)
+    Lg, _ = get_Ls(coll.mesh_cache)
+    u₀g   = zeros(𝒯, N, m*Ntst) # orbit at the Gauss points
+    v₁g   = zero(u₀g) # v₁ at the Gauss points
+    v₁★g  = zero(u₀g) # v₁★ at the Gauss points
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        u₀g[:, rg_l] .= u₀ₛ[:, rg] * Lg
+        v₁g[:, rg_l] .= v₁ₛ[:, rg] * Lg
+        v₁★g[:, rg_l] .= v₁★ₛ[:, rg] * Lg
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
+    end
+    Fu₀g = zero(u₀g) # F(u₀)          at the Gauss points
+    Ag   = zero(u₀g) # A(u₀, v₁)      at the Gauss points
+    Bg   = zero(u₀g) # B(u₀, v₁, v₁)  at the Gauss points
+    Cg   = zero(u₀g) # C(u₀, v₁, v₁, v₁) at the Gauss points
+    @inbounds for p in axes(Cg, 2)
+        Fu₀g[:, p] .= F(u₀g[:, p], par)
+        Ag[:, p]   .= A(u₀g[:, p], par, v₁g[:, p])
+        Bg[:, p]   .= B(u₀g[:, p], par, v₁g[:, p], v₁g[:, p])
+        Cg[:, p]   .= C(u₀g[:, p], par, v₁g[:, p], v₁g[:, p], v₁g[:, p])
     end
 
+    ###################
     # computation of ψ★, recall the BC ψ★(0) = ψ★(1)
     # for this, we generate the linear problem analytically
     # note that we could obtain the same by modifying inplace 
@@ -725,21 +740,38 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     ψ₁★ = Jψ \ rhs
     ψ₁★ₛ = get_time_slices(coll, ψ₁★)
-    ψ₁★ ./= 2∫( ψ₁★ₛ, Fu₀ₛ)
-    @assert ∫( ψ₁★ₛ, Fu₀ₛ) ≈ 1/2
+    ψ₁★g = zero(u₀g)
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        ψ₁★g[:, rg_l] .= ψ₁★ₛ[:, rg] * Lg
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
+    end
+    # scale ψ₁★ so that <ψ₁★, F(u₀)> = 1/2
+    qψ = 2∫_gauss(ψ₁★g, Fu₀g)
+    ψ₁★ ./= qψ
+    ψ₁★g ./= qψ
+    @assert ∫_gauss(ψ₁★g, Fu₀g) ≈ 1/2
 
     # computation of a₁
-    a₁ = ∫(ψ₁★ₛ, Bₛ)
+    a₁ = ∫_gauss(ψ₁★g, Bg)
             # _plot(vcat(vec(ψ₁★ₛ),1), label = "ψ1star")
-            # _plot(vcat(vec(@. Bₛ ),1), label = "Bₛ")
+            # _plot(vcat(vec(@. Bg),1), label = "Bg")
             # return a₁
 
+    ###################
     # computation of h₂
-    rhsₛ = @. Bₛ - 2a₁ * Fu₀ₛ
-    if abs(∫(rhsₛ, ψ₁★ₛ)) > 1e-12 
-        @warn "[PD-Iooss] The integral ∫(rhsₛ, ψ₁★ₛ) should be zero. We found $(∫(rhsₛ, ψ₁★ₛ))"
+    r₂ = 0 .* ψ₁★ₛ # N x (m*Ntst+1), RHS in the row layout of J (last column = BC)
+    @inbounds for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
+        @inbounds for p in (j-1)*m+1 : j*m
+            r₂[:, p] .= dt .* (Bg[:, p] .- 2a₁ .* Fu₀g[:, p])
+        end
     end
-    rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
+    r₂[:, end] .= 0   # BC row
+    if abs(∫_gauss(ψ₁★g, Bg) - 2a₁ * ∫_gauss(ψ₁★g, Fu₀g)) > 1e-12
+        @warn "[PD-Iooss] The RHS of h₂ should be orthogonal to ψ₁★. We found $(∫_gauss(ψ₁★g, Bg) - 2a₁ * ∫_gauss(ψ₁★g, Fu₀g))"
+    end
     border_ψ₁ = ForwardDiff.gradient(x -> ∫( reshape(x, size(ψ₁★ₛ)), ψ₁★ₛ),
                                      zeros(𝒯, length(ψ₁★ₛ))
                                     )
@@ -752,12 +784,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
     J[end, end] = 0
-    h₂ = J \ (Icoll * rhs)
-    # h₂ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
-                # h₂ = Icoll * h₂;@reset h₂[end]=0
+    h₂ = J \ vcat(vec(r₂), 0)
     h₂ₛ = get_time_slices(coll, h₂)
-                # a cause de Icoll
-                # h₂ₛ[:, end] .= h₂ₛ[:,1]
     if abs(∫( ψ₁★ₛ, h₂ₛ)) > 1e-10
         @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
     end
@@ -765,32 +793,47 @@ function period_doubling_normal_form_iooss(pbwrap,
         @warn "[PD-Iooss] The value h₂[end] should be zero. We found $(h₂[end])"
     end
 
+    ###################
     # computation of c
     # we need B(t, v₁(t), h₂(t))
-    for i in axes(Bₛ, 2)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], h₂ₛ[:, i])
+    h₂g = zero(u₀g)
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        h₂g[:, rg_l] .= h₂ₛ[:, rg] * Lg
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
+    end
+    Bgh₂ = zero(u₀g) # B(u₀, h₂, v₁) at the Gauss points
+    @inbounds for p in axes(Bgh₂, 2)
+        Bgh₂[:, p] .= B(u₀g[:, p], par, h₂g[:, p], v₁g[:, p])
     end
 
-    c = 1/(3T) * ∫( v₁★ₛ, Cₛ ) + 
-                 ∫( v₁★ₛ, Bₛ ) -
-         2a₁/T * ∫( v₁★ₛ, Aₛ )
+    IC = ∫_gauss(v₁★g, Cg)
+    IB = ∫_gauss(v₁★g, Bgh₂)
+    IA = ∫_gauss(v₁★g, Ag)
+    c = 1/(3T) * IC + IB - 2a₁/T * IA
 
-    @debug "[PD-Iooss]" ∫( v₁★ₛ, Bₛ ) 2a₁/T * ∫( v₁★ₛ, Aₛ )
+    @debug "[PD-Iooss]" IB 2a₁/T * IA
 
+    ###################
     # computation of a₀₁
-    ∂Fu₀ₛ = copy(u₀ₛ)
-    for i in axes(u₀ₛ, 2)
-        ∂Fu₀ₛ[:, i] .= dₚF(u₀ₛ[:, i], par)
+    ∂Fu₀g = zero(u₀g) # dₚF(u₀) at the Gauss points
+    @inbounds for p in axes(∂Fu₀g, 2)
+        ∂Fu₀g[:, p] .= dₚF(u₀g[:, p], par)
     end
-    a₀₁ = 2∫(ψ₁★ₛ, ∂Fu₀ₛ)
+    a₀₁ = 2∫_gauss(ψ₁★g, ∂Fu₀g)
 
+    ###################
     # computation of h₀₁
     #                     ∂ₜh₀₁ - A(t)h₀₁ = F₀₁(t) - a₀₁⋅∂u₀
-    rhsₛ = copy(u₀ₛ)
-    for i in axes(u₀ₛ, 2)
-        rhsₛ[:, i] .= ∂Fu₀ₛ[:, i] .- a₀₁ .* Fu₀ₛ[:, i]
+    r₀₁ = 0 .* ψ₁★ₛ # N x (m*Ntst+1), RHS in the row layout of J (last column = BC)
+    @inbounds for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
+        @inbounds for p in (j-1)*m+1 : j*m
+            r₀₁[:, p] .= dt .* (∂Fu₀g[:, p] .- a₀₁ .* Fu₀g[:, p])
+        end
     end
-    rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
+    r₀₁[:, end] .= 0   # BC row
     jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
     J[end-N:end-1, 1:N] .= -LA.I(N)
@@ -799,18 +842,26 @@ function period_doubling_normal_form_iooss(pbwrap,
     J[end, begin:end-1] .= border_ψ₁ # integral condition
     J[:, end] .= ψ₁★
     J[end, end] = 0
-    h₀₁ = J \ (Icoll * rhs)
+    h₀₁ = J \ vcat(vec(r₀₁), 0)
     h₀₁ₛ = get_time_slices(coll, h₀₁)
 
+    ###################
     # computation of c₁₁
     #                   < w★, -B(t,h01,w) - R11*w + c11*w + a01*wdot > = 0
     # hence:
     #                   c11 = < w★, B(t,h01,w) + R11*w + c11*w - a01*wdot >
-    for i in axes(u₀ₛ, 2)
-        rhsₛ[:, i] .= B(u₀ₛ[:, i], par, v₁★ₛ[:, i], h₀₁ₛ[:, i]) .+ R11vf(u₀ₛ[:, i], par, v₁★ₛ[:, i])
+    h₀₁g = zero(u₀g)
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        h₀₁g[:, rg_l] .= h₀₁ₛ[:, rg] * Lg
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
     end
-
-    c₁₁ = ∫(v₁★ₛ, rhsₛ) - a₀₁ * ∫(v₁★ₛ, Aₛ)
+    rhsc11_g = zero(u₀g)
+    @inbounds for p in axes(rhsc11_g, 2)
+        rhsc11_g[:, p] .= B(u₀g[:, p], par, v₁★g[:, p], h₀₁g[:, p]) .+ R11vf(u₀g[:, p], par, v₁★g[:, p])
+    end
+    c₁₁ = ∫_gauss(v₁★g, rhsc11_g) - a₀₁ * IA
     c₁₁ *= 2
 
     # we want the parameter a, not the rescaled a₁
@@ -960,10 +1011,10 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     if prm_type # method based on Poincare Return Map (PRM)
         # newton parameter
         optn = br.contparams.newton_options
-        return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose = verbose, nev = nev, kwargs_nf...)
+        return neimark_sacker_normal_form_prm(pbwrap, ns0, optn; verbose, nev, kwargs_nf...)
     end
     # method based on Iooss method
-    neimark_sacker_normal_form_iooss(pbwrap, ns0; verbose, nev, kwargs_nf...)
+    neimark_sacker_normal_form_iooss(pbwrap, ns0)
 end
 
 function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
@@ -1024,11 +1075,8 @@ end
 
 function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                                         ns::NeimarkSacker;
-                                        nev::Int = 3,
-                                        verbose = false,
-                                        lens = getlens(pbwrap),
                                         NRMDEBUG::Val{_NRMDEBUG} = Val(false), # normalise to compare to ApproxFun
-                                        kwargs_nf...) where {_NRMDEBUG}
+                                        ) where {_NRMDEBUG}
     @debug "method IOOSS, NRM = $NRMDEBUG"
 
     # based on the article
@@ -1040,9 +1088,6 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     T = getperiod(coll, ns.x0, par)
     𝒯 = eltype(coll)
 
-    # identity matrix for collocation problem
-    Icoll = I(coll, saved_solution(ns.x0), par)
-
     F(u, pars) = residual(coll.prob_vf, u, pars)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
     B(u, p, du1, du2)      = BilinearMap( (dx1, dx2)      -> d2F(coll.prob_vf, u, p, dx1, dx2))(du1, du2)
@@ -1051,6 +1096,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     _plot(x; k...) = (_sol = get_periodic_orbit(coll, x, 1);display(plot(_sol.t, _sol.u'; k...)))
     _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)        # centered uniform random variables
     local ∫(u, v) = BifurcationKit.∫(coll, u, v, 1) # define integral with coll parameters
+    local ∫_gauss(u, v) = BifurcationKit.∫_gauss(coll, u, v, 1) # integral over Gauss-point arrays
 
     #########
     # compute v1
@@ -1104,21 +1150,37 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     ϕ₁★ₛ = get_time_slices(coll, ϕ₁★)
 
     u₀ₛ = get_time_slices(coll, ns.x0) # periodic solution at bifurcation
-    Fu₀ₛ = copy(u₀ₛ)
-    Aₛ   = copy(v₁ₛ)
-    Bₛ   = copy(v₁ₛ)
-    Cₛ   = copy(v₁ₛ)
-    for i in axes(u₀ₛ, 2)
-      Fu₀ₛ[:, i] .= F(u₀ₛ[:, i], par)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
+
+    # the homological equations are enforced at the Gauss points (the row layout of J);
+    # interpolate the node slices to the Gauss points with the Lagrange matrix Lg
+    mesh = getmesh(coll)
+    Lg, _ = get_Ls(coll.mesh_cache)
+    u₀g   = zeros(𝒯, N, m*Ntst)          # orbit at the Gauss points
+    v₁g   = zeros(Complex{𝒯}, N, m*Ntst) # v₁ at the Gauss points
+    ϕ₁★g  = zero(v₁g)                    # ϕ₁★ at the Gauss points
+    Fu₀g  = zero(v₁g)                    # F(u₀) at the Gauss points
+    Bg    = zero(v₁g)                    # B(u₀, v₁, conj v₁) at the Gauss points
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        u₀g[:, rg_l] .= u₀ₛ[:, rg] * Lg
+        v₁g[:, rg_l] .= v₁ₛ[:, rg] * Lg
+        ϕ₁★g[:, rg_l] .= ϕ₁★ₛ[:, rg] * Lg
+        @inbounds for l in Base.OneTo(m)
+            Fu₀g[:, rg_l[l]] .= F(u₀g[:, rg_l[l]], par)
+            Bg[:, rg_l[l]] .= B(u₀g[:, rg_l[l]], par, v₁g[:, rg_l[l]], conj(v₁g[:, rg_l[l]]))
+        end
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
     end
 
     #########
     # compute a₁
-    ϕ₁★ ./= ∫( ϕ₁★ₛ, Fu₀ₛ)
-    @assert ∫( ϕ₁★ₛ, Fu₀ₛ) ≈ 1
-    # a = ∫ < ϕ₁★, B(v1, cv1) >
-    a₁ = ∫(ϕ₁★ₛ, Bₛ)
+    q = ∫_gauss(ϕ₁★g, Fu₀g)
+    # a = ∫ < ϕ₁★, B(v1, conj v1) > with B evaluated at the Gauss points
+    ϕ₁★ ./= q
+    ϕ₁★g ./= q
+    @assert ∫_gauss(ϕ₁★g, Fu₀g) ≈ 1
+    a₁ = ∫_gauss(ϕ₁★g, Bg)
 
     #########
     # compute v1star
@@ -1126,8 +1188,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0, -θ/T), 𝒯 = Complex{𝒯}, _transpose = Val(true), ρF = -1)
 
     nj = size(J, 1)
-    J[end, :] .= _rand(nj)
-    J[:, end] .= _rand(nj)
+    J[end, :] .= _rand(nj); J[:, end] .= _rand(nj)
     J[end, end] = 0
 
     rhs = zeros(𝒯, nj); rhs[end] = 1
@@ -1150,33 +1211,32 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1
     #########
     # compute h20
-    # solution of (D-T A(t) + 2iθ   )h = B(v1, v1)
-    # written     (D-T(A(t) - 2iθ/T))h = B
-    for i in axes(u₀ₛ, 2)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], v₁ₛ[:, i])
+    # solution of (d/dt - A + 2iω)h = B(v1, v1)
+    r₂₀ = 0 .* v₁★ₛ # N x (m*Ntst+1), RHS in the row layout of J (last column = BC)
+    @inbounds for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
+        @inbounds for p in (j-1)*m+1 : j*m
+            r₂₀[:, p] .= dt .* B(@view(u₀g[:, p]), par, @view(v₁g[:, p]), @view(v₁g[:, p]))
+        end
     end
-    rhs = vcat(vec(Bₛ), 0)
+    r₂₀[:, end] .= 0   # BC row
     J = po_analytical_jacobian(coll, ns.x0, par; ρI = Complex(0,-2θ/T), 𝒯 = Complex{𝒯})
-    # h₂₀ = J \ (rhs)
-
-    h₂₀= J[begin:end-1,begin:end-1] \ rhs[begin:end-1];h₂₀ = vcat(vec(h₂₀), 0)
-    # h₂₀ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
-    h₂₀ = Icoll * h₂₀; @reset h₂₀[end] = 0
+    h₂₀ = J[begin:end-1,begin:end-1] \ vec(r₂₀)
+    h₂₀ = vcat(h₂₀, 0); @reset h₂₀[end] = 0
     h₂₀ₛ = get_time_slices(coll, h₂₀)
-                # a cause de Icoll
-                h₂₀ₛ[:, end] .= h₂₀ₛ[:,1]
-
                 # _plot(real(vcat(vec(h₂₀ₛ),1)),label="h20")
-                # _plot(imag(vcat(vec(Bₛ),1+im)),label="Bₛ")
 
     #########
-    for i in axes(u₀ₛ, 2)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, v₁ₛ[:, i], conj(v₁ₛ[:, i]))
     # compute h11 with periodic BC
-    # solution of (d/dt - A)h = B(v1, v1̄) - a₁F, with ∫(ϕ1★, h11) = 0
+    # solution of (d/dt - A)h = B(v1, conj v1) - a₁F(u₀), with ∫(ϕ1★, h11) = 0
+    r₁₁ = 0 .* v₁★ₛ # N x (m*Ntst+1), RHS in the row layout of J (last column = BC)
+    @inbounds for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
+        @inbounds for p in (j-1)*m+1 : j*m
+            r₁₁[:, p] .= dt .* (Bg[:, p] .- a₁ .* Fu₀g[:, p])
+        end
     end
-    rhsₛ = @. Bₛ - a₁ * Fu₀ₛ
-    rhs = vcat(vec(rhsₛ), 0)
+    r₁₁[:, end] .= 0   # BC row
     border_ϕ1 = ForwardDiff.gradient(x -> ∫( reshape(x, size(ϕ₁★ₛ)), ϕ₁★ₛ),
                                                 zeros(𝒯, length(ϕ₁★ₛ))
                                     )
@@ -1187,8 +1247,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     J[end, begin:end-1] .= border_ϕ1 # integral condition
     J[:, end] .= ϕ₁★
     J[end, end] = 0
-    h₁₁ = J \ rhs
-    h₁₁ ./= 2Ntst # this seems necessary to have something comparable to ApproxFun
+    h₁₁ = J \ vcat(vec(r₁₁), 0)
     h₁₁ₛ = get_time_slices(coll, h₁₁)
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
     @debug "[NS-Iooss]" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
@@ -1200,24 +1259,34 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     end
     #########
     # compute d
-    # d = <v1★, C(v,v,v)  +  2B(h11, v)  +  B(h20, cv)  +  C(v,v,cv)>/2 + ...
-    for i in axes(u₀ₛ, 2)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₁₁ₛ[:, i], v₁ₛ[:, i])
-        Cₛ[:, i] .= C(u₀ₛ[:, i], par,  v₁ₛ[:, i], v₁ₛ[:, i], conj(v₁ₛ[:, i]))
+    # d = [<v1★, C(v1,v1,v̄1)> + 2<v1★, B(h11,v1)> + <v1★, B(h20,v̄1)>]/2
+    #     - a₁/T <v1★, A(v1)> + iθ a₁/T²
+    # the integrands are evaluated at the Gauss points (as in the rest of the
+    # normal form computation) and integrated with the Gauss quadrature
+    v₁★g = zero(v₁g)
+    h₁₁g = zero(v₁g)
+    h₂₀g = zero(v₁g)
+    rg    = UnitRange(1, m+1); rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        v₁★g[:, rg_l] .= v₁★ₛ[:, rg] * Lg
+        h₁₁g[:, rg_l] .= h₁₁ₛ[:, rg] * Lg
+        h₂₀g[:, rg_l] .= h₂₀ₛ[:, rg] * Lg
+        rg   = rg   .+ m
+        rg_l = rg_l .+ m
     end
-                # _plot(real(vcat(vec(Bₛ),1)),label="B")
-    d = (1/T) * ∫( v₁★ₛ, Cₛ ) + 2 * ∫( v₁★ₛ, Bₛ )
-    @debug "[NS-Iooss] B(h11, v1)" d  (1/(2T)) * ∫( v₁★ₛ, Cₛ )     2*∫( v₁★ₛ, Bₛ )
-
-    for i in axes(u₀ₛ, 2)
-        Bₛ[:, i] .= B(u₀ₛ[:, i], par, h₂₀ₛ[:, i], conj(v₁ₛ[:, i]))
-        Aₛ[:, i] .= A(u₀ₛ[:, i], par, v₁ₛ[:, i])
+    Cg   = zero(v₁g) # C(u₀, v₁, v₁, v̄₁) at the Gauss points
+    Bg11 = zero(v₁g) # B(u₀, h₁₁, v₁)    at the Gauss points
+    Bg20 = zero(v₁g) # B(u₀, h₂₀, v̄₁)    at the Gauss points
+    Ag   = zero(v₁g) # A(u₀, v₁)         at the Gauss points
+    @inbounds for p in axes(Cg, 2)
+        Cg[:, p]   .= C(u₀g[:, p], par, v₁g[:, p], v₁g[:, p], conj(v₁g[:, p]))
+        Bg11[:, p] .= B(u₀g[:, p], par, h₁₁g[:, p], v₁g[:, p])
+        Bg20[:, p] .= B(u₀g[:, p], par, h₂₀g[:, p], conj(v₁g[:, p]))
+        Ag[:, p]   .= A(u₀g[:, p], par, v₁g[:, p])
     end
-    @debug "[NS-Iooss] B(h20, v1b)" d   ∫( v₁★ₛ, Bₛ )
-    d +=  ∫( v₁★ₛ, Bₛ )
-    d = d/2
-    @debug "[NS-Iooss] A(h11, v1b)" -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2   im * θ * a₁/T^2
-    d += -a₁/T * ∫( v₁★ₛ, Aₛ ) + im * θ * a₁/T^2
+    d = ((1/T) * ∫_gauss(v₁★g, Cg) + 2 * ∫_gauss(v₁★g, Bg11) + ∫_gauss(v₁★g, Bg20)) / 2
+    @debug "[NS-Iooss] gauss integrals" ∫_gauss(v₁★g, Cg) ∫_gauss(v₁★g, Bg11) ∫_gauss(v₁★g, Bg20) ∫_gauss(v₁★g, Ag)
+    d += -a₁/T * ∫_gauss(v₁★g, Ag) + im * θ * a₁/T^2
 
     nf = (a = a₁, d, h₁₁ₛ, ϕ₁★ₛ, v₁★ₛ, h₂₀ₛ, _NRMDEBUG) # keep b3 for ns-codim 2
     ns_new = (@set ns.nf = nf)

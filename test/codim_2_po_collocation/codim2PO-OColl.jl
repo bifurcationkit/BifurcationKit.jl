@@ -159,7 +159,7 @@ brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 
     bothside = true,
     )
 pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0), 
-                    ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
+                    ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3, max_steps = 50);
                     # verbosity = 3, plot = true,
                     detect_codim2_bifurcation = 2,
                     start_with_eigen = false,
@@ -167,8 +167,17 @@ pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0),
                     jacobian_ma = BK.MinAug(),
                     normC = norminf,
                     callback_newton = BK.cbMaxNorm(1),
-                    # bothside = true,
+                    bothside = true,
                     )
+@test pd_po_coll2.specialpoint[2].type == :gpd
+@test pd_po_coll2.specialpoint[4].type == :gpd
+gpd_nf = BK.get_normal_form(pd_po_coll2, 4)
+@test gpd_nf.params.ϵ ≈ 0.319 atol = 1e-4
+@test gpd_nf.params.b0 ≈ 0.412 atol = 1e-4
+gpd_nf = BK.get_normal_form(pd_po_coll2, 2)
+@test gpd_nf.params.ϵ ≈ 1.093 atol = 1e-3
+@test gpd_nf.params.b0 ≈ 0.218 atol = 1e-3
+
 _probpd = pd_po_coll2.prob
 _x = pd_po_coll2.sol[end].x
 _solpo = _x.x
@@ -282,4 +291,6 @@ ns_po_cl = BK.continuation(deepcopy(br_coll), 1, (@optic _.k7), opts_pocl_ns;
         )
 @test ns_po_cl.specialpoint[1].type == :ch
 ch_nf = BK.get_normal_form(ns_po_cl, 1)
+@test ch_nf.params.k7 ≈ 1.757356 atol = 1e-3
+@test ch_nf.params.k8 ≈ 0.9125773 atol = 1e-3
 end

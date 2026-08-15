@@ -484,8 +484,9 @@ $(TYPEDSIGNATURES)
     @inbounds for j in 1:Ntst
         LA.mul!(guj, uc[:, rg], L)
         LA.mul!(gvj, vc[:, rg], L)
+        dt = (mesh[j+1] - mesh[j]) / 2
         @inbounds for l in 1:m
-            phase += LA.dot(guj[:, l], gvj[:, l]) * ω[l] * (mesh[j+1] - mesh[j]) / 2
+            phase += LA.dot(guj[:, l], gvj[:, l]) * ω[l] * dt
         end
         rg = rg .+ m
     end
@@ -500,6 +501,42 @@ function ∫(coll::Collocation,
     vc = get_time_slices(coll, v)
     return ∫(coll, uc, vc, period)
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+[INTERNAL] Implementation of ∫₀ᵀ < u(t), v(t) > dt from Gauss-point values.
+
+    ∫_gauss(coll, ug, vg, period = one(VI.scalartype(ug)))
+
+The inputs are arrays of values already evaluated at the Gauss points (the
+row layout of the collocation operator J), in contrast to `∫` which takes
+node slices and interpolates to the Gauss points internally.
+
+# Arguments
+- `ug` n x (m * Ntst) values at the Gauss points
+- `vg` n x (m * Ntst) values at the Gauss points
+"""
+@views function ∫_gauss(coll::Collocation,
+                        ug::AbstractMatrix,
+                        vg::AbstractMatrix,
+                        period = one(VI.scalartype(ug)))
+    𝒯y = promote_type(VI.scalartype(ug), VI.scalartype(vg))
+    n, m, Ntst = size(coll)
+    @assert (size(ug) == (n, m*Ntst) && size(vg) == (n, m*Ntst)) "∫_gauss expects n x (m*Ntst) arrays of Gauss-point values"
+    ω = get_gauss_weight(coll)
+    mesh = getmesh(coll)
+    result = zero(𝒯y)
+    @inbounds for j in 1:Ntst
+        dt = (mesh[j+1] - mesh[j]) / 2
+        @inbounds for l in 1:m
+            p = (j-1)*m + l
+            result += LA.dot(ug[:, p], vg[:, p]) * ω[l] * dt
+        end
+    end
+    return result * period
+end
+
 
 """
 $(TYPEDSIGNATURES)
