@@ -248,7 +248,7 @@ function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, 
     step = state.step
     if BK.converged(state) &&
             BK.in_bisection(state) == false &&
-            BK.mod_counter(step, update_every_step) == 1 &&
+            BK.mod_counter(step, update_every_step) &&
             step > 2
             @debug "[Collocation] update mesh"
         has_mesh_been_updated = true

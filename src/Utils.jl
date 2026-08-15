@@ -178,13 +178,19 @@ end
 """
 $(TYPEDSIGNATURES)
 
-This function implements a counter. If `everyN == 0`, it returns false. Otherwise, it returns `true` when `step` is a multiple of `everyN`
+Return `true` when `step` is a multiple of `everyN`, implementing a counter
+used to trigger an action every `everyN` iterations of the continuation step.
+
+It returns `false` when:
+- `everyN == 0` (the action is disabled).
+
+When `everyN == 1` it returns `true` for every `step > 0`.
 """
 function mod_counter(step, everyN)
     if step == 0; return false; end
     if everyN == 0; return false; end
     if everyN == 1; return true; end
-    return mod(step, everyN) == 0
+    return (mod(step, everyN) == 0)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.

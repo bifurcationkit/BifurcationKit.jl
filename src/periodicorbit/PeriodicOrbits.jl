@@ -165,7 +165,7 @@ function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalT
     update_section_every_step = prob.update_section_every_step
     step = state.step
     z = getsolution(state)
-    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+    if success && mod_counter(step, update_section_every_step) && bisection == false
         @debug "[Periodic orbit] update section"
         # Trapeze and Shooting need the parameters for section update:
         updatesection!(prob, z.u, setparam(wrap, z.p))

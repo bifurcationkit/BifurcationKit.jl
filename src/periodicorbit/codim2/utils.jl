@@ -46,7 +46,7 @@ function __update_codim1_po!(𝐌𝐚,
     disc_po = __get_discretization(𝐌𝐚)
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information
-    if converged(state) && mod_counter(state.step, disc_po.update_section_every_step) == 1 && in_bisection(state) == false
+    if converged(state) && mod_counter(state.step, disc_po.update_section_every_step) && in_bisection(state) == false
         # state vector at bifurcation point
         x = getvec(getx(state), 𝐌𝐚)
         pars = getparams(iter, state)

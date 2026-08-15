@@ -1350,7 +1350,7 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
     if converged(state) &&
             meshadapt(coll) &&
             in_bisection(state) == false &&
-            mod_counter(step, update_section_every_step) == 1 &&
+            mod_counter(step, update_section_every_step) &&
             step > 2
         @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
@@ -1364,7 +1364,7 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
             return false
         end
     end
-    if converged(state) && mod_counter(step, update_section_every_step) == 1 && in_bisection(state) == false
+    if converged(state) && mod_counter(step, update_section_every_step) && in_bisection(state) == false
         @debug "[collocation] update section"
         updatesection!(coll, po, params)
     end

@@ -21,10 +21,8 @@ function record_from_solution(x,p;k...)
 end
 
 prob = ODEBifProblem(COm!, z0, par_com, (@optic _.q2); record_from_solution)
-
 opts_br = ContinuationPar(dsmax = 0.015, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 6, detect_bifurcation = 3)
 br = @time continuation(prob, PALC(), opts_br;
-    plot = true, verbosity = 0,
     normC = norminf,
     bothside = true
     )
@@ -51,12 +49,14 @@ function plotSolution(ax, x, p; ax1 = nothing, k...)
     scatter!(ax, xtt.t, xtt[1,:]; markersize = 1.5, k...)
 end
 
-args_po = (    record_from_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, @set par_com.q2 = p.p)
-        return (max = maximum(xtt[1,:]),
-                min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, @set par_com.q2 = p.p))
-    end,
+function record_from_solution(x, p; k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, @set par_com.q2 = p.p)
+    return (max = maximum(xtt[1,:]),
+            min = minimum(xtt[1,:]),
+            period = getperiod(p.prob, x, @set par_com.q2 = p.p))
+end
+
+args_po = (    record_from_solution = record_from_solution,
     plot_solution = plotSolution,
     normC = norminf)
 
