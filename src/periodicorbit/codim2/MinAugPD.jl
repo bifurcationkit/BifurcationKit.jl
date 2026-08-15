@@ -382,6 +382,23 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
     _correct_event_labels(br_pd_po)
 end
 
+# compute the generalized period-doubling coefficient GPD from the PD normal form
+function _get_PD_GPD(pbwrap, pd0, prm, newton_options)
+    if get_discretization(pbwrap) isa Shooting
+        pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(newton_options, verbose = false); verbose = false)
+        return -pd.nf.nf.b3 # sign minus to plot criticality
+    elseif get_discretization(pbwrap) isa Collocation
+        if prm
+            pd = period_doubling_normal_form_prm(pbwrap, pd0, NewtonPar(newton_options, verbose = false); verbose = false)
+            return -pd.nf.nf.b3 # sign minus to plot criticality
+        else
+            pd = period_doubling_normal_form_iooss(pbwrap, pd0; verbose = false)
+            return pd.nf.nf.b3
+        end
+    end
+    return nothing
+end
+
 function test_for_pd_gpd_cp(iter, state)
     𝐏𝐛 = getprob(iter)
     𝐏𝐝 = get_formulation(𝐏𝐛)
@@ -412,20 +429,10 @@ function test_for_pd_gpd_cp(iter, state)
     ζ★ ./= norm(ζ★)
     𝐏𝐝.R2 = LA.dot(ζ★, ζ)
 
-    p1 = get_parameter(zu, 𝐏𝐝) # TODO : what is this hack??
+    p1 = get_parameter(zu, 𝐏𝐝)
     pd0 = PeriodDoubling(copy(x), nothing, p1, newpar, get_lenses(𝐏𝐛)[1], nothing, nothing, nothing, :none)
-    if get_discretization(pbwrap) isa Shooting
-        pd = period_doubling_normal_form(pbwrap, pd0, (1, 1), NewtonPar(𝐏𝐝.newton_options, verbose = false); verbose = false)
-        𝐏𝐝.GPD = pd.nf.nf.b3
-    end
-    if get_discretization(pbwrap) isa Collocation
-        if 𝐏𝐝.prm
-            pd = period_doubling_normal_form_prm(pbwrap, pd0; verbose = false)
-        else
-            pd = period_doubling_normal_form_iooss(pbwrap, pd0; verbose = false)
-            𝐏𝐝.GPD = pd.nf.nf.b3
-        end
-    end
+    gpd = _get_PD_GPD(pbwrap, pd0, 𝐏𝐝.prm, 𝐏𝐝.newton_options)
+    isnothing(gpd) || (𝐏𝐝.GPD = gpd)
     return 𝐏𝐝.GPD, 𝐏𝐝.CP, 𝐏𝐝.R2
 end
 

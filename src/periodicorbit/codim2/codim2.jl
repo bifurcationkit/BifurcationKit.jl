@@ -293,9 +293,6 @@ function _continuation(gh::Bautin,
 
     jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
     pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, record_po)
-    # we have to change the bordered linearsolver to cope with our type FloquetWrapper
-    options = _contParams.newton_options
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
 
     contParams = _contParams
 
@@ -495,11 +492,6 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     # build the variable to hold the functional for computing PO based on finite differences
     vp = zh.ζ[2]
     discPO, orbitguess = re_make(discPO, prob_vf, zh, vp, orbitguess_a, period; orbit = _orbit)
-
-    # @show size(orbitguess) size(discPO) length(discPO)
-    # xtt = getPeriodicOrbit(discPO,orbitguess,0)
-    # plot(xtt.t, xtt.u') |> display
-    # return
 
     verbose && printstyled(color = :green, "━"^61*
     "\n┌─ Start branching from Zero-Hopf bifurcation point to curve of Neimark-Sacker bifurcations of periodic orbits.",

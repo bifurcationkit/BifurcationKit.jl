@@ -411,6 +411,21 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
     _correct_event_labels(br_ns_po)
 end
 
+# compute the first Lyapunov coefficient l1 from the NS normal form and sanitize it,
+# falling back on the previous event value when the coefficient blows up
+function _get_NS_l1(pbwrap, ns0, prm, newton_options::NewtonPar, state)
+    if get_discretization(pbwrap) isa Shooting
+        ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(newton_options, verbose = false))
+        l1 = -ns.nf.nf.b # minus sign to plot criticality
+    elseif get_discretization(pbwrap) isa Collocation
+        ns = prm ? neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = false)) : neimark_sacker_normal_form_iooss(pbwrap, ns0)
+        l1 = ns.prm ? ns.nf.nf.b : ns.nf.nf.d # it does not seem to require the minus sign, maybe the poincareMap is set differently
+    else
+        return nothing
+    end
+    return abs(real(l1)) < 1e5 ? real(l1) : state.eventValue[2][2]
+end
+
 function test_for_ns_ch(iter, state)
     𝐏𝐛 = getprob(iter)
     𝐍𝐒 = get_formulation(𝐏𝐛)
@@ -424,32 +439,13 @@ function test_for_ns_ch(iter, state)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
 
-    prob_ns = iter.prob.prob
-    pbwrap = prob_ns.prob_vf
-
     ns0 = NeimarkSacker(copy(x), nothing, p1, ω, newpar, lens1, nothing, nothing, nothing, :none)
     newton_options = 𝐍𝐒.newton_options
     # test if we jumped to PD branch
     pdjump = abs(abs(ω) - pi) < 100newton_options.tol
-    if ~pdjump && get_discretization(pbwrap) isa Shooting
-        ns = neimark_sacker_normal_form(pbwrap, ns0, (1, 1), NewtonPar(newton_options, verbose = false,))
-        prob_ns.l1 = ns.nf.nf.b
-        prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
-        #############
-    end
-    if ~pdjump && get_discretization(pbwrap) isa Collocation
-        if 𝐍𝐒.prm
-            ns = neimark_sacker_normal_form_prm(pbwrap, ns0, NewtonPar(newton_options, verbose = true))
-        else
-            ns = neimark_sacker_normal_form_iooss(pbwrap, ns0)
-        end
-        if ns.prm
-            prob_ns.l1 = ns.nf.nf.b
-            prob_ns.l1 = abs(real(ns.nf.nf.b)) < 1e5 ? real(ns.nf.nf.b) : state.eventValue[2][2]
-        else
-            prob_ns.l1 = ns.nf.nf.d
-            prob_ns.l1 = abs(real(prob_ns.l1)) < 1e5 ? real(prob_ns.l1) : state.eventValue[2][2]
-        end
+    if ~pdjump
+        l1 = _get_NS_l1(𝐍𝐒.prob_vf, ns0, 𝐍𝐒.prm, newton_options, state)
+        isnothing(l1) || (𝐍𝐒.l1 = l1)
     end
     # Witte, Virginie De “Computational Analysis of Bifurcations of Periodic Orbits,” PhD thesis
     c = cos(ω)
@@ -457,7 +453,7 @@ function test_for_ns_ch(iter, state)
     𝐍𝐒.R2 = c+1  # μ = {1, -1}
     𝐍𝐒.R3 = 2c+1 # μ = {1, exp(±2iπ/3)}
     𝐍𝐒.R4 = c    # μ = {1, exp(±iπ/2)}
-    return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(prob_ns.l1)
+    return 𝐍𝐒.R1, 𝐍𝐒.R2, 𝐍𝐒.R3, 𝐍𝐒.R4, real(𝐍𝐒.l1)
 end
 
 function compute_eigenvalues(eig::HopfEig,

@@ -437,7 +437,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
     end
 
     # TODO remove this hack
-    if prob isa AbstractWrapperPOFiniteDifferencesProblem
+    if prob isa AbstractPeriodicOrbitProblem
         _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = prob.plotSolution)
         prob_fold = re_make(prob_fold, plot_solution = _plotsol)
     end

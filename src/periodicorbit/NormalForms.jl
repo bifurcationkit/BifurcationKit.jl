@@ -614,25 +614,16 @@ function period_doubling_normal_form_iooss(pbwrap,
     # there are a lot of mistakes in the above paper, it seems better to look at https://webspace.science.uu.nl/~kouzn101/NBA/LC2.pdf
     # see also Witte, V. De, F. Della Rossa, W. Govaerts, and Yu. A. Kuznetsov. “Numerical Periodic Normalization for Codim 2 Bifurcations of Limit Cycles” SIAM Journal on Applied Dynamical Systems. https://doi.org/10.1137/120874904.
     coll = get_discretization(pbwrap)
-    N = get_state_dim(coll)
+    N, m, Ntst = size(coll)
     par = pd.params
-    p₀ = _get(par, lens)
     T = getperiod(coll, pd.x0, par)
     lens = getlens(coll)
-    δ = getdelta(coll)
     𝒯 = eltype(coll)
 
-    # identity matrix for collocation problem
-    Icoll = I(coll, saved_solution(pd.x0), par)
-
     F(u, pars) = residual(coll.prob_vf, u, pars)
-    # TODO: use R01
-    # dₚF(u, p) = ForwardDiff.derivative(z -> residual(coll.prob_vf, u, set(p, lens, z)), p₀)
-    dₚF(u, pars) = (residual(coll.prob_vf, u, set(pars, lens, p₀ + δ)) .- 
-                    residual(coll.prob_vf, u, set(pars, lens, p₀ - δ))) ./ (2δ)
-    A(u, pars, du) = dF(coll.prob_vf, u, pars, du)#apply(jacobian(coll.prob_vf, u, pars), du)
-    R11(u, pars, du) = (A(u, set(pars, lens, p₀ + δ), du) .- 
-                        A(u, set(pars, lens, p₀ - δ), du)) ./ (2δ)
+    dₚF(u, pars) = R01(coll.prob_vf, u, pars)
+    A(u, pars, du) = dF(coll.prob_vf, u, pars, du)
+    R11vf(u, pars, du) = R11(coll.prob_vf, u, pars, du)
     B(u, pars, du1, du2)      = d2F(coll.prob_vf, u, pars, du1, du2)
     C(u, pars, du1, du2, du3) = d3F(coll.prob_vf, u, pars, du1, du2, du3)
 
@@ -747,9 +738,8 @@ function period_doubling_normal_form_iooss(pbwrap,
     end
     rhs = vcat(vec(rhsₛ), 0) # it needs to end with zero for the integral condition
     border_ψ₁ = ForwardDiff.gradient(x -> ∫( reshape(x, size(ψ₁★ₛ)), ψ₁★ₛ),
-                                     zeros(length(ψ₁★ₛ))
+                                     zeros(𝒯, length(ψ₁★ₛ))
                                     )
-                            # _plot(vcat(vec(rhsₛ),1))
     # we could perhaps save the re-computation of J here and use the previous J
     jac = jacobian(pbwrap, saved_solution(pd.x0), par)
     J = copy(jac)
@@ -1048,10 +1038,8 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     par = ns.params
     T = getperiod(coll, ns.x0, par)
     𝒯 = eltype(coll)
-    # identity matrix for collocation problem
-    Icoll = I(coll, ns.x0, par)
 
-    F(u, p) = residual(coll.prob_vf, u, p)
+    F(u, pars) = residual(coll.prob_vf, u, pars)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
     B(u, p, du1, du2)      = BilinearMap( (dx1, dx2)      -> d2F(coll.prob_vf, u, p, dx1, dx2))(du1, du2)
     C(u, p, du1, du2, du3) = TrilinearMap((dx1, dx2, dx3) -> d3F(coll.prob_vf, u, p, dx1, dx2, dx3))(du1, du2, du3)
