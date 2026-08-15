@@ -45,7 +45,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the solution of 
+Compute the solution (v, σ) of 
 
 ```
 ┌                ┐ ┌  ┐   ┌   ┐
@@ -54,7 +54,7 @@ Compute the solution of
 └                ┘ └  ┘   └   ┘
 ```
 
-and the same for the adjoint system.
+and the same for the adjoint system with solution (w, τ).
 """
 function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp, ω)
     return __compute_bordered_vectors_hopf(𝐇.linbdsolver,
@@ -99,6 +99,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     # we can probably use R01 and R11
     dₚF  = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
             residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
+
     dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
             apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
     σₚ = -VI.inner(w, dₚJv)

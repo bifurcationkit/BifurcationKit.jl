@@ -40,7 +40,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the solution of 
+Compute the solution (v, σ) of 
 
 ```
 ┌              ┐┌  ┐   ┌   ┐
@@ -49,7 +49,7 @@ Compute the solution of
 └              ┘└  ┘   └   ┘
 ```
 
-and the same for the adjoint system.
+and the same for the adjoint system with solution (w, τ).
 """
 function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp)
     𝒯 = eltype(𝐅)
