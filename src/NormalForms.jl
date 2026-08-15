@@ -43,6 +43,37 @@ end
 """
 $(TYPEDSIGNATURES)
 
+Compute a basis of the kernel of `L` (resp. its adjoint `L★`) by solving the bordered linear systems
+```
+┌       ┐┌  ┐   ┌   ┐
+│ L   A ││v │ = │ 0 │
+│ Bᵀ  0 ││σ │   │ eⱼ│
+└       ┘└  ┘   └   ┘
+```
+for `j = 1,...,N` where the columns of `A` (`as`) and `B` (`bs`) are random vectors. The `j`-th column of the returned `ζs` (resp. `ζ★s`) is thus a vector spanning the kernel of `L` (resp. `L★`), the bases are then biorthogonalized in `get_normal_formNd`.
+"""
+function __compute_nd_basis_from_bls(bls_block, bls_block_adjoint, L, L★, x0, 𝒯, N::Int)
+    as = ntuple(_ -> _randn(x0), N)
+    bs = ntuple(_ -> _randn(x0), N)
+    cs = zeros(𝒯, N, N)
+    zero_vec = VI.zerovector(bs[1])
+    ζs = Vector{typeof(zero_vec)}(undef, N)
+    for jj in 1:N
+        rhsb = zeros(𝒯, N); rhsb[jj] = one(𝒯)
+        v, _, cv, it = solve_bls_block(bls_block, L, as, bs, cs, zero_vec, rhsb)
+        ~cv && @debug "[Normal Form Nd (basis)] linear solver did not converge. it = $it"
+        ζs[jj] = v
+    end
+    ζ★s = Vector{typeof(zero_vec)}(undef, N)
+    for jj in 1:N
+        rhsb = zeros(𝒯, N); rhsb[jj] = one(𝒯)
+        w, _, cv, it = solve_bls_block(bls_block_adjoint, L★, bs, as, cs, zero_vec, rhsb)
+        ~cv && @debug "[Normal Form Nd (basis adjoint)] linear solver did not converge. it = $it"
+        ζ★s[jj] = w
+    end
+    return (; ζs, ζ★s)
+end
+
 # Compute the right (resp. left) null vector of the 1d kernel of `L` (resp. `L★`)
 # using a bordered linear system, see `__compute_bordered_vectors_fold`.
 function _get_kernel_basis_1d_from_bls(L, L★, bls, bls_adjoint, x0, 𝒯, scaleζ; verbose = false)
@@ -90,6 +121,10 @@ function _get_kernel_basis_1d_from_eigensolver(prob, br, bifpt, L, λ, scaleζ, 
     end
     return ζ, ζ★, λ★
 end
+
+"""
+$(TYPEDSIGNATURES)
+
 Bi-orthogonalise the two sets of vectors.
 
 # Optional argument
@@ -193,6 +228,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
                          bls = MatrixBLS(),
                          bls_adjoint = bls,
                          bls_block = bls,
+                         bls_block_adjoint = bls_block,
 
                          start_with_eigen = Val(true), # TODO FIND A BETTER name
                         ) where {𝒯eigvec}
@@ -220,7 +256,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
         return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint, start_with_eigen)
     end
-    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block)
+    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block, bls_block_adjoint, start_with_eigen)
 end
 
 @inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
@@ -677,9 +713,11 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             ζs_ad::Tevecs_ad = nothing,
 
                             bls_block = MatrixBLS(),
+                            bls_block_adjoint = bls_block,
+                            start_with_eigen::Val{start_with_eigen_type} = Val(true),
 
                             scaleζ = LA.norm
-                            ) where {𝒯eigvec, Tevecs, Tevecs_ad}
+                            ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
@@ -715,43 +753,48 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     indev = br.specialpoint[id_bif].ind_ev
     λs = rightEv[indev-N+1:indev]
     verbose && println("──▶ smallest eigenvalues at bifurcation = ", real.(λs))
-    # and corresponding eigenvectors
-    if Tevecs == Nothing # do we have a basis for the kernel?
-        if haseigenvector(br) == false # are the eigenvector saved in the branch?
-            @info "No eigenvector recorded, computing them on the fly..."
-            # we recompute the eigen-elements if there were not saved during the computation of the branch
-            _λ, _ev, _ = options.eigsolver(L, max(nev, max(nev, length(rightEv))))
-            verbose && (println("──▶ (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
-            if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
-                @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
+
+    if start_with_eigen_type
+        # and corresponding eigenvectors
+        if Tevecs == Nothing # do we have a basis for the kernel?
+            if haseigenvector(br) == false # are the eigenvector saved in the branch?
+                @info "No eigenvector recorded, computing them on the fly..."
+                # we recompute the eigen-elements if there were not saved during the computation of the branch
+                _λ, _ev, _ = options.eigsolver(L, max(nev, max(nev, length(rightEv))))
+                verbose && (println("──▶ (λs, λs (recomputed)) = "); display(hcat(rightEv, _λ[eachindex(rightEv)])))
+                if norm(_λ[eachindex(rightEv)] - rightEv, Inf) > br.contparams.tol_stability
+                    @warn "We did not find the correct eigenvalues (see 1st col).\nWe found the eigenvalues displayed in the second column:\n $(display(hcat(rightEv, _λ[eachindex(rightEv)]))).\n Difference between the eigenvalues:" display(_λ[eachindex(rightEv)] - rightEv)
+                end
+                ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev])
+            else
+                ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev])
             end
-            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, _ev, ii)) for ii in indev-N+1:indev])
-        else
-            ζs = convert(Vector{𝒯eigvec}, [_copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, ii)) for ii in indev-N+1:indev])
-        end
-    end
-
-    # extract eigen-elements for transpose(L), needed to build spectral projector
-    # it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
-    # only adjust ζ★s
-    for ζ in ζs; ζ ./= scaleζ(ζ); end
-
-    L★ = if is_symmetric(prob_vf)
-        L
-        else
-            has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L)
         end
 
-    if Tevecs_ad != Nothing # left eigenvectors are provided by the user
-        λ★s = copy(λs)
-        ζ★s = _copy.(ζs_ad)
-    else
-        if is_symmetric(prob)
+        # it is OK to re-scale at this stage as the basis ζs is not touched anymore, we
+        # only adjust ζ★s
+        for ζ in ζs; ζ ./= scaleζ(ζ); end
+
+        # extract eigen-elements for transpose(L), needed to build spectral projector
+        if Tevecs_ad != Nothing # left eigenvectors are provided by the user
             λ★s = copy(λs)
-            ζ★s = _copy.(ζs)
+            ζ★s = _copy.(ζs_ad)
         else
-            ζ★s, λ★s = get_adjoint_basis(L★, conj.(λs), options.eigsolver; nev, verbose)
+            if is_symmetric(prob)
+                λ★s = copy(λs)
+                ζ★s = _copy.(ζs)
+            else
+                L★ = is_symmetric(prob_vf) ? L : (has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L))
+                ζ★s, λ★s = _get_adjoint_kernel_basis_nd_from_eigensolver(L★, conj.(λs), options.eigsolver; nev, verbose)
+            end
         end
+    else
+        # compute the basis of the kernel (right / left) using bordered linear systems
+        verbose && println("──▶ Compute the kernel basis using a bordered linear system")
+        L★ = is_symmetric(prob_vf) ? L : (has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : transpose(L))
+        (; ζs, ζ★s) = __compute_nd_basis_from_bls(bls_block, bls_block_adjoint, L, L★, x0, 𝒯, N)
+        for ζ in ζs; ζ ./= scaleζ(ζ); end
+        λ★s = copy(λs)
     end
     ζ★s::Vector{𝒯eigvec} = real.(ζ★s); λ★s = real.(λ★s) # to enforce type stable code
     ζs::Vector{𝒯eigvec}  = real.(ζs);   λs = real.(λs)

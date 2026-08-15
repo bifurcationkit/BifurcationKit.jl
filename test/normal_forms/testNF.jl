@@ -61,6 +61,16 @@ let
     @test BK.type(bp) == :Transcritical
     @test BK.type(nothing) === nothing
 
+    # same normal form but with the kernel basis computed with a bordered linear system
+    bp_bd = BK.get_normal_form(br, 1; verbose=false, start_with_eigen = Val(false))
+    @test BK.istranscritical(bp_bd) == true
+    @test bp_bd.nf.a01 ≈ bp.nf.a01 atol = 1e-8
+    @test bp_bd.nf.b11 ≈ bp.nf.b11 atol = 1e-8
+    # the physical predictor is invariant under the choice of the kernel basis
+    pred_bd = predictor(bp_bd, 0.1)
+    @test norm(pred_bd.x0) < 1e-10
+    @test norm(pred_bd.x1 - pred.x1, Inf) < 1e-7
+
     prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
     bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
     @test BK.istranscritical(bp) == true
@@ -288,6 +298,17 @@ let
         @test bp2d.nf.b20[1,:,:]/2 ≈ [0 0; 0 prob2d.params.γ]                  atol = 1e-10
         @test norminf(bp2d.nf.b11 - prob2d.params.α * 3.23 * I) ≈ 0            atol = 1e-10
         @test norminf(bp2d.nf.a01) < 1e-10
+
+        # same normal form but with the kernel basis computed with a bordered linear system
+        bp2d_bd = BK.get_normal_form(br, 1; verbose = false, start_with_eigen = Val(false));
+        L = BK.jacobian(prob2d, bp2d_bd.x0, bp2d_bd.params)
+        for ζ in bp2d_bd.ζ
+            @test norm(L * ζ, Inf) < 1e-5
+        end
+        G = [dot(bp2d_bd.ζ★[ii], bp2d_bd.ζ[jj]) for ii in 1:length(bp2d_bd.ζ), jj in 1:length(bp2d_bd.ζ)]
+        @test G ≈ I atol = 1e-7
+        @test norminf(bp2d_bd.nf.b11 - prob2d.params.α * 3.23 * I) ≈ 0          atol = 1e-10
+        @test norminf(bp2d_bd.nf.a01) < 1e-10
     end
 end
 ####################################################################################################
@@ -351,6 +372,16 @@ let
     @test bp2d.nf.b30[1,1,1,1] / 6 ≈ -probD6.params.b atol = 1e-10
     @test bp2d.nf.b30[1,1,2,2] / 2 ≈ -probD6.params.c atol = 1e-10
     @test bp2d.nf.b20[1,2,3] ≈ probD6.params.a atol = 1e-10
+
+    # same normal form but with the kernel basis computed with a bordered linear system
+    bp2d_bd = BK.get_normal_form(br, 1; start_with_eigen = Val(false))
+    L = BK.jacobian(probD6, bp2d_bd.x0, bp2d_bd.params)
+    for ζ in bp2d_bd.ζ
+        @test norm(L * ζ, Inf) < 1e-5
+    end
+    G = [dot(bp2d_bd.ζ★[ii], bp2d_bd.ζ[jj]) for ii in 1:length(bp2d_bd.ζ), jj in 1:length(bp2d_bd.ζ)]
+    @test G ≈ I atol = 1e-7
+    @test bp2d_bd.nf.b11 ≈ I(3) atol = 1e-8
 
     # test the evaluation of the normal form
     x0 = rand(3); @test norm(FbpD6(x0, BK.setparam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
