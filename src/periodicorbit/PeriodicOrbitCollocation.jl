@@ -1236,7 +1236,12 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Perform mesh adaptation of the periodic orbit problem. Modify `pb` and `x` inplace if the adaptation is successfull.
+Perform mesh adaptation of the periodic orbit problem. If the adaptation is successful, the solution `x` is modified inplace and the mesh stored in `coll` is updated.
+
+Return a `NamedTuple` with fields:
+- `success::Bool`: whether the mesh adaptation succeeded.
+- `newτsT`: the new time mesh scaled by the period (as a fraction of the period). It is `nothing` if the mesh is not updated (e.g. when `Ntst < 2` or the monitor function is too small).
+- `ϕ`: the monitor function used for the equipartition.
 
 See page 367 of [1] and also [2].
 
@@ -1256,6 +1261,29 @@ function compute_error!(coll::Collocation, x::AbstractVector; kw...)
     return (;success, newτsT, ϕ)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Core routine of [`compute_error!`](@ref). It computes the monitor function `ϕ` from the jumps of the `m`-th derivative (where `m = ncol`) of the collocation polynomial `sol` at the mid-points of the mesh, and then builds a new equipartitioned mesh `newmesh`. When the adaptation succeeds, the mesh of `coll` is updated inplace via `update_mesh!`.
+
+# Arguments
+- `coll`: the collocation problem.
+- `sol`: the interpolated solution of degree `m`.
+- `::AbstractVector{𝒯}`: the solution vector `x`.
+- `period`: the period of the periodic orbit.
+
+# Keywords
+- `normE = norminf`: norm used to measure the jumps of the derivatives.
+- `verbosity::Bool = false`: if `true`, print information about the new mesh.
+- `K = 𝒯(Inf)`: bound on the ratio `max(ϕ)/min(ϕ)`, used to clamp the monitor function. This corresponds to the field `K` of the `Collocation` struct.
+
+# Returns
+A `NamedTuple` with fields:
+- `success::Bool`: whether the mesh adaptation succeeded.
+- `newmesh`: the new mesh (as time fractions), `nothing` if the mesh is not updated.
+- `newτsT`: the new mesh scaled by the period, `nothing` if the mesh is not updated.
+- `ϕ`: the monitor function.
+"""
 function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
                         normE = norminf,
                         verbosity::Bool = false,
@@ -1277,6 +1305,10 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
     if any(diff(τsT) .<= 0)
         @error "[Mesh-adaptation]. The mesh is non monotonic!\nPlease report the error to the website of BifurcationKit.jl"
         return (success = false, newτsT = τsT, newmesh = nothing, ϕ = τsT)
+    end
+    if Ntst < 2
+        @warn "[Mesh-adaptation]. Ntst = $Ntst < 2, mesh adaptation is skipped."
+        return (success = true, newτsT = nothing, newmesh = nothing, ϕ = τsT)
     end
     sk = zeros(𝒯, Ntst)
     sk[1] = 2normE(vm[1]) / (τsT[2] - τsT[1])
@@ -1364,7 +1396,9 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
             return false
         end
     end
-    if converged(state) && mod_counter(step, update_section_every_step) && in_bisection(state) == false
+    if converged(state) && 
+            mod_counter(step, update_section_every_step) && 
+            in_bisection(state) == false
         @debug "[collocation] update section"
         updatesection!(coll, po, params)
     end

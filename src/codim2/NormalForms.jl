@@ -267,7 +267,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
     κ1 = LA.dot(p1, B(H0001, H0001))
     κ2 = pAq(p1, H0001, lens1) * K11[1] +
          pAq(p1, H0001, lens2) * K11[2]
-    J2K = @. J2_11 * K11[1]^2 + 2J2_12 * K11[1] * K11[2] + J2_11 * K11[2]^2
+    J2K = @. J2_11 * K11[1]^2 + 2J2_12 * K11[1] * K11[2] + J2_22 * K11[2]^2
     κ3 = LA.dot(p1, J2K)
     K2 = -( κ1 + 2κ2 + κ3 ) .* K10
 
@@ -1536,7 +1536,7 @@ Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = one(T)) where T
-    (;λ1, λ2) = hh.nf
+    (; λ2) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
     p2 = _get(hh.params, lens2)

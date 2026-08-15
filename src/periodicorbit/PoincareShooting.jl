@@ -469,7 +469,7 @@ function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, st
 
     psh = get_discretization(wrap)
     update_section_every_step = psh.update_section_every_step
-    if success && mod_counter(step, update_section_every_step) == 1 && bisection == false
+    if success && mod_counter(step, update_section_every_step) && bisection == false
         @debug "[Periodic orbit] update section"
         xm = get_time_slices(psh, _copy(z.u)) 
         updatesection!(psh, z.u, setparam(wrap, z.p))
