@@ -5,22 +5,32 @@ function d2F(wrapcoll::PeriodicOrbitFunctionalColl, x, p, dx1, dx2)
     d2PO(z -> po_residual(get_discretization(wrapcoll), z, p), x, dx1, dx2)
 end
 
-function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalColl, x, par)
+function jacobian_period_doubling_with_border(pbwrap::PeriodicOrbitFunctionalColl, x, par)
     N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
     # put the PD boundary condition
     J[end-N:end-1, 1:N] .= LA.I(N)
+    return J
+end
+
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalColl, x, par)
+    J = jacobian_period_doubling_with_border(pbwrap, x, par)
     return J[begin:end-1, begin:end-1]
 end
 
-function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalColl, x, par, ω)
+function jacobian_neimark_sacker_with_border(pbwrap::PeriodicOrbitFunctionalColl, x, par, ω)
     N, m, Ntst = size(get_discretization(pbwrap))
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
     J = Complex.(Jac)
     J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ω))(N)
-    Jns = J[begin:end-1, begin:end-1]
+    return J
+end
+
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalColl, x, par, ω)
+    J = jacobian_neimark_sacker_with_border(pbwrap, x, par, ω)
+    return J[begin:end-1, begin:end-1]
 end
 
 for (fname, cdt, err_msg) in (
@@ -163,26 +173,17 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     # we put the problem back to the state it was
     restore_problem!(pbwrap, bifpt.x, par)
 
-    # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(get_discretization(pbwrap))
-    N, m, Ntst = size(coll)
-
     # get the PD eigenvectors
-    # TODO: use jacobian_period_doubling?
-    # tODO: merge with Shooting
-    jac = jacobian(pbwrap, pdpointguess.u, par)
-    J = copy(jac) # careful, we copy in case of use of DenseAnalyticalInplace
+    J = jacobian_period_doubling_with_border(pbwrap, saved_solution(pdpointguess.u), par)
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
     J[end, end] = 0
-    # enforce PD boundary condition
-    J[end-N:end-1, 1:N] .= LA.I(N)
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, pdpointguess.u, par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
+    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, saved_solution(pdpointguess.u), par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation
     continuation_pd(pbwrap, alg,
         pdpointguess, par,
@@ -221,21 +222,14 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
     nspointguess = ns_point(br, ind_bif)
 
-    # we copy the problem for not mutating the one passed by the user
-    coll = deepcopy(get_discretization(getprob(br)))
-    N, m, Ntst = size(coll)
-
     # get the NS eigenvectors
     par = setparam(br, bifpt.param)
-    jac = jacobian(getprob(br), nspointguess.u, par)
-    J = Complex.(copy(jac)) # careful, we copy in case of use of DenseAnalyticalInplace
+    λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+    J = jacobian_neimark_sacker_with_border(getprob(br), saved_solution(nspointguess.u), par, imag(λₙₛ))
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to eigenspace
     J[:, end] .= rand(nj)
     J[end, end] = 0
-    # enforce NS boundary condition
-    λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(exp(λₙₛ))(N)
 
     rhs = zeros(nj); rhs[end] = 1
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)

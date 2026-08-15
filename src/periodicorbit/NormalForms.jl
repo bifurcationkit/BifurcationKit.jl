@@ -1027,9 +1027,9 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                                         nev::Int = 3,
                                         verbose = false,
                                         lens = getlens(pbwrap),
-                                        _NRMDEBUG = false, # normalise to compare to ApproxFun
-                                        kwargs_nf...)
-    @debug "method IOOSS, NRM = $_NRMDEBUG"
+                                        NRMDEBUG::Val{_NRMDEBUG} = Val(false), # normalise to compare to ApproxFun
+                                        kwargs_nf...) where {_NRMDEBUG}
+    @debug "method IOOSS, NRM = $NRMDEBUG"
 
     # based on the article
     # Kuznetsov, Yu. A., W. Govaerts, E. J. Doedel, and A. Dhooge. “Numerical Periodic Normalization for Codim 1 Bifurcations of Limit Cycles.” SIAM Journal on Numerical Analysis 43, no. 4 (January 2005): 1407–35. https://doi.org/10.1137/040611306.

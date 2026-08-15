@@ -21,13 +21,18 @@ jacobian_adjoint_period_doubling_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ 
 jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, -cis(-ω), dx)
 
 # same as above but matrix based
-function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+function jacobian_period_doubling_with_border(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
     M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     J = copy(Jac)
     # put the PD boundary condition
     J[end-N:end-1, 1:N] .= LA.I(N)
+    return J
+end
+
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+    J = jacobian_period_doubling_with_border(pbwrap, x, par)
     return J[begin:end-1, begin:end-1]
 end
 
@@ -120,13 +125,18 @@ function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{
     dx -> jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, -cis(ω), dx)
 end
 
-function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
+function jacobian_neimark_sacker_with_border(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
     M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
     # put the NS boundary condition
     J = Complex.(copy(Jac))
     J[end-N:end-1, 1:N] .*= cis(ω)
+    return J
+end
+
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
+    J = jacobian_neimark_sacker_with_border(pbwrap, x, par, ω)
     return J[begin:end-1, begin:end-1]
 end
 
@@ -260,12 +270,10 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     biftype = bifpt.type
 
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
-
     nspointguess = ns_point(br, ind_bif)
 
     # copy the problem for not mutating the one passed by the user
     pbwrap = getprob(br)
-
     par_ns = setparam(br, bifpt.param)
 
     # compute the eigenspace
@@ -277,14 +285,6 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
     q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(randn(nj)), 0, Complex.(zeros(nj)), 1)
     q ./= norm(q)
     p = conj(q)
-
-    ###########
-    # ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-    # # compute the full eigenvector
-    # floquetsolver = br.contparams.newton_options.eigsolver
-    # ζ_a = floquetsolver(Val(:ExtractEigenVector), getprob(br), bifpt.x, setparam(br, bifpt.param), real.(ζ))
-    # ζs = reduce(vcat, ζ_a)
-    # ζs_ad = copy(ζs)
 
     # perform continuation
     continuation_ns(getprob(br), alg,
