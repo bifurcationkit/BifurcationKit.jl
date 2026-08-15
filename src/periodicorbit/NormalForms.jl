@@ -1040,6 +1040,9 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     T = getperiod(coll, ns.x0, par)
     𝒯 = eltype(coll)
 
+    # identity matrix for collocation problem
+    Icoll = I(coll, saved_solution(ns.x0), par)
+
     F(u, pars) = residual(coll.prob_vf, u, pars)
     A(u, p, du) = apply(jacobian(coll.prob_vf, u, p), du)
     B(u, p, du1, du2)      = BilinearMap( (dx1, dx2)      -> d2F(coll.prob_vf, u, p, dx1, dx2))(du1, du2)

@@ -248,7 +248,7 @@ z0 = rand(4)
 par_sl = (k1=0.1631021, k2=1250., k3=0.046875, k4=20., k5=1.104, k6=0.001, k₋₇=0.1175, k7=1.5, k8=0.75)
 bifprob = BK.ODEBifProblem(SL!, z0, par_sl, (@optic _.k8);)
 
-alg_ode = Vern9()
+alg_ode = Rodas5()
 prob_de = ODEProblem(SL!, z0, (0, 136.), par_sl)
 sol_ode = OrdinaryDiffEq.solve(prob_de, alg_ode)
 prob_de = ODEProblem(SL!, sol_ode.u[end], (0, 30.), sol_ode.prob.p, reltol = 1e-11, abstol = 1e-13)
