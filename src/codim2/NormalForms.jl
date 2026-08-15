@@ -1338,7 +1338,7 @@ function hopf_hopf_normal_form(_prob,
     prob_vf = 𝐌𝐚.prob_vf
 
     if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
-        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(prob_ma))")
+        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(𝐌𝐚))")
     end
 
     # linear solver

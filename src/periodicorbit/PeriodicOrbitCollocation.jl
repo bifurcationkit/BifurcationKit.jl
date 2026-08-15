@@ -16,9 +16,9 @@ $(TYPEDFIELDS)
 
     MeshCollocationCache(Ntst::Int, m::Int, 𝒯 = Float64)
 
-- `Ntst` number of time steps.
+- `Ntst` number of intervals of the coarse mesh.
 - `m` degree of the collocation polynomials.
-- `Ty` type of the time variable.
+- `𝒯` type of the time variable.
 """
 struct MeshCollocationCache{𝒯}
     "Coarse mesh size."
@@ -184,13 +184,15 @@ Here are some useful methods you can apply to `coll::Collocation`:
 - `size(coll)` returns the triplet `(N, m, Ntst)`.
 - `getmesh(coll)` returns the mesh `0 = τ₁ < ... < τₙₜₛₜ₊₁ = 1`. This is useful because this mesh is bound to vary during automatic mesh adaptation.
 - `get_mesh_coll(coll)` returns the (static) mesh `-1 = σ₁ < ... < σₘ₊₁ = 1`.
-- `get_times(coll)` returns the vector of times (length `1 + m * Ntst`) at the which the collocation is applied.
-- `generate_solution(coll, orbit, period)` generate a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
-- `POInterpolation(coll, x)` return a function interpolating the solution `x` using a piecewise polynomials function.
-- `getperiod(coll po, p)` return the period of the periodic orbit `po`.
+- `get_times(coll)` returns the vector of times (length `1 + m * Ntst`) at which the collocation is applied.
+- `generate_solution(coll, orbit, period)` generates a guess from a function `t -> orbit(t)` which approximates the periodic orbit.
+- `POInterpolation(coll, x)` returns a function interpolating the solution `x` using a piecewise polynomial function.
+- `getperiod(coll, po, p)` returns the period of the periodic orbit `po`.
 
 # Orbit guess
-You can evaluate the residual of the functional (and other things) by calling `coll(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
+An orbit guess `orbitguess` must be of size 1 + N * (1 + m * Ntst) where N is the number of unknowns in the state space and `orbitguess[end]` is an estimate of the period `T` of the limit cycle.
+
+`Collocation` is a discretization, not a functional. You can evaluate the residual `G` and its jacobian on an orbit guess using `po_residual(coll, orbitguess, p)`, `po_residual!(coll, out, orbitguess, p)` and `po_analytical_jacobian(coll, orbitguess, p)`.
 
 Note that you can generate this guess from a function using `generate_solution` or `generate_ci_problem`.
 
@@ -199,15 +201,25 @@ Note that you can generate this guess from a function using `generate_solution` 
 Specify the choice of the jacobian (and linear algorithm), `jacobian` must belong to `$_pocoll_jacobian_types`.\n\nThis is used to
   select a way of inverting the jacobian dG of the functional G. See website for more information.
 
+# Mesh adaptation
+
+Mesh adaptation is activated by setting `meshadapt = true`. It then modifies the mesh, i.e. the distribution of the `Ntst` intervals over `[0, 1]`, so as to equilibrate an estimate of the discretization error along the orbit. More precisely, it is performed every `update_section_every_step` continuation steps after a successful Newton convergence (and not during bisection).
+
+At each adaptation, the local error is estimated from the jump of the `m`-th derivative of the polynomial interpolating the orbit, which stands in for the `(m + 1)`-th derivative of the true solution. From this, a monitor function `ϕ` is built and a new mesh is computed by equipartition of `∫ϕ`, i.e. the intervals are redistributed so that each of them carries the same amount of error.
+
+The new mesh is enforced to satisfy `max(hᵢ) / min(hᵢ) ≤ K`, where `hᵢ` denotes the time steps; this bound is set through the parameter `K`. Set `verbose_mesh_adapt = true` to print information about the new mesh and the monitor function at each adaptation.
+
+Note that mesh adaptation modifies `getmesh(coll)` in place. The mesh is stored in the solutions saved along the branch (see `POSavedSolutionAndState`), so that it can be restored, e.g. when starting a new branch from a bifurcation point.
+
 # Constructors
 - `Collocation(Ntst::Int, m::Int; kwargs)` creates an empty functional with `Ntst` and `m`.
 
 # Functional
- A functional, hereby called `G`, encodes this problem. The following methods are available
+ A functional, hereby called `G`, encodes this problem. `Collocation` is a discretization of `G`; it is wrapped into the functional `PeriodicOrbit(coll)`. The following methods are available on this functional
 
-- `residual(coll, orbitguess, p)` evaluates the functional G on `orbitguess`
-- `residual!(coll, out, orbitguess, p)` evaluates the functional G on `orbitguess`
-- `jacobian(coll, orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
+- `residual(PeriodicOrbit(coll), orbitguess, p)` evaluates the functional G on `orbitguess`
+- `residual!(PeriodicOrbit(coll), out, orbitguess, p)` evaluates the functional G on `orbitguess`
+- `jacobian(PeriodicOrbit(coll), orbitguess, p)` evaluates the jacobian dG of the functional G on `orbitguess`
 """
 @with_kw_noshow struct Collocation{Tprob <: Union{Nothing, AbstractBifurcationProblem}, Tjac <: AbstractJacobianType, 𝒯, vectype, ∂vectype, Tmass} <: AbstractDifferentialDiscretization
     "Bifurcation problem."
@@ -225,9 +237,10 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
     "Dimension of the state space."
     N::Int = 0
 
-    # whether the problem is nonautonomous
+    "Whether the vector field is autonomous, i.e. does not depend explicitly on time."
     isautonomous::Bool = true
 
+    "Mass matrix to handle differential-algebraic (DAE) problems. Defaults to `nothing` for standard ODE problems."
     massmatrix::Tmass = nothing
 
     "Update the section every `update_section_every_step` step during continuation."
@@ -239,7 +252,7 @@ Specify the choice of the jacobian (and linear algorithm), `jacobian` must belon
     "Cache for collocation. See docs of `MeshCollocationCache`."
     mesh_cache::MeshCollocationCache{𝒯} = nothing
 
-    # cache for allocation free computations
+    "Cache for allocation free computations. See docs of `POCollCache`."
     cache::POCollCache{𝒯} = nothing
 
     #################
@@ -388,7 +401,7 @@ Generate a guess and a periodic orbit problem from a solution.
 - `bifprob` a bifurcation problem to provide the vector field
 - `sol` basically an `ODEProblem` or a function `t -> sol(t)`
 - `period` estimate of the period of the periodic orbit
-- `cache_In = false` for caching in `MeshCollocationCache`
+- `cache_In = false` saves memory by not allocating the identity matrix inside `POCollCache` (see `save_mem`).
 - `optimal_period = true` optimizes the period
 - `use_adapted_mesh = false` adapt the mesh to minimize error. Should be used with mesh adaptation `meshadapt = true`.
 
@@ -446,11 +459,11 @@ $(TYPEDSIGNATURES)
 
 [INTERNAL] Implementation of ∫₀ᵀ < u(t), v(t) > dt.
 
-```∫(coll, uc, vc, T = 1)```
+    ∫(coll, uc, vc, period = one(VI.scalartype(uc)))
 
 # Arguments
-- uj  n x (m + 1)
-- vj  n x (m + 1)
+- `uc` n x (m * Ntst + 1)
+- `vc` n x (m * Ntst + 1)
 """
 @views function ∫(coll::Collocation,
                     uc::AbstractMatrix,
@@ -494,12 +507,12 @@ end
 """
 $(TYPEDSIGNATURES)
 
-[INTERNAL] Implementation of phase condition ∫_0^T < u(t), ∂ϕ(t) > dt. Note that it works for non uniform mesh.
+[INTERNAL] Implementation of the phase condition (1/T)∫₀ᵀ < u(t), ∂ϕ(t) > dt. Note that it works for non uniform mesh.
 
 # Arguments
+- `uc` n x (m * Ntst + 1)
 - `Ls = (L, ∂L)` from `get_Ls`
-- uj   n x (m + 1)
-- guj  n x m
+- `period` period of the orbit
 """
 function phase_condition(coll::Collocation,
                         uc,
@@ -1047,13 +1060,13 @@ end
 $(TYPEDSIGNATURES)
 
 This is the Newton solver for computing a periodic orbit using orthogonal collocation method.
-Note that the linear solver has to be apropriately set up in `options`.
+Note that the linear solver has to be appropriately set up in `options`.
 
 # Arguments
 
-Similar to [`newton`](@ref) except that `prob` is a [`Collocation`](@ref).
+Similar to [`newton`](@ref) except that `coll` is a [`Collocation`](@ref).
 
-- `prob` a problem of type `<: Collocation` encoding the shooting functional G.
+- `coll` a discretization of type `<: Collocation` encoding the collocation functional G.
 - `orbitguess` a guess for the periodic orbit.
 - `options` same as for the regular [`newton`](@ref) method.
 
@@ -1088,7 +1101,7 @@ This is the continuation method for computing a periodic orbit using an orthogon
 Similar to [`continuation`](@ref) except that `prob` is a [`Collocation`](@ref). By default, it prints the period of the periodic orbit.
 
 # Keywords arguments
-- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetQaD`
+- `eigsolver` specify an eigen solver for the computation of the Floquet exponents, defaults to `FloquetColl`
 """ # TODO This is a bit of a hack. It should be a Functional not a discretization like Collocation
 function continuation(coll::Collocation,
                     orbitguess,
@@ -1236,7 +1249,7 @@ function compute_error!(coll::Collocation, x::AbstractVector; kw...)
     period = getperiod(coll, x, nothing)
     # get solution, we copy x because it is overwritten at the end of this function
     sol = POInterpolation(deepcopy(coll), copy(x))
-    (; newτsT, ϕ) = _compute_error!(coll, sol, x, period)
+    (; newτsT, ϕ) = _compute_error!(coll, sol, x, period; kw...)
     # update solution
     newsol = generate_solution(coll, sol, period)
     x .= newsol
@@ -1244,7 +1257,7 @@ function compute_error!(coll::Collocation, x::AbstractVector; kw...)
     return (;success, newτsT, ϕ)
 end
 
-function _compute_error!(coll::Collocation, sol, x::AbstractVector{𝒯}, ΔT;
+function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, ΔT;
                         normE = norminf,
                         verbosity::Bool = false,
                         K = 𝒯(Inf),
@@ -1335,6 +1348,7 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
     has_mesh_been_updated = false
 
     # mesh adaptation
+    # TODO Not sure state is updated!
     if converged(state) &&
             meshadapt(coll) &&
             in_bisection(state) == false &&
@@ -1377,7 +1391,7 @@ function restore_problem!(wrap::PeriodicOrbitFunctionalColl, x::POSavedSolutionA
     return true
 end
 
-function restore_problem!(wrap::PeriodicOrbitFunctionalColl, x::AbstractVector, pars)
+function restore_problem!(::PeriodicOrbitFunctionalColl, ::AbstractVector, pars)
     return true
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

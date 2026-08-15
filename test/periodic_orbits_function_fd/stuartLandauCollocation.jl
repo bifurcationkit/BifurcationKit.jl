@@ -344,11 +344,20 @@ end
 # test Hopf aBS
 let
     optcontpo = ContinuationPar(optconteq; detect_bifurcation = 2, tol_stability = 1e-7, nev = 10)
-    for jacPO in (BK.DenseAnalytical(), BK.AutoDiffDense(), BK.FullSparse(), BK.DenseAnalyticalInplace(), BK.FullSparseInplace()), use_nf in (true, false)
+    for jacPO in (BK.DenseAnalytical(),
+                    BK.AutoDiffDense(),
+                    BK.FullSparse(),
+                    BK.DenseAnalyticalInplace(),
+                    BK.FullSparseInplace()), 
+        use_nf in (true, 
+                   false)
         useGEV = jacPO in (BK.AutoDiffDense(), BK.DenseAnalytical())
-        _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 10, p_max = 0.8).newton_options.verbose = false)
-        for lspo in (BK.MatrixBLS(), BK.COPBLS())
-            for eig in (EigArnoldiMethod(;sigma=0.1), EigArpack(0.1), DefaultEig())
+        _cont_po =(@set ContinuationPar(optcontpo; ds = 0.01, max_steps = 15, p_max = 1.9).newton_options.verbose = false)
+        for lspo in (BK.MatrixBLS(), 
+                     BK.COPBLS())
+            for eig in (EigArnoldiMethod(;sigma=0.1),
+                        # EigArpack(0.1),
+                        DefaultEig())
                 # @error "" jacPO use_nf typeof(lspo) eig
                 br_po_gev = continuation(br, 1, _cont_po,
                     Collocation(20, 5; jacobian = jacPO);

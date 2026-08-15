@@ -65,13 +65,13 @@ end
 _getdim(::COPCACHE{dim}) where {dim} = dim
 
 """
-$TYPEDEF
+$(TYPEDEF)
 
 Linear solver based on the condensation of parameters.
 
 # Internal fields
 
-$TYPEDFIELDS
+$(TYPEDFIELDS)
 
 # Constructors
 
@@ -87,13 +87,13 @@ struct COPLS{dim, 𝒯, Tp} <: AbstractDirectLinearSolver
 end
 
 """
-$TYPEDEF
+$(TYPEDEF)
 
 Bordered linear solver based on the condensation of parameters. `dim` in the struct definition is the size of the border counting the phase condition. It is thus `dim = 1` for COPLS and `dim = 2` for the case of arclength continuation of periodic orbits as there are two constraints: the phase and the arclength.
 
 # Internal fields
 
-$TYPEDFIELDS
+$(TYPEDFIELDS)
 
 # Constructors
 

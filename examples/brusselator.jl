@@ -133,7 +133,12 @@ end
 plot(br_hopf)
 ####################################################################################################
 # automatic branch switching from Hopf point
-opt_po = NewtonPar(tol = 1e-10, verbose = true, max_iterations = 15)
+function plotPO(x,p;k...)
+    sol = BK.get_periodic_orbit(p.prob, x, p.p)
+    heatmap!(1:n, sol.t, (sol.u[1:n,:])'; color = :viridis, k...)
+end
+
+opt_po = NewtonPar(verbose = true, max_iterations = 15, tol = 1e-11)
 opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, p_max = 2.2, max_steps = 200, newton_options = opt_po,
     plot_every_step = 1, nev = 11, tol_stability = 1e-6,
     detect_bifurcation = 3, max_bisection_steps = 15, n_inversion = 4)
@@ -155,6 +160,7 @@ br_po = continuation(
         (Base.display(contResult.eig[end].eigenvals) ;true)
         end,
     # plot_solution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
+    plot_solution = plotPO,
     normC = norminf)
 ####################################################################################################
 # semi-automatic branch switching from bifurcation BP-PO

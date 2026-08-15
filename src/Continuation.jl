@@ -284,8 +284,8 @@ function save!(br::ContResult,
     # update branch field
     push!(br.branch, get_state_summary(it, state))
     # save solution
-    if it.contparams.save_sol_every_step > 0 && 
-        (mod_counter(state.step, it.contparams.save_sol_every_step) || 
+    if (it.contparams.save_sol_every_step > 0 && 
+        (mod_counter(state.step, it.contparams.save_sol_every_step)) || 
         ~done(it, state))
         push!(br.sol, (x = save_solution(it.prob, _copy(getx(state)), setparam(it.prob, getp(state))),
                        p = getp(state),
@@ -483,12 +483,13 @@ function Base.iterate(it::ContIterable,
         end
 
         if compute_eigenelements(it)
-            # this computes eigen-elements, store them in state and update the stability indices in state
+            # computes eigen-elements, store them in state and update the stability indices in state
             it_eigen = compute_eigenvalues!(it, state)
             if verbose1
                 printstyled(color=:green,"──▶ Computed ", length(state.eigvals), " eigenvalues in ", it_eigen, " iterations, #unstable = ", state.n_unstable[1], "\n")
             end
         end
+        # update the problem inplace
         state.stopcontinuation = ~update_problem!(it, state)
         state.step += 1
     else

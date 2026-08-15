@@ -40,6 +40,21 @@ where ``h_1 = s_i - s_{i-1}``. ``M_a`` is a mass matrix. Finally, the phase of t
 # Internal fields
 $(TYPEDFIELDS)
 
+# Methods
+
+Here are some useful methods you can apply to `pb::Trapeze`:
+
+- `length(pb)` gives the number `M * N` of unknowns in the time-discretized state (without the period `T`, which is stored as `x[end]`).
+- `get_mesh_size(pb)` returns the number `M` of time slices.
+- `get_times(pb)` returns the normalized times `sᵢ` at which the orbit is discretized, i.e. the cumulative sum of the mesh steps.
+- `get_time_slices(pb, x)` returns the orbit guess `x` as an `N x M` matrix.
+- `get_mass_matrix(pb)` returns the mass matrix, defaulting to the identity if none was provided.
+- `hasmassmatrix(pb)` returns `true` if a mass matrix was provided.
+- `getparams(pb)`, `getlens(pb)` and `setparam(pb, p)` give access to the parameters of the underlying vector field.
+- `getdelta(pb)` returns the step `δ` used for finite differences.
+- `generate_solution(pb, orbit, period)` generates a guess from a function `t -> orbit(t)`.
+- `get_periodic_orbit(pb, x, pars)` computes the full periodic orbit, mainly for plotting purposes.
+
 # Constructors
 
 The structure can be created by calling `Trapeze(;kwargs...)`. For example, you can declare such a problem without vector field by doing
@@ -47,9 +62,9 @@ The structure can be created by calling `Trapeze(;kwargs...)`. For example, you 
     Trapeze(M = 100)
 
 # Orbit guess
-You will see below that you can evaluate the residual of the functional (and other things) by calling `pb(orbitguess, p)` on an orbit guess `orbitguess`. Note that `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
+An orbit guess `orbitguess` must be a vector of size M * N + 1 where N is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
 
-Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
+Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`. You can evaluate the residual of the functional `G` on an orbit guess using `po_residual(pb, orbitguess, p)` and its jacobian with the methods listed in the `# Functional` section below.
 
 # Functional
  A functional, hereby called `G`, encodes this problem. The following methods are available
@@ -92,6 +107,7 @@ $DocStrjacobianPOTrap
     "Whether the computation takes place on the gpu (Experimental)."
     ongpu::Bool = false
 
+    "Whether the vector field is autonomous, i.e. does not depend explicitly on time."
     isautonomous::Bool = true
 
     "Mass matrix. You can pass for example a sparse matrix. Default: identity matrix."

@@ -681,7 +681,7 @@ end
 let
     n = 100
     x0 = rand(n)
-    J0 = I + sprand(n,n,0.1)
+    J0 = I + sprand(n, n, 0.1)
     B = diagm(0 => vcat(ones(n)))
 
     geil = BK.EigenMassMatrix(B, BK.DefaultEig())
@@ -705,17 +705,20 @@ end
 let
     n = 100
     x0 = rand(n)
-    J0 = I + sprand(n,n,0.1)
+    J0 = I + sprand(n, n, 0.1)
     B = diagm(0 => vcat(ones(n-1), 0))
     Jmf = x -> J0 * x
     Bmf = x -> B * x
 
-    @test _test_sorted(BK.DefaultGEig(; B)(J0, 10)[1])
+    outkk = BK.DefaultGEig(; B)(J0, 10)
+    @test _test_sorted(outkk[1])
+    @test all(isfinite, outkk[1])
 
     eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
     geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
     outkk = geil(Symmetric(J0), 10)
     @test _test_sorted(outkk[1])
+    @test all(isfinite, outkk[1])
     geteigenvector(eil, outkk[2], 2)
 
     eil = BK.EigArnoldiMethod(;x₀ = rand(n))
@@ -723,4 +726,5 @@ let
     outkk = geil(J0, 10)
     BK.geteigenvector(geil, outkk[2], 1:2)
     @test _test_sorted(outkk[1])
+    @test all(isfinite, outkk[1])
 end

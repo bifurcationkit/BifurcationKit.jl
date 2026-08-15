@@ -5,12 +5,12 @@ Create a problem to implement the Simple / Parallel Multiple Standard Shooting m
 
 A functional, hereby called `G`, encodes the shooting problem. For example, the following methods are available:
 
-- `residual(pb, orbitguess, par)` evaluates the functional G on `orbitguess`
-- `jvp(pb, orbitguess, par, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`.
-- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
-- `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
+- `po_residual(pb, orbitguess, par)` evaluates the functional G on `orbitguess`
+- `po_jvp(pb, orbitguess, par, du)` evaluates the jacobian `dG(orbitguess)⋅du` functional at `orbitguess` on `du`.
+- `po_jacobian(pb, orbitguess, par)` computes the matrix of the jacobian `dG(orbitguess)` analytically, based on monodromy matrices. Useful mainly for ODEs.
+- `po_jacobian!(pb, J, orbitguess, par)` same as above but overwrites `J` inplace.
 
-You can then call `residual(pb, orbitguess, par)` to apply the functional to a guess. Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
+You can then call `po_residual(pb, orbitguess, par)` to apply the functional to a guess. Note that you can generate this guess from a function solution using `generate_solution` or `generate_ci_problem`.
 
 ## Allowed types
 
@@ -19,6 +19,18 @@ You can then call `residual(pb, orbitguess, par)` to apply the functional to a g
 
 # Internal fields
 $(TYPEDFIELDS)
+
+# Methods
+
+Here are some useful methods you can apply to `pb::Shooting`:
+
+- `get_mesh_size(pb)` returns the number `M` of time slices.
+- `get_time_slices(pb, x)` returns the time slices, either as an `N x M` matrix or as a `BorderedArray`.
+- `getparams(pb)`, `getlens(pb)` and `setparam(pb, p)` give access to the parameters of the model.
+- `isparallel(pb)` returns `true` if the multiple trajectories are simulated in parallel (threading).
+- `generate_solution(pb, orbit, period)` generates a guess from a function `t -> orbit(t)`.
+- `POInterpolation(pb, x)` returns a function interpolating the periodic orbit `x`.
+- `get_periodic_orbit(pb, x, pars)` computes the full periodic orbit, mainly for plotting purposes.
 
 # Jacobian
 $DocStringJacobianPOSh
@@ -61,6 +73,7 @@ where we supply now two `ODEProblem`s. The first one `prob1`, is used to define 
     M::Int64 = 0                         # number of sections
     "`flow::Flow`: implements the flow of the Cauchy problem though the structure [`Flow`](@ref)."
     flow::Tf = Flow()                    # should be a Flow
+    "`ds`: vector of the time differences for each shooting, of length `M`. Defaults to a uniform partition of `[0, 1]`."
     ds::Ts = diff(LinRange(0, 1, M + 1)) # difference of times for multiple shooting
     "`section`: implements a phase condition. The evaluation `section(x, T)` must return a scalar number where `x` is a guess for **one point** on the periodic orbit and `T` is the period of the guess. Also, the method `section(x, T, dx, dT)` must be available and must return the differential of `section`. The type of `x` depends on what is passed to the newton solver. See [`SectionSS`](@ref) for a type of section defined as a hyperplane."
     section::Tsection = nothing          # sections for phase condition

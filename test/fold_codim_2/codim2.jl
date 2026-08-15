@@ -60,7 +60,10 @@ sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
 sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 6
 
-for eigen_start in (true, false), _jac in (BK.AutoDiff(), BK.FiniteDifferences(), BK.MinAugMatrixBased(), BK.MinAug())
+for eigen_start in (true, false), _jac in (BK.AutoDiff(),
+                                           BK.FiniteDifferences(),
+                                           BK.MinAugMatrixBased(),
+                                           BK.MinAug())
     # @info "" eigen_start _jac
     sn_br = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 1., p_min = 0., detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2), 
             bdlinsolver = MatrixBLS(), 

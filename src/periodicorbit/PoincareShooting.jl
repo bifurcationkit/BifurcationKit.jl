@@ -34,14 +34,14 @@ for multiple shooting . Here `prob` is an `Union{ODEProblem, EnsembleProblem}` w
 where `normals` (resp. `centers`) is a list of normals (resp. centers) which defines a list of hyperplanes ``\\Sigma_i``. These hyperplanes are used to define partial Poincaré return maps.
 
 ## Computing the functionals
-A functional, hereby called `G` encodes this shooting problem. You can then call `residual(pb, orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
+A functional, hereby called `G` encodes this shooting problem. You can then call `po_residual(pb, orbitguess, par)` to apply the functional to a guess. Note that `orbitguess::AbstractVector` must be of size M * N where N is the number of unknowns in the state space and `M` is the number of Poincaré maps. Another accepted `guess` is such that `guess[i]` is the state of the orbit on the `i`th section. This last form allows for non-vector state space which can be convenient for 2d problems for example.
 
 Note that you can generate this guess from a function solution using `generate_solution`.
 
-- `residual(pb, orbitguess, par)` evaluates the functional G on `orbitguess`
-- `jvp(pb, orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
-- `pb`(Val(:JacobianMatrixInplace), J, x, par)` compute the jacobian of the functional analytically. This is based on ForwardDiff.jl. Useful mainly for ODEs.
-- `pb(Val(:JacobianMatrix), x, par)` same as above but out-of-place.
+- `po_residual(pb, orbitguess, par)` evaluates the functional G on `orbitguess`
+- `po_jvp(pb, orbitguess, par, du)` evaluates the jacobian `dG(orbitguess).du` functional at `orbitguess` on `du`
+- `po_jacobian(pb, orbitguess, par)` computes the matrix of the jacobian `dG(orbitguess)` analytically, based on monodromy matrices. Useful mainly for ODEs.
+- `po_jacobian!(pb, J, orbitguess, par)` same as above but overwrites `J` inplace.
 
 
 !!! tip "Tip"

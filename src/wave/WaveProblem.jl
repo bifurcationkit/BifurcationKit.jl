@@ -2,7 +2,7 @@ abstract type AbstractTravelingWaveDiscretization end
 """
 $(TYPEDEF)
 
-This composite type implements a functional for freezing symmetries in order, for example, to compute traveling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. When you call `pb(x, par)`, it computes:
+This composite type implements a functional for freezing symmetries in order, for example, to compute traveling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. `TWModel` is a discretization: the residual of the frozen system is obtained by wrapping `pb` into a `TravellingWave` functional, `residual(TravellingWave(pb), x, par)`, which computes:
 
                     ┌                   ┐
                     │ f(x, par) - s⋅∂⋅x │

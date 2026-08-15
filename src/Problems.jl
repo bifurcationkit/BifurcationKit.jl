@@ -15,7 +15,7 @@ abstract type AbstractBifurcationFunction end
 #   - dF(pb::AbstractBifurcationProblem, x, p, dx). This is the jvp. !! 🚧🚧 TODO change name for jvp 🚧🚧
 #   - vjp(pb::AbstractBifurcationProblem, x, p, dx)
 abstract type AbstractBifurcationProblem end
-# This current ``implementation'' of this abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
+# The current ``implementation'' of this abstract type is based on the BifFunction (<: AbstractBifurcationFunction), see below.
 # It provides all derivatives aka the Taylor jet. In practice, we factor the jet out
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.

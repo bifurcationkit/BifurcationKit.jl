@@ -68,7 +68,8 @@ function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at
 end
 
 function __compute_bordered_vectors(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
-     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
+    # Todo: use hopf_ma_test
+    # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
     v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 

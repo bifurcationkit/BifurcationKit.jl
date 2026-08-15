@@ -63,15 +63,11 @@ opts_po_cont = ContinuationPar(dsmax = 0.02, dsmin = 1e-4, p_max = 1.1, max_step
 Mt = 120 # number of time sections
 br_po = continuation(
         br, 2, opts_po_cont,
-        Trapeze(M = Mt; update_section_every_step = 1, jacobian = BK.Dense());
+        Trapeze(M = Mt; jacobian = BK.Dense());
         ampfactor = 1., δp = 0.01,
         verbosity = 0, plot = false,
-        record_from_solution = recordPO,
-        plot_solution = plotPO,
-        finalise_solution = (z, tau, step, contResult; prob = nothing, kwargs...) -> begin
-                return z.u[end] < 40
-                true
-            end,
+        # record_from_solution = recordPO,
+        # plot_solution = plotPO,
         normC = norminf)
 
 # plot(br, br_po)
@@ -109,8 +105,8 @@ for meshadapt in (false, true)
                 br, 2, opts_po_cont,
                 Collocation(40, 4; meshadapt, K = 200);
                 alg = PALC(),
-                record_from_solution = recordPO,
-                plot_solution = plotPO,
+                # record_from_solution = recordPO,
+                # plot_solution = plotPO,
                 normC = norminf)
     @test br_po.specialpoint[1].param ≈  0.63031334 rtol = 1e-4
     @test br_po.specialpoint[2].param ≈ -0.63031334 rtol = 1e-4
@@ -176,7 +172,7 @@ pt = BK.get_normal_form(br_po, 1)
 # └─ c = 25.631010143700337
 # BK.predictor(pt, 0.1,1).δp #0.1
 # a and b must have the same sign
-@test_skip pt.nf.a * pt.nf.c3 > 0
+@test_broken pt.nf.nf.a * pt.nf.nf.b > 0
 
 show(br_po)
 
