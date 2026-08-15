@@ -250,7 +250,7 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     elseif bifpt.type == :gh
         return bautin_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed)
     elseif bifpt.type == :zh
-        return zero_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
+        return zero_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, start_with_eigen)
     elseif bifpt.type == :hh
         return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point

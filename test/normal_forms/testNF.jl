@@ -685,6 +685,13 @@ let
         @test zh.nf.G011/2 ≈ par_zh.G011
         BK.type(zh)
 
+        # same normal form but with the kernel basis computed with a bordered linear system
+        zh_bd = get_normal_form(br_codim2, 1, autodiff = false, detailed = Val(true), start_with_eigen = Val(false))
+        s = sign(dot(zh_bd.ζ.q0, zh.ζ.q0))
+        @test zh_bd.nf.G200 ≈ s * par_zh.G200 rtol = 1e-1 atol = 1e-2
+        @test zh_bd.nf.G110 ≈ s * par_zh.G110 rtol = 1e-1 atol = 1e-2
+        @test zh_bd.nf.G011/2 ≈ s * par_zh.G011 rtol = 1e-1 atol = 1e-2
+
         pred = BK.predictor(zh, Val(:FoldCurve), 0.1)
         pred.EigenVec(0.1)
         pred.EigenVecAd(0.1)

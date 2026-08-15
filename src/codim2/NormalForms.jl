@@ -971,6 +971,11 @@ function predictor(gh::Bautin, ::Val{:FoldPeriodicOrbitCont}, ϵ::T;
             x0 = t -> x0)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# the frequency of the Hopf pair is stored in the special point when the Zero-Hopf / Hopf-Hopf
+# point was detected during a Hopf curve continuation, it is not available otherwise
+_get_frequency(x) = nothing
+_get_frequency(x::MASolutionFreq) = x.ω
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function zero_hopf_normal_form(_prob,
                                 br::AbstractBranchResult, ind_bif::Int,
                                 Teigvec::Type{𝒯eigvec} = _getvectortype(br);
@@ -981,8 +986,10 @@ function zero_hopf_normal_form(_prob,
                                 lens = getlens(br),
                                 scaleζ = norm,
                                 bls = _prob.prob.linbdsolver,
+                                bls_adjoint = nothing,
                                 autodiff = true,
-                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type}
+                                start_with_eigen::Val{start_with_eigen_type} = Val(true),
+                                detailed::Val{detailed_type} = Val(false)) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
 
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
@@ -1005,6 +1012,7 @@ function zero_hopf_normal_form(_prob,
 
     # bordered linear solver
     bls = prob_ma.linbdsolver
+    bls_adjoint = isnothing(bls_adjoint) ? prob_ma.linbdsolverAdjoint : bls_adjoint
 
     # kernel dimension
     N = 3
@@ -1032,46 +1040,84 @@ function zero_hopf_normal_form(_prob,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
-
-    # right eigenvector
-    # TODO IMPROVE THIS
-    if true #haseigenvector(br) == false
-        # we recompute the eigen-elements if there were not saved during the computation of the branch
-        verbose && @info "Recomputing eigenvector on the fly"
-        _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-        # null eigenvalue
-        _ind0 = argmin(abs.(_λ))
-        verbose && @info "The eigenvalue is $(_λ[_ind0])"
-        abs(_λ[_ind0]) > br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
-        q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
-        # imaginary eigenvalue
-        tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
-        # imaginary eigenvalue iω1
-        _ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
-        verbose && (@info "Eigenvalue :" _λ _ind2)
-        _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
-        λI = _λ[_ind2[_indIm]]
-        q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
-        verbose && @info "Second eigenvalue = $(λI)"
-    else
-        error("This case has not been done. Please open an issue on the website.")
-        ζ = _copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
-    end
-
-    # normalise for easier debugging
-    if imag(λI) < 0
-        λI = conj(λI)
-        q1 = conj(q1)
-    end
-
-    q0 = real(q0)
-    q0 ./= scaleζ(q0)
-    cq1 = conj(q1)
-
-    # left eigen-elements
     _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
-    p0, λ★ = get_adjoint_basis(_Jt, conj(_λ[_ind0]), optionsN.eigsolver.eigsolver; nev, verbose)
-    p1, λ★1 = get_adjoint_basis(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
+
+    # right / left eigenvectors
+    if start_with_eigen_type
+        # right eigenvector
+        # TODO IMPROVE THIS
+        if true #haseigenvector(br) == false
+            # we recompute the eigen-elements if there were not saved during the computation of the branch
+            verbose && @info "Recomputing eigenvector on the fly"
+            _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+            # null eigenvalue
+            _ind0 = argmin(abs.(_λ))
+            verbose && @info "The eigenvalue is $(_λ[_ind0])"
+            abs(_λ[_ind0]) > br.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue 0. We found $(_λ[_ind0])"
+            q0 = geteigenvector(optionsN.eigsolver, _ev, _ind0)
+            # imaginary eigenvalue
+            tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
+            # imaginary eigenvalue iω1
+            _ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
+            verbose && (@info "Eigenvalue :" _λ _ind2)
+            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
+            λI = _λ[_ind2[_indIm]]
+            q1 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
+            verbose && @info "Second eigenvalue = $(λI)"
+        else
+            error("This case has not been done. Please open an issue on the website.")
+            ζ = _copy(geteigenvector(optionsN.eigsolver ,br.eig[bifpt.idx].eigenvec, bifpt.ind_ev))
+        end
+
+        # normalise for easier debugging
+        if imag(λI) < 0
+            λI = conj(λI)
+            q1 = conj(q1)
+        end
+
+        q0 = real(q0)
+        q0 ./= scaleζ(q0)
+        cq1 = conj(q1)
+        λ0 = _λ[_ind0]
+
+        # left eigen-elements
+        p0, λ★ = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λ0), optionsN.eigsolver.eigsolver; nev, verbose)
+        p1, λ★1 = _get_adjoint_kernel_basis_1d_from_eigensolver(_Jt, conj(λI), optionsN.eigsolver.eigsolver; nev, verbose)
+    else
+        # compute the basis of the kernel using bordered linear systems
+        verbose && println("──▶ Compute the kernel basis using a bordered linear system")
+        # frequency of the Hopf pair, taken from the branch if available (Zero-Hopf detected
+        # during a Hopf curve continuation) or computed on the fly otherwise
+        ωh = _get_frequency(bifpt)
+        if isnothing(ωh)
+            _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
+            _ind0 = argmin(abs.(_λ))
+            tol_ev = max(1e-10, 10abs(imag(_λ[_ind0])))
+            _ind2 = [ii for ii in eachindex(_λ) if ((abs(imag(_λ[ii])) > tol_ev) & (ii != _ind0))]
+            _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
+            ωh = imag(_λ[_ind2[_indIm]])
+        end
+        abs(ωh) < 1e-12 && @warn "The frequency of the Hopf pair is close to zero ω ≈ $ωh. The bordered system for the complex eigenvector may be ill-conditioned."
+
+        # real null vector q0 and left null vector p0
+        a0 = _randn(x0); VI.scale!(a0, 1 / scaleζ(a0))
+        b0 = _randn(x0); VI.scale!(b0, 1 / scaleζ(b0))
+        bdv = __compute_bordered_vectors_fold(bls, bls_adjoint, L, _Jt, a0, b0, VI.zerovector(a0), 𝒯)
+        q0, p0 = bdv.v, bdv.w
+
+        # complex eigenvectors ±iω
+        a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
+        b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
+        M = getmassmatrix(prob_vf, x0, parbif)
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, _Jt, ωh, a1, b1, VI.zerovector(a1))
+        q1, p1 = bdv.v, bdv.w
+        λI = Complex{𝒯}(0, ωh)
+        λ0 = zero(Complex{𝒯})
+        q0 = real(q0)
+        q0 ./= scaleζ(q0)
+        q1 ./= scaleζ(q1)
+        cq1 = conj(q1)
+    end
 
     # normalise left eigenvectors
     p0 ./= LA.dot(p0, q0)
@@ -1102,7 +1148,7 @@ function zero_hopf_normal_form(_prob,
         parbif,
         lenses,
         (;q0, q1), (;p0, p1),
-        (;ω = λI, λ0 = _λ[_ind0], dFp),
+        (;ω = λI, λ0, dFp),
         :none
     )
 
