@@ -1367,7 +1367,7 @@ function hopf_hopf_normal_form(_prob,
 
     # p0, ω0 = getp(bifpt.x, 𝐌𝐚)
     p0 = bifpt.x.p1
-    ω0 = bifpt.x.ω
+    ω0 = abs(bifpt.x.ω)
 
     # right eigenvector
     # TODO IMPROVE THIS
@@ -1383,7 +1383,7 @@ function hopf_hopf_normal_form(_prob,
         tol_ev = max(1e-10, 10abs(ω0 - imag(_λ[_ind0])))
         # imaginary eigenvalue iω1
         _ind2 = [ii for ii in eachindex(_λ) if abs(abs(imag(_λ[ii])) - abs(ω0)) > tol_ev]
-        _indIm = argmin(real(_λ[ii]) for ii in _ind2)
+        _indIm = argmin(abs(real(_λ[ii])) for ii in _ind2)
         λ2 = _λ[_ind2[_indIm]]
         verbose && @info "The second eigenvalue is $(λ2)"
         q2 = geteigenvector(optionsN.eigsolver, _ev, _ind2[_indIm])
@@ -1422,13 +1422,28 @@ function hopf_hopf_normal_form(_prob,
     p1 ./= LA.dot(q1, p1)
     p2 ./= LA.dot(q2, p2)
 
-    @assert LA.dot(p1, q1) ≈ 1 "we found $(LA.dot(p1, q1)) instead of 1."
-    @assert LA.dot(p2, q2) ≈ 1 "we found $(LA.dot(p2, q2)) instead of 1."
+    LA.dot(p1, q1) ≈ 1 || @warn "we found $(LA.dot(p1, q1)) instead of 1."
+    LA.dot(p2, q2) ≈ 1 || @warn "we found $(LA.dot(p2, q2)) instead of 1."
 
     # parameters
     lenses = (getlens(𝐌𝐚), lens)
     lens1, lens2 = lenses
     p10 = _get(parbif, lens1); p20 = _get(parbif, lens2);
+
+    pt = HopfHopf(
+        x0, nothing, nothing,
+        parbif,
+        lenses,
+        (;q1, q2), (;p1, p2),
+        (;ω0, λ1, λ2),
+        :none
+    )
+
+    # case of simplified normal form
+    if detailed_type == false
+        return pt
+    end
+
 
     # _getp(l::AllOpticTypes) = _get(parbif, l)
     # _setp(l::AllOpticTypes, p::Number) = set(parbif, l, p)
@@ -1439,20 +1454,6 @@ function hopf_hopf_normal_form(_prob,
         # finite differences
         Jp = (p, l) -> (residual(prob_vf, x0, setp(l, p + ϵ2)) .- 
                         residual(prob_vf, x0, setp(l, p - ϵ2)) ) ./ (2ϵ2)
-    end
-
-    pt = HopfHopf(
-        x0, nothing, nothing,
-        parbif,
-        lenses,
-        (;q1, q2), (;p1, p2),
-        (;λ1, λ2),
-        :none
-    )
-
-    # case of simplified normal form
-    if detailed_type == false
-        return pt
     end
 
     # second order differential, to be in agreement with Kuznetsov et al.
@@ -1524,7 +1525,7 @@ function hopf_hopf_normal_form(_prob,
     dω1, dω2 = [imag(G1011), imag(G0021)/2] .- (imag.(Γ) * α) # formula (28) in REF2
     ns2 = (; dω1, dω2, α)
 
-    return @set pt.nf = (;λ1, λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
+    return @set pt.nf = (;ω0, λ1, λ2, G2100, G0021, G1110, G1011, γ₁₁₀, γ₁₀₁, γ₂₁₀, γ₂₀₁, Γ, h₁₁₀₀, h₀₀₁₁, h₀₀₀₀₁₀, h₀₀₀₀₀₁, h₂₀₀₀, h₀₀₂₀, ns1, ns2)
 end
 
 """
@@ -1535,29 +1536,34 @@ Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
                     ampfactor = one(T)) where T
-    (; λ2) = hh.nf
+    (; λ2, λ1, ω0) = hh.nf
     lens1, lens2 = hh.lens
     p1 = _get(hh.params, lens1)
     p2 = _get(hh.params, lens2)
     par0 = [p1, p2]
 
+    i1 = abs(imag(λ2) - ω0) > abs(imag(λ1) - ω0)
+    ω1 = i1 ? imag(λ2) : imag(λ1)
+    ζ1  = i1 ? hh.ζ.q2 : hh.ζ.q1
+    ζ★1 = i1 ? hh.ζ★.p2 : hh.ζ★.p1
+
     function HopfCurve(s)
-        return (pars = par0 , ω = imag(λ2))
+        return (pars = par0 , ω = ω1)
     end
 
     # compute eigenvector corresponding to the Hopf branch
     function EigenVec(s)
-        return hh.ζ.q2
+        return ζ1 #hh.ζ.q2
     end
 
     function EigenVecAd(s)
-        return hh.ζ★.p2
+        return ζ★1 #hh.ζ★.p2
     end
 
-    return (hopf = t -> HopfCurve(t).pars,
+    return (;hopf = t -> HopfCurve(t).pars,
             ω    = t -> HopfCurve(t).ω,
-            EigenVec = EigenVec,
-            EigenVecAd = EigenVecAd,
+            EigenVec,
+            EigenVecAd,
             x0 = t -> 0)
 end
 

@@ -150,7 +150,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = false,
+                    start_with_eigen = false, # allows to filter out option
                     bdlinsolver = MatrixBLS(),
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
@@ -216,7 +216,7 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = false,
+                    start_with_eigen = false, # allows to filter out option
                     bdlinsolver = MatrixBLS(),
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}

@@ -24,6 +24,7 @@ function modify_po_plot(::Union{BK_NoPlot, BK_Plots},
                     kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (x, p; k...) -> _plotsol(getvec(x, probPO.prob), (prob = probPO, p = p); k...)
+    return _plotsol2
 end
 
 function modify_po_plot(::BK_Makie, 
@@ -33,6 +34,7 @@ function modify_po_plot(::BK_Makie,
                         kwargs...)
     _plotsol = get(kwargs, :plot_solution, nothing)
     _plotsol2 = isnothing(_plotsol) ? plot_default : (ax, x, p; k...) -> _plotsol(ax, getvec(x, probPO.prob), (prob = probPO, p = p); k...)
+    return _plotsol2
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 __get_discretization(pb::AbstractWrapperPeriodicOrbitProblem) = get_discretization(pb)

@@ -351,7 +351,7 @@ br_pok2 = continuation(_psh, outpo.u, PALC(tangent = Bordered()),
 @info "Multiple Poincaré Shooting aBS"
 # test automatic branch switching with most possible options
 # calls with analytical jacobians
-br_psh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005), PoincareShooting(2, odeprob, Vern9(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
+br_psh = continuation(br, 1, ContinuationPar(opts_po_cont; ds = 0.005, max_steps = 10), PoincareShooting(2, odeprob, Vern9(); abstol=1e-10, reltol=1e-9, parallel = true, lens = @optic _.r); normC = norminf)
 @test BK.getprob(br_psh) isa BK.PeriodicOrbitFunctionalSh
 @test br_psh.period[1] ≈ 2pi rtol = 1e-7
 

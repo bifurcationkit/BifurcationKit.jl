@@ -17,6 +17,13 @@ function Pop!(du, X, p, t = 0)
     du
 end
 
+function record_po_coll_codim2(x, p; k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+    return (max = maximum(xtt[1,:]),
+            min = minimum(xtt[1,:]),
+            period = getperiod(p.prob, x, p.p))
+end
+
 let
 par_pop = ( K = 1., r = 2π, a = 4π, b0 = 0.25, e = 1., d = 2π, ϵ = 0.2, )
 z0 = [0.1,0.1,1,0]
@@ -30,15 +37,10 @@ sol = OrdinaryDiffEq.solve(prob_de, alg)
 prob_de = ODEProblem(Pop!, sol.u[end], (0,5.), par_pop, reltol = 1e-8, abstol = 1e-10)
 sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 ################################################################################
-argspo = (record_from_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
-        return (max = maximum(xtt[1,:]),
-                min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, p.p))
-    end,)
+argspo = (record_from_solution = record_po_coll_codim2,)
 ################################################################################
-coll, ci = generate_ci_problem(Collocation(26, 3), prob, sol, 2.; use_adapted_mesh = true)
-coll, ci = generate_ci_problem(Collocation(26, 3), prob, sol, 2.)
+coll, ci = generate_ci_problem(Collocation(30, 4), prob, sol, 2.; use_adapted_mesh = true)
+coll, ci = generate_ci_problem(Collocation(40, 3), prob, sol, 2.)
 
 solpo = newton(coll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -50,7 +52,7 @@ brpo_fold = continuation(coll, deepcopy(ci), PALC(), opts_po_cont;
     verbosity = 0, plot = false,
     argspo...
     )
-# pt = get_normal_form(brpo_fold, 1)
+get_normal_form(brpo_fold, 1)
 
 coll2 = @set coll.prob_vf = BK.re_make(prob, lens = @optic _.ϵ)
 brpo_pd = continuation(coll2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
@@ -66,16 +68,17 @@ get_normal_form(brpo_pd, 1, prm = Val(false))
 opts_pocoll_fold = ContinuationPar(BK.getcontparams(brpo_fold), detect_bifurcation = 3, max_steps = 3, p_min = 0., p_max=1.2, n_inversion = 4)
 @reset opts_pocoll_fold.newton_options.tol = 1e-12
 
-for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false)
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false), steigen in (true, false)
     fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_pocoll_fold;
             verbosity = 0, plot = false,
             detect_codim2_bifurcation = 1,
-            start_with_eigen = false,
+            # start_with_eigen = steigen,
             usehessian,
             bothside = true,
             jacobian_ma = jma,
             bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
             )
+    @assert ~isnothing(fold_po_coll1.eig)
     @test fold_po_coll1.kind isa BK.FoldPeriodicOrbitCont
 end
 
@@ -83,12 +86,12 @@ end
 opts_pocoll_pd = ContinuationPar(BK.getcontparams(brpo_pd), detect_bifurcation = 3, max_steps = 20, p_min = -1., dsmax = 1e-2, ds = 1e-3)
 @reset opts_pocoll_pd.newton_options.tol = 1e-12
 
-for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false), steigen in (true, false)
     pd_po_coll = continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
                     detect_codim2_bifurcation = 1,
-                    start_with_eigen = false,
+                    start_with_eigen = steigen,
                     usehessian = false,
                     jacobian_ma = jma,
                     normC = norminf,
@@ -118,13 +121,13 @@ get_normal_form(brpo_ns, 1; prm = Val(false))
 
 opts_pocoll_ns = ContinuationPar(BK.getcontparams(brpo_ns), detect_bifurcation = 2, max_steps = 20, p_min = 0., dsmax = 7e-3, ds = -1e-3)
 
-for jma in (BK.MinAug(), BK.MinAugMatrixBased(), )
+for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false), steigen in (true, false)
     opts_pocoll_ns2 = @set opts_pocoll_ns.detect_bifurcation = 2
     ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns2;
             verbosity = 0, plot = false,
             detect_codim2_bifurcation = 1,
             update_minaug_every_step = 1,
-            start_with_eigen = false,
+            start_with_eigen = steigen,
             usehessian = false,
 
             jacobian_ma = jma,

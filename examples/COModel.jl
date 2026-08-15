@@ -67,12 +67,12 @@ brpo = @time continuation(br, 2, opts_po_cont,
     Collocation(50, 3 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
     # verbosity = 0, plot = true,
     normC = norminf,
-    alg = PALC(tangent = Bordered()),
-    # alg = PALC(),
-    # alg = MoorePenrose(tangent=PALC(tangent = Bordered()), method = BK.direct),
+    # alg = PALC(tangent = Bordered()),
+    alg = PALC(),
+    # alg = MoorePenrose(predictor=PALC(tangent = Bordered()), method = BK.direct),
     δp = 0.00025,
-    linear_algo = COPBLS(),
-    callback_newton = BK.cbMaxNormAndΔp(1., 1.5e-3),
+    # linear_algo = COPBLS(),
+    callback_newton = BK.cbMaxNormAndΔp(1., 1.0e-3),
     bothside = true,
     args_po...
     )

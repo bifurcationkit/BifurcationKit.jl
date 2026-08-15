@@ -144,7 +144,7 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 
 # Arguments
 - `node::BifDiagNode` a node in the bifurcation diagram
-- `maxlevel = 1` required maximal level of recursion.
+- `maxlevel` required maximal level of recursion.
 - `options = (x, p, level; k...) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
 
 # Optional arguments

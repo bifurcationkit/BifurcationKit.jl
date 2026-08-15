@@ -220,7 +220,7 @@ Automatic branch switching at branch points based on a computation of the normal
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `nev` number of eigenvalues to be computed to get the right eigenvector
-- `verbosedeflation = true` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
+- `verbosedeflation = false` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
 - `scaleζ` norm used to normalize eigenbasis when computing the reduced equation
 - `Teigvec` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `ζs` basis of the kernel
