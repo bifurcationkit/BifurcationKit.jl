@@ -26,7 +26,7 @@ module PlotsExt
                            BVPSolution,
                            hasbranch,
                            AbstractTwoParamCont,
-                           NSCont,
+                           NSCont, PDCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont,
                            HopfCont,
                            is_supercritical
 

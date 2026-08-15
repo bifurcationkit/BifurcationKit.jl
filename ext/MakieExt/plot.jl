@@ -104,13 +104,16 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
 
     # stability linewidth
     linewidth = linewidthunstable
-    if Tkind <: AbstractTwoParamCont
-        linewidthstable = 1
-    end
     indices = Int[sp.idx for sp in contres.specialpoint if sp.type !== :endpoint]
     # isplit required to work with CairoMakie due to change of linewidth for stability
     if _hasstability(contres) && plotstability
-        linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
+        if Tkind == NSPeriodicOrbitCont || Tkind == HopfCont || Tkind == PDPeriodicOrbitCont
+            linewidth = isplit(map(ind -> is_supercritical(contres, ind) ? linewidthstable : linewidthunstable, eachindex(contres.stable)), indices, false)
+        elseif Tkind <: AbstractTwoParamCont
+            linewidth = isplit(fill(linewidthunstable, length(contres.stable)), indices, false)
+        else
+            linewidth = isplit(map(x -> x ? linewidthstable : linewidthunstable, contres.stable), indices, false)
+        end
     end
 
     if dash_unstable_style == false
@@ -123,7 +126,7 @@ function plot!(ax1, contres::AbstractResult{Tkind, Tprob};
         end
     else
         if Tkind <: AbstractTwoParamCont
-            _stable = (Tkind == NSCont || Tkind == HopfCont) ? [is_supercritical(contres, ind) for ind in eachindex(contres.stable)] : fill(true, length(contres.stable))
+            _stable = (Tkind == NSPeriodicOrbitCont || Tkind == HopfCont || Tkind == PDPeriodicOrbitCont) ? [is_supercritical(contres, ind) for ind in eachindex(contres.stable)] : fill(true, length(contres.stable))
         else
             _stable = contres.stable
         end

@@ -248,7 +248,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
     ind1, ind2 = get_plot_vars(contres, vars)
     xlab, ylab = get_axis_labels(ind1, ind2, contres)
     @series begin
-        if Tk == NSCont || Tk == HopfCont
+        if Tk == NSPeriodicOrbitCont || Tk == HopfCont || Tk == PDPeriodicOrbitCont
             if isnothing(unstable_plot_type)
                 linewidth --> map(ind -> is_supercritical(contres, ind) ? linewidthstable : linewidthunstable, eachindex(contres.param))
             else

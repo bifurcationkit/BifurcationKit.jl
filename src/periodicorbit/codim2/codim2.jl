@@ -155,8 +155,12 @@ __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args..
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 
-function is_supercritical(br::AbstractResult{<:NeimarkSackerMinimallyAugmentedFormulation}, ind::Int)
+function is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int)
     real(br.CH[ind]) < 0
+end
+
+function is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int)
+    real(br.GPD[ind]) < 0
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})

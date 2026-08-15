@@ -28,7 +28,7 @@ module MakieExt
                            plotAllDCBranch,
                            plot_DCont_branch,
                            AbstractResult,
-                           NSCont,
+                           NSCont, PDCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont,
                            HopfCont,
                            is_supercritical
     include("plot.jl")
