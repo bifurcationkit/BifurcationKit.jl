@@ -527,20 +527,20 @@ Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Fold bifur
 A named tuple `(; ζ, ζad)` of the normalized right and left eigenvectors, with the normalization `⟨ζ, ζad⟩ = 1`.
 """
 function _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    u0 = saved_solution(bifpt.x)
     # we use a minimally augmented formulation to set the initial vectors
-    a = isnothing(a) ? _randn(_copy(bifpt.x)) : a; VI.scale!(a, 1 / normC(a))
-    b = isnothing(b) ? _randn(_copy(bifpt.x)) : b; VI.scale!(b, 1 / normC(b))
+    a = isnothing(a) ? _randn(_copy(u0)) : a; VI.scale!(a, 1 / normC(a))
+    b = isnothing(b) ? _randn(_copy(u0)) : b; VI.scale!(b, 1 / normC(b))
+    @error "" typeof(bifpt.x) typeof(prob)
 
-    𝒯 = VI.scalartype(bifpt.x)
-    L = jacobian(prob, bifpt.x, parbif)
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, bifpt.x, parbif) : transpose(L)
-    M = getmassmatrix(prob, bifpt.x, parbif)
+    𝒯 = typeof(bifpt.param)
+    L = jacobian(prob, u0, parbif)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, u0, parbif) : transpose(L)
 
     (; v, w, itv, itw) = __compute_bordered_vectors_fold(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
 
-    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, v))
-
-    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w))
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, parbif)) norminf(apply(L, v))
+    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, parbif)) norminf(apply(L★, w))
 
     ζad = w; VI.scale!(ζad, 1 / normC(ζad))
     ζ   = v; VI.scale!(ζ,   1 / normC(ζ))

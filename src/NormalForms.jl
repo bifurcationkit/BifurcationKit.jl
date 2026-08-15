@@ -1119,7 +1119,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     else
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
-        (; v, w) = __compute_bordered_vectors(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v
         ζ★ = w
         λ★ = conj(λ)

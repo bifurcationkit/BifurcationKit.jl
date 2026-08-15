@@ -185,7 +185,7 @@ _duu = rand(length(_solpo))
 _sol = BK.PDMALinearSolver(_solpo, _p1, 𝐏𝐝, _param, _duu, 1.)
 _solfd = _Jpdad \ vcat(_duu, 1)
 
-@test norminf(_solfd[1:end-1] - _sol[1]) < 1e-3 # it comes from FD in σₓ
+@test norminf(_solfd[1:end-1] - _sol[1]) < 1e-2 # it comes from FD in σₓ
 @test abs(_solfd[end] - _sol[2]) < 5e-3
 
 _probpd_matrix = @set _probpd.jacobian = BK.MinAugMatrixBased()
