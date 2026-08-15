@@ -39,8 +39,9 @@ sol = OrdinaryDiffEq.solve(prob_de, Rodas5())
 ################################################################################
 argspo = (record_from_solution = record_po_coll_codim2,)
 ################################################################################
+for _meshadapt in (false, true)
 coll, ci = generate_ci_problem(Collocation(30, 4), prob, sol, 2.; use_adapted_mesh = true)
-coll, ci = generate_ci_problem(Collocation(40, 3), prob, sol, 2.)
+coll, ci = generate_ci_problem(Collocation(40, 3; meshadapt = _meshadapt), prob, sol, 2.)
 
 solpo = newton(coll, ci, NewtonPar(verbose = false))
 @test BK.converged(solpo)
@@ -54,7 +55,8 @@ brpo_fold = continuation(coll, deepcopy(ci), PALC(), opts_po_cont;
     )
 get_normal_form(brpo_fold, 1)
 
-coll2 = @set coll.prob_vf = BK.re_make(prob, lens = @optic _.ϵ)
+coll2 = deepcopy(coll)
+coll2 = @set coll2.prob_vf = BK.re_make(prob, lens = @optic _.ϵ)
 brpo_pd = continuation(coll2, deepcopy(ci), PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 0, plot = false,
     argspo...
@@ -91,6 +93,7 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
                     detect_codim2_bifurcation = 1,
+                    update_minaug_every_step = 1, # keep this to be sure for the test
                     start_with_eigen = steigen,
                     usehessian = false,
                     jacobian_ma = jma,
@@ -126,7 +129,7 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
     ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns2;
             verbosity = 0, plot = false,
             detect_codim2_bifurcation = 1,
-            update_minaug_every_step = 1,
+            update_minaug_every_step = 1, # keep this to be sure for the test
             start_with_eigen = steigen,
             usehessian = false,
 
@@ -149,7 +152,7 @@ end
 
 ################################################################################
 # test of the implementation of the jacobian for the PD case
-
+if _meshadapt == false
 pd_po_coll2 = continuation(deepcopy(brpo_pd), 1, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3);
                     # verbosity = 3, plot = true,
@@ -220,4 +223,6 @@ _solfd = _Jnsad \ vcat(_duu, _dp, 1)
 _probpd_matrix = @set _probns.jacobian = BK.MinAugMatrixBased()
 J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-7
+end
+end
 end

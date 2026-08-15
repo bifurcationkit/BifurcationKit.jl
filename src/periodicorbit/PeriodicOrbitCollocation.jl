@@ -1204,7 +1204,11 @@ end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # interpolation method
-(sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb, t0, getx(sol), getperiod(getprob(sol), getx(sol), nothing))
+(sol::POInterpolation{ <: Collocation})(t0) = __interpolate_posolution(sol.pb,
+                                                                t0,
+                                                                getx(sol),
+                                                                getperiod(getprob(sol), getx(sol), nothing)
+                                                                )
 
 function __interpolate_posolution(coll::Collocation, t0, x::AbstractVector, period)
     xm = get_time_slices(coll, x)
@@ -1375,13 +1379,18 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
     return (; success = true, newmesh, newτsT, ϕ)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+Internal function to perform mesh adaptation of Collocation problem.
+This can be technical when doing mesh adaptation during NS/PD/Fold continuation as the state space of state is not
+necessarily an AbstractVector. In this case, one can pass the hack update_pred = false
+"""
 function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
     update_section_every_step = coll.update_section_every_step
     step = state.step
     has_mesh_been_updated = false
 
     # mesh adaptation
-    # TODO Not sure state is updated!
+    # Carefull, state may be updated!
     if converged(state) &&
             meshadapt(coll) &&
             in_bisection(state) == false &&
@@ -1389,26 +1398,43 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
             step > 2
         @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
-        old_po = _copy(po) # avoid possible overwrite in compute_error!
-        oldmesh = get_times(coll) .* getperiod(coll, old_po, nothing)
-        adapt = compute_error!(coll, old_po;
+        # we keep a copy of the tangent and of the old mesh so that the tangent
+        # can be re-interpolated onto the new mesh after the adaptation.
+        coll_old = deepcopy(coll)
+        period = getperiod(coll, po, nothing)
+        # this resamples po (= state.z.u) onto the new mesh inplace
+        adapt = compute_error!(coll, po;
                     verbosity = coll.verbose_mesh_adapt,
                     K = coll.K,
                     )
         if ~adapt.success # stop continuation if mesh adaptation fails
+            # don't worry: in this case, coll was not touched.
             return false
         end
     end
+
     if converged(state) && 
             mod_counter(step, update_section_every_step) && 
             in_bisection(state) == false
         @debug "[collocation] update section"
         updatesection!(coll, po, params)
     end
-    if has_mesh_been_updated && update_pred
-        # we recompute the tangent predictor
+
+    if has_mesh_been_updated &&
+            update_pred && 
+            state.τ.u isa AbstractVector
+        # we keep a copy of the tangent and of the old mesh so that the tangent
+        # can be re-interpolated onto the new mesh after the adaptation.
+        # we re-interpolate the tangent onto the new mesh and update the predictor
+        # without recomputing the tangent (which would mix different meshes)
         @debug "[collocation] update predictor"
-        getpredictor!(state, iter)
+        τu = _copy(state.τ.u)
+        τinterp = t -> __interpolate_posolution(coll_old, t, τu, period)
+        # τinterp = POInterpolation(coll_old, )
+        τnew = generate_solution(coll, τinterp, period)
+        τnew[end] = τu[end] # restore the period component of the tangent
+        state.τ.u .= τnew
+        update_predictor!(state, iter)
     end
     return true
 end

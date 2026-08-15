@@ -216,14 +216,23 @@ function save_solution(bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, x, pars
     end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function __interpolate_bvp_solution(coll::BK.Collocation, t0, x::AbstractVector, interval)
+    n, m, Ntst = size(coll)
+    xm = BK.get_time_slices(x, n, m, Ntst)
+    __interpolate_bvp_solution(coll, t0, xm, interval)
+end
+
+@views function __interpolate_bvp_solution(coll::BK.Collocation, t0, xm::AbstractMatrix, interval::Real)
+    BK.__interpolate_posolution(coll, t0, xm, interval)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function (sol::BK.BVPInterpolation{ <:  DiscretizedBVP{ Tmodel, <: Collocation}})(t0) where {Tmodel}
     d_bvp = sol.pb
     model = get_model(d_bvp)
     coll = d_bvp.cache.po_coll
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
-    xm = get_time_slices(d_bvp, BK.getx(sol))
-    BK.__interpolate_posolution(coll, t0, xm, δT)
+    __interpolate_bvp_solution(coll, t0, BK.getx(sol), δT)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}}, 
@@ -236,43 +245,55 @@ end
 
 function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, update_pred = true)
     disc = get_discretizer(d_bvp)
+    if meshadapt(disc) == false
+        return true
+    end
+
     model = get_model(d_bvp)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
     coll = d_bvp.cache.po_coll
     has_mesh_been_updated = false
-    if meshadapt(disc) == false
-        return true
-    end
     update_every_step = disc.update_every_step
     step = state.step
     if BK.converged(state) &&
+            meshadapt(disc) &&
             BK.in_bisection(state) == false &&
             BK.mod_counter(step, update_every_step) &&
             step > 2
-            @debug "[Collocation] update mesh"
+        @debug "[Collocation] update mesh"
         has_mesh_been_updated = true
+         # we keep a copy of the tangent and of the old mesh so that the tangent
+        # can be re-interpolated onto the new mesh after the adaptation.
+        coll_old = deepcopy(coll)
         old_bvp = BK._copy(bvpsol) # avoid possible overwrite in compute_error!
-        oldmesh = BK.get_times(coll) .* δT
         ####################################
         # get solution, we copy x because it is overwritten at the end of this function
         sol = BK.BVPInterpolation(deepcopy(d_bvp), copy(old_bvp), nothing)
-
-        (; success, newmesh, ϕ) = BK._compute_error!(coll, sol, old_bvp, δT;
+        adapt = BK._compute_error!(coll, sol, old_bvp, δT;
                             verbosity = disc.verbose_mesh_adapt,
                             K = coll.K,
                             )
         # update solution
         newsol = generate_solution(d_bvp, sol)
         old_bvp .= newsol
-        if ~success # stop continuation if mesh adaptation fails
+        if ~adapt.success # stop continuation if mesh adaptation fails
+            # don't worry: in this case, coll was not touched.
             return false
         end
     end
+
     if has_mesh_been_updated && update_pred
-        # we recompute the tangent predictor
+        # we keep a copy of the tangent and of the old mesh so that the tangent
+        # can be re-interpolated onto the new mesh after the adaptation.
+        # we re-interpolate the tangent onto the new mesh and update the predictor
+        # without recomputing the tangent (which would mix different meshes)
         @debug "[collocation] update predictor"
-        BK.getpredictor!(state, iter)
+        τu = BK._copy(state.τ.u)
+        τinterp = t -> __interpolate_bvp_solution(coll_old, t, τu, δT)
+        τnew = BK.generate_solution(coll, τinterp, δT)
+        state.τ.u .= τnew[1:end-1]
+        BK.update_predictor!(state, iter)
     end
     return true
 end

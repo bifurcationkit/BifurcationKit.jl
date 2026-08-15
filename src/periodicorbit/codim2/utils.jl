@@ -72,6 +72,7 @@ function update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation{ <: PeriodicOrb
     Z = getsolution(state)
     po = getvec(Z.u, 𝐌𝐚)
     params = getparams(iter, state)
-    # we do not update the predictor in the following call
+    # TODO: improve the following
+    # we do not update the predictor in the following call. 
     return update_po_coll!(coll, po, params, iter, state, false)
 end
