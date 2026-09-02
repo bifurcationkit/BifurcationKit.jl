@@ -24,6 +24,7 @@ module BifurcationKit
     include("jacobianTypes.jl")
     include("ContKind.jl")
     include("Problems.jl")
+    include("dae/Problems.jl")
 
     # we put this here to be used in LinearBorderSolver and Continuation
     abstract type AbstractContinuationAlgorithm end
@@ -133,7 +134,7 @@ module BifurcationKit
     export DefaultEig, EigArpack, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
     # Problems
-    export BifurcationProblem, BifFunction, getlens, getparams, re_make, ODEBifProblem, DAEBifProblem
+    export BifurcationProblem, BifFunction, getlens, getparams, re_make, ODEBifProblem
 
     # bordered nonlinear problems
     # export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem, newtonBordered, continuationBordered

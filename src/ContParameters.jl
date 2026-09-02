@@ -116,7 +116,7 @@ function init(contparams::ContinuationPar{T,S,E},
 end
 
 function init(contparams::ContinuationPar{T,S,E}, 
-               prob::Union{ODEBifProblem, DAEBifProblem}, 
+               prob::Union{ODEBifProblem, DAEMassBifProblem}, 
                ::AbstractContinuationAlgorithm) where {T,S,E <: DefaultEig}
     n = length(getu0(prob))
     @reset contparams.nev = n

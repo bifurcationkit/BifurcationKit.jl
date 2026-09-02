@@ -20,6 +20,7 @@ abstract type AbstractBifurcationProblem end
 # of BifFunction because we rarely needs the Taylor jet except for very specific normal forms.
 # The type definition of BifFunction would be very long otherwise if we had to parameterize all jets.
 abstract type AbstractAllJetBifProblem <: AbstractBifurcationProblem end
+abstract type AbstractDAEBifProblem <: AbstractAllJetBifProblem end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # This is the abstract type for Minimally Augmented problems. See codimension two continuation.
 abstract type AbstractMABifurcationProblem{T, Tjac} <: AbstractBifurcationProblem end
@@ -343,7 +344,6 @@ const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
     :ODEBifProblem => "Specific to Ordinary Differential Equations  (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
     :PDEBifProblem => "Specific to Partial Differential Equations   (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
-    :DAEBifProblem => "Specific to Differential Algebraic Equations (DAE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧."
 )
 
 save_solution_default(x, p) = x
@@ -356,7 +356,6 @@ plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 for (op, at, kd) in (
                 (:BifurcationProblem, nothing, nothing), # <: AbstractAllJetBifProblem
                 (:ODEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
-                (:DAEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
                 (:PDEBifProblem, nothing, nothing), # <: AbstractAllJetBifProblem
 
                 (:FoldMAProblem, AbstractMABifurcationProblem, nothing),
@@ -371,7 +370,7 @@ for (op, at, kd) in (
 
                 (:WrapTW, AbstractWaveProblem, :TravellingWave),
            )
-    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem, :DAEBifProblem)
+    if op in (:BifurcationProblem, :ODEBifProblem, :PDEBifProblem)
         @eval begin
             """
             $(TYPEDEF)
@@ -590,6 +589,8 @@ getparam(pb::AbstractBifurcationProblem) = _get(getparams(pb), getlens(pb))
 setparam(pb::AbstractBifurcationProblem, p0) = set(getparams(pb), getlens(pb), p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
+getmassmatrix(pb::AbstractBifurcationProblem, x, p) = TrivialMassMatrix() # for Hopf continuation
+is_mass_matrix_constant(::AbstractBifurcationProblem) = true
 
 # specific to AbstractAllJetBifProblem
 isinplace(pb::AbstractAllJetBifProblem) = isinplace(pb.VF)
