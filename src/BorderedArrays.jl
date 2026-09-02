@@ -223,7 +223,7 @@ Initialize a vector like `randn!`.
 """
 _randn(x) = randn!(_copy(x))
 _randn(x::VI.MinimalVec) = randn!(_copy(x.vec))
-_randn!(x::VI.MinimalVec) = (randn!(x.vec);x)
+_randn!(x::VI.MinimalVec) = (randn!(x.vec); x)
 
 _randn(y::BorderedArray{T, V}) where {T, V} = (x = _copy(y);_randn!(x);x)
 

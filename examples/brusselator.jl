@@ -133,8 +133,8 @@ end
 plot(br_hopf)
 ####################################################################################################
 # automatic branch switching from Hopf point
-function plotPO(x,p;k...)
-    sol = BK.get_periodic_orbit(p.prob, x, p.p)
+function plotPO(x,p; state, iter, k...)
+    sol = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     heatmap!(1:n, sol.t, (sol.u[1:n,:])'; color = :viridis, k...)
 end
 
@@ -144,6 +144,7 @@ opts_po_cont = ContinuationPar(dsmin = 0.001, dsmax = 0.04, p_max = 2.2, max_ste
     detect_bifurcation = 3, max_bisection_steps = 15, n_inversion = 4)
 
 probPO = Trapeze(M = 51; N = 2n, jacobian = BK.BorderedSparseInplace())
+# probPO = Collocation(20,2; N=2n, jacobian = BK.FullSparseInplace())
 br_po = continuation(
     # arguments for branch switching
     br, 1,
@@ -159,7 +160,6 @@ br_po = continuation(
         @info "Floquet exponents:"
         (Base.display(contResult.eig[end].eigenvals) ;true)
         end,
-    # plot_solution = (x, p; kwargs...) -> heatmap!(get_periodic_orbit(p.prob, x, par_bru).u'; ylabel="time", color=:viridis, kwargs...),
     plot_solution = plotPO,
     normC = norminf)
 ####################################################################################################

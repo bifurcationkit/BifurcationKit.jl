@@ -19,7 +19,7 @@ Solve the generalized eigenvalue problem ``A x = \\lambda B x`` using `l`.
 function gev(eig::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
     F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B); sortby = eig.which)
-    J = findall( isfinite, F.values)
+    J = findall(isfinite, F.values)
     nev2 = min(nev, length(J))
     return Complex.(F.values[J][end:-1:end-nev2+1]), Complex.(F.vectors[:, J[end:-1:end-nev2+1]]), true, 1
 end

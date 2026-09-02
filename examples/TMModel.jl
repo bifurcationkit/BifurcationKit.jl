@@ -29,23 +29,23 @@ plot(br, plotfold = false)
 br_hopf = @time BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
-        jacobian_ma = BK.MinAug(),
+        jacobian_ma = BK.MinAugMatrixBased(),
         bothside = true,)
 plot(br_hopf)
 ####################################################################################################
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
-function recordPO(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function recordPO(x, p; state, iter, k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
             period = getperiod(p.prob, x, p.p))
 end
 
 # arguments for periodic orbits
-function plotSolution(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function plotSolution(x, p; state, iter, k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "E", k...)
     plot!(xtt.t, xtt[2,:]; label = "x", k...)
     plot!(xtt.t, xtt[3,:]; label = "u", k...)
@@ -68,18 +68,16 @@ plot(br, br_potrap, markersize = 3)
 plot!(br_potrap.param, br_potrap.min, label = "")
 ####################################################################################################
 # branching to PO from Hopf using Collocation
-opts_po_cont = ContinuationPar(opts_br, ds = 0.0001, dsmin = 1e-4, max_steps = 90, tol_stability = 1e-5, detect_bifurcation = 2, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds = 0.0001, dsmin = 1e-4, max_steps = 110, tol_stability = 1e-5, detect_bifurcation = 3, plot_every_step = 10)
 
 br_pocoll = @time continuation(
     br, 4, opts_po_cont,
-    Collocation(100, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
-    alg = PALC(tangent = Bordered()),
-    # verbosity = 3, plot = true,
+    Collocation(40, 4; meshadapt = true, jacobian = BK.DenseAnalyticalInplace());
     args_po...,
     linear_algo = BK.COPBLS(),
     )
 
-plot(br, br_pocoll, markersize = 3, xlims = (-2.5, 0))
+plot(br, br_pocoll, markersize = 3, xlims = (-2., -1))
 ####################################################################################################
 # idem with Standard shooting
 import OrdinaryDiffEq as ODE
@@ -94,31 +92,29 @@ br_posh = @time continuation(
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Standard Shooting
-    Shooting(15, prob_ode, ODE.Rodas5(), parallel = true,);
+    Shooting(15, prob_ode, Rodas5(), parallel = true,);
     linear_algo = MatrixBLS(),
     # verbosity = 2,
     plot = true,
+    callback_newton = BK.cbMaxNorm(1e0),
     args_po...,
     )
 
 plot(br_posh, br, markersize = 3)
 ####################################################################################################
 # idem with Poincaré shooting
-opts_po_cont = ContinuationPar(opts_br, dsmax = 0.02, ds= 0.0001, max_steps = 50, newton_options = NewtonPar(tol = 1e-9, max_iterations=15), tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 5)
+opts_po_cont = ContinuationPar(opts_br, dsmax = 0.02, ds= 0.001, max_steps = 50, newton_options = NewtonPar(tol = 1e-11, max_iterations=15), tol_stability = 1e-6, detect_bifurcation = 0, plot_every_step = 5)
 
 br_popsh = @time continuation(
     br, 4,
     # arguments for continuation
     opts_po_cont,
     # this is where we tell that we want Poincaré Shooting
-    PoincareShooting(5, prob_ode, ODE.Rodas5(); parallel = true);
-    # usedeflation = true,
-    linear_algo = MatrixBLS(),
+    PoincareShooting(10, prob_ode, Rodas5(); parallel = true);
     verbosity = 2, plot = true,
     args_po...,
     callback_newton = BK.cbMaxNorm(1e0),
     normC = norminf)
-
 plot(br, br_popsh, markersize = 3)
 ####################################################################################################
 # periodic orbit from curve of Hopf bifurcations

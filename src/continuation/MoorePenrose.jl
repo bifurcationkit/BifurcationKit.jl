@@ -107,7 +107,7 @@ update_predictor!(state::AbstractContinuationState,
 # corrector based on natural formulation
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    algo::MoorePenrose;
+                    ::MoorePenrose;
                     kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
@@ -153,7 +153,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     x = _copy(z_pred.u)
     p = z_pred.p
     res_f = residual(prob, x, set(par, paramlens, p))
-    dFdp = R01(prob, x, set(par, paramlens, p))
+    dFdp = R01(FiniteDifferences(), prob, x, set(par, paramlens, p))
 
     res = normN(res_f)
     residuals = [res]
@@ -177,7 +177,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         step += 1
-        R01!(prob, dFdp, x, par, p)
+        R01!(FiniteDifferences(), prob, dFdp, x, par, p)
         J = jacobian(prob, x, set(par, paramlens, p))
 
         if method === direct || method === pInv

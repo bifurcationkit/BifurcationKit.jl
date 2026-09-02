@@ -94,12 +94,13 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
     dₚF = minus(residual(𝐅.prob_vf, x, set(par, lens, p + ϵₚ)),
                 residual(𝐅.prob_vf, x, set(par, lens, p - ϵₚ)))
     VI.scale!(dₚF, 𝒯(1 / (2ϵₚ)))
-    dJvdp = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵⱼ)), v),
-                  apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵⱼ)), v));
-    VI.scale!(dJvdp, 𝒯(1/(2ϵⱼ)))
-    σₚ = -VI.inner(w, dJvdp)
 
-    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵₓ, v, w, par0, dJvdp, itv, itw)
+    ∂Jv∂p = minus(apply(jacobian(𝐅.prob_vf, x, set(par, lens, p + ϵⱼ)), v),
+                  apply(jacobian(𝐅.prob_vf, x, set(par, lens, p - ϵⱼ)), v));
+    VI.scale!(∂Jv∂p, 𝒯(1/(2ϵⱼ)))
+    σₚ = -VI.inner(w, ∂Jv∂p)
+
+    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵₓ, v, w, par0, dJvdp = ∂Jv∂p, itv, itw)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}

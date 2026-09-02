@@ -23,18 +23,18 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     # - x guess for the point at which the jacobian has a purely imaginary eigenvalue
     # - p guess for the parameter for which the jacobian has a purely imaginary eigenvalue
     # The jacobian of the MA problem is solved with a BLS method
-    # ┌         ┐┌  ┐   ┌ ┐
-    # │ J-iω  a ││v │ = │0│
-    # │  b    0 ││σ1│   │1│
-    # └         ┘└  ┘   └ ┘
+    # ┌             ┐┌  ┐   ┌ ┐
+    # │ J-iω⋅M  M⋅a ││v │ = │0│
+    # │  M⋅b      0 ││σ1│   │1│
+    # └             ┘└  ┘   └ ┘
     # In the notations of Govaerts 2000, a = w, b = v
-    # Thus, b should be a null vector of J - iω
-    #       a should be a null vector of J'+ iω
+    # Thus, b should be a null vector of J - iω⋅M
+    #       a should be a null vector of J'+ iω⋅M'
     a = 𝐇.a
     b = 𝐇.b
     # update parameter
     par = set(params, getlens(𝐇), p)
-    # we solve (J - iω)⋅v + a σ1 = 0 with <b, v> = 1
+    # we solve (J - iω)⋅v + M⋅a σ1 = 0 with <M⋅b, v> = 1
     # note that the shift argument only affect J in this call:
     J = jacobian(𝐇.prob_vf, x, par)
     _, σ1, cv, = hopf_ma_test(𝐇, J, a, b, zero(𝒯), 𝐇.zero, one(𝒯), ω)
@@ -48,10 +48,10 @@ $(TYPEDSIGNATURES)
 Compute the solution (v, σ) of 
 
 ```
-┌                ┐ ┌  ┐   ┌   ┐
-│ J - iω    𝐇.a  │ │v │ = │ 0 │
-│  𝐇.b'      0   │ │σ │   │ 1 │
-└                ┘ └  ┘   └   ┘
+┌                    ┐ ┌  ┐   ┌   ┐
+│ J - iω⋅M    M⋅𝐇.a  │ │v │ = │ 0 │
+│  (M⋅𝐇.b)'     0    │ │σ │   │ 1 │
+└                    ┘ └  ┘   └   ┘
 ```
 
 and the same for the adjoint system with solution (w, τ).
@@ -133,6 +133,7 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     Jhopf = hcat(J_at_xp, dₚF, VI.zerovector(dₚF))
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
+    return Jhopf
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Struct to invert the jacobian of the Hopf MA problem.
@@ -159,7 +160,7 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
     # This 2 x 2 system is then solved to get (dp, dω)
     ################### inversion of Jhopf ####################
 
-    (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, itv, itw, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
 
     # we solve J⋅x1 = duu and J⋅x2 = dₚF
     x1, x2, cv, (it1, it2) = 𝐇.linsolver(J_at_xp, duu, dₚF)
@@ -288,7 +289,6 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
             prob = getprob(br),
             normN = norm,
             options = br.contparams.newton_options,
-            verbose = true,
             nev = br.contparams.nev,
             start_with_eigen = false,
             kwargs...)
@@ -657,7 +657,7 @@ function (eig::HopfEig)(Jma, nev; k...)
 end
 
 @views function (eig::HopfEig)(Jma::AbstractMatrix, nev; k...)
-    eigenelts = eig.eigsolver(Jma[begin:end-2, begin:end-2], nev; k...)
+    return eig.eigsolver(Jma[begin:end-2, begin:end-2], nev; k...)
 end
 
 geteigenvector(eig::HopfEig, vectors, i::Int) = geteigenvector(eig.eigsolver, vectors, i)

@@ -16,7 +16,7 @@ end
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.001137, 0.891483, 0.062345]
 
-function record_from_solution(x,p;k...)
+function record_from_solution(x,p; k...)
     (x = x[1], y = x[2], s = x[3])
 end
 
@@ -30,8 +30,8 @@ br = @time continuation(prob, PALC(), opts_br;
 plot(br)
 ####################################################################################################
 # periodic orbits
-function plotSolution(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function plotSolution(x, p; state, iter, k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "", k...)
     plot!(xtt.t, xtt[2,:]; label = "", k...)
     plot!(xtt.t, xtt[3,:]; label = "", k...)
@@ -39,9 +39,8 @@ function plotSolution(x, p; k...)
     plot!(br; subplot = 1, putspecialptlegend = false, xlims = (1.02, 1.07))
 end
 
-function plotSolution(ax, x, p; ax1 = nothing, k...)
-    @info "plotsol Makie"
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function plotSolution(ax, x, p; ax1 = nothing, state, iter, k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     lines!(ax1, br)
     lines!(ax, xtt.t, xtt[1,:]; k...)
     lines!(ax, xtt.t, xtt[2,:]; k...)
@@ -49,29 +48,27 @@ function plotSolution(ax, x, p; ax1 = nothing, k...)
     scatter!(ax, xtt.t, xtt[1,:]; markersize = 1.5, k...)
 end
 
-function record_from_solution(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, @set par_com.q2 = p.p)
+function record_from_solution_po(x, p; iter, state, k...)
+    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
             period = getperiod(p.prob, x, @set par_com.q2 = p.p))
 end
 
-args_po = (    record_from_solution = record_from_solution,
+args_po = (    record_from_solution = record_from_solution_po,
     plot_solution = plotSolution,
     normC = norminf)
 
 opts_po_cont = ContinuationPar(opts_br, dsmax = 1., ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
-max_steps = 300, detect_bifurcation = 0, plot_every_step = 10)
+max_steps = 300, detect_bifurcation = 3, plot_every_step = 10, tol_stability = 1e-3)
 
 brpo = @time continuation(br, 2, opts_po_cont,
-    Collocation(50, 3 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = true, update_section_every_step = 0);
+    Collocation(50, 4 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 200, verbose_mesh_adapt = false);
     # verbosity = 0, plot = true,
     normC = norminf,
-    # alg = PALC(tangent = Bordered()),
     alg = PALC(),
-    # alg = MoorePenrose(predictor=PALC(tangent = Bordered()), method = BK.direct),
     δp = 0.00025,
-    # linear_algo = COPBLS(),
+    linear_algo = COPBLS(),
     callback_newton = BK.cbMaxNormAndΔp(1., 1.0e-3),
     bothside = true,
     args_po...

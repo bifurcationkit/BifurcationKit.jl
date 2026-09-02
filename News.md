@@ -66,6 +66,12 @@ All notable changes to this project will be documented in this file (hopefully).
 - add defaults to `ContState` fields and `EmptyContState`
 - refactor the generalized eigenvalue computation into `GeneralizedEigenSolver.jl` and the tangents into `Tangents.jl`
 - use an out-of-place formulation for waves
+- add `∫_gauss` to integrate arrays sampled at the Gauss points, i.e. in the row layout of the collocation operator, consistently with `∫`
+- add the keyword `start_with_eigen = Val(true)` to `get_normal_form1d`, `get_normal_formNd` and the codim 2 normal forms (`hopf`, `cusp`, `bogdanov_takens`, `bautin`, `zero_hopf`, `hopf_hopf`): with `start_with_eigen = Val(false)`, the (right/left) kernel basis is built with a bordered linear system (keywords `bls`, `bls_adjoint`, `bls_block`) instead of the eigensolver, which is more robust for large-scale problems. `bautin_normal_form` also accepts `bls`/`bls_adjoint` like `hopf_normal_form`
+- compute the parameter derivative `dFdp` in the Moore-Penrose algorithm (`newton_moore_penrose`) with the (user provided) `R01`/`R01!` instead of first-order finite differences, and accumulate the number of linear iterations (`itlineartot`)
+
+### Fixed
+- evaluate all the integrands of the NS Iooss normal form (`neimark_sacker_normal_form_iooss`) at the Gauss points and build the RHS of the homological equations `h20`/`h11` in the row layout of the collocation operator. This removes the former `Icoll` mass-matrix pre-scaling and the ad-hoc `h20 ./= 2Ntst` / `h11 ./= 2Ntst` renormalizations.
 
 ## [0.8.0]
 

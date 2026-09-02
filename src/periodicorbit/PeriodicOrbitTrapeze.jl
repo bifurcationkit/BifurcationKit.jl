@@ -149,7 +149,7 @@ end
 @inline isinplace(trap::Trapeze) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
 @inline get_time_step(trap::Trapeze, i::Int) = get_time_step(trap.mesh, i)
 get_times(trap::Trapeze) = cumsum(collect(trap.mesh))
-@inline hasmassmatrix(trap::Trapeze{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
+@inline hasmassmatrix(::Trapeze{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
 @inline getparams(trap::Trapeze) = getparams(trap.prob_vf)
 @inline getlens(trap::Trapeze) = getlens(trap.prob_vf)
 @inline getdelta(trap::Trapeze) = getdelta(trap.prob_vf)
@@ -484,7 +484,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Fill the cyclic (block tridiagonal) part of the block matrix `Jc`, i.e. the jacobian of the Crank-Nicolson relations w.r.t. the space unknowns, using the analytic jacobians ``J(x_i)`` of the vector field evaluated at each slice. The blocks read ``I - (T\\,h_i/2)\\,J(x_i)`` on the diagonal and ``-I - (T\\,h_i/2)\\,J(x_{i-1})`` on the sub-diagonal (with the cyclic convention ``x_0 := x_{M-1}``).
+Fill the cyclic (block tridiagonal) part of the block matrix `Jc`, i.e. the jacobian of the Crank-Nicolson relations w.r.t. the space unknowns, using the analytic jacobians ``J(x_i)`` of the vector field evaluated at each slice. The blocks read ``M - (T\\,h_i/2)\\,J(x_i)`` on the diagonal and ``-M - (T\\,h_i/2)\\,J(x_{i-1})`` on the sub-diagonal (with the cyclic convention ``x_0 := x_{M-1}``).
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
     period = _extract_period_fdtrap(trap, u0)
@@ -504,7 +504,7 @@ function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc:
     Jn = Iₙ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
-    # we could do a Jn .= -I .- ... but we want to allow the sparsity pattern to vary
+    # we could do a Jn .= -M .- ... but we want to allow the sparsity pattern to vary
     Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 

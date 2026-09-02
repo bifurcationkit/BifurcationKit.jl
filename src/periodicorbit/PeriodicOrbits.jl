@@ -400,16 +400,19 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization ;
                       bif_prob = getprob(br),
-                      detailed::Val{detailed_type} = Val(true),
+
+                      detailed::Val{detailed_type} = Val(true), # TODO: we need a kwargs_nf = ()
+                      start_with_eigen::Val{start_with_eigen_type} = Val(true),
+
                       use_normal_form = true,
                       nev = length(eigenvalsfrombif(br, ind_bif)),
-                      kwargs...) where {detailed_type}
+                      kwargs...) where {detailed_type, start_with_eigen_type}
     # compute the normal form of the branch point
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
 
     detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
-    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, start_with_eigen)
     return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 
@@ -426,7 +429,7 @@ function _continuation(hopfpt::Hopf,
     # compute predictor for point on new branch
     ds = isnothing(δp) ? _contParams.ds : δp
     𝒯 = typeof(ds)
-    pred = predictor(hopfpt, ds; verbose, ampfactor = 𝒯(ampfactor))
+    pred = predictor(hopfpt, ds; ampfactor = 𝒯(ampfactor))
 
     # we compute a phase so that the constraint equation
     # < u(0) − u_hopf, ψ > = 0 is satisfied.

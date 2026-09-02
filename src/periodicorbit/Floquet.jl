@@ -358,6 +358,7 @@ end
 function MonodromyQaD(trap::Trapeze, J, u0, par)
     # extraction of various constants
     M, N = size(trap)
+    Mass = get_mass_matrix(trap)
 
     # period of the cycle
     T = getperiod(trap, u0)
@@ -367,14 +368,14 @@ function MonodromyQaD(trap::Trapeze, J, u0, par)
 
     u0c = get_time_slices(u0, N, M)
 
-    @views mono = Array(LA.I - h/2 * (jacobian(trap.prob_vf, u0c[:, 1], par))) \ Array(LA.I + h/2 * jacobian(trap.prob_vf, u0c[:, M-1], par))
+    @views mono = Array(Mass - h/2 * (jacobian(trap.prob_vf, u0c[:, 1], par))) \ Array(Mass + h/2 * jacobian(trap.prob_vf, u0c[:, M-1], par))
     temp = similar(mono)
 
     for ii in 2:M-1
         # for some reason, the next line is faster than doing (I - h/2 * (trap.J(u0c[:, ii]))) \ ...
         # also I - h/2 .* J seems to hurt (a little) the performances
         h =  T * get_time_step(trap, ii)
-        @views temp = Array(LA.I - h/2 * (jacobian(trap.prob_vf, u0c[:, ii], par))) \ Array(LA.I + h/2 * jacobian(trap.prob_vf, u0c[:, ii-1], par))
+        @views temp = Array(Mass - h/2 * (jacobian(trap.prob_vf, u0c[:, ii], par))) \ Array(Mass + h/2 * jacobian(trap.prob_vf, u0c[:, ii-1], par))
         mono .= temp * mono
     end
     return mono

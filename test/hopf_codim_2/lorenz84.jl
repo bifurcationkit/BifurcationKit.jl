@@ -432,22 +432,19 @@ end
 ####################################################################################################
 # branching from Hopf points to periodic orbits
 let
-hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, save_sol_every_step = 1, detect_bifurcation = 1, max_steps = 100)  ;
-    verbosity = 0,
+hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0.001, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, detect_bifurcation = 3, max_steps = 100)  ;
     normC = norminf,
-    detect_codim2_bifurcation = 1,
+    detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    start_with_eigen = true,
+    start_with_eigen = false,
     bothside = true,
     jacobian_ma = BK.MinAug(),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
 
-_br_po = BK.continuation_from_hopf_point(hp_codim2_1, 5, 
-        ContinuationPar(opts_br; detect_bifurcation = 2, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
-        Collocation(20, 5);
-        # verbosity = 3,
-        # autodiff = false, 
+_br_po = BK.continuation_from_hopf_point(hp_codim2_1, 9, 
+        ContinuationPar(opts_br; detect_bifurcation = 3, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
+        Collocation(20, 4);
         lens = getlens(br)
         )
 end

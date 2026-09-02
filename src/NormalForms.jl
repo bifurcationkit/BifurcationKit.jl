@@ -1156,11 +1156,11 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     # right eigenvector
-    if ~haseigenvector(br)
+    ζ = if ~haseigenvector(br)
         # we recompute the eigen-elements if there were not saved during the computation of the branch
-        ζ, _λ0 = _get_target_eigenvector_from_eigensolver(L, λ, options.eigsolver; nev, verbose)
+         _get_target_eigenvector_from_eigensolver(L, λ, options.eigsolver; nev, verbose)[1]
     else
-        ζ = _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+        _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
     end
     VI.scale!(ζ, 1 / scaleζ(ζ))
 
@@ -1205,7 +1205,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                   parbif, lens,
                   ζ, ζ★,
                   HopfNormalForm(a = missing,
-                               b = missing,
+                                 b = missing,
                                Ψ110 = missing,
                                Ψ001 = missing,
                                Ψ200 = missing
@@ -1236,7 +1236,7 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `p` new parameter value
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
-function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
+function predictor(hp::Hopf, ds; ampfactor = 1)
     # get the element type
     𝒯 = VI.scalartype(hp.x0)
     # get the normal form
@@ -1284,12 +1284,12 @@ function predictor(hp::Hopf, ds; verbose::Bool = false, ampfactor = 1)
 
     return (;
             orbit = orbit ,
-            Ψ001 = Ψ001,
+            Ψ001,
             amp = 2amp,
             ω = ω,
             period = abs(2pi / ω),
             p = pnew,
-            dsfactor = dsfactor)
+            dsfactor)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
