@@ -89,7 +89,7 @@ has_hessian(dae::DAEMassBifProblem) = has_hessian(dae.prob_vf)
 # has_adjoint_MF(dae::DAEMassBifProblem) = has_adjoint_MF(dae.prob_vf)
 
 getmassmatrix(dae::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: AbstractMatrix} = dae.M
-getmassmatrix(::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: LA.UniformScaling} = LA.Diagonal(ones(length(x)))
+getmassmatrix(::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: Union{LA.UniformScaling, TrivialMassMatrix}} = LA.Diagonal(ones(length(x)))
 getmassmatrix(dae::DAEMassBifProblem, x, p) = dae.M(x, p)
 is_mass_matrix_constant(::DAEMassBifProblem{ConstantMass}) = true
 is_mass_matrix_constant(::DAEMassBifProblem) = false
@@ -101,6 +101,8 @@ function DAEMassBifProblem(prob, M; type = ConstantMass)
 end
 DAEMassBifProblem{Tkind}(prob, M) where {Tkind <: AbstractDAEMassType} =
     DAEMassBifProblem{Tkind, typeof(prob), typeof(M)}(prob, M)
+
+DAEMassBifProblem{Tkind}(prob, ::LA.UniformScaling{Bool}) where {Tkind <: AbstractDAEMassType} = DAEMassBifProblem{ConstantMass, typeof(prob), TrivialMassMatrix}(prob, TrivialMassMatrix())
 
 function re_make(dae::DAEMassBifProblem{Tkind};
                 M = nothing,

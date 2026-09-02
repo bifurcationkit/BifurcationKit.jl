@@ -569,11 +569,11 @@ function continuation_hopf(prob,
         # computation of adjoint eigenvalue
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         L = jacobian(prob, bifpt.x, parbif)
-        Mass = get_mass_matrix(prob, bifpt.x, parbif)
+        Mass = getmassmatrix(prob, bifpt.x, parbif)
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
         ζ★, = _get_target_eigenvector_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
-        ζad = VI.add(ζ★, 1 / dot_with_mass(ζ★, Mass, ζ))
+        ζad = VI.scale(ζ★, 1 / dot_with_mass(ζ★, Mass, ζ))
     else
         (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
@@ -610,8 +610,8 @@ function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinso
 
     Mass = M isa TrivialMassMatrix ? LA.I : M
 
-    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*Mass*v) norminf(apply(L,v) + complex(0,ω)*v)
-    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*adjoint(Mass)*w) norminf(apply(L★,w) + complex(0,ω)*w)
+    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, v) - complex(0,ω)*apply(Mass,v)) norminf(apply(L,v) + complex(0,ω)*v)
+    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(adjoint(Mass),w)) norminf(apply(L★,w) + complex(0,ω)*w)
 
     ζad = VI.scale(w,  1 / normC(w))
     ζ   = VI.scale(v,  1 / normC(v))

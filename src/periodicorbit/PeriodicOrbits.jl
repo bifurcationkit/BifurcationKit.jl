@@ -576,7 +576,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\nYou can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
 
     # normalise left eigenvector
-    ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
+    ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ))
     @assert dot_with_mass(ζ★, Mass, ζ) ≈ 1
 
     hopfpt = Hopf(x0, nothing, _get(params, lens),
