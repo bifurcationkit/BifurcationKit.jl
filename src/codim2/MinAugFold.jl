@@ -25,7 +25,7 @@ function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where �
     # In the notations of Govaerts 2000, a = w, b = v
     # Thus, b should be a null vector of J
     #       a should be a null vector of J'
-    # we solve Jv + a σ1 = 0 with <b, v> = 1
+    # we solve J⋅v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
     a = 𝐅.a
     b = 𝐅.b
