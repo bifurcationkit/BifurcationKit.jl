@@ -553,6 +553,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     x0 = get_solution(bifpt.x)
     params = getparams(br_hopf, ind_pt)
     L = jacobian(vector_field, x0, params)
+    Mass = jacobian(vector_field, x0, params)
 
     # newton parameters
     optionsN = br_hopf.contparams.newton_options
@@ -568,15 +569,15 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     ζ ./= LA.norm(ζ)
 
     # left eigen-elements
-    _Jt = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
-    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(_Jt, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
+    L★ = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
+    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\nYou can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
 
     # normalise left eigenvector
-    ζ★ ./= VI.inner(ζ, ζ★)
-    @assert VI.inner(ζ, ζ★) ≈ 1
+    ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
+    @assert dot_with_mass(ζ★, Mass, ζ) ≈ 1
 
     hopfpt = Hopf(x0, nothing, _get(params, lens),
                 ω,
@@ -592,7 +593,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                 )
 
     # we compute the Hopf normal form
-    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L)
+    nf = __hopf_normal_form(vector_field, hopfpt, 𝐇.linsolver ; verbose, L, Mass)
     @debug "[PO from Hopf curve]" nf params nf.nf.b/br_hopf[ind_pt].l1
     if ~(nf.nf.b ≈ br_hopf[ind_pt].l1)
         @warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")

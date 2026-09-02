@@ -119,6 +119,12 @@ module BifurcationKit
     # BVP problem
     include("bvp/BVP.jl")
 
+    # DAE problem
+    include("dae/EigSolver.jl")
+    include("dae/Continuation.jl")
+    include("dae/MinAugHopf.jl")
+    include("dae/MinAugFold.jl")
+
     # plotting
     include("plotting/Utils.jl")
 

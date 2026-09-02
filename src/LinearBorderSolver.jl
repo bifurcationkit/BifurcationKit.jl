@@ -225,7 +225,7 @@ MatrixBLS() = MatrixBLS(nothing)
 # case of a scalar additional linear equation
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
-# │ (shift⋅I + J)     dR      ││dX│ = │ R │
+# │ (shift⋅M + J)     dR      ││dX│ = │ R │
 # │   ξu * dzu'   ξp * dzp    ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
 function (lbs::MatrixBLS)(J, dR,
@@ -234,13 +234,14 @@ function (lbs::MatrixBLS)(J, dR,
                           ξu::𝒯 = one(𝒯), 
                           ξp::𝒯 = one(𝒯);
                           shift::𝒯s = nothing, 
+                          Mass = LA.I,
                           dotp = nothing,
                           applyξu! = nothing)  where {𝒯 <: Number, 𝒯s}
 
     if isnothing(shift)
         A = J
     else
-        A = J + shift * LA.I
+        A = J + shift * Mass
     end
     # USE BLOCK ARRAYS LAZY?
     # A = hcat(A, dR)

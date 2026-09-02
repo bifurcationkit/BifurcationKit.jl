@@ -13,8 +13,10 @@ function hopf_point(br::AbstractBranchResult, index::Int)
     return BorderedArray(_copy(saved_solution(specialpoint.x)), [p, ω] )
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# this function encodes the functional
-hopf_ma_test(𝐇, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = 𝐇.linbdsolver(J, a, b, J22, _zero, n; shift = Complex{𝒯}(0, -ω))
+# this function encodes the functional in the case where the Mass matrix is I, passed as ::Nothing
+hopf_ma_test(𝐇, M, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = _hopf_ma_test(𝐇.linbdsolver, M, J, a, b, J22, _zero, n, Complex{𝒯}(0, -ω))
+_hopf_ma_test(linbdsolver, M, J, a, b, J22, _zero, n, shift) = linbdsolver(J, apply(M,a), apply(M,b), J22, _zero, n; shift, Mass = M)
+_hopf_ma_test(linbdsolver, ::TrivialMassMatrix, J, a, b, J22, _zero, n, shift) = linbdsolver(J, a, b, J22, _zero, n; shift)
 
 function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
@@ -37,7 +39,8 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     # we solve (J - iω)⋅v + M⋅a σ1 = 0 with <M⋅b, v> = 1
     # note that the shift argument only affect J in this call:
     J = jacobian(𝐇.prob_vf, x, par)
-    _, σ1, cv, = hopf_ma_test(𝐇, J, a, b, zero(𝒯), 𝐇.zero, one(𝒯), ω)
+    M = getmassmatrix(𝐇.prob_vf, x, par)
+    _, σ1, cv, = hopf_ma_test(𝐇, M, J, a, b, zero(𝒯), 𝐇.zero, one(𝒯), ω)
     ~cv && @debug "[Hopf residual] Linear solver for (J-iω) did not converge."
     return residual(𝐇.prob_vf, x, par), real(σ1), imag(σ1)
 end
@@ -56,9 +59,10 @@ Compute the solution (v, σ) of
 
 and the same for the adjoint system with solution (w, τ).
 """
-function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp, ω)
+function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, M, J_at_xp, JAd_at_xp, ω)
     return __compute_bordered_vectors_hopf(𝐇.linbdsolver,
                                       𝐇.linbdsolverAdjoint,
+                                      M,
                                       J_at_xp,
                                       JAd_at_xp,
                                       ω,
@@ -67,17 +71,16 @@ function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, J_at
                                       𝐇.zero)
 end
 
-function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
-    # Todo: use hopf_ma_test
+function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::TrivialMassMatrix, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero_vector) where {𝒯}
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
-    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    v, σ, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero_vector, one(𝒯); shift = Complex{𝒯}(0, -ω))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
-    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero, one(𝒯); shift = Complex{𝒯}(0, ω))
+    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero_vector, one(𝒯); shift = Complex{𝒯}(0, ω))
     ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
-    return (; v, w, itv, itw)
+    return (; v, w, itv, itw, σ)
 end
 
 function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
@@ -87,10 +90,11 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
 
     # This avoids doing 3 times the possibly costly building of J(x, p)
     J_at_xp = jacobian(𝐇.prob_vf, x, par0)
+    M_at_xp = getmassmatrix(𝐇.prob_vf, x, par0)
     # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
 
-    (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, M_at_xp, J_at_xp, JAd_at_xp, ω)
 
     δ = getdelta(𝐇.prob_vf)
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
@@ -106,7 +110,7 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
-    σω = Complex{𝒯}(0, 1) * VI.inner(w, v)
+    σω = Complex{𝒯}(0, 1) * dot_with_mass(w, M_at_xp, v)
 
     return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
 end
@@ -292,6 +296,9 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
             nev = br.contparams.nev,
             start_with_eigen = false,
             kwargs...)
+    if is_mass_matrix_constant(prob) == false
+        error("Non constant mass matrix not taken into account!")
+    end
     hopfpointguess = hopf_point(br, ind_hopf)
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
@@ -300,7 +307,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     ζ ./= normN(ζ)
-    ζad = conj.(ζ)
+    ζ★ = conj.(ζ)
 
     if start_with_eigen
         # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
@@ -310,16 +317,16 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
 
         # jacobian at bifurcation point
         L = jacobian(prob, bifpt.x, parbif)
+        Mass = getmassmatrix(prob, bifpt.x, parbif)
 
         # computation of adjoint eigenvector
-        _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-
-        ζstar, _ = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ), options.eigsolver; nev, verbose = false)
-        ζad .= ζstar ./ VI.inner(ζstar, ζ)
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
+        ζ★, _ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev)
+        ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
     end
 
     # solve the hopf equations
-    return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζad, options; normN, kwargs...)
+    return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζ★, options; normN, kwargs...)
 end
 
 function update!(𝐏𝐛::HopfMAProblem, iter, state)
@@ -345,8 +352,9 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
     newpar = getparams(iter, state)
     J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
     JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
+    M_at_xp = getmassmatrix(𝐇.prob_vf, x, newpar)
 
-    bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+    bd_vec = _compute_bordered_vectors(𝐇, M_at_xp, J_at_xp, JAd_at_xp, ω)
 
     𝐇.a .= bd_vec.w ./ 𝐇.norm(bd_vec.w)
     # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
@@ -445,6 +453,9 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 kwargs...) where {Tb, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
     lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1")
+    if is_mass_matrix_constant(prob_vf) == false
+        error("Non constant mass matrix not taken into account!")
+    end
 
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
@@ -536,6 +547,9 @@ function continuation_hopf(prob,
                         a = nothing,
                         b = nothing,
                         kwargs...)
+    if is_mass_matrix_constant(prob) == false
+        error("Non constant mass matrix not taken into account!")
+    end
     hopfpointguess = hopf_point(br, ind_hopf)
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
@@ -551,15 +565,15 @@ function continuation_hopf(prob,
         end
         ζ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
         VI.scale!(ζ, 1 / normC(ζ))
-        ζad = conj.(ζ)
 
         # computation of adjoint eigenvalue
         λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
         L = jacobian(prob, bifpt.x, parbif)
+        Mass = get_mass_matrix(prob, bifpt.x, parbif)
         L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
 
-        ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
-        VI.add!(ζad, ζ★, 1 / VI.inner(ζ★, ζ), 0)
+        ζ★, = _get_target_eigenvector_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
+        ζad = VI.add(ζ★, 1 / dot_with_mass(ζ★, Mass, ζ))
     else
         (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
@@ -590,11 +604,13 @@ function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinso
 
     L = jacobian(prob, bifpt.x, parbif)
     L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
+    M = getmassmatrix(prob, bifpt.x, parbif)
 
-    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
+
+    Mass = M isa TrivialMassMatrix ? LA.I : M
 
     @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*Mass*v) norminf(apply(L,v) + complex(0,ω)*v)
-
     @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*adjoint(Mass)*w) norminf(apply(L★,w) + complex(0,ω)*w)
 
     ζad = VI.scale(w,  1 / normC(w))
@@ -613,10 +629,11 @@ function test_bt_gh(iter, state)
     # expression of the jacobian
     x = getvec(zu, 𝐇) # fold point
     newpar = getparams(iter, state)
-    J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : transpose(J_at_xp)
+    L = jacobian(𝐇.prob_vf, x, newpar)
+    L★ = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : transpose(L)
+    Mass = getmassmatrix(𝐇.prob_vf, x, newpar)
 
-    bd_vec = _compute_bordered_vectors(𝐇, J_at_xp, JAd_at_xp, ω)
+    bd_vec = _compute_bordered_vectors(𝐇, Mass, L, L★, ω)
 
     # compute new b
     ζ = bd_vec.v
@@ -627,11 +644,10 @@ function test_bt_gh(iter, state)
 
     # test function for Bogdanov-Takens
     𝐇.BT = ω
-    ζ★ ./= VI.inner(ζ, ζ★)
+    ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
     @debug "Hopf normal form computation"
     hp0 = Hopf(x, nothing, get_parameter(zu, 𝐇), ω, newpar, get_lenses(𝐏𝐛)[1], ζ, ζ★, (a = zero(Complex{𝒯}), b = zero(Complex{𝒯})), :hopf)
-    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; verbose = false) # TODO!! WE NEED A KWARGS here
-    # lyapunov coefficient
+    hp = __hopf_normal_form(𝐇.prob_vf, hp0, 𝐇.linsolver; L, Mass)
     𝐇.l1 = hp.nf.b
     # test for Bautin bifurcation.
     # If GH is too large, we take the previous value to avoid spurious detection

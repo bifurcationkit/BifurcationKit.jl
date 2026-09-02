@@ -694,6 +694,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
+    M = getmassmatrix(prob_vf, x0, parbif)
 
     # right eigenvector
     if haseigenvector(br) == false
@@ -716,7 +717,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
         # compute the eigenvectors using a bordered linear system
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
         b = ζ
-        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(_λ0)
     end
@@ -1060,6 +1061,7 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
+    M = getmassmatrix(prob_vf, x0, parbif)
     L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
 
     # right / left eigenvectors
@@ -1104,7 +1106,7 @@ function zero_hopf_normal_form(𝐏𝐛,
         # complex eigenvectors ±iω
         a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
         b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ωh, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ωh, a1, b1, VI.zerovector(a1))
         q1, p1 = bdv.v, bdv.w
         λI = Complex{𝒯}(0, ωh)
         λ0 = zero(Complex{𝒯})
@@ -1428,7 +1430,8 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
-    _Jt = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
+    M = getmassmatrix(prob_vf, x0, parbif)
+    L★ = has_adjoint(prob_vf) ? jacobian_adjoint(prob_vf, x0, parbif) : adjoint(L)
 
     # p0, ω0 = getp(bifpt.x, 𝐌𝐚)
     p0 = bifpt.x.p1
@@ -1474,8 +1477,8 @@ function hopf_hopf_normal_form(𝐏𝐛,
         ω1 = imag(λ1); ω2 = imag(λ2);
 
         # left eigen-elements
-        p1, λ★1 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ1), optionsN.eigsolver.eigsolver; nev, verbose)
-        p2, λ★2 = _get_target_eigenvector_from_eigensolver(_Jt, conj(λ2), optionsN.eigsolver.eigsolver; nev, verbose)
+        p1, λ★1 = _get_target_eigenvector_from_eigensolver(L★, conj(λ1), optionsN.eigsolver.eigsolver; nev, verbose)
+        p2, λ★2 = _get_target_eigenvector_from_eigensolver(L★, conj(λ2), optionsN.eigsolver.eigsolver; nev, verbose)
     else
         # compute the basis of the kernel using bordered linear systems
         verbose && println("──▶ Compute the kernel basis using a bordered linear system")
@@ -1490,9 +1493,9 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
         a1 = _randn(complex.(x0)); VI.scale!(a1, 1 / scaleζ(a1))
         b1 = _randn(complex.(x0)); VI.scale!(b1, 1 / scaleζ(b1))
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, _Jt, ω1, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω1, a1, b1, VI.zerovector(a1))
         q1, p1 = bdv.v, bdv.w
-        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, _Jt, ω2, a1, b1, VI.zerovector(a1))
+        bdv = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω2, a1, b1, VI.zerovector(a1))
         q2, p2 = bdv.v, bdv.w
         q1 ./= scaleζ(q1)
         q2 ./= scaleζ(q2)

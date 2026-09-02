@@ -1045,10 +1045,15 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
                             pt::Hopf, 
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
-                            L = nothing)
+                            L = nothing,
+                            Mass = TrivialMassMatrix())
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
-    cζ = conj(pt.ζ)
+    cζ = conj(ζ)
+
+    if ~(dot_with_mass(ζ★, Mass, ζ) ≈ 1)
+        ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ)) # normalize by <ζ★, M⋅ζ>_ℂ ≡ <conj(ζ★), M⋅ζ>
+    end
 
     # jacobian at the bifurcation point
     # do not recompute it if passed
@@ -1069,9 +1074,15 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     av = R11(prob, x0, parbif, ζ) .+ 2 .* R2(ζ, Ψ001)
     a = VI.inner(av, ζ★)
 
-    # (2iω − L)⋅Ψ200 = R20(ζ, ζ)
+    # (2iω⋅Mass − L)⋅Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
-    Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
+    if Mass isa TrivialMassMatrix
+        Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
+    elseif Mass isa AbstractMatrix # TODO: this is a real hack!
+        Ψ200, cv, it = ls(Complex(0, 2ω)*Mass - L, R20)
+    else
+        error("Mass matrix type not taken into account, Mass = $Mass")
+    end
     ~cv && @debug "[Hopf Ψ200] Linear solver for J did not converge. it = $it"
 
     # −L⋅Ψ110 = 2R20(ζ, cζ)
@@ -1134,6 +1145,11 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     if ~(br.specialpoint[ind_hopf].type == :hopf)
         error("The provided index does not refer to a Hopf Point")
     end
+
+    if is_mass_matrix_constant(prob) == false
+        error("Non constant mass matrix not taken into account!")
+    end
+
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
     options = br.contparams.newton_options
 
@@ -1179,25 +1195,36 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         )
     end
 
+    Mass = getmassmatrix(prob, x0, parbif) # mass matrix (DAE) handling
+    if ~(Mass isa TrivialMassMatrix)
+        if start_with_eigen_type
+            error("hopf_normal_form with `start_with_eigen = Val(true)` is not supported for a problem with a mass matrix (DAE): " *
+                  "the eigen-computation would ignore `M`. Please pass `start_with_eigen = Val(false)` so that the (right/left) " *
+                  "eigenvectors are computed with a bordered linear system on the pencil `(J - iωM)`.")
+        end
+    end
+
     # left eigen-elements
     L★ = has_adjoint(prob) ? jacobian_adjoint(prob, x0, parbif) : adjoint(L)
     if start_with_eigen_type
         ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev, verbose)
     else
-        a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
-        b = ζ
-        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, L, L★, ω, a, b, VI.zerovector(a))
+        _tmp_vector_complex =  VI.scale(_copy(x0), one(Complex{VI.scalartype(x0)}))
+        a = _randn(_tmp_vector_complex); VI.scale!(a, 1 / scaleζ(a))
+        b = _randn(_tmp_vector_complex); VI.scale!(b, 1 / scaleζ(b))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, Mass, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(λ)
+        VI.scale!(ζ, 1 / scaleζ(ζ))
     end
 
     # check that λ★ ≈ conj(λ)
     abs(λ + λ★) > 1e-2 && @debug "[Hopf normal form] We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
 
     # normalise left eigenvector
-    ζ★ ./= LA.dot(ζ, ζ★)
-    if ~(VI.inner(ζ, ζ★) ≈ 1)
-        error("Error of precision in normalization")
+    ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ)) # normalize by <ζ★, M⋅ζ>_ℂ ≡ <conj(ζ★), M⋅ζ>
+    if ~(dot_with_mass(ζ★, Mass, ζ) ≈ 1)
+        error("Error of precision in normalization, got: $(dot_with_mass(ζ★, Mass, ζ)) ≈ 1")
     end
 
     hopfpt = Hopf(x0, bifpt.τ, bifpt.param,
@@ -1212,7 +1239,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                         ),
                 Symbol("?")
         )
-    return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L)
+    return __hopf_normal_form(prob, hopfpt, options.linsolver ; verbose, L, Mass)
 end
 
 """

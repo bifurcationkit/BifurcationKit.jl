@@ -560,6 +560,9 @@ function test_zh(iter, state)
     return iter.prob.prob.ZH
 end
 
+dot_with_mass(ζ★, ::TrivialMassMatrix, ζ) = VI.inner(ζ★, ζ)
+dot_with_mass(ζ★, Mass, ζ) = LA.dot(ζ★, Mass, ζ)
+
 # Bogdanov-Takens / Cusp test function for the Fold functional
 function test_bt_cusp(iter, state)
     probma = getprob(iter)
@@ -579,10 +582,12 @@ function test_bt_cusp(iter, state)
     VI.scale!(ζ, 1 / 𝐅.norm(ζ))
 
     # compute new a
-    ζstar = bd_vec.w
-    VI.scale!(ζstar, 1 / 𝐅.norm(ζstar))
+    ζ★ = bd_vec.w
+    VI.scale!(ζ★, 1 / 𝐅.norm(ζ★))
 
-    𝐅.BT = VI.inner(ζstar, ζ)
+    # compute test functions
+    M = getmassmatrix(𝐅.prob_vf, x, newpar)
+    𝐅.BT = dot_with_mass(ζ★, M, ζ)
     𝐅.CP = getp(state.τ)
 
     return 𝐅.BT, 𝐅.CP
