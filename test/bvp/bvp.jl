@@ -1,4 +1,5 @@
 using BifurcationKit, Test
+import OrdinaryDiffEq as ODE
 const BK = BifurcationKit
 
 # ==============================================================================
@@ -56,7 +57,6 @@ let
     @test disc.M == 4
     @test BK.BVP.mesh_size(disc) == 4
     @test BK.BVP.solution_dim(disc, 2) == 8
-    @test BK.BVP.total_dim(disc, 2) == 9
 end
 
 # ----- Trapeze -----
@@ -66,7 +66,6 @@ let
     @test disc.M == 50
     @test BK.BVP.mesh_size(disc) == 50
     @test BK.BVP.solution_dim(disc, 2) == 100
-    @test BK.BVP.total_dim(disc, 2) == 101
 
     mesh = BK.TimeMesh([0.5, 0.5])
     disc2 = BK.BVP.Trapeze(; M=3, mesh)
@@ -83,7 +82,6 @@ let
     @test disc.m == 4
     @test BK.BVP.mesh_size(disc) == 20*4 + 1
     @test BK.BVP.solution_dim(disc, 2) == 2 * (20*4 + 1)
-    @test BK.BVP.total_dim(disc, 2) == 2 * (20*4 + 1) + 1
 end
 
 # ----- discretize: Trapeze -----
@@ -99,7 +97,7 @@ let
     @test bvp.model === model
     @test bvp.discretizer === disc
     @test BK.BVP.state_dimension(bvp) == 2
-    @test length(bvp) == 2*10 + 1
+    @test length(bvp) == 2*10
 end
 
 # ----- discretize: Collocation -----
@@ -112,7 +110,7 @@ let
     show(bvp)
     @test bvp isa BK.BVP.DiscretizedBVP
     @test BK.BVP.state_dimension(bvp) == 2
-    @test length(bvp) == 2 * (5*3 + 1) + 1
+    @test length(bvp) == 2 * (5*3 + 1)
 end
 
 # ----- DiscretizedBVP getters -----
@@ -170,7 +168,7 @@ let
     x0 = zeros(length(bvp))
     res = BK.BVP.bvp_residual(bvp, x0, (ω=1.0,))
     @test length(res) == length(bvp)
-    @test res[1:end-1] == zeros(length(bvp)-1)
+    @test res == zeros(length(bvp))  # fully written, no uninitialized tail
 end
 
 # ----- bvp_jacobian: Trapeze, FD vs analytical -----
@@ -303,9 +301,10 @@ let
     bvp = BK.BVP.discretize(model, disc)
     x0 = BK.BVP.generate_solution(bvp, t -> [cos(t), sin(t)])
     @test length(x0) == length(bvp)
-    @test x0[end] == 0.0  # T = 0 in initial guess
     # First slice should be orbit at t=0
     @test x0[1:2] ≈ [1.0, 0.0]
+    # Last slice is orbit(T) with T = tf - t0 = 1
+    @test x0[end] == sin(1.0)
 end
 
 # ----- generate_solution (Collocation) -----
@@ -452,7 +451,7 @@ let
     @test haskey(po, :period)
     @test length(po.t) == disc.M
     @test size(po.u, 2) == disc.M
-    @test po.period == x0[end]
+    @test po.period == 1.0  # fixed time interval (0, 1) of the model
 end
 
 # ----- get_periodic_orbit (Collocation) -----
@@ -469,7 +468,7 @@ let
     @test haskey(po, :u)
     @test haskey(po, :period)
     @test length(po.t) == disc.Ntst * disc.m + 1
-    @test po.period == x0[end]
+    @test po.period == 1.0  # fixed time interval (0, 1) of the model
 end
 
 # ----- update_phase_reference! -----
@@ -482,7 +481,7 @@ let
     @test BK.BVP.update_phase_reference!(bvp, rand(length(bvp)), (ω=1.0,)) == true
 end
 
-# ----- Collocation: bvp_jacobian with AutoDiffDense (default, expects full vector with period) -----
+# ----- Collocation: bvp_jacobian with AutoDiffDense (default) -----
 let
     F(u, p) = [u[2], -p.ω^2 * u[1]]
     g(u0, uT, p) = [u0[1], uT[1]]
@@ -520,4 +519,35 @@ let
         plot=false, verbosity=0, normC=norminf)
     @test br isa BK.AbstractBranchResult
     @test length(br) > 0
+end
+
+# ----- Regression: Shooting residual is fully written, Newton is deterministic -----
+# (the residual used to leave its last entry uninitialized: `out = similar(X)` with
+# only the prefix out[1:n*M] written; the trailing +1 "period" slot was never filled)
+let
+    F(u, p, t=0) = [u[2], -p.μ * u[1]]
+    g(u0, uT, p) = [u0[1] - 1.0, u0[2]]  # pins the phase, the system is square
+    n, M = 2, 4
+
+    odeprob = ODE.ODEProblem(F, [1.0, 0.0], (0.0, 2π), (μ = 1.0,))
+    model = BK.BVP.BVPModel(odeprob, g; n)
+    bvp = BK.BVP.discretize(model, BK.BVP.Shooting(M, ODE.Tsit5(), false))
+
+    x0 = BK.BVP.generate_solution(bvp, t -> [cos(t), sin(t)])
+    @test length(x0) == n * M
+    x0[1] += 0.05  # perturb so that Newton actually iterates
+
+    prob = BK.BVP.BVPBifProblem(bvp, x0, (μ = 1.0,), (@optic _.μ))
+
+    # identical inputs must give identical residuals (no uninitialized memory)
+    r1 = BK.residual(prob, prob.u0, prob.params)
+    r2 = BK.residual(prob, prob.u0, prob.params)
+    @test r1 == r2
+    @test length(r1) == n * M
+
+    # wrong-size input must fail loudly instead of reading garbage
+    @test_throws ArgumentError BK.BVP.bvp_residual(bvp, vcat(x0, 0.0), (μ = 1.0,))
+
+    sol = BK.solve(prob, BK.Newton(), NewtonPar(tol = 1e-9, verbose = false))
+    @test BK.converged(sol)
 end
