@@ -8,13 +8,15 @@ function bvp_residual(d_bvp::DiscretizedBVP{<: BVPModel, <: Collocation}, X, p)
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
 
-    # Extract solution
-    Xm = reshape(@view(X[1:nf*N_total]), nf, N_total)
+    N = nf * N_total
+    length(X) == N || throw(ArgumentError("bvp_residual: expected length(X) == $N, got $(length(X))"))
 
-    # Get output buffer from cache
-    # Robust check: only use cache for Float64 to avoid chunk mismatch in Dual
-    out = similar(X)
-    outm = reshape(@view(out[1:nf*N_total]), nf, N_total)
+    # Extract solution
+    Xm = reshape(@view(X[1:N]), nf, N_total)
+
+    # Allocate output; every entry is written below
+    out = similar(X, N)
+    outm = reshape(out, nf, N_total)
 
     # Core residual computation from BifurcationKit
     # This writes to outm[:, 1:Ntst*m]

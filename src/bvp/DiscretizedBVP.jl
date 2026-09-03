@@ -78,8 +78,8 @@ end
 """State dimension."""
 state_dimension(bvp::DiscretizedBVP) = state_dimension(bvp.model)
 
-"""Total dimension of the discretized problem."""
-Base.length(bvp::DiscretizedBVP) = total_dim(bvp.discretizer, state_dimension(bvp))
+"""Total dimension of the discretized problem (the time span is fixed by the model, there is no trailing period slot)."""
+Base.length(bvp::DiscretizedBVP) = solution_dim(bvp.discretizer, state_dimension(bvp))
 
 """Get the underlying model."""
 get_model(bvp::DiscretizedBVP) = bvp.model
