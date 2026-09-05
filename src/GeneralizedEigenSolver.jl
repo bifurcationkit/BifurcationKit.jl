@@ -41,14 +41,14 @@ function gev(eig::EigArpack, A, B, nev; kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # GEV useful for computation of Floquet exponents based on collocation
-function gev(eig::EigArnoldiMethod{𝒯σ}, A, B, nev; kwargs...) where {𝒯σ}
     if A isa AbstractMatrix
         # Solve Ax = λBx using Shift-invert method 
         # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
         𝒯 = eltype(A)
         σ = isnothing(eig.sigma) ? zero(𝒯) : eig.sigma
+        𝒯𝒯 = promote_type(𝒯, typeof(σ))
         P = LA.lu(A - σ * B)
-        L = LinearMaps.LinearMap{𝒯σ}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
+        L = LinearMaps.LinearMap{𝒯𝒯}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
         decomp, history = ArnoldiMethod.partialschur(L; nev, which = eig.which,
                                                          eig.kwargs...)
         vals, ϕ = ArnoldiMethod.partialeigen(decomp)
