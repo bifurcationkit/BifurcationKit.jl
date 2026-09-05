@@ -1076,13 +1076,8 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # (2iω⋅Mass − L)⋅Ψ200 = R20(ζ, ζ)
     R20 = R2(ζ, ζ)
-    if Mass isa TrivialMassMatrix
-        Ψ200, cv, it = ls(L, R20; a₀ = Complex(0, 2ω), a₁ = -1)
-    elseif Mass isa AbstractMatrix # TODO: this is a real hack!
-        Ψ200, cv, it = ls(Complex(0, 2ω)*Mass - L, R20)
-    else
-        error("Mass matrix type not taken into account, Mass = $Mass")
-    end
+    so = ShiftedOperator(J = MassAndJacobian(Mass, L), a₀ = Complex(0, 2ω), a₁ = -1)
+    Ψ200, cv, it = ls(so, R20)
     ~cv && @debug "[Hopf Ψ200] Linear solver for J did not converge. it = $it"
 
     # −L⋅Ψ110 = 2R20(ζ, cζ)
@@ -1351,7 +1346,8 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier -1 not normalized, dot = $(LA.dot(ζ★, ζ))"
 
     # jacobian at the bifurcation point
-    L = jacobian(prob, x0, parbif)
+    J = jacobian(prob, x0, parbif)
+    so = ShiftedOperator(;J, a₀ = -1)
 
     # we use BilinearMap to be able to call on complex valued arrays
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
@@ -1366,7 +1362,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     # no need for bordered linear solver since L has eigenvalue -1 (I-L is invertible) 
     # and 0 (for PRM; 1 is not a VP of dΠ)
     # Also, (I − L)⋅Ψ01 = E(R01) makes the PD normal form phase dependent it seems, so let's not do it.
-    Ψ01, cv, it = ls(L, -r01; a₀ = -1)
+    Ψ01, cv, it = ls(so, -r01)
     ~cv && @debug "[PD Ψ01] Linear solver for J did not converge. it = $it"
     a = LA.dot(ζ★, r11 .+ R2(ζ, Ψ01))
     verbose && println("──▶ Normal form:   x⋅(-1+ a⋅δμ + b₃⋅x²)")
@@ -1376,7 +1372,7 @@ function period_doubling_normal_form(prob::AbstractBifurcationProblem,
     # b = < ζ★, 3R2(h20, ζ) + R3(ζ, ζ, ζ) >
     # (I - L)⋅h20 = B(ζ,ζ)
     h2v = R2(ζ, ζ)
-    h20, cv, it = ls(L, h2v; a₀ = -1) # h20 = (L - I) \ h2v
+    h20, cv, it = ls(so, h2v) # h20 = (L - I) \ h2v
     ~cv && @debug "[PD h20] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, h20)
     b = LA.dot(ζ★, b3v) / 6
@@ -1433,7 +1429,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     cζ = conj.(pt.ζ)
 
     # jacobian at the bifurcation point
-    L = jacobian(prob, x0, parbif)
+    J = jacobian(prob, x0, parbif)
 
     # we use ---Maps to be able to call on complex valued arrays
     R2 = BilinearMap( (dx1, dx2)      -> d2F(prob, x0, parbif, dx1, dx2) )
@@ -1445,7 +1441,7 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
     # no need for bordered linear solver
     if detailed
         R001 = R01(prob, x0, parbif)
-        Ψ001, cv, it = ls(L, -R001; a₁ = -1)
+        Ψ001, cv, it = ls(ShiftedOperator(;J, a₁ = -1), -R001)
         ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
         # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
@@ -1457,13 +1453,13 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # (exp(2iω)−L)⋅Ψ200 = R20(ζ,ζ)
     R20 = R2(ζ, ζ)
-    Ψ200, cv, it = ls(L, R20; a₀ = cis(2ω), a₁ = -1)
+    Ψ200, cv, it = ls(ShiftedOperator(;J, a₀ = cis(2ω), a₁ = -1), R20)
     ~cv && @debug "[NS Ψ200] Linear solver for J did not converge. it = $it"
     # @assert Ψ200 ≈ (exp(Complex(0, 2ω))*I - L) \ R20
 
     # (I−L)⋅Ψ110 = 2R20(ζ,cζ)
     R20 = 2 .* R2(ζ, cζ)
-    Ψ110, cv, it = ls(L, -R20; a₀ = -1)
+    Ψ110, cv, it = ls(ShiftedOperator(;J, a₀ = -1), -R20)
     ~cv && @debug "[NS Ψ110] Linear solver for J did not converge. it = $it"
 
     # b = ⟨2R20(ζ,Ψ110) + 2R20(cζ,Ψ200) + 3R30(ζ,ζ,cζ), ζ∗⟩)
@@ -1598,7 +1594,8 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     abs(LA.dot(ζ★, ζ) - 1) > 1e-5 && @warn "adjoint eigenvector for multiplier 1 not normalized, dot = $(LA.dot(ζ★, ζ))"
 
     # jacobian at bifurcation point
-    L = jacobian(prob, x0, parbif)
+    J = jacobian(prob, x0, parbif)
+    so = ShiftedOperator(;J, a₀ = -1)
 
     if abs(LA.dot(ζ, ζ★)) <= 1e-10
         error("We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero")
@@ -1617,7 +1614,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     r01 = R01(prob, x0, parbif)
     a01 = LA.dot(r01, ζ★)
 
-    Ψ01, cv, it = ls(L, E(r01); a₀ = -1)
+    Ψ01, cv, it = ls(so, E(r01))
     ~cv && @debug "[Normal form Ψ01] Linear solver for J did not converge. it = $it"
 
     verbose && println("┌── Normal form:   a01⋅δμ + b11⋅x⋅δμ + b20⋅x²/2 + b30⋅x³/6")
@@ -1634,7 +1631,7 @@ function get_normal_form1d_maps(prob::AbstractBifurcationProblem,
     verbose && println("├─── b20/2 = ", b20/2)
 
     # coefficient of x^3, recall b2v = R2(ζ, ζ)
-    wst, cv, it = ls(L, E(b2v); a₀ = -1) # Golub. Schaeffer Vol 1 page 33, eq 3.22
+    wst, cv, it = ls(so, E(b2v)) # Golub. Schaeffer Vol 1 page 33, eq 3.22
     ~cv && @debug "[Normal form wst] Linear solver for J did not converge. it = $it"
     b3v = R3(ζ, ζ, ζ) .- 3 .* R2(ζ, wst)
     b30 = LA.dot(b3v, ζ★)
