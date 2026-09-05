@@ -51,10 +51,10 @@ function (algcont::Multiple)(state; kwargs...)
     residuals = get(state, :residuals, nothing)
     iteration = isnothing(residuals) ? 0 : length(residuals)
     contparams = get(state, :contparams, nothing)
+    tol = isnothing(contparams) ? Inf : contparams.newton_options.tol
     if algcont.currentind > 1
         if iteration - algcont.pmimax > 0
             out = residuals[end] <= algcont.α * residuals[end-algcont.pmimax]
-            tol = isnothing(contparams) ? Inf : contparams.newton_options.tol
             out = out || residuals[end] < tol
             return out
         end
@@ -88,8 +88,8 @@ function corrector!(_state::AbstractContinuationState,
     (;ds) = state
     (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─ Multiple tangent predictor\n")
     # we combine the callbacks for the newton iterations
-    cb = (state; k...) -> callback(it)(state; k...) && algo(state; k...)
     # note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
+    cb = (args; k...) -> callback(it)(args; k...) && algo(args; k...)
     for ii in algo.nb:-1:1
         algo.currentind = ii # record the current index
         zpred = _copy(state.z_pred)

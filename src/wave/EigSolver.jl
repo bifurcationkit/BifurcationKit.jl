@@ -1,40 +1,57 @@
 abstract type AbstractWaveEigenSolver <: AbstractEigenSolver end
 
 """
-    Basic eigen solver to compute the stability of the wave based on the eigenvalues of `J + η * ∂`.
+$(TYPEDEF)
+
+Basic eigen solver to compute the stability of the wave based on the eigenvalues of `J + η * ∂`.
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 struct EigenWave{Te} <: AbstractWaveEigenSolver
     "Eigensolver."
     eigensolver::Te
     matrix_free::Bool
 end
-# contructor
+
 EigenWave() = EigenWave(DefaultEig(), false)
 
-@views function (geig::EigenWave)(J::AbstractMatrix, nev; kw...)
-    eig = geig.eigensolver
+@views function (eigw::EigenWave)(J::AbstractMatrix, nev; kw...)
+    eig = eigw.eigensolver
     # we remove the constraints
     return eig(J[1:end-1, 1:end-1], nev; kw...)
 end
 
-function (geig::EigenWave)(J, nev; kw...)
-    eig = geig.eigensolver
+function (eigw::EigenWave)(J, nev; kw...)
+    eig = eigw.eigensolver
     return eig(J, nev; kw...)
 end
 
-function compute_eigenvalues(geig::EigenWave, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; k...)
+function compute_eigenvalues(eigw::EigenWave, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; k...)
     wrap = getprob(iter)
     twprob = get_discretization(wrap)
-    J = if geig.matrix_free
+    J = if eigw.matrix_free
         # using dx -> twprob(u0, par, dx)[1:end-1] woul be wrong because it contains the term ds⋅∂
         dx -> _jvp_for_eigenwave(twprob, u0, par, dx)
     else
         jacobian(wrap, u0, par)
     end
-    return geig(J, nev; iter, state, k...)
+    return eigw(J, nev; iter, state, k...)
+end
+
+@views function compute_eigenvalues(eigw::EigenWave{<: EigenDAE}, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kw...)
+    wrap = getprob(iter)
+    twprob = get_discretization(wrap)
+    prob = twprob.prob_vf
+    Mass = getmassmatrix(prob, getx(state), setparam(iter, getp(state)))
+    J = jacobian(wrap, u0, par)
+    eig = eigw.eigensolver
+    return eig(J[1:end-1, 1:end-1], Mass, nev; kw...)
 end
 
 """
+$(TYPEDEF)
+
 Return the jacobian-vector-product of the travelling wave problem without the constraints.
 More precisely, it computes `J⋅du + η ⋅ ∂⋅du` where `η = x[end]` is the speed(s) of the travelling wave solution `x`.
 This is needed for the computation of eigenvalues with matrix-free eigen-solver.
@@ -58,7 +75,12 @@ This is needed for the computation of eigenvalues with matrix-free eigen-solver.
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-    Eigen solver to compute the stability of the wave based on the eigenvalues of the GEV, see [documentation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/intro_wave/#Wave-stability).
+$(TYPEDEF)
+
+Eigen solver to compute the stability of the wave based on the eigenvalues of the GEV, see [documentation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/intro_wave/#Wave-stability).
+
+# Internal fields
+$(TYPEDFIELDS)
 """
 struct GEigenWave{Te} <: AbstractWaveEigenSolver
     "Generalized eigensolver."
@@ -66,16 +88,25 @@ struct GEigenWave{Te} <: AbstractWaveEigenSolver
     matrix_free::Bool
 end
 
-# contructor
 GEigenWave() = GEigenWave(nothing, false)
 
 function (geig::GEigenWave)(J, nev; kw...)
     eig = geig.eigensolver
     return eig(J, nev; kw...)
 end
+
+@views function compute_eigenvalues(geigw::GEigenWave{<: EigenDAE}, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kw...)
+    wrap = getprob(iter)
+    twprob = get_discretization(wrap)
+    prob = twprob.prob_vf
+    Mass = getmassmatrix(prob, getx(state), setparam(iter, getp(state)))
+    J = jacobian(wrap, u0, par)
+    eig = geigw.eigensolver
+    return eig(J, SPA.blockdiag(Mass, SPA.sparse(LA.I, twprob.nc, twprob.nc)), nev; kw...)
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 convert_to_wave_eigen_solver(eigw::EigenWave, ::AbstractEigenSolver, B) = eigw
 convert_to_wave_eigen_solver(eigw::EigenWave{Nothing}, eig0::AbstractEigenSolver, B) = EigenWave(eig0, eigw.matrix_free)
 
-convert_to_wave_eigen_solver(eigw::GEigenWave, ::AbstractEigenSolver, B) = eigw
-convert_to_wave_eigen_solver(eigw::GEigenWave{Nothing}, eig0::AbstractEigenSolver, B) = GEigenWave(convert_to_GEV(eig0, B), eigw.matrix_free)
+convert_to_wave_eigen_solver(geigw::GEigenWave, ::AbstractEigenSolver, B) = geigw
+convert_to_wave_eigen_solver(geigw::GEigenWave{Nothing}, eig0::AbstractEigenSolver, B) = GEigenWave(convert_to_GEV(eig0, B), geigw.matrix_free)

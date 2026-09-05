@@ -25,9 +25,12 @@ $(TYPEDFIELDS)
     linsolver::L = DefaultLS()
     "eigen solver, must be `<: AbstractEigenSolver`."
     eigsolver::E = DefaultEig()
+    "Active linesearch."
     linesearch::Bool = false
-    α::T = convert(typeof(tol), 1.0)        # damping
-    αmin::T = convert(typeof(tol), 0.001)   # minimal damping
+    "damping."
+    α::T = convert(typeof(tol), 1.0)
+    "minimal damping."
+    αmin::T = convert(typeof(tol), 0.001)
     @assert 0 <= α <= 1
     @assert 0 <= tol "Tolerance must be non negative."
 end

@@ -71,6 +71,46 @@ function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, M, M
                                       𝐇.zero)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Compute the bordered vectors `v`, `w` of the shifted jacobian of the vector field at a Hopf point, used in the minimally augmented (MA) formulation. More precisely, we solve the bordered linear systems
+
+```math
+\\begin{pmatrix}
+J - i\\omega M & M\\cdot a \\\\
+(M\\cdot b)^T & 0
+\\end{pmatrix}
+\\begin{pmatrix} v \\\\ \\sigma_1 \\end{pmatrix} =
+\\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}
+```
+
+and
+
+```math
+\\begin{pmatrix}
+J^T + i\\omega M^T & M\\cdot b \\\\
+(M\\cdot a)^T & 0
+\\end{pmatrix}
+\\begin{pmatrix} w \\\\ \\sigma_2 \\end{pmatrix} =
+\\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}
+```
+
+so that `v` (resp. `w`) is a right (resp. left) null vector of `J - iω⋅M` (resp. `J' + iω⋅M'`), the last row enforcing the orthogonality condition. When `M` is an `IdentityOperator`, the mass matrix is omitted and `a, b` are used directly for the bordering. The multipliers should satisfy `σ1 ≈ conj(σ2)`.
+
+# Arguments
+
+- `linbdsolver`, `linbdsolver_adjoint` bordered linear solvers used to invert the shifted bordered systems
+- `M`, `M★` mass matrix and its adjoint
+- `J`, `J★` jacobian of the vector field and its adjoint (or transpose)
+- `ω` Hopf frequency
+- `a`, `b` reference vectors used for the bordering: `b` should be close to a **right** null vector of `J - iω⋅M` (the critical eigenvector) while `a` should be close to a **left** one, *i.e.* a null vector of the adjoint `J' + iω⋅M'`; both are updated along the continuation, see [`HopfMAProblem`](@ref)
+- `_zero_vector` a zero vector of the appropriate type
+
+# Output
+
+Returns a NamedTuple `(v, w, itv, itw, σ1, σ2)` where `itv` (resp. `itw`) is the number of iterations of the bordered linear solver and `σ1`, `σ2` are the multipliers of the two bordered systems.
+"""
 function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::IdentityOperator, M★, J, J★, ω::𝒯, a, b, _zero_vector) where {𝒯}
     v, σ1, cv, itv = linbdsolver(ShiftedOperator(J = J, a₀ = Complex{𝒯}(0, -ω) ), a, b, zero(𝒯), _zero_vector, one(𝒯))
     # we solve (J-iωI)v + a σ1 = 0 with <b, v> = 1

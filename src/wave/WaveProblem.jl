@@ -35,12 +35,16 @@ $(TYPEDFIELDS)
     ∂::TD
     "reference solution, we only need one!"
     u₀::Tu0
+    "generator ⋅ u₀"
     ∂u₀::TDu0 = (∂ * u₀,)
-    DAE::Int = 0
-    "[Internal] number of constraints"
+    DAE::Vector{Bool} = fill(true, nc)
+    "[Internal] number of constraints."
     nc::Int = 1
+    "Jacobian for the full problem."
     jacobian::Tj = AutoDiff()
-    @assert 0 <= DAE <= 1
+    "Update the section every `update_section_every_step` step during continuation."
+    update_section_every_step::UInt = 1
+    @assert 0 <= all(x-> 0<=x<=1, DAE)
     @assert 0 < nc
     @assert jacobian in (MatrixFree(), AutoDiffMF(), FullLU(), FiniteDifferences(), AutoDiff()) "This jacobian is not defined. Please chose another one."
 end
@@ -48,24 +52,23 @@ end
 @inline getlens(tw::TWModel) = getlens(tw.prob_vf)
 @inline getdelta(tw::TWModel) = getdelta(tw.prob_vf)
 
-function TWModel(prob, ∂::Tuple, u₀; DAE = 0, jacobian = AutoDiff())
+function TWModel(prob, ∂::Tuple, u₀; DAE = [true for _ in ∂], jacobian = AutoDiff(), k...)
     # ∂u₀ = Tuple( apply(_D, u₀) for _D in ∂)
     ∂u₀ = Tuple( LA.mul!(zero(u₀), _D, u₀, 1, 0) for _D in ∂)
-    return TWModel(prob_vf = prob, 
-        ∂ = ∂,
-        u₀ = u₀,
-        ∂u₀ = ∂u₀,
+    return TWModel(;prob_vf = prob, 
+        ∂,
+        u₀,
+        ∂u₀,
         # u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀),
-        DAE = DAE,
+        DAE,
         nc = length(∂),
-        jacobian = jacobian )
+        jacobian,
+        k... )
 end
 
-# constructor
 TWModel(prob, ∂, u₀; kw...) = TWModel(prob, (∂,), u₀; kw...)
 
-function re_make(tw::TWModel;
-                params = getparams(tw))
+function re_make(tw::TWModel; params = getparams(tw))
     new_prob = re_make(tw.prob_vf; params)
     return (@set tw.prob_vf = new_prob)
 end
@@ -82,10 +85,10 @@ function Base.show(io::IO, tw::TWModel)
 end
 
 # we put type information to ensure the user pass a correct u0
-function updatesection!(pb::TWModel{Tprob, Tu0, TDu0, TD}, u₀::Tu0) where {Tprob, Tu0, TDu0, TD}
+function updatesection!(pb::TWModel{Tprob, Tu0, TDu0, TD}, U₀::Tu0) where {Tprob, Tu0, TDu0, TD}
+    u₀ = @view U₀[1:end-pb.nc]
     _copyto!(pb.u₀, u₀)
     for (∂, ∂u₀) in zip(pb.∂, pb.∂u₀)
-        # pb.u₀∂u₀ = Tuple( dot(u₀, u) for u in ∂u₀)
         _copyto!(∂u₀, ∂ * u₀)
     end
 end
@@ -154,7 +157,7 @@ end
     # we put the constraints
     for ii in 0:nc-1
         out[end-ii] = LA.dot(u, pb.∂u₀[ii+1])
-        if pb.DAE == 0
+        if pb.DAE[ii+1]
             out[end-ii] -= LA.dot(pb.u₀, pb.∂u₀[ii+1])
         end
     end
@@ -215,10 +218,27 @@ jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
-dF(tw::WrapTW, x, p, dx1) = ForwardDiff.derivative(t -> residual(get_discretization(tw), x .+ t .* dx1, p), 0)
+R01(tw::WrapTW, x, p) = R01(FiniteDifferences(), tw, x, p)
+R02(tw::WrapTW, x, p) = R02(FiniteDifferences(), tw, x, p)
+R11(tw::WrapTW, x, p, dx) = R11(FiniteDifferences(), tw, x, p, dx)
+dF(tw::WrapTW, x, p, dx1) = get_discretization(tw)(x, p, dx1)
 d2F(tw::WrapTW, x, p, dx1, dx2) = ForwardDiff.derivative(t -> dF(tw, x .+ t .* dx2, p, dx1), 0)
 d3F(tw::WrapTW, x, p, dx1, dx2, dx3) = ForwardDiff.derivative(t -> d2F(tw, x .+ t .* dx3, p, dx1, dx2), 0)
-@inline update!(::WrapTW, args...; k...) = update_default(args...; k...)
+
+function update!(wrap::WrapTW, iter, state::ContState)
+    prob = get_discretization(wrap)
+    success = converged(state)
+    bisection = in_bisection(state)
+    update_section_every_step = prob.update_section_every_step
+    step = state.step
+    z = getsolution(state)
+    if success && mod_counter(step, update_section_every_step) && bisection == false
+        @debug "[Periodic orbit] update section"
+        # Trapeze and Shooting need the parameters for section update:
+        updatesection!(prob, z.u)
+    end
+    return true
+end
 
 _generate_jacobian(probPO::TWModel, J::Union{MatrixFree, AutoDiffMF, FullLU, FiniteDifferences, AutoDiff}, o, pars; k...) = J
 
@@ -256,12 +276,46 @@ function record_from_solution(iter::ContIterable{TravellingWaveCont},
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
-Specific continuation routine for wave problems.
+Continuation of waves (travelling or rotating waves) computed with the freezing
+method of [`TWModel`](@ref). The problem `prob` is wrapped in a `WrapTW` and
+continued with the standard [`continuation`](@ref) machinery (with
+`kind = TravellingWaveCont()`).
 
-## Arguments
-- 
+# Arguments
+- `prob::TWModel`: frozen wave problem built with [`TWModel`](@ref).
+- `orbitguess`: initial guess `vcat(u₀, s₀)`: the state followed by the
+  speed(s) `s₀` (one per frozen symmetry). A guess is provided, *e.g.*, by
+  `newton(prob, vcat(u₀, s₀), options)`.
+- `alg::AbstractContinuationAlgorithm`: continuation algorithm (*e.g.* `PALC()`).
+- `contParams::ContinuationPar`: continuation options.
+
+# Keyword arguments
+- `eigsolver = GEigenWave()`: eigensolver used to assess the stability of the
+  wave. Two wave-specific eigensolvers are available:
+  * `GEigenWave()` (default): the stability is obtained from the generalized
+    eigenvalue problem of the full frozen jacobian with the mass matrix
+    `blockdiag(M, I_nc)` (identity on the speed components), see
+    [Wave stability](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/intro_wave/#Wave-stability).
+    The mass matrix `M` is the one of the underlying vector field (or the
+    identity) and the mass `diag(1, …, 1, 0)` (zero weight on the speed
+    components) is used to convert the eigensolver stored in
+    `contParams.newton_options.eigsolver` into a generalized one.
+  * `EigenWave(eigsolver, matrix_free)`: the stability is obtained from the
+    eigenvalues of `J + η⋅∂` (jacobian of the frozen system `F - s⋅∂` with the
+    speed(s) `η` fixed); the phase constraints are removed from `J`. `eigsolver`
+    is the underlying eigensolver (defaulting to the one in
+    `contParams.newton_options.eigsolver`) and `matrix_free` selects a
+    matrix-free evaluation of the jacobian-vector products.
+- `record_from_solution = nothing`: by default, records the speed(s) `s`.
+- `plot_solution = plot_solution(prob.prob_vf)`: plotting callback.
+- `δ = getdelta(prob)`: step used when the jacobian of `prob` requires finite
+  differences.
+- additional keyword arguments are forwarded to [`continuation`](@ref).
+
+# See also
+- [`TWModel`](@ref), [`GEigenWave`](@ref), [`EigenWave`](@ref)
 """
 function continuation(prob::TWModel,
                     orbitguess, 
@@ -274,13 +328,12 @@ function continuation(prob::TWModel,
                     kwargs...)
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
-    B = SPA.spdiagm(vcat(ones(N-1), 0))
+    B = SPA.spdiagm(vcat(ones(N-1), zeros(prob.nc)))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convert_to_wave_eigen_solver(eigsolver, old_eigsolver, B)
     # this is to remove this part from the arguments passed to continuation
     jac = _generate_jacobian(prob, prob.jacobian, orbitguess, getparams(prob); δ)
     probwp = WrapTW(prob, jac, orbitguess, plot_solution, record_from_solution)
-    # call continuation
     return continuation(probwp, alg, contParamsWave; kind = TravellingWaveCont(), kwargs...,)
 end

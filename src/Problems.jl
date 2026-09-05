@@ -505,7 +505,7 @@ for (op, at, kd) in (
             @inline get_discretization(pb::$op) = pb.disc
             @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
             residual(pb::$op, x, p) = residual($kd(get_discretization(pb)), x, p)
-            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), $kd, o, x, p)
+            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), o, x, p)
             @inline getdelta(pb::$op) = getdelta(get_discretization(pb))
         end
     end
