@@ -1171,13 +1171,20 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     L = jacobian(prob, x0, parbif)
 
     # right eigenvector
-    ζ = if ~haseigenvector(br)
-        # we recompute the eigen-elements if there were not saved during the computation of the branch
-         _get_target_eigenvector_from_eigensolver(L, λ, options.eigsolver; nev, verbose)[1]
-    else
-        _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+    ζ = if haseigenvector(br) 
+            _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+        else
+            if start_with_eigen_type
+                # we recompute the eigen-elements if there were not saved during the computation of the branch
+                _get_target_eigenvector_from_eigensolver(L, λ, options.eigsolver; nev, verbose)[1]
+            else
+                nothing
+            end
     end
-    VI.scale!(ζ, 1 / scaleζ(ζ))
+
+    if ~isnothing(ζ)
+        VI.scale!(ζ, 1 / scaleζ(ζ))
+    end
 
     if ~detailed_type
         return Hopf(x0, bifpt.τ, bifpt.param,

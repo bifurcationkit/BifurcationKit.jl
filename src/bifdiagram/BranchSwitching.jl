@@ -88,6 +88,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       nev = options_cont.nev,
                       scaleζ = norm,
                       autodiff = true,
+                      start_with_eigen = Val(true),
 
                       usedeflation::Bool = false,
                       verbosedeflation::Bool = false,
@@ -122,6 +123,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                                 nev,
                                 scaleζ,
                                 autodiff,
+                                start_with_eigen,
                                 bls_block,
 
                                 verbosedeflation,
@@ -140,6 +142,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                             nev,
                             verbose,
                             scaleζ,
+                            start_with_eigen,
                             bls,
                             tol_fold)
 
@@ -243,6 +246,7 @@ function multicontinuation(br::AbstractBranchResult,
                             scaleζ = norm,
                             autodiff = true,
                             bls_block = MatrixBLS(),
+                            start_with_eigen = Val(true),
 
                             verbosedeflation::Bool = false,
 
@@ -251,7 +255,7 @@ function multicontinuation(br::AbstractBranchResult,
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
     # TODO: the following makes the function type unstable. Calling directly get_normal_formNd impeds logic because of L270 multicontinuation(...) = nothing
-    bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff, bls_block)
+    bpnf = get_normal_form(getprob(br), br, ind_bif, Teigvec; nev, verbose, ζs, scaleζ, autodiff, bls_block, start_with_eigen)
 
     return multicontinuation(br,
                             bpnf,

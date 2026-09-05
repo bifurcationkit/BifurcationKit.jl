@@ -451,12 +451,12 @@ function JFsl2(u, p)
 end
 
 let
-    for _F in (Fsl2, Fsl2!), autodiff in  (true, false)
+    for _F in (Fsl2, Fsl2!), autodiff in  (true, false), save_eig in (true, false)
         par_sl = (r = -0.1, μ = 0.132, ν = 1.0, c3 = 1.123, c5 = 0.2)
         probsl2 = BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
 
         # detect hopf bifurcation
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, save_eigenvectors = save_eig)
 
         br = BK.continuation(probsl2, PALC(), opts_br; normC = norminf)
 
