@@ -9,8 +9,16 @@ abstract type AbstractLinearSolver end
 abstract type AbstractDirectLinearSolver <: AbstractLinearSolver end
 abstract type AbstractIterativeLinearSolver <: AbstractLinearSolver end
 
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+Structure to bundle the mass matrix and the jacobian. This is especially useful for dispatch of linear solvers.
+"""
+struct MassAndJacobian{TM, TJ}
+    M::TM
+    J::TJ
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The function linsolve(J, x; kwargs...) must return whether the solve was successful and how many steps were required for the solve.
-
 # the following function can be used to cache some factorization, see DefaultLS() case for example
 function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     sol1, flag1, it1 = ls(J, rhs1; kwargs...)
@@ -18,11 +26,11 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     return sol1, sol2, flag1 & flag2, (it1, it2)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# The two following methods are used for the continuation of Hopf points and the computation of Floquet multipliers
 """
-[Internal] This function returns a₀ * I + a₁ * J and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+[Internal] This function returns a₀ * Mass + a₁ * J and ensures that we don't perform unnecessary computations like 0*Mass + 1*J.
+Used for the continuation of Hopf points and the computation of Floquet multipliers.
 """
-function _axpy(J, a₀, a₁)
+function _axpy(J, a₀, a₁, Mass = LA.I)
     if a₀ === VI.Zero() # this is decided at compilation!
         if a₁ === VI.One()
             return J
@@ -31,20 +39,21 @@ function _axpy(J, a₀, a₁)
         end
     elseif a₀ === VI.One()
         if a₁ === VI.One()
-            return LA.I + J
+            return Mass + J
         else
-            return LA.I + a₁ .* J
+            return Mass + a₁ .* J
         end
     else
-        return a₀ * LA.I + a₁ .* J
+        return a₀ * Mass + a₁ .* J
     end
 end
 
 """
-[Internal] This function implements the operator (a₀ * I + a₁ * J)⋅v and ensures that we don't perform unnecessary computations like 0*I + 1*J.
+[Internal] This function implements the operator (a₀ * Mass + a₁ * J)⋅v and ensures that we don't perform unnecessary computations like 0*Mass + 1*J.
+Used for the continuation of Hopf points and the computation of Floquet multipliers.
 """
-function _axpy_op(J, v::AbstractArray, a₀, a₁)
-    if a₀ === VI.Zero()
+function _axpy_op(J, v::AbstractArray, a₀, a₁, Mass = LA.I)
+    if a₀ === VI.Zero() # this is decided at compilation!
         if a₁ === VI.One()
             return apply(J, v)
         else
@@ -52,16 +61,16 @@ function _axpy_op(J, v::AbstractArray, a₀, a₁)
         end
     elseif a₀ === VI.One()
         if a₁ === VI.One()
-            return v .+ apply(J, v)
+            return apply(Mass, v) .+ apply(J, v)
         else
-            return v .+ a₁ .* apply(J, v)
+            return apply(Mass, v) .+ a₁ .* apply(J, v)
         end
     else
-        return a₀ .* v .+ a₁ .* apply(J, v)
+        return a₀ .* apply(Mass, v) .+ a₁ .* apply(J, v)
     end
 end
 
-function _axpy_op!(o, J, v::AbstractArray, a₀, a₁)
+function _axpy_op!(o, J, v::AbstractArray, a₀, a₁, Mass = LA.I)
     apply!(o, J, v)
     if a₀ === VI.Zero()
         if a₁ === VI.One()
@@ -72,12 +81,12 @@ function _axpy_op!(o, J, v::AbstractArray, a₀, a₁)
         end
     elseif a₀ === VI.One()
         if a₁ === VI.One()
-            return o .+= v
+            return o .+= apply(Mass, v)
         else
-            return o .= v .+ a₁ .* o
+            return o .= apply(Mass, v) .+ a₁ .* o
         end
     else
-        return o .= a₀ .* v .+ a₁ .* o
+        return o .= a₀ .* apply(Mass, v) .+ a₁ .* o
     end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

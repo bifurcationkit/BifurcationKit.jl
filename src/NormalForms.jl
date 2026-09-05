@@ -1046,7 +1046,7 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
                             ls::AbstractLinearSolver; 
                             verbose::Bool = false,
                             L = nothing,
-                            Mass = TrivialMassMatrix())
+                            Mass = IdentityOperator())
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
     cζ = conj(ζ)
@@ -1199,7 +1199,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     end
 
     Mass = getmassmatrix(prob, x0, parbif) # mass matrix (DAE) handling
-    if ~(Mass isa TrivialMassMatrix)
+    if ~(Mass isa IdentityOperator)
         if start_with_eigen_type
             error("hopf_normal_form with `start_with_eigen = Val(true)` is not supported for a problem with a mass matrix (DAE): " *
                   "the eigen-computation would ignore `M`. Please pass `start_with_eigen = Val(false)` so that the (right/left) " *

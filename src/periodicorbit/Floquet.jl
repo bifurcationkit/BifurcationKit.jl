@@ -277,7 +277,6 @@ end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Trapeze
-
 # Matrix-Free version of the monodromy operator
 function MonodromyQaD_matrix_free(trap::Trapeze, po, par, du::AbstractVector)
     @assert hasmassmatrix(trap) == false # TODO: correct this
@@ -300,7 +299,6 @@ function MonodromyQaD_matrix_free(trap::Trapeze, po, par, du::AbstractVector)
         res, _ = trap.linsolver(Jac(ii), out; a₀ = one(𝒯), a₁ = -h/2) # res = (I - h/2 * Jac(ii)) \ out
         out .= res
     end
-
     return out
 end
 

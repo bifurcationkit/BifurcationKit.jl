@@ -451,7 +451,7 @@ function solve_bls_block(lbs::MatrixFreeBLS,
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Linear Solvers based on a bordered solver
-# !!!! This one is used as a linear Solver, not as a Bordered one
+# !!!! This one is used as a linear solver, not as a bordered one
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
@@ -482,9 +482,7 @@ end
 function  (l::LSFromBLS)(J, rhs1, rhs2)
     F = LA.factorize(J[begin:end-1,begin:end-1])
     x1, x2, flag1, it1 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs1[begin:end-1]), rhs1[end])
-
     y1, y2, flag2, it2 = l.solver(F, Array(J[begin:end-1,end]), Array(J[end,begin:end-1]), J[end, end], (@view rhs2[begin:end-1]), rhs2[end])
-
     return vcat(x1, x2), vcat(y1, y2), flag1 & flag2, (1, 1)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

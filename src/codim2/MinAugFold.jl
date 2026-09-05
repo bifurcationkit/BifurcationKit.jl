@@ -51,21 +51,21 @@ Compute the solution (v, σ) of
 
 and the same for the adjoint system with solution (w, τ).
 """
-function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J_at_xp, JAd_at_xp)
+function _compute_bordered_vectors(𝐅::FoldMinimallyAugmentedFormulation, J, J★)
     𝒯 = eltype(𝐅)
-    (; v, w, itv, itw) = __compute_bordered_vectors_fold(𝐅.linbdsolver, 𝐅.linbdsolverAdjoint, J_at_xp, JAd_at_xp, 𝐅.a, 𝐅.b, 𝐅.zero, 𝒯)
-    return (; v, w, itv, itw, JAd_at_xp)
+    (; v, w, itv, itw) = __compute_bordered_vectors_fold(𝐅.linbdsolver, 𝐅.linbdsolverAdjoint, J, J★, 𝐅.a, 𝐅.b, 𝐅.zero, 𝒯)
+    return (; v, w, itv, itw, JAd_at_xp = J★)
 end
 
-function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J_at_xp, JAd_at_xp, a, b, _zero_vector, 𝒯)
+function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J, J★, a, b, _zero_vector, 𝒯)
     # we solve Jv + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
-    v, _, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero_vector, one(𝒯))
+    v, _, cv, itv = linbdsolver(J, a, b, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge."
 
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
-    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero_vector, one(𝒯))
+    w, _, cv, itw = linbdsolver_adjoint(J★, b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
 
     return (; v, w, itv, itw)
@@ -78,15 +78,15 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
 
     # The jacobian is used at least 3 times below. This avoids doing 3 times the 
     # (possibly) costly building of J(x, p)
-    J_at_xp = jacobian(𝐅.prob_vf, x, par0)
-    # Avoid computing J_at_xp twice in case 𝐅.Jadjoint is not provided
-    if is_symmetric(𝐅.prob_vf)
-        JAd_at_xp = J_at_xp
-    else
-        JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, par0) : transpose(J_at_xp)
-    end
+    J = jacobian(𝐅.prob_vf, x, par0)
+    # Avoid computing J twice in case 𝐅.Jadjoint is not provided
+    J★ = if is_symmetric(𝐅.prob_vf)
+            J
+        else
+            has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, par0) : transpose(J)
+        end
 
-    (;v, w, itv, itw, JAd_at_xp) = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
+    (;v, w, itv, itw, JAd_at_xp) = _compute_bordered_vectors(𝐅, J, J★)
 
     δ = getdelta(𝐅.prob_vf)
     ϵₚ = ϵₓ = ϵⱼ = 𝒯(δ)
@@ -100,7 +100,7 @@ function _get_bordered_terms(𝐅::FoldMinimallyAugmentedFormulation, x, p::𝒯
     VI.scale!(∂Jv∂p, 𝒯(1/(2ϵⱼ)))
     σₚ = -VI.inner(w, ∂Jv∂p)
 
-    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵₓ, v, w, par0, dJvdp = ∂Jv∂p, itv, itw)
+    return (;J_at_xp = J, JAd_at_xp, dₚF, σₚ, δ, ϵₓ, v, w, par0, dJvdp = ∂Jv∂p, itv, itw)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function jacobian(pdpb::FoldMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector, par) where {Tprob}
@@ -300,16 +300,16 @@ function update!(probma::FoldMAProblem, iter, state)
     zu = getx(state)
     x = getvec(zu, 𝐅) # fold point
     newpar = getparams(iter, state)
-    J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
+    J = jacobian(𝐅.prob_vf, x, newpar)
 
     # compute new a, close to left null vector
-    if is_symmetric(𝐅)
-        JAd_at_xp = J_at_xp
-    else
-        JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, newpar) : transpose(J_at_xp)
-    end
+    J★ = if is_symmetric(𝐅)
+            J
+        else
+            has_adjoint(𝐅) ? jacobian_adjoint(𝐅.prob_vf, x, newpar) : transpose(J)
+        end
 
-    bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
+    bd_vec = _compute_bordered_vectors(𝐅, J, J★)
     _copyto!(𝐅.a, bd_vec.w); VI.scale!(𝐅.a, 1 / 𝐅.norm(bd_vec.w))
     # do not normalize with dot(newb, 𝐅.a), it prevents from BT detection
     _copyto!(𝐅.b, bd_vec.v); VI.scale!(𝐅.b, 1 / 𝐅.norm(bd_vec.v))
@@ -560,7 +560,7 @@ function test_zh(iter, state)
     return iter.prob.prob.ZH
 end
 
-dot_with_mass(ζ★, ::TrivialMassMatrix, ζ) = VI.inner(ζ★, ζ)
+dot_with_mass(ζ★, ::IdentityOperator, ζ) = VI.inner(ζ★, ζ)
 dot_with_mass(ζ★, Mass, ζ) = LA.dot(ζ★, Mass, ζ)
 
 # Bogdanov-Takens / Cusp test function for the Fold functional
@@ -572,10 +572,10 @@ function test_bt_cusp(iter, state)
     zu = getx(state)
     x = getvec(zu, 𝐅) # fold point
     newpar = getparams(iter, state)
-    J_at_xp = jacobian(𝐅.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(𝐅) ? jacobian_adjoint(𝐅, x, newpar) : transpose(J_at_xp)
+    J = jacobian(𝐅.prob_vf, x, newpar)
+    J★ = has_adjoint(𝐅) ? jacobian_adjoint(𝐅, x, newpar) : transpose(J)
 
-    bd_vec = _compute_bordered_vectors(𝐅, J_at_xp, JAd_at_xp)
+    bd_vec = _compute_bordered_vectors(𝐅, J, J★)
 
     # compute new b
     ζ = bd_vec.v

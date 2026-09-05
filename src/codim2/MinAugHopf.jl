@@ -59,25 +59,25 @@ Compute the solution (v, σ) of
 
 and the same for the adjoint system with solution (w, τ).
 """
-function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, M, J_at_xp, JAd_at_xp, ω)
+function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, M, J, J★, ω)
     return __compute_bordered_vectors_hopf(𝐇.linbdsolver,
                                       𝐇.linbdsolverAdjoint,
                                       M,
-                                      J_at_xp,
-                                      JAd_at_xp,
+                                      J,
+                                      J★,
                                       ω,
                                       𝐇.a,
                                       𝐇.b,
                                       𝐇.zero)
 end
 
-function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::TrivialMassMatrix, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero_vector) where {𝒯}
+function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::IdentityOperator, J, J★, ω::𝒯, a, b, _zero_vector) where {𝒯}
     # we solve (J-iω)v + a σ1 = 0 with <b, v> = 1
-    v, σ, cv, itv = linbdsolver(J_at_xp, a, b, zero(𝒯), _zero_vector, one(𝒯); shift = Complex{𝒯}(0, -ω))
+    v, σ, cv, itv = linbdsolver(ShiftedOperator(J = J, a₀ = Complex{𝒯}(0, -ω) ), a, b, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J-iω) did not converge."
 
     # we solve (J+iω)'w + b σ1 = 0 with <a, w> = 1
-    w, _, cv, itw = linbdsolver_adjoint(JAd_at_xp, b, a, zero(𝒯), _zero_vector, one(𝒯); shift = Complex{𝒯}(0, ω))
+    w, _, cv, itw = linbdsolver_adjoint(ShiftedOperator(J = J★, a₀ = Complex{𝒯}(0, ω) ), b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J+iω)' did not converge."
 
     return (; v, w, itv, itw, σ)
@@ -89,12 +89,12 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     par0 = set(par, lens, p)
 
     # This avoids doing 3 times the possibly costly building of J(x, p)
-    J_at_xp = jacobian(𝐇.prob_vf, x, par0)
-    M_at_xp = getmassmatrix(𝐇.prob_vf, x, par0)
-    # Avoid computing J_at_xp twice in case 𝐇.Jadjoint is not provided
-    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, par0) : transpose(J_at_xp)
+    J = jacobian(𝐇.prob_vf, x, par0)
+    M = getmassmatrix(𝐇.prob_vf, x, par0)
+    # Avoid computing J twice in case 𝐇.Jadjoint is not provided
+    J★ = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, par0) : transpose(J)
 
-    (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, M_at_xp, J_at_xp, JAd_at_xp, ω)
+    (; v, w, itv, itw) = _compute_bordered_vectors(𝐇, M, J, J★, ω)
 
     δ = getdelta(𝐇.prob_vf)
     ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
@@ -110,9 +110,9 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
 
     # case of sigma_omega
     # σω = dot(w, Complex{T}(0, 1) * v)
-    σω = Complex{𝒯}(0, 1) * dot_with_mass(w, M_at_xp, v)
+    σω = Complex{𝒯}(0, 1) * dot_with_mass(w, M, v)
 
-    return (;J_at_xp, JAd_at_xp, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
+    return (;J_at_xp = J, JAd_at_xp = J★, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # since this is matrix based, it requires X to ba an AbstractVector
@@ -350,11 +350,11 @@ function update!(𝐏𝐛::HopfMAProblem, iter, state)
     # expression of the jacobian
     x = getvec(zu, 𝐇) # fold point
     newpar = getparams(iter, state)
-    J_at_xp = jacobian(𝐇.prob_vf, x, newpar)
-    JAd_at_xp = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J_at_xp)
-    M_at_xp = getmassmatrix(𝐇.prob_vf, x, newpar)
+    J = jacobian(𝐇.prob_vf, x, newpar)
+    J★ = has_adjoint(𝐇) ? jacobian_adjoint(𝐇.prob_vf, x, newpar) : adjoint(J)
+    M = getmassmatrix(𝐇.prob_vf, x, newpar)
 
-    bd_vec = _compute_bordered_vectors(𝐇, M_at_xp, J_at_xp, JAd_at_xp, ω)
+    bd_vec = _compute_bordered_vectors(𝐇, M, J, J★, ω)
 
     𝐇.a .= bd_vec.w ./ 𝐇.norm(bd_vec.w)
     # do not normalize with dot(newb, 𝐇.a), it prevents from BT detection
@@ -608,7 +608,7 @@ function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinso
 
     (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
 
-    Mass = M isa TrivialMassMatrix ? LA.I : M
+    Mass = M isa IdentityOperator ? LA.I : M
 
     @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, v) - complex(0,ω)*apply(Mass,v)) norminf(apply(L,v) + complex(0,ω)*v)
     @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(adjoint(Mass),w)) norminf(apply(L★,w) + complex(0,ω)*w)

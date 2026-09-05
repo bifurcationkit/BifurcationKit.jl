@@ -23,7 +23,7 @@ end
 
 function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, J_at_xp, JAd_at_xp, ω::𝒯, a, b, _zero) where {𝒯}
     # we solve (J - iωM)v + M·a·σ1 = 0 with <M·b, v> = 1
-    # this is the SAME bordered system as the one used to evaluate the Hopf MA residual
+    # this is the same bordered system as the one used to evaluate the Hopf MA residual
     # (see `hopf_ma_test`), so that the bordered vectors are consistent with the residual
     Ma = apply(M, a)
     Mb = apply(M, b)

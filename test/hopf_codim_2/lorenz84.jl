@@ -44,7 +44,7 @@ z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105
 recordFromSolutionLor(u::AbstractVector, p; k...) = (X = u[1], Y = u[2], Z = u[3], U = u[4])
 recordFromSolutionLor(u::BorderedArray, p; k...) = recordFromSolutionLor(u.u, p)
 
-prob = BK.BifurcationProblem(Lor, z0, parlor, (@optic _.F);
+prob = BK.ODEBifProblem(Lor, z0, parlor, (@optic _.F);
     J = jac_Lor,
     record_from_solution = recordFromSolutionLor,)
 

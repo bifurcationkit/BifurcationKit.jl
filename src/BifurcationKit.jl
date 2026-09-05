@@ -124,6 +124,7 @@ module BifurcationKit
     include("dae/Continuation.jl")
 
     # DAE codim 2
+    include("dae/LinearSolver.jl")
     include("dae/codim2/MinAugHopf.jl")
     include("dae/codim2/MinAugFold.jl")
 

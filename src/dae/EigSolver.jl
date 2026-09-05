@@ -11,17 +11,17 @@ _to_dae_eigen(eig::EigenDAE) = eig
 
 getsolver(eig::EigenDAE) = eig
 
-@views function (eig::EigenDAE)(J::AbstractMatrix, Mass, nev; kw...)
+@views function (eig::EigenDAE)(J, Mass, nev; kw...)
     eig = eig.eigensolver
     return gev(eig, J, Mass, nev; kw...)
 end
 
-@views function (eig::EigenDAE)(J::AbstractMatrix, ::TrivialMassMatrix, nev; kw...)
+@views function (eig::EigenDAE)(J::AbstractMatrix, ::IdentityOperator, nev; kw...)
     eig = eig.eigensolver
     return eig(J, nev; kw...)
 end
 
-function (eig::EigenDAE)(J, Mass, nev; kw...)
-    eig = eig.eigensolver
-    error("DAE eigen computations require a matrix valued Jacobian. We got a $(typeof(J)) which is not an `AbstractMatrix`. Matrix-free (operator) Jacobians are not supported yet for the generalized eigenproblem `J⋅x = λ⋅M⋅x`.")
-end
+# function (eig::EigenDAE)(J, Mass, nev; kw...)
+#     eig = eig.eigensolver
+#     error("DAE eigen computations require a matrix valued Jacobian. We got a $(typeof(J)) which is not an `AbstractMatrix`. Matrix-free (operator) Jacobians are not supported yet for the generalized eigenproblem `J⋅x = λ⋅M⋅x`.")
+# end

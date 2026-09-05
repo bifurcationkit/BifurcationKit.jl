@@ -182,45 +182,42 @@ Compute the period of the periodic orbit associated to `x`.
 # just call Trapeze()
 
 function Trapeze(prob_vf,
-                                    ϕ::vectype,
-                                    xπ::vectype,
-                                    m::Union{Int, AbstractVector},
-                                    ls::AbstractLinearSolver = DefaultLS();
-                                    ongpu = false,
-                                    massmatrix = nothing) where {vectype}
+                ϕ::vectype,
+                xπ::vectype,
+                m::Union{Int, AbstractVector},
+                ls::AbstractLinearSolver = DefaultLS();
+                ongpu = false,
+                massmatrix = nothing) where {vectype}
     _length = ϕ isa AbstractVector ? length(ϕ) : 0
     M = m isa Number ? m : length(m) + 1
-
     return Trapeze(;prob_vf, ϕ, xπ, M, mesh = TimeMesh(m), N = _length ÷ M, linsolver = ls, ongpu, massmatrix)
 end
 
 function Trapeze(prob_vf,
-                                    ϕ::vectype,
-                                    xπ::vectype,
-                                    m::Union{Int, AbstractVector},
-                                    N::Int,
-                                    ls::AbstractLinearSolver = DefaultLS();
-                                    ongpu = false,
-                                    massmatrix = nothing,
-                                    update_section_every_step::Int = 0,
-                                    jacobian = Dense()) where {vectype}
+                ϕ::vectype,
+                xπ::vectype,
+                m::Union{Int, AbstractVector},
+                N::Int,
+                ls::AbstractLinearSolver = DefaultLS();
+                ongpu = false,
+                massmatrix = nothing,
+                update_section_every_step::Int = 0,
+                jacobian = Dense()) where {vectype}
     M = m isa Number ? m : length(m) + 1
     # we use 0 * ϕ to create a copy filled with zeros, this is useful to keep the types
     trap = Trapeze(;prob_vf,
-                                    ϕ = similar(ϕ, N*M),
-                                    xπ = similar(xπ, N*M),
-                                    M,
-                                    mesh = TimeMesh(m),
-                                    N,
-                                    linsolver = ls,
-                                    ongpu,
-                                    massmatrix,
-                                    update_section_every_step,
-                                    jacobian)
-
+                    ϕ = similar(ϕ, N*M),
+                    xπ = similar(xπ, N*M),
+                    M,
+                    mesh = TimeMesh(m),
+                    N,
+                    linsolver = ls,
+                    ongpu,
+                    massmatrix,
+                    update_section_every_step,
+                    jacobian)
     trap.xπ .= 0
     trap.ϕ .= 0
-
     trap.xπ[eachindex(xπ)] .= xπ
     trap.ϕ[eachindex(ϕ)] .= ϕ
     return trap
@@ -694,8 +691,7 @@ $(TYPEDSIGNATURES)
 Return the sparse cyclic matrix ``J_c(u_0)`` of size ``N\\,(M-1)`` (see `po_cylic_block`) as a sparse matrix. This corresponds to the space part of ``dG`` without the closure block, the period column and the phase line; it is used to build the (preconditioned) bordered linear solvers.
 """
 function jacobian_cyclic_sparse(trap::Trapeze, u0::AbstractVector, par, γ = 1)
-    # extraction of various constants
-    N = trap.N
+    M, N = size(trap)
     AγBlock = po_jacobian_block(trap, u0, par; γ)
 
     # this is bad for performance. Get converted to SparseMatrix at the next line
@@ -710,7 +706,6 @@ $(TYPEDSIGNATURES)
 Return the block diagonal of the jacobian ``dG(u_0)``, i.e. a sparse matrix whose `M` diagonal blocks read ``I - (T\\,h_i/2)\\,J(x_i)`` (the last one is the identity). The inverse of this matrix is a natural block Jacobi preconditioner for the (preconditioned) matrix-free solvers of `Trapeze`.
 """
 function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
-    # extraction of various constants
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
 

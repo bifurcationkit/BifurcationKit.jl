@@ -589,7 +589,7 @@ getparam(pb::AbstractBifurcationProblem) = _get(getparams(pb), getlens(pb))
 setparam(pb::AbstractBifurcationProblem, p0) = set(getparams(pb), getlens(pb), p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
-getmassmatrix(pb::AbstractBifurcationProblem, x, p) = TrivialMassMatrix() # for Hopf continuation
+getmassmatrix(::AbstractBifurcationProblem, x, p) = IdentityOperator() # for Hopf continuation
 is_mass_matrix_constant(::AbstractBifurcationProblem) = true
 
 # specific to AbstractAllJetBifProblem

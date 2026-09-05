@@ -58,8 +58,8 @@ end
 
 @inline _print_line(step::Int, residual::Real, itlinear::Tuple{Int, Int}) = @printf("|%8d     │ %16.4e     │ (%4d, %4d)   |\n", step, residual, itlinear[1], itlinear[2])
 @inline _print_line(step::Int, residual::Real, itlinear::Int) = @printf("│%8d     │ %16.4e     │ %8d       │\n", step, residual, itlinear)
-@inline _print_line(step::Int, residual::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
-@inline _print_line(step::Int, residual::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
+@inline _print_line(step::Int, ::Nothing, itlinear::Int) = @printf("│%8d     │                      │ %8d       │\n", step, itlinear)
+@inline _print_line(step::Int, ::Nothing, itlinear::Tuple{Int, Int}) = @printf("│%8d     │                      │ (%4d, %4d)   │\n", step, itlinear[1], itlinear[2])
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # these are very useful methods than can be used with dispatch to specialize the eigensolver to the model
 # indeed, something, we need to apply the eigensolver to a modified getx(state) (for example Floquet exponents)
@@ -194,15 +194,13 @@ function mod_counter(step, everyN)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this trick is extracted from KrylovKit. It allows for the Jacobian to be specified as a matrix (sparse / dense) or as a function.
-apply(A::AbstractMatrix, x::AbstractVector) = A * x
 apply(f, x) = f(x)
+apply(A::AbstractMatrix, x::AbstractVector) = A * x
+@inline apply(::LA.UniformScaling{Bool}, x) = x
+@inline apply(::IdentityOperator, x) = x
 
 apply!(y::AbstractVector, A::AbstractMatrix, x::AbstractVector) = LA.mul!(y, A, x)
 apply!(y, f, x) = f(y, x)
-
-# empty eigenvectors to save memory
-# _empty(a::AbstractVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
-# _empty(a::AbstractMatrix{T}, ::Type{U}=T) where {T,U} = similar(a, (0,0))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)

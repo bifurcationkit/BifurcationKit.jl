@@ -548,11 +548,11 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     params = getparams(br_hopf, ind_pt)
     L = jacobian(vector_field, x0, params)
     L★ = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
-    Mass = jacobian(vector_field, x0, params)
-
+    Mass = getmassmatrix(vector_field, x0, params)
     _tmp_vector_complex =  VI.scale(_copy(x0), one(Complex{VI.scalartype(x0)}))
     a = _randn(_tmp_vector_complex); VI.scale!(a, 1 / scaleζ(a))
     b = _randn(_tmp_vector_complex); VI.scale!(b, 1 / scaleζ(b))
+
     (; v, w) = __compute_bordered_vectors_hopf(𝐇.linbdsolver, 𝐇.linbdsolverAdjoint, Mass, L, L★, ω, a, b, VI.zerovector(a))
     ζ = v; ζ★ = w; VI.scale!(ζ, 1 / scaleζ(ζ))
 

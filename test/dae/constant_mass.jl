@@ -38,11 +38,11 @@ let
     # `bogdanov_takens_normal_form` is reached.
     ind_bt = findfirst(pt -> pt.type == :bt, brfold.specialpoint)
     @test ind_bt !== nothing
-    @test_throws "Bogdanov-Takens normal form not implemented for problems with a mass matrix" get_normal_form(brfold, ind_bt; nev = 2)
+    @test_throws "Constant DAE not taken into account!" get_normal_form(brfold, ind_bt; nev = 2)
 
     ind_bt_h = findfirst(pt -> pt.type == :bt, brhopf.specialpoint)
     @test ind_bt_h !== nothing
-    @test_throws "Bogdanov-Takens normal form not implemented for problems with a mass matrix" get_normal_form(brhopf, ind_bt_h; nev = 2)
+    @test_throws "Constant DAE not taken into account!" get_normal_form(brhopf, ind_bt_h; nev = 2)
     # plot(brfold, brhopf)
 
     #############################################
