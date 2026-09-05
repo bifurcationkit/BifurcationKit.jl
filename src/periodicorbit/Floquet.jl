@@ -290,13 +290,13 @@ function MonodromyQaD_matrix_free(trap::Trapeze, po, par, du::AbstractVector)
     Jac(i) = jacobian(trap.prob_vf, (@view po_s[:, i]), par)
 
     out .= out .+ h/2 .* apply(Jac(M-1), out)
-    res, _ = trap.linsolver(Jac(1), out; a₀ = one(𝒯), a₁ = -h/2) # res = (I - h/2 * Jac(1) \ out
+    res, _ = trap.linsolver(ShiftedOperator(J = Jac(1), a₀ = one(𝒯), a₁ = -h/2), out) # res = (I - h/2 * Jac(1)) \ out
     out .= res
 
     for ii in 2:M-1
         h =  T * get_time_step(trap, ii)
         out .= out .+ h/2 .* apply(Jac(ii-1), out)
-        res, _ = trap.linsolver(Jac(ii), out; a₀ = one(𝒯), a₁ = -h/2) # res = (I - h/2 * Jac(ii)) \ out
+        res, _ = trap.linsolver(ShiftedOperator(J = Jac(ii), a₀ = one(𝒯), a₁ = -h/2), out) # res = (I - h/2 * Jac(ii)) \ out
         out .= res
     end
     return out
@@ -317,7 +317,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunct
 
     @views out .= out .+ h/2 .* apply(Jac(M-1), out)
     # res = (I - h/2 * trap.J(po_s[:, 1])) \ out
-    @views res, _ = trap.linsolver(Jac(1), out; a₀ = convert(𝒯, 1), a₁ = -h/2)
+    @views res, _ = trap.linsolver(ShiftedOperator(J = Jac(1), a₀ = convert(𝒯, 1), a₁ = -h/2), out)
     out .= res
     out_a = [copy(out)]
 
@@ -325,7 +325,7 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunct
         h =  T * get_time_step(trap, ii) # current time step
         @views out .= out .+ h/2 .* apply(Jac(ii-1), out)
         # res = (I - h/2 * trap.J(po_s[:, ii])) \ out
-        @views res, _ = trap.linsolver(Jac(ii), out; a₀ = convert(𝒯, 1), a₁ = -h/2)
+        @views res, _ = trap.linsolver(ShiftedOperator(J = Jac(ii), a₀ = convert(𝒯, 1), a₁ = -h/2), out)
         out .= res
         push!(out_a, copy(out))
     end
