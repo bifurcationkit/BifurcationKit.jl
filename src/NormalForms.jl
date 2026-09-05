@@ -1053,7 +1053,7 @@ function __hopf_normal_form(prob::AbstractBifurcationProblem,
     cζ = conj(ζ)
 
     if ~(dot_with_mass(ζ★, Mass, ζ) ≈ 1)
-        ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ)) # normalize by <ζ★, M⋅ζ>_ℂ ≡ <conj(ζ★), M⋅ζ>
+        ζ★ ./= _normalize_for_hopf(ζ★, Mass, ζ)
     end
 
     # jacobian at the bifurcation point
@@ -1228,7 +1228,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     abs(λ + λ★) > 1e-2 && @debug "[Hopf normal form] We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part:\nλ  ≈ $λ,\nλ★ ≈ $λ★\nYou can perhaps increase the number of computed eigenvalues, the current number is nev = $nev"
 
     # normalise left eigenvector
-    ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ)) # normalize by <ζ★, M⋅ζ>_ℂ ≡ <conj(ζ★), M⋅ζ>
+    ζ★ ./= _normalize_for_hopf(ζ★, Mass, ζ)
     if ~(dot_with_mass(ζ★, Mass, ζ) ≈ 1)
         error("Error of precision in normalization, got: $(dot_with_mass(ζ★, Mass, ζ)) ≈ 1")
     end

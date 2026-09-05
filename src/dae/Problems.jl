@@ -95,6 +95,7 @@ getmassmatrix(dae::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tpro
 getmassmatrix(::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: Union{LA.UniformScaling, IdentityOperator}} = LA.Diagonal(ones(length(x)))
 getmassmatrix(dae::DAEMassBifProblem, x, p) = dae.M(x, p)
 is_mass_matrix_constant(::DAEMassBifProblem{ConstantMass}) = true
+is_mass_matrix_constant(::DAEMassBifProblem{IdentityOperator}) = true
 is_mass_matrix_constant(::DAEMassBifProblem) = false
 
 # generic constructors, the kind of mass matrix `type` defaults to `ConstantMass`

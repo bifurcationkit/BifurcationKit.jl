@@ -172,6 +172,11 @@ function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     return MASolution(x_ma, p1)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+Return scalar <ζ★, M⋅ζ>_ℂ ≡ <conj(ζ★), M⋅ζ>
+"""
+_normalize_for_hopf(ζ★, Mass, ζ) = conj(dot_with_mass(ζ★, Mass, ζ))
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 test_ma(::AbstractMinimallyAugmentedFormulation_Fold_PD ,Jac, v, w, J22, _zero, n, lsbd) = lsbd(Jac, v, w, J22, _zero, n)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)

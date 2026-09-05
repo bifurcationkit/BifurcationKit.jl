@@ -52,7 +52,7 @@ Here are some useful methods you can apply to `pb::Trapeze`:
 - `get_times(pb)` returns the normalized times `sᵢ` at which the orbit is discretized, i.e. the cumulative sum of the mesh steps.
 - `get_time_slices(pb, x)` returns the state part of the guess `x` (i.e. `x[1:M*N]`, the period is dropped) reshaped as an `N x M` matrix.
 - `get_time_step(pb, i)` returns the `i`-th normalized mesh step `hᵢ`.
-- `get_mass_matrix(pb)` returns the mass matrix, defaulting to a sparse identity matrix if none was provided. Passing `true` as a second argument returns instead an identity matrix of the form `I(N)`.
+- `get_mass_matrix(pb)` returns the mass matrix, defaulting to a sparse identity matrix if none was provided. Passing `Val(true)` as a second argument returns instead an identity matrix of the form `I(N)`.
 - `hasmassmatrix(pb)` returns `true` if a mass matrix was provided.
 - `getparams(pb)`, `getlens(pb)` and `setparam(pb, p)` give access to the parameters of the underlying vector field.
 - `getperiod(pb, x)` returns the period `T = x[end]` of the guess `x`.
@@ -157,9 +157,8 @@ setparam(trap::Trapeze, p) = set(getparams(trap), getlens(trap), p)
 @inline get_state_dim(trap::Trapeze) = trap.N
 @inline length(trap::Trapeze) = trap.M * get_state_dim(trap)
 
-# type unstable!
-@inline function get_mass_matrix(trap::Trapeze, return_type_Array = false)
-    if return_type_Array == false
+@inline function get_mass_matrix(trap::Trapeze, return_type_Array::Val{return_type_Array_val} = Val(false)) where {return_type_Array_val}
+    if return_type_Array_val == false
         return hasmassmatrix(trap) ? trap.massmatrix : SPA.spdiagm( 0 => ones(trap.N))
     else
         return hasmassmatrix(trap) ? trap.massmatrix : LinearAlgebra.I(trap.N)
@@ -570,7 +569,7 @@ Inplace version of `po_jacobian_sparse`: the jacobian ``dG(u_0)`` is stored in t
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
 
-    Iₙ = get_mass_matrix(trap, ~(Tj <: SPA.SparseMatrixCSC))
+    Iₙ = get_mass_matrix(trap, Val(~(Tj <: SPA.SparseMatrixCSC)))
 
     u0m = get_time_slices(trap, u0)
 
