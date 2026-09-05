@@ -69,7 +69,7 @@ residual(dae::DAEMassBifProblem, x, p) = residual(dae.prob_vf, x, p)
 residual!(dae::DAEMassBifProblem, o, x, p) = residual!(dae.prob_vf, o, x, p)
 jacobian(dae::DAEMassBifProblem, x, p) = jacobian(dae.prob_vf, x, p)
 # jacobian!(dae::DAEMassBifProblem, J, x, p) = jacobian!(dae.prob_vf, J, x, p)
-# jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x, p)
+jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x, p)
 # constant (matrix like) mass matrices are returned as-is, state dependent ones are evaluated at (x, p)
 
 record_from_solution(dae::DAEMassBifProblem) = record_from_solution(dae.prob_vf)

@@ -42,6 +42,7 @@ end
 # iterated derivatives
 ∂(f) = x -> ForwardDiff.derivative(f, x)
 ∂(f, ::Val{n}) where {n} = n == 0 ? f : ∂(∂(f), Val(n-1))
+@inline _jvp_fwd(f, x, p, dx) = ForwardDiff.derivative(t -> f(x .+ t .* dx, p), 0)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function print_nonlinear_step(step, residual, itlinear = 0, lastRow = false)
     if lastRow
