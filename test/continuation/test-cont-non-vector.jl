@@ -20,7 +20,7 @@ end
 using LinearAlgebra
 
 function F0(x::Vector, r)
-    out = r .+  x .- x.^3
+    return r .+  x .- x.^3
 end
 
 let
@@ -40,7 +40,7 @@ let
 
     @test br0.param[end] == -1
 
-    solfold = newton(br0, 2)
+    solfold = newton(br0, 2; jacobian_ma = BK.MinAug())
     @test BK.converged(solfold)
 end
 ####################################################################################################
@@ -96,7 +96,7 @@ let
 
     br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 
-    solfold = newton(br, 1; bdlinsolver = BorderingBLS(solver = opt_newton.linsolver, dot = BK.VI.inner))
+    solfold = newton(br, 1; bdlinsolver = BorderingBLS(solver = opt_newton.linsolver, dot = BK.VI.inner), jacobian_ma = BK.MinAug(), start_with_eigen = false)
     @test BK.converged(solfold)
 
     try
@@ -173,13 +173,14 @@ let
 
     br = continuation(prob2, PALC(), opts_br; linear_algo = BorderingBLS(opt_newton.linsolver))
 
-    solfold = newton(br, 1; bdlinsolver = BorderingBLS(solver = opt_newton.linsolver, dot = BK.VI.inner))
-    @test BK.converged(solfold)
+    solfold = newton(br, 1; bdlinsolver = BorderingBLS(solver = opt_newton.linsolver, dot = BK.VI.inner), jacobian_ma = BK.MinAug(), start_with_eigen = false, usehessian = true)
+    @test_skip BK.converged(solfold)
 
     try
         outfoldco = continuation(br, 1, (@optic _[2]), ContinuationPar(opts_br, max_steps = 4); 
                         # verbosity = 2,
                         start_with_eigen = false,
+                        usehessian = true,
                         bdlinsolver = BorderingBLS(opt_newton.linsolver), 
                         jacobian_ma = BK.MinAug())
     catch

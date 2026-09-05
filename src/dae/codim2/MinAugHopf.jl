@@ -4,47 +4,23 @@ function _hopf_ma_test(linbdsolver, M, J, a, b, J22, _zero, n, shift)
     return linbdsolver(so, apply(M,a), apply(M,b), J22, _zero, n)
 end
 
-function _init_hopf_vectors_minaug(dae::DAEMassBifProblem, xₕ, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
-    # we use a minimally augmented formulation to set the initial vectors
-    # we start with a vector similar to an eigenvector, we must ensure that
-    # it is complex valued
-    ζ = VI.scale(_copy(xₕ), one(Complex{VI.scalartype(xₕ)}))
-    a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
-    b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
-
-    L = jacobian(dae, xₕ, parbif)
-    M = getmassmatrix(dae, xₕ, parbif)
-    M★ = ~has_massmatrix_adjoint(dae) ? adjoint(M) : getmassmatrix_adjoint(dae, xₕ, parbif)
-    L★ = ~has_adjoint(dae) ? adjoint(L) : jacobian_adjoint(dae, xₕ, parbif)
-
-    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, M★, L, L★, ω, a, b, VI.zerovector(a))
-
-    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(dae, xₕ, parbif)) norminf(apply(L,v) - complex(0,ω)*apply(M,v)) norminf(apply(L,v) + complex(0,ω)*apply(M,v))
-
-    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(dae, xₕ, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(M★, w)) norminf(apply(L★,w) + complex(0,ω)*apply(M★, w))
-
-    ζad = VI.scale(w,  1 / normC(w))
-    ζ   = VI.scale(v,  1 / normC(v))
-    return (; ζ, ζad)
-end
-
-function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, M★, J, J★, ω::𝒯, a, b, _zero) where {𝒯}
+function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, M★, J, J★, ω::𝒯, a, b, _zero_vector) where {𝒯}
     # we solve (J - iωM)v + M·a·σ1 = 0 with <M·b, v> = 1
     # this is the same bordered system as the one used to evaluate the Hopf MA residual
     # (see `hopf_ma_test`), so that the bordered vectors are consistent with the residual
     Ma = apply(M, a)
     Mb = apply(M, b)
-    maj = MassAndJacobian(M, J); so = ShiftedOperator(J=maj, a₀ = Complex{𝒯}(0, -ω))
-    v, σ, cv, itv = linbdsolver(so, Ma, Mb, zero(𝒯), _zero, one(𝒯))
+    maj = MassAndJacobian(M, J); so = ShiftedOperator(J = maj, a₀ = Complex{𝒯}(0, -ω))
+    v, σ1, cv, itv = linbdsolver(so, Ma, Mb, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J-iωM) did not converge."
 
     # we solve (J' + iωM')w + M·b·σ2 = 0 with <M·a, w> = 1
     # (conjugate adjoint of the bordered system above)
-    maj = MassAndJacobian(M★, J★); so = ShiftedOperator(J=maj, a₀ = Complex{𝒯}(0, ω))
-    w, σ2, cv, itw = linbdsolver_adjoint(so, Mb, Ma, zero(𝒯), _zero, one(𝒯))
+    maj = MassAndJacobian(M★, J★); so = ShiftedOperator(J = maj, a₀ = Complex{𝒯}(0, ω))
+    w, σ2, cv, itw = linbdsolver_adjoint(so, Mb, Ma, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J-iωM)' did not converge."
-
-    return (; v, w, itv, itw, σ1 = σ, σ2)
+    # we should have σ1 ≈ conj(σ2)
+    return (; v, w, itv, itw, σ1, σ2)
 end
 
 function compute_eigenvalues(hopfeig::HopfEig, 

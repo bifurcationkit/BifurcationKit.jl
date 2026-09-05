@@ -85,7 +85,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
     verbose && print_nonlinear_step(step, res)
 
     # invoke callback before algo really starts
-    compute = callback((; x, fx, nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
+    compute = callback((; x, fx, J = nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
     while (step < max_iterations) && (res > tol) && compute
         J = jacobian(prob, x, params0)

@@ -190,13 +190,14 @@ This function turns an initial guess for a Fold point into a solution to the Fol
 - `prob::AbstractBifurcationProblem`
 - `foldpointguess` initial guess (x_0, p_0) for the Fold point. It should be a `BorderedArray` as returned by the function `fold_point`
 - `par` parameters used for the vector field
-- `eigenvec` guess for the right null vector
-- `eigenvec_ad` guess for the left null vector
+- `ζ` guess for the right null vector
+- `ζ★` guess for the left null vector
 - `options::NewtonPar` options for the Newton-Krylov algorithm, see [`NewtonPar`](@ref).
 
 # Optional arguments:
 - `normN = norm`
 - `bdlinsolver` bordered linear solver for the constraint equation
+- `jacobian_ma = AutoDiff()` how the jacobian of the Fold functional is computed and inverted, see [Fold / Hopf Continuation](@ref)
 - `kwargs` keywords arguments to be passed to the regular Newton-Krylov solver
 
 # Simplified call
@@ -214,71 +215,77 @@ The parameters / options are as usual except that you have to pass the branch `b
 """
 function newton_fold(prob::AbstractBifurcationProblem,
                 foldpointguess, par,
-                eigenvec, eigenvec_ad,
+                ζ, ζ★,
                 options::NewtonPar;
                 normN = norm,
                 bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
                 usehessian = true,
+                jacobian_ma = AutoDiff(),
                 kwargs...)
 
     𝐅 = FoldMinimallyAugmentedFormulation(
         re_make(prob; params = par),
-        _copy(eigenvec),
-        _copy(eigenvec_ad),
+        _copy(ζ★), # this is pb.a ≈ left null vector of J'
+        _copy(ζ),  # this is pb.b ≈ right null vector of J
         options.linsolver,
         # do not change linear solver if the user provides it
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian)
 
-    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, nothing, plot_solution(prob), record_from_solution(prob))
-
-    # options for the Newton Solver
-    opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
+        foldpointguess = vcat(foldpointguess.u, foldpointguess.p)
+        prob_ma = FoldMAProblem(𝐅, jacobian_ma, foldpointguess, nothing, plot_solution(prob), record_from_solution(prob))
+        opt_fold = options
+    else
+        prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, nothing, plot_solution(prob), record_from_solution(prob))
+        # options for the Newton Solver
+        opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
+    end
     return solve(prob_ma, Newton(), opt_fold; normN, kwargs...)
+end
+
+# this version extracts the border vectors
+function newton_fold(prob,
+                foldpointguess::BorderedArray,
+                par,
+                options::NewtonPar;
+                nev = 10,
+                start_with_eigen = false,
+                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                bdlinsolver_adjoint = bdlinsolver,
+                a = nothing,
+                b = nothing,
+                ζ = nothing,
+                normN = norm,
+                kwargs...)
+    x₀ = foldpointguess.u
+    if start_with_eigen
+        VI.scale!!(ζ,  1/ normN(ζ))
+        𝒯 = real(VI.scalartype(x₀))
+
+        # jacobian at the bifurcation point
+        L = jacobian(prob, x₀, par)
+
+        # computation of the adjoint zero eigenvector
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, x₀, par)
+        ζ★, _ = _get_target_eigenvector_from_eigensolver(L★, zero(𝒯), options.eigsolver; nev)
+        ζ★ = real.(ζ★)
+        ζ★ ./= real(VI.inner(ζ, ζ★)) # it can be useful to enforce real(), like for DDE
+    else
+        (; ζ, ζad) = _init_fold_vectors_minaug(prob, x₀, par, bdlinsolver, bdlinsolver_adjoint, a, b, normN)
+        ζ★ = ζad
+    end
+    return newton_fold(prob, foldpointguess, par, ζ, ζ★, options; normN, bdlinsolver, kwargs...)
 end
 
 function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                 prob = getprob(br),
-                normN = norm,
                 options = br.contparams.newton_options,
-                nev = br.contparams.nev,
-                start_with_eigen = false,
-                bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
-                kwargs...)
+                kw...)
     foldpointguess = fold_point(br, ind_fold)
     bifpt = br.specialpoint[ind_fold]
-    eigenvec = bifpt.τ.u; VI.scale!(eigenvec, 1 / normN(eigenvec))
-    eigenvec_ad = _copy(eigenvec)
-
-    if start_with_eigen
-        λ = zero(_getvectoreltype(br))
-        p = bifpt.param
-        parbif = setparam(br, p)
-
-        # jacobian at bifurcation point
-        L = jacobian(prob, bifpt.x, parbif)
-
-        # computation of zero eigenvector
-        ζstar, = _get_target_eigenvector_from_eigensolver(L, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
-        eigenvec .= real.(ζstar)
-
-        # computation of adjoint eigenvector
-        _Jt = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        ζstar, = _get_target_eigenvector_from_eigensolver(_Jt, λ, br.contparams.newton_options.eigsolver; nev, verbose = false)
-        eigenvec_ad .= real.(ζstar)
-        VI.scale!(eigenvec_ad, 1 / normN(eigenvec_ad))
-    end
-
-    # solve the Fold equations
-    return newton_fold(prob,
-                        foldpointguess,
-                        getparams(br),
-                        eigenvec,
-                        eigenvec_ad,
-                        options; 
-                        normN = normN,
-                        bdlinsolver = bdlinsolver,
-                        kwargs...)
+    ζ = bifpt.τ.u
+    return newton_fold(prob, foldpointguess, getparams(br), options; nev = br.contparams.nev, ζ, kw...)
 end
 
 function update!(probma::FoldMAProblem, iter, state::ContState)
@@ -504,7 +511,7 @@ function continuation_fold(prob,
         ζad = real.(ζ★)
         VI.scale!(ζad, 1 / real(VI.inner(ζ, ζ★))) # it can be useful to enforce real(), like for DDE
     else
-        (; ζ, ζad) = _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+        (; ζ, ζad) = _init_fold_vectors_minaug(prob, bifpt.x, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
 
     return continuation_fold(prob, alg,
@@ -527,20 +534,20 @@ Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Fold bifur
 # Return
 A named tuple `(; ζ, ζad)` of the normalized right and left eigenvectors, with the normalization `⟨ζ, ζad⟩ = 1`.
 """
-function _init_fold_vectors_minaug(prob, bifpt, parbif, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
-    u0 = saved_solution(bifpt.x)
+function _init_fold_vectors_minaug(prob, x₀, par₀, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    u0 = saved_solution(x₀)
     # we use a minimally augmented formulation to set the initial vectors
     a = isnothing(a) ? _randn(_copy(u0)) : a; VI.scale!(a, 1 / normC(a))
     b = isnothing(b) ? _randn(_copy(u0)) : b; VI.scale!(b, 1 / normC(b))
 
-    𝒯 = typeof(bifpt.param)
-    L = jacobian(prob, u0, parbif)
-    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, u0, parbif) : transpose(L)
+    𝒯 = VI.scalartype(u0)
+    L = jacobian(prob, u0, par₀)
+    L★ = has_adjoint(prob) ? jacobian_adjoint(prob, u0, par₀) : transpose(L)
 
     (; v, w, itv, itw) = __compute_bordered_vectors_fold(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
 
-    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, parbif)) norminf(apply(L, v))
-    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, parbif)) norminf(apply(L★, w))
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v))
+    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, par₀)) norminf(apply(L★, w))
 
     ζad = w; VI.scale!(ζad, 1 / normC(ζad))
     ζ   = v; VI.scale!(ζ,   1 / normC(ζ))
@@ -559,9 +566,6 @@ function test_zh(iter, state)
     end
     return iter.prob.prob.ZH
 end
-
-dot_with_mass(ζ★, ::IdentityOperator, ζ) = VI.inner(ζ★, ζ)
-dot_with_mass(ζ★, Mass, ζ) = LA.dot(ζ★, Mass, ζ)
 
 # Bogdanov-Takens / Cusp test function for the Fold functional
 function test_bt_cusp(iter, state)

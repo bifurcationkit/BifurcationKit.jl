@@ -51,7 +51,7 @@ let
                     br.specialpoint[indfold].x,
                     opts_br0.newton_options.linsolver)
 
-    outfold = BK.newton_fold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(tol = 1e-10), normN = norminf)
+    outfold = BK.newton_fold(prob, foldpt, par_chan, br.specialpoint[indfold].x, br.specialpoint[indfold].x, NewtonPar(tol = 1e-10), normN = norminf; jacobian_ma = BK.MinAug())
     @test BK.converged(outfold)
 
     # we now use the newton refined point

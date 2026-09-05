@@ -502,7 +502,6 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
     # change the user provided functions by passing discPO in its parameters
-    # _finsol = modify_po_2params_finalise(discPO, kwargs, NeimarkSackerProblemMinimallyAugmented(discPO))
     _recordsol = modify_po_record(discPO, kwargs, getparams(discPO), getlens(discPO))
     _plotsol = modify_po_plot(discPO, kwargs)
 

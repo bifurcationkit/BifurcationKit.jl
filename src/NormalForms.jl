@@ -1142,10 +1142,6 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         error("The provided index does not refer to a Hopf Point")
     end
 
-    if is_mass_matrix_constant(prob) == false
-        error("Non constant mass matrix not taken into account!")
-    end
-
     verbose && println("━"^53*"\n──▶ Hopf normal form computation")
     options = br.contparams.newton_options
 
@@ -1199,6 +1195,10 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                         ),
                 Symbol("?")
         )
+    end
+
+    if is_mass_matrix_constant(prob) == false
+        error("Non constant mass matrix not taken into account!")
     end
 
     Mass = getmassmatrix(prob, x0, parbif) # mass matrix (DAE) handling

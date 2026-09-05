@@ -72,13 +72,13 @@ function _compute_bordered_vectors(𝐇::HopfMinimallyAugmentedFormulation, M, M
 end
 
 function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::IdentityOperator, M★, J, J★, ω::𝒯, a, b, _zero_vector) where {𝒯}
-    # we solve (J-iωM)v + a σ1 = 0 with <b, v> = 1
     v, σ1, cv, itv = linbdsolver(ShiftedOperator(J = J, a₀ = Complex{𝒯}(0, -ω) ), a, b, zero(𝒯), _zero_vector, one(𝒯))
-    ~cv && @debug "Bordered linear solver for (J-iωM) did not converge."
+    # we solve (J-iωI)v + a σ1 = 0 with <b, v> = 1
+    ~cv && @debug "Bordered linear solver for (J-iωI) did not converge."
 
-    # we solve (J+iωM)'w + b σ2 = 0 with <a, w> = 1
+    # we solve (J+iωI)'w + b σ2 = 0 with <a, w> = 1
     w, σ2, cv, itw = linbdsolver_adjoint(ShiftedOperator(J = J★, a₀ = Complex{𝒯}(0, ω) ), b, a, zero(𝒯), _zero_vector, one(𝒯))
-    ~cv && @debug "Bordered linear solver for (J+iωM)' did not converge."
+    ~cv && @debug "Bordered linear solver for (J+iωI)' did not converge."
     # we should have σ1 ≈ conj(σ2)
     return (; v, w, itv, itw, σ1, σ2)
 end
@@ -98,32 +98,22 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     (; v, w, itv, itw, σ1, σ2) = _compute_bordered_vectors(𝐇, M, M★, J, J★, ω)
 
     δ = getdelta(𝐇.prob_vf)
-    ϵ1 = ϵ2 = ϵ3 = 𝒯(δ)
-    ################### computation of σx σp ####################
-    # TODO!! This is only finite differences
-    # we can probably use R01 and R11
-    dₚF  = (residual(𝐇.prob_vf, x, set(par, lens, p + ϵ1)) -
-            residual(𝐇.prob_vf, x, set(par, lens, p - ϵ1))) / 𝒯(2ϵ1)
-
-    dₚJv = (apply(jacobian(𝐇.prob_vf, x, set(par, lens, p + ϵ3)), v) -
-            apply(jacobian(𝐇.prob_vf, x, set(par, lens, p - ϵ3)), v)) / 𝒯(2ϵ3)
+    ϵ2 = ϵₚ = 𝒯(δ)
+    ################### computation of σω σp ####################
+    dₚF  = R01(𝐇.prob_vf, x, set(par, lens, p))
+    dₚJv = R11(𝐇.prob_vf, x, set(par, lens, p), v)
     σₚ = -VI.inner(w, dₚJv)
-
-    # case of sigma_omega
-    # σω = dot(w, Complex{T}(0, 1) * v)
     σω = Complex{𝒯}(0, 1) * dot_with_mass(w, M, v)
-
     return (;J_at_xp = J, JAd_at_xp = J★, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω, M, σ1, σ2)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# since this is matrix based, it requires X to ba an AbstractVector
 function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVector{𝒯}, par) where {Tprob, 𝒯}
     𝐇 = get_formulation(pdpb)
     x = @view X[begin:end-2]
     p = X[end-1]
     ω = X[end]
 
-    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω) = _get_bordered_terms(𝐇, x, p, ω, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, σω, σ1, σ2) = _get_bordered_terms(𝐇, x, p, ω, par)
 
     cw = conj(w)
     vr = real(v); vi = imag(v)
@@ -153,18 +143,19 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
     # The Jacobian J of the vector field is expressed at (x, p)
     # the jacobian expression Jhopf of the hopf problem is
     #           ┌             ┐
-    #  Jhopf =  │  J  dpF   0 │
+    #  Jhopf =  │  J  dₚF   0 │
     #           │ σx   σp  σω │
     #           └             ┘
     ########## Resolution of the bordered linear system ########
-    # J⋅dX      + dpF⋅dp           = du => dX = x1 - dp⋅x2
+    # solve for x1, x2: J⋅x1 = du and J⋅x2 = dₚF
+    # J⋅dX      + dₚF⋅dp           = du => dX = x1 - dp⋅x2
     # The second equation
     #    <σx, dX> +  σp⋅dp + σω⋅dω = du[end-1:end]
     # thus becomes
     #   (σp - <σx, x2>)⋅dp + σω⋅dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
     ################### inversion of Jhopf ####################
-    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, itv, itw, σω, M, σ1, σ2) = _get_bordered_terms(𝐇, x, p, ω, par)
+    (;J_at_xp, JAd_at_xp, dₚF, σₚ, ϵ2, v, w, par0, itv, itw, σω, σ1, σ2) = _get_bordered_terms(𝐇, x, p, ω, par)
     # we should have σ1 ≈ conj(σ2)
 
     # we solve J⋅x1 = duu and J⋅x2 = dₚF
@@ -181,8 +172,7 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
     if 𝐇.usehessian == false || has_hessian(𝐇) == false
         # finite differences version
         # (J(x+εv)ᵀ w - J(x)ᵀ w)/ε  =  (d²F[v,·])^* w  =  -σx
-        cw = conj(w)
-        vr = real(v); vi = imag(v)
+        cw = conj(w); vr = real(v); vi = imag(v)
         # apply jacobian adjoint
         u1r = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vr, par0, cw, true)
         u1i = apply_jacobian(𝐇.prob_vf, x + ϵ2 * vi, par0, cw, true)
@@ -268,45 +258,50 @@ The parameters / options are as usual except that you have to pass the branch `b
     For ODE problems, it is more efficient to use the Matrix based Bordered Linear Solver passing the option `bdlinsolver = MatrixBLS()`
 """
 function newton_hopf(prob,
-            hopfpointguess::BorderedArray,
-            par,
-            eigenvec, eigenvec_ad,
-            options::NewtonPar;
-            normN = norm,
-            bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
-            usehessian = true,
-            jacobian_ma::AbstractJacobianType = AutoDiff(),
-            kwargs...)
+                    guessₕ::BorderedArray,
+                    par,
+                    ζ, ζ★,
+                    options::NewtonPar;
+                    normN = norm,
+                    bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                    usehessian = true,
+                    jacobian_ma::AbstractJacobianType = AutoDiff(),
+                    kwargs...)
     𝐇 = HopfMinimallyAugmentedFormulation(
-        re_make(prob; params = par),
-        _copy(eigenvec_ad), # this is pb.a ≈ null space of (J - iω M)^*
-        _copy(eigenvec),    # this is pb.b ≈ null space of  J - iω M
-        options.linsolver,
-        # do not change linear solver if user provides it
-        @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
-        usehessian)
-
-    prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, nothing, plot_solution(prob), record_from_solution(prob))
-    opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
+            re_make(prob; params = par),
+            _copy(ζ★), # this is pb.a ≈ null space of (J - iω M)^*
+            _copy(ζ),    # this is pb.b ≈ null space of  J - iω M
+            options.linsolver,
+            # do not change linear solver if user provides it
+            @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
+            usehessian)
+    if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
+        guessₕ = vcat(guessₕ.u, guessₕ.p)
+        prob_h = HopfMAProblem(𝐇, jacobian_ma, guessₕ, nothing, plot_solution(prob), record_from_solution(prob))
+        opt_hopf = options
+    else
+        prob_h = HopfMAProblem(𝐇, nothing, guessₕ, nothing, plot_solution(prob), record_from_solution(prob))
+        opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()
+    end
     return solve(prob_h, Newton(), opt_hopf; normN, kwargs...)
 end
 
 # this version extracts the border vectors
 function newton_hopf(prob,
-            hopfpointguess::BorderedArray,
-            par,
-            options::NewtonPar;
-            nev = 10,
-            start_with_eigen = false,
-            bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
-            bdlinsolver_adjoint = bdlinsolver,
-            a = nothing,
-            b = nothing,
-            ζ = nothing,
-            normN = norm,
-            kwargs...)
-    xₕ = hopfpointguess.u
-    ω = hopfpointguess.p[2]
+                    guessₕ::BorderedArray,
+                    par,
+                    options::NewtonPar;
+                    nev = 10,
+                    start_with_eigen = false,
+                    bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+                    bdlinsolver_adjoint = bdlinsolver,
+                    a = nothing,
+                    b = nothing,
+                    ζ = nothing,
+                    normN = norm,
+                    kwargs...)
+    xₕ = guessₕ.u
+    ω = guessₕ.p[2]
     if start_with_eigen
         ζ ./= normN(ζ)
         ζ★ = conj.(ζ)
@@ -322,26 +317,23 @@ function newton_hopf(prob,
         ζ★, _ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev)
         ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
     else
-
         (; ζ, ζad) = _init_hopf_vectors_minaug(prob, xₕ, par, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normN)
         ζ★ = ζad
     end
-
-    # solve the hopf equations
-    return newton_hopf(prob, hopfpointguess, par, ζ, ζ★, options; normN, bdlinsolver, kwargs...)
+    return newton_hopf(prob, guessₕ, par, ζ, ζ★, options; normN, bdlinsolver, kwargs...)
 end
 
 function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
             prob = getprob(br),
             options = br.contparams.newton_options,
             kw...)
-    hopfpointguess = hopf_point(br, ind_hopf)
+    guessₕ = hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
     options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
     @assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step."
     @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-    return newton_hopf(prob, hopfpointguess, getparams(br), options; nev = br.contparams.nev, ζ, kw...)
+    return newton_hopf(prob, guessₕ, getparams(br), options; nev = br.contparams.nev, ζ, kw...)
 end
 
 function update!(𝐏𝐛::HopfMAProblem, iter, state::ContState)
@@ -608,7 +600,7 @@ end
 Compute the initial (right / left) eigenvectors `(ζ, ζad)` of the Hopf point
 using the minimally augmented formulation.
 """
-function _init_hopf_vectors_minaug(prob, xₕ, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+function _init_hopf_vectors_minaug(prob, xₕ, parₕ, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     # we use a minimally augmented formulation to set the initial vectors
     # we start with a vector similar to an eigenvector, we must ensure that
     # it is complex valued
@@ -616,15 +608,15 @@ function _init_hopf_vectors_minaug(prob, xₕ, parbif, ω, bdlinsolver, bdlinsol
     a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
     b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
-    L = jacobian(prob, xₕ, parbif)
-    L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, xₕ, parbif)
-    M = getmassmatrix(prob, xₕ, parbif)
-    M★ = has_massmatrix_adjoint(prob) ? getmassmatrix_adjoint(prob, xₕ, parbif) : adjoint(M)
+    L = jacobian(prob, xₕ, parₕ)
+    L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, xₕ, parₕ)
+    M = getmassmatrix(prob, xₕ, parₕ)
+    M★ = has_massmatrix_adjoint(prob) ? getmassmatrix_adjoint(prob, xₕ, parₕ) : adjoint(M)
 
     (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, M★, L, L★, ω, a, b, VI.zerovector(a))
 
-    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, xₕ, parbif)) norminf(apply(L, v) - complex(0,ω)*apply(M,v)) norminf(apply(L,v) + complex(0,ω)*apply(M,v))
-    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, xₕ, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(M★,w)) norminf(apply(L★,w) + complex(0,ω)*apply(M★,w))
+    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, xₕ, parₕ)) norminf(apply(L,  v) - complex(0,ω)*apply(M, v)) norminf(apply(L, v) + complex(0,ω)*apply(M, v))
+    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, xₕ, parₕ)) norminf(apply(L★, w) - complex(0,ω)*apply(M★,w)) norminf(apply(L★,w) + complex(0,ω)*apply(M★,w))
 
     ζad = VI.scale(w,  1 / normC(w))
     ζ   = VI.scale(v,  1 / normC(v))

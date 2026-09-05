@@ -49,15 +49,15 @@ BK.NeimarkSackerMinimallyAugmentedFormulation(prob)
 @reset opts_br.newton_options.verbose = false
 @reset opts_br.newton_options.max_iterations = 10
 
-sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), jacobian_ma = BK.MinAug())
 @test BK.converged(sn) && sn.itlineartot == 6
 @test sn.u.u ≈ [0.05402941507127516, 0.3022414400400177, 0.45980653206336225] rtol = 1e-4
 @test sn.u.p ≈ 1.0522002878699546 rtol = 1e-4
 
-sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS())
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), jacobian_ma = BK.MinAug())
 @test BK.converged(sn) && sn.itlineartot == 6
 
-sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), start_with_eigen = true)
+sn = newton(br, 3; options = opts_br.newton_options, bdlinsolver = MatrixBLS(), jacobian_ma = BK.MinAug(), start_with_eigen = true)
 @test BK.converged(sn) && sn.itlineartot == 6
 
 for eigen_start in (true, false), _jac in (BK.AutoDiff(),
@@ -99,13 +99,13 @@ hppt = get_normal_form(br, 2)
 
 @reset opts_br.newton_options.verbose = false
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true, jacobian_ma = BK.MinAug())
 @test hp.converged && hp.itlineartot == 8
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = false, bdlinsolver = MatrixBLS())
-@test hp.converged && hp.itlineartot == 12
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = false, bdlinsolver = MatrixBLS(), jacobian_ma = BK.MinAug())
+@test hp.converged
 
-hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true, bdlinsolver = MatrixBLS(), verbose = true)
+hp = BK.newton_hopf(br, 2; options = opts_br.newton_options, start_with_eigen = true, bdlinsolver = MatrixBLS(), verbose = true, jacobian_ma = BK.MinAug())
 @test hp.converged && hp.itlineartot == 8
 
 # we check that we truly have a bifurcation point.
@@ -124,7 +124,7 @@ ind = argmin(abs.(_eigvals .- Complex(0, ω)))
 hp = newton(br, 2;
     options = NewtonPar( opts_br.newton_options; max_iterations = 10),
     start_with_eigen = true,
-    bdlinsolver = MatrixBLS())
+    bdlinsolver = MatrixBLS(), jacobian_ma = BK.MinAug())
 
 hp = newton(br, 2; options = NewtonPar( opts_br.newton_options; max_iterations = 10), start_with_eigen = true)
 

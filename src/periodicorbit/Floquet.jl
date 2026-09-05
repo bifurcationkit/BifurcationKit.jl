@@ -337,7 +337,7 @@ __mono_matrix_block(Mᵢ, Hᵢ) = Array(Mᵢ) \ Array(Hᵢ)
 # Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
 function MonodromyQaD(trap::Trapeze, J, po, par)
     M, N = size(trap)
-    Mass = get_mass_matrix(trap)
+    Mass = _get_mass_matrix(trap)
     T = getperiod(trap, po)
     # current time step
     h =  T * get_time_step(trap, 1)

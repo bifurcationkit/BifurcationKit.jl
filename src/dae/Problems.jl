@@ -11,6 +11,10 @@ Marker for a **constant** mass matrix `M` (independent of the state `x` and of t
 struct ConstantMass <: AbstractDAEMassType end
 
 struct IdentityOperator <: AbstractDAEMassType end
+
+dot_with_mass(ζ★, ::IdentityOperator, ζ) = VI.inner(ζ★, ζ)
+dot_with_mass(ζ★, Mass::AbstractMatrix, ζ) = LA.dot(ζ★, Mass, ζ)
+dot_with_mass(ζ★, Mass, ζ) = VI.inner(ζ★, apply(Mass, ζ))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
@@ -77,7 +81,6 @@ residual!(dae::DAEMassBifProblem, o, x, p) = residual!(dae.prob_vf, o, x, p)
 jacobian(dae::DAEMassBifProblem, x, p) = jacobian(dae.prob_vf, x, p)
 jacobian!(dae::DAEMassBifProblem, J, x, p) = jacobian!(dae.prob_vf, J, x, p)
 jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x, p)
-# constant (matrix like) mass matrices are returned as-is, state dependent ones are evaluated at (x, p)
 
 record_from_solution(dae::DAEMassBifProblem) = record_from_solution(dae.prob_vf)
 plot_solution(dae::DAEMassBifProblem) = plot_solution(dae.prob_vf)
