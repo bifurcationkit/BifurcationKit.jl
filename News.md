@@ -6,6 +6,32 @@ All notable changes to this project will be documented in this file (hopefully).
 ## [Unreleased]
 
 ### Breaking changes
+- `DAEMassBifProblem` no longer exposes a `Mᵗ` field: the mass matrix, its adjoint and the optional mass derivatives are grouped in a `MassFunction` stored in the field `M`. They are passed through `DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), type = ConstantMass)` or `re_make`
+- the low-level methods `newton_fold` / `newton_hopf` now take the bordered vectors `(ζ, ζ★)` and the keyword `jacobian_ma` (default `AutoDiff()`); as a consequence `newton(br, ind)` on a Fold / Hopf point uses the matrix-based jacobian by default
+- `get_mass_matrix(::Trapeze)` is renamed `_get_mass_matrix`
+
+### Added
+- add the mass-adjoint interface `getmassmatrix_adjoint` / `has_massmatrix_adjoint`, and the `MassFunction` structure holding the mass matrix, its adjoint and the optional derivatives `R01` (`∂ₚ⟨w, M(x,p) v⟩`) and `∇x` (`∇ₓ⟨w, M(x,p) v⟩`), exposed through `R01_mass_matrix` / `∇_x_mass_matrix`
+- support mass matrices depending on the state and on the parameters in the Hopf Minimally Augmented formulation (`jacobian_ma = MinAug()` and `MinAugMatrixBased()`): the bordered scalar σ1 now includes the `∂ₓM` and `∂ₚM` contributions, and the former "Non constant mass matrix not taken into account!" guards are removed from `continuation_hopf`
+- add the `jacobian_ma` keyword to `newton_fold` / `newton_hopf`, like in `continuation_fold` / `continuation_hopf`
+
+### Fixed
+- check the constant mass-matrix restriction in `hopf_normal_form` only when the mass matrix is actually used
+- pass `J = nothing` as a keyword in the `callback` invoked by `_newton`
+
+## [0.8.5]
+
+### Breaking changes
+- remove the `massmatrix` field of the minimally augmented formulations
+
+### Added
+- add DAE support: `DAEMassBifProblem` for `M(x,p) du/dt = F(u,p)`, its eigen solver `EigenDAE`, continuation and codim 2 (Fold/Hopf) continuation
+- encode shifted linear systems with `ShiftedOperator` and mass-aware linear solves with `MassAndJacobian` (Floquet, Hopf MA, normal forms)
+- add `_normalize_for_hopf`, `start_with_eigen` for branch switching, and a complex shift in `gev`
+
+## [0.8.4]
+
+### Breaking changes
 - `get_adjoint_basis` is replaced by the methods `_get_kernel_basis_1d_from_eigensolver` / `_get_kernel_basis_1d_from_bls` (resp. the Nd helpers), which now compute the right and left (adjoint) kernel vectors together
 - `__compute_bordered_vectors_fold` / `__compute_bordered_vectors_hopf` are now also used to build the kernel basis of the normal forms (`start_with_eigen = Val(false)`)
 

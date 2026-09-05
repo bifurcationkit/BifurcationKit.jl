@@ -223,15 +223,16 @@ Initialize a vector like `randn!`.
 """
 _randn(x) = randn!(_copy(x))
 _randn(x::VI.MinimalVec) = randn!(_copy(x.vec))
-_randn!(x::VI.MinimalVec) = (randn!(x.vec); x)
-
 _randn(y::BorderedArray{T, V}) where {T, V} = (x = _copy(y);_randn!(x);x)
+
+_randn!(x) = randn!(x)
+_randn!(x::VI.MinimalVec) = (randn!(x.vec); x)
 
 function _randn!(x::BorderedArray{T, V}) where {T, V}
     _randn!(x.u)
     if V <: Number
         x.p = randn(V)
-    elseif T <: AbstractArray
+    else
         randn!(x.p)
     end
     return x
