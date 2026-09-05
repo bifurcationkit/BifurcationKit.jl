@@ -1169,6 +1169,9 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # eigenvalue
     λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
     ω = imag(λ)
+    if ω < 0 # important for a positive period in the predictor
+        ω = abs(ω); λ = conj(λ)
+    end
     L = jacobian(prob, x0, parbif)
 
     # right eigenvector
@@ -1299,6 +1302,10 @@ function predictor(hp::Hopf, ds; ampfactor = 1)
         dsfactor = 1
     end
     A(t) = amp * cis(t)
+
+    if abs(ω - hp.ω) / abs(ω) > abs(ds)
+        @warn "Very stiff bifurcation. Second order predictor gives ω = $ω compared to hopf frequency $(hp.ω)"
+    end
 
     # make the predictor type-stable
     orbit = let Ψ001=Ψ001, Ψ110=Ψ110, Ψ200=Ψ200

@@ -31,6 +31,18 @@ let
     @test :bt in [pt.type for pt in brfold.specialpoint]
     brhopf = continuation(br, 3, (@optic _.p2); bothside = true)
     @test :bt in [pt.type for pt in brhopf.specialpoint]
+
+    # the Bogdanov-Takens normal form (from a branch) is not implemented for DAE.
+    # `nev` is passed explicitly so that the default `eigenvalsfrombif` is not
+    # evaluated (the fold curve does not store eigen-elements) and the guard in
+    # `bogdanov_takens_normal_form` is reached.
+    ind_bt = findfirst(pt -> pt.type == :bt, brfold.specialpoint)
+    @test ind_bt !== nothing
+    @test_throws "Bogdanov-Takens normal form not implemented for problems with a mass matrix" get_normal_form(brfold, ind_bt; nev = 2)
+
+    ind_bt_h = findfirst(pt -> pt.type == :bt, brhopf.specialpoint)
+    @test ind_bt_h !== nothing
+    @test_throws "Bogdanov-Takens normal form not implemented for problems with a mass matrix" get_normal_form(brhopf, ind_bt_h; nev = 2)
     # plot(brfold, brhopf)
 
     #############################################

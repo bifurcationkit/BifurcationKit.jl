@@ -2,6 +2,7 @@
 # and of the DAEMassBifProblem wrapper API.
 using BifurcationKit, Test
 import LinearAlgebra as LA
+import ForwardDiff
 const BK = BifurcationKit
 
 function Fsl2(x, p)
@@ -72,4 +73,9 @@ let
     @test BK.getu0(daeprob2) == [1.0, -1.0]
     @test BK.getmassmatrix(daeprob2, zeros(2), par_sl) ≈ 2 .* LA.I(2)
     @test BK.getlens(daeprob2) == BK.getlens(prob)
+    # `dF` is the directional derivative (JVP) of the residual: it is forwarded
+    # to the wrapped problem and matches the ForwardDiff derivative
+    u = [0.2, -0.3]; du = [0.1, 0.5]
+    @test BK.dF(daeprob, u, par_sl, du) ≈ BK.dF(prob, u, par_sl, du)
+    @test BK.dF(daeprob, u, par_sl, du) ≈ ForwardDiff.derivative(t -> BK.residual(daeprob, u .+ t .* du, par_sl), 0)
 end

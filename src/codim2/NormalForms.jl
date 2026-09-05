@@ -41,7 +41,6 @@ function cusp_normal_form(𝐏𝐛,
     𝒯 = VI.scalartype(𝒯eigvec)
 
     # linear solvers
-    ls = 𝐌𝐚.linsolver
     bls = isnothing(bls) ? 𝐌𝐚.linbdsolver : bls
     bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
@@ -87,22 +86,21 @@ function cusp_normal_form(𝐏𝐛,
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
 
-    @assert abs(LA.dot(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((LA.dot(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
-    ζ★ ./= LA.dot(ζ, ζ★)
+    @assert abs(VI.inner(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    ζ★ ./= VI.inner(ζ, ζ★)
 
     # Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
-    # notations from this paper
     B(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
     C(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
     q = ζ
     p = ζ★
 
     h2 = B(q, q)
-    h2 .= LA.dot(p, h2) .* q .- h2
+    h2 .= VI.inner(p, h2) .* q .- h2
     H2, _, cv, it = bls(L, q, p, zero(𝒯), h2, zero(𝒯))
     ~cv && @debug "[CUSP (H2)] Bordered linear solver for J did not converge. iterations = $it"
 
-    c = LA.dot(p, C(q, q, q)) + 3LA.dot(p, B(q, H2))
+    c = VI.inner(p, C(q, q, q)) + 3VI.inner(p, B(q, H2))
     c /= 6
 
     pt = Cusp(
@@ -113,6 +111,7 @@ function cusp_normal_form(𝐏𝐛,
         (c = c, ),
         :none
     )
+    return pt
 end
 
 """
@@ -131,7 +130,8 @@ Compute the Bogdanov-Takens normal form.
 - `autodiff = true` only for Bogdanov-Takens point. Whether to use ForwardDiff for the many differentiations that are required to compute the normal form.
 - `detailed = true` only for Bogdanov-Takens point. Whether to compute only a simplified normal form.
 """
-function bogdanov_takens_normal_form(𝐌𝐚, L,
+function bogdanov_takens_normal_form(𝐌𝐚, 
+                                    L,
                                     pt::BogdanovTakens;
                                     δ = getdelta(𝐌𝐚),
                                     verbose = false,
@@ -142,18 +142,15 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
                                     bls_block = bls) where {detailed_type}
     x0 = pt.x0
     parbif = pt.params
-    Ty = VI.scalartype(x0)
+    𝒯 = VI.scalartype(x0)
 
     # vector field
     VF = 𝐌𝐚.prob_vf
     F(x, p) = residual(VF, x, p)
 
     # for finite differences
-    ϵ = convert(Ty, δ)
+    ϵ = convert(𝒯, δ)
     ϵ2 = sqrt(ϵ) # for second order differential
-
-    # linear solvers
-    ls = 𝐌𝐚.linsolver
 
     lens1, lens2 = pt.lens
 
@@ -165,7 +162,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
     ζs0, ζs1 = pt.ζ★
 
     G = [LA.dot(xs, x) for xs in pt.ζ★, x in pt.ζ]
-    norm(G - LA.I(2), Inf) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
+    norminf(G - LA.I(2)) > 1e-5 && @warn "G == I(2) is not valid. We built a basis such that G = $G"
 
     G = [LA.dot(xs, apply(L, x)) for xs in pt.ζ★, x in pt.ζ]
     norminf(G - [0 1; 0 0]) > 1e-5 && @warn "G is not close to the Jordan block of size 2. We built a basis such that G = $G. The norm of the difference is $(norminf(G - [0 1; 0 0]))"
@@ -185,8 +182,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
     end
 
     ###########################
-    # computation of the unfolding. We follow the procedure described in Al-Hdaibat et al. 2016
-
+    # computation of the unfolding. We follow the procedure described in:
     # Al-Hdaibat, B., W. Govaerts, Yu. A. Kuznetsov, and H. G. E. Meijer. “Initialization of Homoclinic Solutions near Bogdanov--Takens Points: Lindstedt--Poincaré Compared with Regular Perturbation Method.” SIAM Journal on Applied Dynamical Systems 15, no. 2 (January 2016): 952–80. https://doi.org/10.1137/15M1017491.
     ###########################
     # to have the same notations as in the paper above
@@ -195,7 +191,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
 
     # second differential notations, to be in agreement with Kuznetsov et al.
     B(dx1, dx2) = d2F(VF, x0, parbif, dx1, dx2)
-    Ainv(dx) = bls(L, p1, q0, zero(Ty), dx, zero(Ty))
+    Ainv(dx) = bls(L, p1, q0, zero(𝒯), dx, zero(𝒯))
 
     H2000, _, cv, it = Ainv(2 .* a .* q1 .- B(q0, q0))
     ~cv && @debug "[BT H2000] Linear solver for J did not converge. it = $it"
@@ -252,7 +248,7 @@ function bogdanov_takens_normal_form(𝐌𝐚, L,
     ~cv && @debug "[BT K10] Linear solver for J did not converge. it = $it"
     @assert size(H0010) == size(x0)
 
-    H0001, K11, cv, it = solve_bls_block(bls_block, L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(Ty), one(Ty)])
+    H0001, K11, cv, it = solve_bls_block(bls_block, L, J1s, (A12_1, A12_2), A22, zero(q1), [zero(𝒯), one(𝒯)])
     ~cv && @debug "[BT K11] Linear solver for J did not converge. it = $it"
     @assert size(H0001) == size(x0)
 
@@ -471,7 +467,7 @@ function predictor(bt::BogdanovTakens, ::Val{:HomoclinicCurve}, ds::T;
                         1/(2a) * u0(ξ)^2 * H2000 + 10b/(7a) * u0(ξ) * H1001)
     end
 
-    return (α = α, orbit = xLP)
+    return (;α = α, orbit = xLP)
 end
 
 """
@@ -520,12 +516,14 @@ function bogdanov_takens_normal_form(𝐏𝐛,
     # functional
     # get the MA problem
     𝐌𝐚 = get_formulation(𝐏𝐛)
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("We need an AbstractMinimallyAugmentedFormulation!\nWe found a ", typeof(𝐌𝐚))
+    end
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
-
-    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
-        error("We need an AbstractMinimallyAugmentedFormulation!\nWe found a ", typeof(𝐌𝐚))
+    if prob_vf isa AbstractDAEBifProblem
+        error("Constant DAE not taken into account!")
     end
 
     # kernel dimension
@@ -652,27 +650,30 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
                             ) where {𝒯eigvec, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
-
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
     # get the MA problem
     𝐌𝐚 = get_formulation(𝐏𝐛)
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("We need an AbstractMinimallyAugmentedFormulation!\nWe found a ", typeof(𝐌𝐚))
+    end
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
+    if prob_vf isa AbstractDAEBifProblem
+        error("Constant DAE not taken into account!")
+    end
 
     # scalar type
     𝒯 = VI.scalartype(𝒯eigvec)
-    ϵ = 𝒯(δ)
+    ϵ = convert(𝒯, δ)
 
     # functional
     @assert 𝐌𝐚 isa HopfMinimallyAugmentedFormulation "You need to provide a curve of Hopf points."
     ls = 𝐌𝐚.linsolver
     bls = 𝐌𝐚.linbdsolver
 
-    # ``kernel'' dimension
-    N = 2
-
+    N = 2 # ``kernel'' dimension
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(N, nev)
 
@@ -716,7 +717,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     else
         # compute the eigenvectors using a bordered linear system
         a = _randn(ζ); VI.scale!(a, 1 / scaleζ(a))
-        b = ζ
+        b = _randn(ζ); VI.scale!(b, 1 / scaleζ(b))
         (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(_λ0)
@@ -1014,19 +1015,21 @@ function zero_hopf_normal_form(𝐏𝐛,
                                 detailed::Val{detailed_type} = Val(false)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
-
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
 
     # scalar type
     𝒯 = VI.scalartype(Teigvec)
-    ϵ = 𝒯(δ)
+    ϵ = convert(𝒯, δ)
 
     𝐌𝐚 = get_formulation(𝐏𝐛)
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐌𝐚))")
+    end
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
-    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
-        error("[zero-hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐌𝐚))")
+    if prob_vf isa AbstractDAEBifProblem
+        error("Constant DAE not taken into account!")
     end
 
     # linear solver
@@ -1036,8 +1039,7 @@ function zero_hopf_normal_form(𝐏𝐛,
     bls = 𝐌𝐚.linbdsolver
     bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
-    # kernel dimension
-    N = 3
+    N = 3 # kernel dimension
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(N, nev)
 
@@ -1053,10 +1055,10 @@ function zero_hopf_normal_form(𝐏𝐛,
     # we put the problem back to the state it was
     restore_problem!(prob_vf, x0, parbif)
 
-    if Teigvec <: BorderedArray
-        x0 = convert(Teigvec.parameters[1], x0)
+    x0 = if Teigvec <: BorderedArray
+        convert(Teigvec.parameters[1], x0)
     else
-        x0 = convert(Teigvec, x0)
+        convert(Teigvec, x0)
     end
 
     # jacobian at bifurcation point
@@ -1395,12 +1397,14 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # get the MA problem
     𝐌𝐚 = get_formulation(𝐏𝐛)
+    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
+        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(𝐌𝐚))")
+    end
 
     # get the initial vector field
     prob_vf = 𝐌𝐚.prob_vf
-
-    if ~(𝐌𝐚 isa AbstractMinimallyAugmentedFormulation)
-        error("[Hopf-Hopf normal form] The underlying problem is not a `AbstractProblemMinimallyAugmented`.\n\nWe found the type: $(typeof(𝐌𝐚))")
+    if prob_vf isa AbstractDAEBifProblem
+        error("Constant DAE not taken into account!")
     end
 
     # linear solver
@@ -1410,9 +1414,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
     bls = isnothing(bls) ? 𝐌𝐚.linbdsolver : bls
     bls_adjoint = isnothing(bls_adjoint) ? 𝐌𝐚.linbdsolverAdjoint : bls_adjoint
 
-    # kernel dimension
-    N = 4
-
+    N = 4 # kernel dimension
     # in case nev = 0 (number of unstable eigenvalues), we increase nev to avoid bug
     nev = max(N, nev)
 
