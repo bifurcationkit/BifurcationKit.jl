@@ -114,6 +114,7 @@ ind_hopf = 1
 optnew = opts_br_eq.newton_options
 hopfpoint = @time newton(br, ind_hopf;
                 options = (@set optnew.verbose = true), 
+                jacobian_ma = BK.MinAug(),
                 normN = norminf);
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from l = ", br.specialpoint[ind_hopf].param, "\n")
 

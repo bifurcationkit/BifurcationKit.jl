@@ -115,7 +115,7 @@ hopfpoint = newton(br, ind_hopf;
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from guess l = ", br.specialpoint[ind_hopf].param, "\n")
 
 br_hopf = continuation(br, 1, (@optic _.γ),
-    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15, save_eigenvectors = false); 
+    ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -0.1, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15, save_eigenvectors = false); 
     plot = true,
     start_with_eigen = false, 
     bothside = false,

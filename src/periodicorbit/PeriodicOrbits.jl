@@ -58,10 +58,11 @@ has_hessian(pb::AbstractFiniteDifferencesDiscretization) = pb.d2F === nothing
 isinplace(pb::AbstractFiniteDifferencesDiscretization) = isinplace(pb.prob_vf)
 
 function applyJ!(pb, dest, x, p, dx) #TODO REMOVE?
+    prob_vf = pb.prob_vf isa DAEMassBifProblem ? pb.prob_vf.prob_vf : pb.prob_vf
     if isinplace(pb)
-        pb.prob_vf.VF.J(dest, x, p, dx)
+        prob_vf.VF.J(dest, x, p, dx)
     else
-        dest .= apply(pb.prob_vf.VF.J(x, p), dx)
+        dest .= apply(jacobian(prob_vf, x, p), dx)
     end
     dest
 end

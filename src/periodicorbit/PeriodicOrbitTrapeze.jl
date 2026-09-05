@@ -250,8 +250,6 @@ Trapeze(prob_vf,
         adaptmesh = false,
         massmatrix = nothing) = Trapeze(prob_vf, zeros(N*(m isa Number ? m : length(m) + 1)), zeros(N*(m isa Number ? m : length(m) + 1)), m, N, ls; ongpu, massmatrix)
 
-
-# do not type h::Number because this will annoy CUDA
 """
 $(TYPEDSIGNATURES)
 
@@ -267,7 +265,7 @@ of the current time slice. The vector `tmp_Fu` is a buffer which, on entry, must
 
 The 3-argument version (`u1`, `u2`, `h`) simply duplicates the slices for the directions `du1 = u1`, `du2 = u2`.
 """
-function potrap_scheme!(trap,
+function potrap_scheme!(trap::Trapeze,
                         dest,
                         u1, u2,
                         du1, du2,
@@ -325,9 +323,8 @@ where ``T = x_{M N + 1}`` is the period. It works for inplace / out of place vec
 
     # multiply by T allows to have a non-zero Jpo[end,end] ; useful for preconditioners
     phase_cond = (LA.dot(u[begin:end-1], trap.ϕ) - LA.dot(trap.xπ, trap.ϕ)) * T
-    # this is for CuArrays.jl to work in the mode allowscalar(false)
     if on_gpu(trap)
-        return vcat(out[begin:end-1], phase_cond) # this is the phase condition
+        return out .= vcat(out[begin:end-1], phase_cond) # this is the phase condition
     else
         out[end] = phase_cond
         return out
@@ -456,12 +453,12 @@ function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du:
 
     h = T * get_time_step(trap, 1)
     @views potrap_scheme!(trap, outc[:, 1], u0c[:, 1], u0c[:, M-1],
-                                          duc[:, 1], duc[:, M-1], par, h/2, tmp, Val(true); applyf = Val(false))
+                                            duc[:, 1], duc[:, M-1], par, h/2, tmp, Val(true); applyf = Val(false))
 
     for 𝐢 in 2:M-1
         h = T * get_time_step(trap, 𝐢)
         @views potrap_scheme!(trap, outc[:, 𝐢], u0c[:, 𝐢], u0c[:, 𝐢-1],
-                                               duc[:, 𝐢], duc[:, 𝐢-1], par, h/2, tmp, Val(true); applyf = Val(false))
+                                                duc[:, 𝐢], duc[:, 𝐢-1], par, h/2, tmp, Val(true); applyf = Val(false))
     end
 
     # we also return a Vector version of outc
