@@ -122,8 +122,10 @@ module BifurcationKit
     # DAE problem
     include("dae/EigSolver.jl")
     include("dae/Continuation.jl")
-    include("dae/MinAugHopf.jl")
-    include("dae/MinAugFold.jl")
+
+    # DAE codim 2
+    include("dae/codim2/MinAugHopf.jl")
+    include("dae/codim2/MinAugFold.jl")
 
     # plotting
     include("plotting/Utils.jl")

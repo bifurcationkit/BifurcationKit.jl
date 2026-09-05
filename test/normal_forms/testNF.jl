@@ -640,7 +640,7 @@ let
             )
         @test hopf_codim2.specialpoint[1].type == :gh
 
-        bautin = BK.get_normal_form(hopf_codim2, 1; nev = 2)
+        bautin = BK.get_normal_form(hopf_codim2, 1; nev = 2, start_with_eigen = Val(true))
         show(bautin)
         BK.type(bautin)
 

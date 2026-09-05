@@ -288,7 +288,6 @@ function MonodromyQaD_matrix_free(trap::Trapeze, po, par, du::AbstractVector)
 
     out = copy(du)
     po_s = get_time_slices(po, N, M)
-
     Jac(i) = jacobian(trap.prob_vf, (@view po_s[:, i]), par)
 
     out .= out .+ h/2 .* apply(Jac(M-1), out)
@@ -332,7 +331,6 @@ function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunct
         out .= res
         push!(out_a, copy(out))
     end
-
     return out_a
 end
 
