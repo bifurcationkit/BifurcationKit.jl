@@ -35,13 +35,15 @@ $(TYPEDFIELDS)
 - `residual(pb, x, p)` calls `residual(pb.prob_vf, x, p)`
 - `jacobian(pb, x, p)` calls `jacobian(pb.prob_vf, x, p)`
 - `getmassmatrix(pb, x, p)` returns the mass matrix `M(x, p)` (or `pb.M` if it is a constant matrix)
+- `has_massmatrix_adjoint(pb)` returns whether a dedicated mass adjoint `pb.Mᵗ` was provided
+- `getmassmatrix_adjoint(pb, x, p)` returns the user provided mass adjoint `pb.Mᵗ` (matrix or function). When `has_massmatrix_adjoint(pb)` is `false`, use `adjoint(getmassmatrix(pb, x, p))`
 - `record_from_solution(pb)`, `save_solution(pb, u, pars)`, `update!(pb, iter, state)` are forwarded to `pb.prob_vf`
-- `re_make(pb; M = …, kwargs…)` rebuilds the problem, possibly with another mass matrix
+- `re_make(pb; M = …, Mᵗ = …, kwargs…)` rebuilds the problem, possibly with another mass matrix (and/or its adjoint)
 - the jet methods of the wrapped problem (`R01`, `dF`, `d2F`, `d3F`, …) are forwarded as well
 
 # Constructors
 
-- `DAEMassBifProblem(prob, M; type = ConstantMass)` wraps the bifurcation problem `prob` with the mass matrix `M`, which can be a matrix or a function `M(x, p)`.
+- `DAEMassBifProblem(prob, M; Mᵗ = nothing, type = ConstantMass)` wraps the bifurcation problem `prob` with the mass matrix `M`, which can be a matrix or a function `M(x, p)`. An optional adjoint `Mᵗ` can be provided (a matrix or a function `Mᵗ(x, p)`) to be used in place of `adjoint(M(x, p))`.
 - `DAEMassBifProblem{ConstantMass}(prob, M)` explicitly sets the kind of mass matrix through the type parameter.
 - a `UniformScaling` mass matrix (`I`, `α * I`) is also accepted: the identity case is stored with the marker `IdentityOperator` so that no mass matrix solve is required.
 
@@ -52,11 +54,13 @@ The eigenvalues along the continuation are the generalized eigenvalues of `(J(x,
 !!! warning "Mass matrix"
     A mass matrix which depends on the state `x` (as opposed to a constant one, or one depending only on the parameters) is only partially supported: it is evaluated once at the current solution during continuation, but the higher order derivatives of the vector field `F` do not account for derivatives of `M`.
 """
-struct DAEMassBifProblem{Tkind <: AbstractDAEMassType, Tprob, TM} <: AbstractDAEBifProblem
+struct DAEMassBifProblem{Tkind <: AbstractDAEMassType, Tprob, TM, TMt} <: AbstractDAEBifProblem
     "vector field, must be `AbstractBifurcationProblem`."
     prob_vf::Tprob
     "Mass matrix/operator."
     M::TM
+    "Adjoint of the mass matrix, or `nothing` to compute it as `adjoint(M(x, p))`."
+    Mᵗ::TMt
 end
 @inline getparams(dae::DAEMassBifProblem) = getparams(dae.prob_vf)
 @inline getlens(dae::DAEMassBifProblem) = getlens(dae.prob_vf)
@@ -94,31 +98,61 @@ has_hessian(dae::DAEMassBifProblem) = has_hessian(dae.prob_vf)
 getmassmatrix(dae::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: AbstractMatrix} = dae.M
 getmassmatrix(::DAEMassBifProblem{ConstantMass, Tprob, TM}, x, p) where {Tprob, TM <: Union{LA.UniformScaling, IdentityOperator}} = LA.Diagonal(ones(length(x)))
 getmassmatrix(dae::DAEMassBifProblem, x, p) = dae.M(x, p)
+
+# the identity mass matrix is self-adjoint
+Base.adjoint(::IdentityOperator) = IdentityOperator()
+
+"""
+$(TYPEDSIGNATURES)
+
+Whether the problem provides a dedicated adjoint of the mass matrix, i.e. whether
+`pb.Mᵗ` is not `nothing`.
+"""
+has_massmatrix_adjoint(::DAEMassBifProblem{Tkind, Tprob, TM, Nothing}) where {Tkind, Tprob, TM} = false
+has_massmatrix_adjoint(::DAEMassBifProblem{Tkind, Tprob, TM, TMt}) where {Tkind, Tprob, TM, TMt} = true
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the user provided adjoint of the mass matrix `M(x, p)`, that is `pb.Mᵗ`. It
+can be a matrix or a function `Mᵗ(x, p)`. Use [`has_massmatrix_adjoint`](@ref) to
+check whether it is provided, otherwise use `adjoint(getmassmatrix(pb, x, p))`.
+"""
+getmassmatrix_adjoint(dae::DAEMassBifProblem, x, p) = _getmassmatrix_adjoint(dae.Mᵗ, x, p)
+_getmassmatrix_adjoint(Mᵗ::AbstractMatrix, x, p) = Mᵗ
+_getmassmatrix_adjoint(Mᵗ, x, p) = Mᵗ(x, p)
+
 is_mass_matrix_constant(::DAEMassBifProblem{ConstantMass}) = true
 is_mass_matrix_constant(::DAEMassBifProblem{IdentityOperator}) = true
 is_mass_matrix_constant(::DAEMassBifProblem) = false
 
 # generic constructors, the kind of mass matrix `type` defaults to `ConstantMass`
-function DAEMassBifProblem(prob, M; type = ConstantMass)
+function DAEMassBifProblem(prob, M; Mᵗ = nothing, type = ConstantMass)
     @assert type <: AbstractDAEMassType "The provided `type` for the mass matrix must be a subtype of `AbstractDAEMassType`, e.g. `ConstantMass`."
-    return DAEMassBifProblem{type}(prob, M)
+    return DAEMassBifProblem{type}(prob, M; Mᵗ)
 end
-DAEMassBifProblem{Tkind}(prob, M) where {Tkind <: AbstractDAEMassType} =
-    DAEMassBifProblem{Tkind, typeof(prob), typeof(M)}(prob, M)
+DAEMassBifProblem{Tkind}(prob, M; Mᵗ = nothing) where {Tkind <: AbstractDAEMassType} =
+    DAEMassBifProblem{Tkind, typeof(prob), typeof(M), typeof(Mᵗ)}(prob, M, Mᵗ)
 
-DAEMassBifProblem{Tkind}(prob, ::LA.UniformScaling{Bool}) where {Tkind <: AbstractDAEMassType} = DAEMassBifProblem{ConstantMass, typeof(prob), IdentityOperator}(prob, IdentityOperator())
+# positional constructor used by `setproperties` (through ConstructionBase)
+DAEMassBifProblem(prob, M, Mᵗ) = DAEMassBifProblem(prob, M; Mᵗ = Mᵗ)
+
+DAEMassBifProblem{Tkind}(prob, ::LA.UniformScaling{Bool}; Mᵗ = nothing) where {Tkind <: AbstractDAEMassType} = DAEMassBifProblem{ConstantMass, typeof(prob), IdentityOperator, typeof(Mᵗ)}(prob, IdentityOperator(), Mᵗ)
 
 function re_make(dae::DAEMassBifProblem{Tkind};
                 M = nothing,
+                Mᵗ = nothing,
                 kw...
                 ) where {Tkind}
     new_prob = re_make(dae.prob_vf; kw...)
-    new_dae = if isnothing(M)
-        @set dae.prob_vf = new_prob
-    else
-        DAEMassBifProblem{Tkind}(new_prob, M)
+    if isnothing(M) && isnothing(Mᵗ)
+        # preserve the kind of mass matrix (ConstructionBase would reset it)
+        return DAEMassBifProblem{Tkind, typeof(new_prob), typeof(dae.M), typeof(dae.Mᵗ)}(new_prob, dae.M, dae.Mᵗ)
     end
-    return new_dae
+    newM = isnothing(M) ? dae.M : M
+    # if only the mass matrix changes, fall back to the automatic adjoint
+    newMt = isnothing(Mᵗ) ? (isnothing(M) ? dae.Mᵗ : nothing) : Mᵗ
+    return DAEMassBifProblem{Tkind}(new_prob, newM; Mᵗ = newMt)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _massmatrix_repr(M::AbstractMatrix) = string(typeof(M), " of size ", size(M))

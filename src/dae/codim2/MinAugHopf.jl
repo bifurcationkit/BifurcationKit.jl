@@ -27,7 +27,7 @@ function _init_hopf_vectors_minaug(dae::DAEMassBifProblem, bifpt, parbif, ω, bd
     return (; ζ, ζad)
 end
 
-function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, J, J★, ω::𝒯, a, b, _zero) where {𝒯}
+function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, M★, J, J★, ω::𝒯, a, b, _zero) where {𝒯}
     # we solve (J - iωM)v + M·a·σ1 = 0 with <M·b, v> = 1
     # this is the same bordered system as the one used to evaluate the Hopf MA residual
     # (see `hopf_ma_test`), so that the bordered vectors are consistent with the residual
@@ -39,11 +39,11 @@ function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, J,
 
     # we solve (J' + iωM')w + M·b·σ2 = 0 with <M·a, w> = 1
     # (conjugate adjoint of the bordered system above)
-    maj = MassAndJacobian(adjoint(M), J★); so = ShiftedOperator(J=maj, a₀ = Complex{𝒯}(0, ω))
-    w, _, cv, itw = linbdsolver_adjoint(so, Mb, Ma, zero(𝒯), _zero, one(𝒯))
+    maj = MassAndJacobian(M★, J★); so = ShiftedOperator(J=maj, a₀ = Complex{𝒯}(0, ω))
+    w, σ2, cv, itw = linbdsolver_adjoint(so, Mb, Ma, zero(𝒯), _zero, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J-iωM)' did not converge."
 
-    return (; v, w, itv, itw, σ)
+    return (; v, w, itv, itw, σ1 = σ, σ2)
 end
 
 function compute_eigenvalues(hopfeig::HopfEig, 

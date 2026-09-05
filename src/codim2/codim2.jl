@@ -145,14 +145,35 @@ update!(𝐌𝐚::AbstractMinimallyAugmentedFormulation, iter, state) = update!(
 
 @inline getdelta(𝐏𝐛::AbstractMABifurcationProblem) = getdelta(get_formulation(𝐏𝐛))
 
+"""
+$(TYPEDEF)
+
+Structure holding the solution of a minimally augmented Fold / Pitchfork / transcritical problem. It is returned by [`save_solution`](@ref) and used, for example, for mesh adaptation in codim 2 continuation.
+
+# Fields
+$(TYPEDFIELDS)
+"""
 struct MASolution{𝒯1, 𝒯2} <: AbstractMASolution
+    "Solution of the underlying vector field problem, as returned by `save_solution(𝐌𝐚.prob_vf, ...)`."
     x::𝒯1
+    "Value of the first parameter of the minimally augmented problem."
     p1::𝒯2
 end
 
+"""
+$(TYPEDEF)
+
+Structure holding the solution of a minimally augmented Hopf / Neimark-Sacker problem. It is similar to [`MASolution`](@ref) but also stores the frequency `ω` of the bifurcating periodic orbit.
+
+# Fields
+$(TYPEDFIELDS)
+"""
 struct MASolutionFreq{𝒯1, 𝒯2} <: AbstractMASolution
+    "Solution of the underlying vector field problem, as returned by `save_solution(𝐌𝐚.prob_vf, ...)`."
     x::𝒯1
+    "Value of the first parameter of the minimally augmented problem."
     p1::𝒯2
+    "Frequency `ω` of the bifurcating periodic orbit."
     ω::𝒯2
 end
 
@@ -316,12 +337,6 @@ function Base.show(io::IO, 𝐌𝐚::AbstractMinimallyAugmentedFormulation{Tprob
     printstyled(io, 𝐌𝐚.linbdsolver; color, bold)
     print(io, "\n" * prefix * "└─ linear bordered solver for the jacobian adjoint:  ")
     printstyled(io, 𝐌𝐚.linbdsolverAdjoint; color, bold)
-    # print(io, "\n" * prefix * "├─ Dimension:  ")
-    # printstyled(io, length(getu0(𝐌𝐚)); color, bold)
-    # print(io, "\n" * prefix * "├─ Jacobian: ")
-    # printstyled(io, 𝐌𝐚.jacobian; color, bold)
-    # print(io, "\n" * prefix * "└─ Parameter: ")
-    # printstyled(io, get_lens_symbol(getlens(𝐌𝐚)); color, bold)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}

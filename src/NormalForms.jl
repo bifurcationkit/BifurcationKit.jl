@@ -1202,6 +1202,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     end
 
     Mass = getmassmatrix(prob, x0, parbif) # mass matrix (DAE) handling
+    Mass★ = has_massmatrix_adjoint(prob) ? getmassmatrix_adjoint(prob, x0, parbif) : adjoint(Mass)
     if ~(Mass isa IdentityOperator)
         if start_with_eigen_type
             error("hopf_normal_form with `start_with_eigen = Val(true)` is not supported for a problem with a mass matrix (DAE): " *
@@ -1218,7 +1219,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
         _tmp_vector_complex =  VI.scale(_copy(x0), one(Complex{VI.scalartype(x0)}))
         a = _randn(_tmp_vector_complex); VI.scale!(a, 1 / scaleζ(a))
         b = _randn(_tmp_vector_complex); VI.scale!(b, 1 / scaleζ(b))
-        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, Mass, L, L★, ω, a, b, VI.zerovector(a))
+        (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, Mass, Mass★, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
         λ★ = conj(λ)
         VI.scale!(ζ, 1 / scaleζ(ζ))
