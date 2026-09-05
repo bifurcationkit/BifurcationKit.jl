@@ -537,43 +537,24 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
                       disc::AbstractBoundaryValueDiscretization;
                       lens = getlens(br_hopf),
                       nev::Int = length(eigenvals(br_hopf, ind_pt)),
+                      scaleζ = norm,
                       kwargs...) where {Tprob <: HopfMAProblem}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
-    # extract the problem, formulations and vector field
-    _prob = getprob(br_hopf)
-    𝐇 = get_formulation(_prob)
+    hopt_point = br_hopf.sol[ind_pt]
+    𝐇 = get_formulation(getprob(br_hopf))
     vector_field = 𝐇.prob_vf
-    if ~(𝐇 isa HopfMinimallyAugmentedFormulation)
-        error("[PO branching from Hopf curve] You need to provide a curve of Hopf points.\nThe underlying problem is not a `HopfProblemMinimallyAugmented`.\nWe found the type: $(typeof(𝐇))")
-    end
-    # we get the Hopf point
-    bifpt = br_hopf.sol[ind_pt]
-    ω = get_frequency(bifpt.x, 𝐇)
-    λ = Complex(0, ω)
-    x0 = get_solution(bifpt.x)
+    ω = get_frequency(hopt_point.x, 𝐇) |> abs
+    x0 = get_solution(hopt_point.x)
     params = getparams(br_hopf, ind_pt)
     L = jacobian(vector_field, x0, params)
+    L★ = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
     Mass = jacobian(vector_field, x0, params)
 
-    # newton parameters
-    optionsN = br_hopf.contparams.newton_options
-
-    # TODO! Use Minimally Augmented system for this instead of re-computing all eigenvalues
-    # compute the right eigenvector
-    verbose && @info "Recomputing eigenvector on the fly"
-    _λ, _ev, _ = optionsN.eigsolver.eigsolver(L, nev)
-    _ind = argmin(abs.(_λ .- λ))
-    verbose && @info "The eigenvalue is $(_λ[_ind])"
-    abs(_λ[_ind] - λ) > 10br_hopf.contparams.newton_options.tol && @warn "We did not find the correct eigenvalue $λ. We found $(_λ[_ind])"
-    ζ = geteigenvector(optionsN.eigsolver, _ev, _ind)
-    ζ ./= LA.norm(ζ)
-
-    # left eigen-elements
-    L★ = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
-    ζ★, λ★ = _get_target_eigenvector_from_eigensolver(L★, conj(_λ[_ind]), optionsN.eigsolver.eigsolver; nev, verbose)
-
-    # check that λ★ ≈ conj(λ)
-    abs(λ + λ★) > 1e-2 && @warn "We did not find the left eigenvalue for the Hopf point to be very close to the imaginary part, $λ ≈ $(λ★) and $(abs(λ + λ★)) ≈ 0?\nYou can perhaps increase the number of computed eigenvalues, the number is nev = $nev."
+    _tmp_vector_complex =  VI.scale(_copy(x0), one(Complex{VI.scalartype(x0)}))
+    a = _randn(_tmp_vector_complex); VI.scale!(a, 1 / scaleζ(a))
+    b = _randn(_tmp_vector_complex); VI.scale!(b, 1 / scaleζ(b))
+    (; v, w) = __compute_bordered_vectors_hopf(𝐇.linbdsolver, 𝐇.linbdsolverAdjoint, Mass, L, L★, ω, a, b, VI.zerovector(a))
+    ζ = v; ζ★ = w; VI.scale!(ζ, 1 / scaleζ(ζ))
 
     # normalise left eigenvector
     ζ★ ./= conj(dot_with_mass(ζ★, Mass, ζ))
@@ -599,7 +580,7 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
         @warn("The computation of the Lyapunov exponent for the Hopf normal form differs from the one recorded in the Hopf curve. If you used a a different norm or automatic differentiation, nevermind this warning.")
     end
     bifprob = re_make(vector_field; lens, params)
-    return _continuation(nf, bifprob, options_cont, disc; verbose, kwargs...)
+    return _continuation(nf, bifprob, options_cont, disc; kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Branch switching from bifurcations of periodic orbits
