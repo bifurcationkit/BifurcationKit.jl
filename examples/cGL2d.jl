@@ -338,7 +338,7 @@ out_ = similar(sol0f)
 
 probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = P, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Prec, log=true)
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
@@ -368,12 +368,11 @@ indfold = 1
 foldpt = BK.fold_point(deepcopy(br_po), indfold)
 par_fold = (@set par_cgl.r = foldpt.p)
 
-
 BK.residual(br_po.prob, foldpt.u, par_fold) |> plot
 
 Jpo = BK.po_jacobian_sparse(poTrap, foldpt.u, (@set par_cgl.r = foldpt.p + 0.01));
-Prec = POTrapCirculantPrec(poTrap, foldpt.u, (@set par_cgl.r = foldpt.p + 0.01), ref = :average);
-Prec = @time ilu(Jpo, τ = 0.002);
+Prec = BK.POTrapCirculantPrec(poTrap, foldpt.u, (@set par_cgl.r = foldpt.p + 0.01), ref = :average);
+# Prec = @time ilu(Jpo, τ = 0.002);
 ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Prec, log = true)
 ls(Jpo, rand(ls.N))
 

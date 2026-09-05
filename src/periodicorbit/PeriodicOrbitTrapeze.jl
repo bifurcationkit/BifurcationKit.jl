@@ -52,8 +52,8 @@ Here are some useful methods you can apply to `pb::Trapeze`:
 - `get_times(pb)` returns the normalized times `sᵢ` at which the orbit is discretized, i.e. the cumulative sum of the mesh steps.
 - `get_time_slices(pb, x)` returns the state part of the guess `x` (i.e. `x[1:M*N]`, the period is dropped) reshaped as an `N x M` matrix.
 - `get_time_step(pb, i)` returns the `i`-th normalized mesh step `hᵢ`.
-- `_get_mass_matrix(pb)` returns the mass matrix, defaulting to a sparse identity matrix if none was provided. Passing `Val(true)` as a second argument returns instead an identity matrix of the form `I(N)`.
-- `hasmassmatrix(pb)` returns `true` if a mass matrix was provided.
+- `_get_mass_matrix(pb)` returns the mass matrix, defaulting to a sparse identity matrix if none was provided. Passing `Val(true)` as a second argument returns instead an identity matrix of the form `I(N)`. The stateful version `_get_mass_matrix(pb, x, p)` resolves the mass matrix from the field `massmatrix` if it was provided, otherwise from the underlying vector field problem through `getmassmatrix(prob_vf, x, p)` (this makes `Trapeze` work with a `DAEMassBifProblem`).
+- `hasmassmatrix(pb)` returns `true` if a (non trivial) mass matrix is present, either provided through the field `massmatrix` or carried by the underlying vector field problem (e.g. a `DAEMassBifProblem`).
 - `getparams(pb)`, `getlens(pb)` and `setparam(pb, p)` give access to the parameters of the underlying vector field.
 - `getperiod(pb, x)` returns the period `T = x[end]` of the guess `x`.
 - `getdelta(pb)` returns the step `δ` used for finite differences.
@@ -72,7 +72,10 @@ A more realistic way to build the problem is to provide the bifurcation problem 
     Trapeze(prob_vf, M::Int, N::Int)
     Trapeze(prob_vf, ϕ, xπ, M::Int, N::Int, ls = DefaultLS(); kwargs...)
 
-In the second form, `ϕ` and `xπ` (see above) provide the initial section; they are stored into vectors of length `N * M`, the extra entries (if the provided vectors are shorter) being set to `0`. The keyword `massmatrix` allows to specify a mass matrix. When the discretization is created with a vector field, the residual `F` of `prob_vf` and its jacobian are used to assemble the functional `G`.
+In the second form, `ϕ` and `xπ` (see above) provide the initial section; they are stored into vectors of length `N * M`, the extra entries (if the provided vectors are shorter) being set to `0`. The keyword `massmatrix` allows to specify a mass matrix (it takes precedence over the one of the vector field). When the discretization is created with a vector field, the residual `F` of `prob_vf` and its jacobian are used to assemble the functional `G`.
+
+!!! warning "State dependent mass matrix"
+    When `prob_vf` is a [`DAEMassBifProblem`](@ref) with a mass matrix depending on the state, `M(x_i, p)` is evaluated at each time slice in the residual, but the analytic jacobian treats it as frozen at the current state (the derivative `∇_x M` is not included). The jacobian is then an approximation whose accuracy degrades with the strength of the state dependence.
 
 # Orbit guess
 An orbit guess `orbitguess` must be a vector of size `M * N + 1` where `N` is the number of unknowns in the state space and `orbitguess[M*N+1]` is an estimate of the period ``T`` of the limit cycle. More precisely, using the above notations, `orbitguess` must be ``orbitguess = [x_{1},x_{2},\\cdots,x_{M}, T]``.
@@ -149,7 +152,7 @@ end
 @inline isinplace(trap::Trapeze) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
 @inline get_time_step(trap::Trapeze, i::Int) = get_time_step(trap.mesh, i)
 get_times(trap::Trapeze) = cumsum(collect(trap.mesh))
-@inline hasmassmatrix(::Trapeze{Tprob, vectype, Tls, T, Tmass}) where {Tprob, vectype, Tls, T, Tmass} = ~(Tmass == Nothing)
+@inline hasmassmatrix(trap::Trapeze) = (trap.prob_vf !== nothing && !has_trivial_mass_mastrix(trap.prob_vf))
 @inline getparams(trap::Trapeze) = getparams(trap.prob_vf)
 @inline getlens(trap::Trapeze) = getlens(trap.prob_vf)
 @inline getdelta(trap::Trapeze) = getdelta(trap.prob_vf)
@@ -157,13 +160,30 @@ setparam(trap::Trapeze, p) = set(getparams(trap), getlens(trap), p)
 @inline get_state_dim(trap::Trapeze) = trap.N
 @inline length(trap::Trapeze) = trap.M * get_state_dim(trap)
 
-@inline function _get_mass_matrix(trap::Trapeze, return_type_Array::Val{return_type_Array_val} = Val(false)) where {return_type_Array_val}
-    if return_type_Array_val == false
-        return hasmassmatrix(trap) ? trap.massmatrix : SPA.spdiagm( 0 => ones(trap.N))
-    else
-        return hasmassmatrix(trap) ? trap.massmatrix : LinearAlgebra.I(trap.N)
+@inline function _get_mass_matrix(trap::Trapeze, x, p, ::Val{return_type_Array_val} = Val(false)) where {return_type_Array_val}
+    if trap.massmatrix !== nothing
+        return trap.massmatrix
     end
+    if trap.prob_vf !== nothing
+        Mass = getmassmatrix(trap.prob_vf, x, p)
+        if Mass isa IdentityOperator
+            return return_type_Array_val == false ? SPA.spdiagm(0 => ones(trap.N)) : LA.I(trap.N)
+        elseif return_type_Array_val == false && Mass isa LA.Diagonal
+            return SPA.spdiagm(0 => LA.diag(Mass))
+        end
+        return Mass
+    end
+    return return_type_Array_val == false ? SPA.spdiagm(0 => ones(trap.N)) : LA.I(trap.N)
 end
+
+@inline function _has_mass_matrix(trap::Trapeze, x, p)
+    # trap.massmatrix !== nothing && return true
+    trap.prob_vf === nothing && return false
+    return is_mass_matrix_constant(trap.prob_vf)
+end
+
+@inline apply_mass_matrix(trap::Trapeze, x, p, dx) = apply_mass_matrix(trap.prob_vf, x, p, dx)
+
 # these functions extract the last component of the periodic orbit guess
 @inline _extract_period_fdtrap(trap::Trapeze, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
 # these functions extract the time slices components
@@ -252,7 +272,7 @@ function potrap_scheme!(trap,
                         u1, u2,
                         du1, du2,
                         par, h,
-                        tmp,
+                        tmp_Fu,
                         linear::Val{is_linear} = Val(true);
                         applyf::Val{is_applyf} = Val(true)) where {is_linear, is_applyf}
     # this function implements the basic implicit scheme used for the time integration
@@ -261,23 +281,24 @@ function potrap_scheme!(trap,
     # basically tmp_Fu is F(u2)
     # applyf: if true use F and dF otherwise
     if is_linear
-        dest .= tmp
+        dest .= tmp_Fu
         if is_applyf
-            # tmp <- trap.F(u1, par)
-            residual!(trap.prob_vf, tmp, u1, par) #TODO this line does not almost seem to be type stable in code_wartype, gives @_11::Union{Nothing, Tuple{Int64,Int64}}
+            # tmp_Fu <- trap.F(u1, par)
+            residual!(trap.prob_vf, tmp_Fu, u1, par)
         else
-            applyJ(trap, tmp, u1, par, du1)
+            applyJ!(trap, tmp_Fu, u1, par, du1)
         end
         if hasmassmatrix(trap)
-            dest .= trap.massmatrix * (du1 .- du2) .- h .* (dest .+ tmp)
+            Mdu = apply_mass_matrix(trap, u1, par, du1 .- du2)
+            dest .= Mdu .- h .* (dest .+ tmp_Fu)
         else
-            @. dest = (du1 - du2) - h * (dest + tmp)
+            @. dest = (du1 - du2) - h * (dest + tmp_Fu)
         end
     else # used for jvp
-        dest .-= h .* tmp
-        # tmp <- trap.F(u1, par)
-        residual!(trap.prob_vf, tmp, u1, par)
-        dest .-= h .* tmp
+        dest .-= h .* tmp_Fu
+        # tmp_Fu <- trap.F(u1, par)
+        residual!(trap.prob_vf, tmp_Fu, u1, par)
+        dest .-= h .* tmp_Fu
     end
 end
 potrap_scheme!(trap, dest, u1, u2, par, h, tmp, linear = Val(true); applyf = Val(true)) = potrap_scheme!(trap, dest, u1, u2, u1, u2, par, h, tmp, linear; applyf)
@@ -348,6 +369,7 @@ Matrix-free expression (jvp) of the jacobian ``dG(u)\\cdot du`` of the PO functi
 """
 @views function po_jvp!(trap::Trapeze, out, u, par, du)
     M, N = size(trap)
+    @assert is_mass_matrix_constant(trap.prob_vf)
     T  = _extract_period_fdtrap(trap, u)
     dT = _extract_period_fdtrap(trap, du)
 
@@ -425,6 +447,7 @@ function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du:
     # du of size N * (M - 1)
     # outc of size N * M
     M, N = size(trap)
+    @assert is_mass_matrix_constant(trap.prob_vf)
 
     u0c = reshape(u0, N, M-1)
     duc = reshape(du, N, M-1)
@@ -479,7 +502,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Fill the cyclic (block tridiagonal) part of the block matrix `Jc`, i.e. the jacobian of the Crank-Nicolson relations w.r.t. the space unknowns, using the analytic jacobians ``J(x_i)`` of the vector field evaluated at each slice. The blocks read ``M - (T\\,h_i/2)\\,J(x_i)`` on the diagonal and ``-M - (T\\,h_i/2)\\,J(x_{i-1})`` on the sub-diagonal (with the cyclic convention ``x_0 := x_{M-1}``).
+Fill the cyclic (block tridiagonal) part of the block matrix `Jc`, i.e. the jacobian of the Crank-Nicolson relations w.r.t. the space unknowns, using the analytic jacobians ``J(x_i)`` of the vector field evaluated at each slice. The diagonal blocks read ``M(x_i) + dMv(x_i, x_i - x_{i-1}) - (T\\,h_i/2)\\,J(x_i)`` and the sub-diagonal ones ``-M(x_i) - (T\\,h_i/2)\\,J(x_{i-1})`` (with the cyclic convention ``x_0 := x_{M-1}``), where `dMv` is the state-jacobian of the mass application, see [`jacobian_apply_mass_matrix`](@ref).
 """
 function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArray)
     period = _extract_period_fdtrap(trap, u0)
@@ -490,17 +513,22 @@ end
 # see explanation in po_cylic_block!
 function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
     M, N = size(trap)
+    need_dM = is_mass_matrix_constant(trap.prob_vf)
 
     I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
 
     tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
 
     h = period * get_time_step(trap, 1)
-    Jn = I₁ - (h/2) .* tmpJ
+    Jn = if need_dM
+        I₁ + jacobian_apply_mass_matrix(trap.prob_vf, u0m[:, 1], par, u0m[:, 1] .- u0m[:, M-1]) - (h/2) .* tmpJ
+    else
+        I₁
+    end
     Jc[BA.Block(1, 1)] = Jn
 
-    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢
-    # (frozen in the jacobian); for the wrap block this is still x_1
+    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢;
+    # for the wrap block this is still x_1
     Jn = @views -I₁ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 
@@ -512,7 +540,11 @@ function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc:
 
         tmpJ = @views jacobian(trap.prob_vf, u0m[:, 𝐢], par)
 
-        Jn = Iᵢ - (h/2) .* tmpJ
+        Jn = if need_dM
+            Iᵢ + jacobian_apply_mass_matrix(trap.prob_vf, u0m[:, 𝐢], par, u0m[:, 𝐢] .- u0m[:, 𝐢-1]) - (h/2) .* tmpJ
+        else
+            Iᵢ
+        end
         Jc[BA.Block(𝐢, 𝐢)] = Jn
     end
     return Jc
@@ -524,6 +556,7 @@ $(TYPEDSIGNATURES)
 Return the cyclic (block tridiagonal) matrix ``J_c(u_0)`` of size ``N\\,(M-1)`` as a `BlockArray`, see `po_cylic_block!`.
 """
 function po_cylic_block(trap::Trapeze, u0::AbstractVector, par)
+    @assert is_mass_matrix_constant(trap.prob_vf)
     M, N = size(trap)
     Jc = BA.BlockArray(SPA.spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
     po_cylic_block!(trap, u0, par, Jc)
@@ -542,6 +575,7 @@ $(TYPEDSIGNATURES)
 Return the sparse matrix of the full jacobian ``dG(u_0)`` of the PO functional `G` at `u_0`. It is assembled from the block matrix ``A_\\gamma`` (see `po_jacobian_block`) to which the derivative ``\\partial_T G`` w.r.t. the period `T` is appended as a last column (computed by finite differences with step `δ`), together with the last row encoding the phase condition ``\\phi^\\top\\,x = 0``.
 """
 function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ = getdelta(trap))
+    # @assert is_mass_matrix_constant(trap.prob_vf)
     # extraction of various constants
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
@@ -621,35 +655,41 @@ Inplace version of `po_jacobian_sparse`: the jacobian ``dG(u_0)`` is stored in t
 """
 @views function po_jacobian_sparse!(trap::Trapeze, J0::Tj, u0::AbstractVector, par; γ = 1, δ = getdelta(trap)) where Tj
     M, N = size(trap)
+    @assert is_mass_matrix_constant(trap.prob_vf)
     T = _extract_period_fdtrap(trap, u0)
 
-    Iₙ = _get_mass_matrix(trap, Val(~(Tj <: SPA.SparseMatrixCSC)))
+    V = Val(~(Tj <: SPA.SparseMatrixCSC))
 
     u0m = get_time_slices(trap, u0)
 
     tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
+    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢
+    # (frozen in the jacobian); for the wrap block this is still x_1
+    I₁ = _get_mass_matrix(trap, u0m[:, 1], par, V)
+
     h = T * get_time_step(trap, 1)
-    Jn = Iₙ - (h/2) .* tmpJ
+    Jn = I₁ - (h/2) .* tmpJ
     # setblock!(Jc, Jn, 1, 1)
     J0[1:N, 1:N] .= Jn
 
-    Jn .= -Iₙ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
+    Jn .= -I₁ .- (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     # setblock!(Jc, Jn, 1, M-1)
     J0[1:N, (M-2)*N+1:(M-1)*N] .= Jn
 
-    for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
-        @. Jn = -Iₙ - h/2 * tmpJ
+    for 𝐢 in 2:M-1
+        h = T * get_time_step(trap, 𝐢)
+        Iᵢ = _get_mass_matrix(trap, u0m[:, 𝐢], par, V)
+        @. Jn = -Iᵢ - h/2 * tmpJ
         # the next lines cost the most
-        # setblock!(Jc, Jn, ii, ii-1)
-        J0[(ii-1)*N+1:(ii)*N, (ii-2)*N+1:(ii-1)*N] .= Jn
+        # setblock!(Jc, Jn, 𝐢, 𝐢-1)
+        J0[(𝐢-1)*N+1:(𝐢)*N, (𝐢-2)*N+1:(𝐢-1)*N] .= Jn
 
-        tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)
+        tmpJ .= jacobian(trap.prob_vf, u0m[:, 𝐢], par)
 
-        @. Jn = Iₙ - h/2 * tmpJ
-        # setblock!(Jc, Jn, ii, ii)
-        J0[(ii-1)*N+1:(ii)*N, (ii-1)*N+1:(ii)*N] .= Jn
+        @. Jn = Iᵢ - h/2 * tmpJ
+        # setblock!(Jc, Jn, 𝐢, 𝐢)
+        J0[(𝐢-1)*N+1:(𝐢)*N, (𝐢-1)*N+1:(𝐢)*N] .= Jn
     end
 
     # setblock!(Aγ, -γ * Iₙ, M, 1)

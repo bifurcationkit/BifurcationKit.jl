@@ -1,8 +1,9 @@
+# test that the top eigenvalues are sorted by decreasing real part
+_test_sorted(x) = issorted(x, by = real, rev = true)
+####################################################################################################
 using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack, Random
 const BK = BifurcationKit
 Random.seed!(1234)
-# test that the top eigenvalues are sorted by decreasing real part
-_test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
 BK.closesttozero(rand(10))
 BK.norm2sqr(rand(2))

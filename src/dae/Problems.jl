@@ -34,8 +34,10 @@ The derivatives are used by the minimally augmented formulations to account for 
 
 - `R01(x, p, v, w)` returns the **scalar** `∂_p ⟨w, M(x, p) v⟩` where `p` is differentiated along the continuation lens. If `nothing`, it is approximated by central finite differences.
 - `∇x(x, p, v, w)` returns the **vector** `∇_x ⟨w, M(x, p) v⟩`. If `nothing`, it is approximated by `ForwardDiff.gradient`.
+- `applyM(x, p, v)` returns `M(x, p) * v`. If `nothing`, it defaults to `apply(M(x, p), v)`.
+- `dMv(x, p, v)` returns the **matrix** jacobian of `x -> M(x, p) v`. If `nothing`, it is computed with `ForwardDiff.jacobian`.
 """
-struct MassFunction{TM, TMt, TR01, TGx}
+struct MassFunction{TM, TMt, TR01, TGx, TAM, TdMv}
     "Mass matrix/operator, or a function `M(x, p)`."
     M::TM
     "Adjoint of the mass matrix (matrix or function `Mᵗ(x, p)`), or `nothing`."
@@ -44,15 +46,32 @@ struct MassFunction{TM, TMt, TR01, TGx}
     R01::TR01
     "Gradient, with respect to the state `x`, of `⟨w, M(x, p) v⟩`: `(x, p, v, w) -> vector`, or `nothing`."
     ∇x::TGx
+    "Application of the mass matrix: `(x, p, dx) -> M(x, p) * dx`."
+    applyM::TAM
+    "Jacobian (matrix) of the map `x -> M(x, p) v`: `(x, p, v) -> matrix`, or `nothing`."
+    dMv::TdMv
 end
-MassFunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing) = MassFunction(M, Mᵗ, R01, ∇x)
+
+MassFunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing, applyM = nothing, dMv = AutoDiff()) = MassFunction(M, Mᵗ, R01, ∇x, _default_applyM(M, applyM), dMv)
+_default_applyM(M, applyM) = applyM
+_default_applyM(M, ::Nothing) = (x, p, dx) -> apply(_getmassmatrix(M, x, p), dx)
 
 _to_massfunction(mf::MassFunction; kw...) = mf
-_to_massfunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing) = MassFunction(M; Mᵗ, R01, ∇x)
+_to_massfunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing, applyM = nothing, dMv = AutoDiff()) = MassFunction(M; Mᵗ, R01, ∇x, applyM, dMv)
+
 getmassmatrix(mf::MassFunction, x, p) = _getmassmatrix(mf.M, x, p)
 _getmassmatrix(M::AbstractMatrix, x, p) = M
 _getmassmatrix(::Union{LA.UniformScaling, IdentityOperator}, x, p) = LA.Diagonal(ones(length(x)))
 _getmassmatrix(M, x, p) = M(x, p)
+
+apply_mass_matrix(::MassFunction{IdentityOperator}, x, p, dx) = dx
+apply_mass_matrix(mf::MassFunction, x, p, dx) = mf.applyM(x, p, dx)
+
+jacobian_apply_mass_matrix(mf::MassFunction, x, p, v) = mf.dMv(x, p, v)
+
+function jacobian_apply_mass_matrix(mf::MassFunction{TM, TMt, TR01, TGx, TAM, AutoDiff}, x, p, v) where {TM, TMt, TR01, TGx, TAM}
+    return ForwardDiff.jacobian(z -> apply_mass_matrix(mf, z, p, v), x)
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
@@ -77,17 +96,19 @@ $(TYPEDFIELDS)
 - `residual(pb, x, p)` calls `residual(pb.prob_vf, x, p)`
 - `jacobian(pb, x, p)` calls `jacobian(pb.prob_vf, x, p)`
 - `getmassmatrix(pb, x, p)` returns the mass matrix `M(x, p)`
+- `apply_mass_matrix(pb, x, p, dx)` returns `M(x, p) * dx`, see [`MassFunction`](@ref)
+- `jacobian_apply_mass_matrix(pb, x, p, v)` returns the jacobian matrix of `x -> M(x, p) v`, see [`MassFunction`](@ref)
 - `R01_mass_matrix(pb, x, p, v, w)` returns `∂_p ⟨w, M(x, p) v⟩`, see [`MassFunction`](@ref)
 - `∇_x_mass_matrix(pb, x, p, v, w)` returns `∇_x ⟨w, M(x, p) v⟩`, see [`MassFunction`](@ref)
 - `has_massmatrix_adjoint(pb)` returns whether a dedicated mass adjoint `pb.M.Mᵗ` was provided
 - `getmassmatrix_adjoint(pb, x, p)` returns the user provided mass adjoint `pb.M.Mᵗ` (matrix or function)
 - `record_from_solution(pb)`, `save_solution(pb, u, pars)`, `update!(pb, iter, state)` are forwarded to `pb.prob_vf`
-- `re_make(pb; M = …, Mᵗ = …, R01 = …, ∇x = …, kwargs…)` rebuilds the problem, possibly with another mass matrix (and/or its derivatives)
+- `re_make(pb; M = …, Mᵗ = …, R01 = …, ∇x = …, applyM = …, dMv = …, kwargs…)` rebuilds the problem, possibly with another mass matrix (and/or its derivatives)
 - the jet methods of the wrapped problem (`R01`, `dF`, `d2F`, `d3F`, …) are forwarded as well
 
 # Constructors
 
-- `DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = nothing, ∇x = nothing, type = ConstantMass)` wraps the bifurcation problem `prob` with the mass matrix `M`, which can be a matrix or a function `M(x, p)`. An optional adjoint `Mᵗ` (a matrix or a function `Mᵗ(x, p)`) and optional derivatives `R01`, `∇x` can be provided, see [`MassFunction`](@ref). A [`MassFunction`](@ref) can also be passed directly as `M`.
+- `DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = nothing, ∇x = nothing, applyM = nothing, dMv = nothing, type = ConstantMass)` wraps the bifurcation problem `prob` with the mass matrix `M`, which can be a matrix or a function `M(x, p)`. An optional adjoint `Mᵗ` (a matrix or a function `Mᵗ(x, p)`), optional derivatives `R01`, `∇x`, optional application `applyM` and optional jacobian `dMv` of `x -> M(x, p) v` can be provided, see [`MassFunction`](@ref). A [`MassFunction`](@ref) can also be passed directly as `M`.
 - `DAEMassBifProblem{ConstantMass}(prob, M)` explicitly sets the kind of mass matrix through the type parameter.
 - a `UniformScaling` mass matrix (`I`, `α * I`) is also accepted: the identity case is stored with the marker `IdentityOperator` so that no mass matrix solve is required.
 
@@ -138,6 +159,9 @@ has_hessian(dae::DAEMassBifProblem) = has_hessian(dae.prob_vf)
 # constant (matrix like) mass matrices are returned as-is, state dependent ones are evaluated at (x, p)
 getmassmatrix(dae::DAEMassBifProblem, x, p) = getmassmatrix(dae.M, x, p)
 
+apply_mass_matrix(dae::DAEMassBifProblem, x, p, dx) = apply_mass_matrix(dae.M, x, p, dx)
+jacobian_apply_mass_matrix(dae::DAEMassBifProblem, x, p, v) = jacobian_apply_mass_matrix(dae.M, x, p, v)
+
 # the identity mass matrix is self-adjoint
 Base.adjoint(::IdentityOperator) = IdentityOperator()
 
@@ -161,25 +185,25 @@ _getmassmatrix_adjoint(Mᵗ::AbstractMatrix, x, p) = Mᵗ
 _getmassmatrix_adjoint(Mᵗ, x, p) = Mᵗ(x, p)
 getmassmatrix_adjoint(dae::DAEMassBifProblem, x, p) = getmassmatrix_adjoint(dae.M, x, p)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-is_mass_matrix_constant(::DAEMassBifProblem{ConstantMass}) = true
-is_mass_matrix_constant(::DAEMassBifProblem{IdentityOperator}) = true
-is_mass_matrix_constant(::DAEMassBifProblem) = false
+# whether the mass matrix is state independent: it is the case for matrix like masses
+# (including the identity marker), function masses are considered state dependent
+is_mass_matrix_constant(::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, TR01, TGx, TAM, TdMv}}) where {Tkind, Tprob, TM, TMt, TR01, TGx, TAM, TdMv} = TM <: Union{AbstractMatrix, LA.UniformScaling, IdentityOperator}
 
 has_trivial_mass_mastrix(::DAEMassBifProblem{IdentityOperator}) = true
 has_trivial_mass_mastrix(::DAEMassBifProblem) = false
 
 # generic constructors, the kind of mass matrix `type` defaults to `ConstantMass`
-function DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), type = ConstantMass)
+function DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), applyM = nothing, dMv = AutoDiff(), type = ConstantMass)
     @assert type <: AbstractDAEMassType "The provided `type` for the mass matrix must be a subtype of `AbstractDAEMassType`, e.g. `ConstantMass`."
-    return DAEMassBifProblem{type}(prob, M; Mᵗ, R01, ∇xM)
+    return DAEMassBifProblem{type}(prob, M; Mᵗ, R01, ∇xM, applyM, dMv)
 end
-function DAEMassBifProblem{Tkind}(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff()) where {Tkind <: AbstractDAEMassType}
-    mf = _to_massfunction(M; Mᵗ, R01, ∇x = ∇xM)
+function DAEMassBifProblem{Tkind}(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), applyM = nothing, dMv = AutoDiff()) where {Tkind <: AbstractDAEMassType}
+    mf = _to_massfunction(M; Mᵗ, R01, ∇x = ∇xM, applyM, dMv)
     return DAEMassBifProblem{Tkind, typeof(prob), typeof(mf)}(prob, mf)
 end
 
-function DAEMassBifProblem{Tkind}(prob, ::LA.UniformScaling{Bool}; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff()) where {Tkind <: AbstractDAEMassType}
-    mf = MassFunction(IdentityOperator(); Mᵗ, R01, ∇x = ∇xM)
+function DAEMassBifProblem{Tkind}(prob, ::LA.UniformScaling{Bool}; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), applyM = nothing, dMv = AutoDiff()) where {Tkind <: AbstractDAEMassType}
+    mf = MassFunction(IdentityOperator(); Mᵗ, R01, ∇x = ∇xM, applyM, dMv)
     return DAEMassBifProblem{ConstantMass, typeof(prob), typeof(mf)}(prob, mf)
 end
 
@@ -188,10 +212,12 @@ function re_make(dae::DAEMassBifProblem{Tkind};
                 Mᵗ = nothing,
                 R01 = FiniteDifferences(),
                 ∇xM = AutoDiff(),
+                applyM = nothing,
+                dMv = nothing,
                 kw...
                 ) where {Tkind}
     new_prob = re_make(dae.prob_vf; kw...)
-    if isnothing(M) && isnothing(Mᵗ) && isnothing(R01) && isnothing(∇xM)
+    if isnothing(M) && isnothing(Mᵗ) && isnothing(R01) && isnothing(∇xM) && isnothing(applyM) && isnothing(dMv)
         # preserve the kind of mass matrix (ConstructionBase would reset it)
         return DAEMassBifProblem{Tkind, typeof(new_prob), typeof(dae.M)}(new_prob, dae.M)
     end
@@ -199,7 +225,9 @@ function re_make(dae::DAEMassBifProblem{Tkind};
     newMt = isnothing(Mᵗ) ? base.Mᵗ : Mᵗ
     newR01 = R01 isa FiniteDifferences ? base.R01 : R01
     newGx = ∇xM isa AutoDiff ? base.∇x : ∇xM
-    mf = MassFunction(base.M; Mᵗ = newMt, R01 = newR01, ∇x = newGx)
+    newAM = isnothing(applyM) ? base.applyM : applyM
+    newdMv = isnothing(dMv) ? base.dMv : dMv
+    mf = MassFunction(base.M; Mᵗ = newMt, R01 = newR01, ∇x = newGx, applyM = newAM, dMv = newdMv)
     return DAEMassBifProblem{Tkind, typeof(new_prob), typeof(mf)}(new_prob, mf)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -213,7 +241,7 @@ used, otherwise a central finite difference is performed.
 """
 R01_mass_matrix(dae::DAEMassBifProblem, x, p, v, w) = dae.M.R01(x, p, v, w)
 
-function R01_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, FiniteDifferences, TGx}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TGx}
+function R01_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, FiniteDifferences, TGx, TAM, TdMv}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TGx, TAM, TdMv}
     lens = getlens(dae)
     p0 = _get(p, lens)
     ϵ = getdelta(dae)
@@ -222,7 +250,7 @@ function R01_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, T
     return (dot_with_mass(w, M₊, v) - dot_with_mass(w, M₋, v)) / (2ϵ)
 end
 
-function R01_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, AutoDiff, TGx}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TGx}
+function R01_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, AutoDiff, TGx, TAM, TdMv}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TGx, TAM, TdMv}
     lens = getlens(dae)
     p0 = _get(p, lens)
     return ForwardDiff.derivative(z -> dot_with_mass(w, getmassmatrix(dae, x, set(p, lens, z)), v), p0)
@@ -237,7 +265,7 @@ scalar, used by the minimally augmented Hopf formulation. If the user provided
 """
 ∇_x_mass_matrix(dae::DAEMassBifProblem, x, p, v, w) = dae.M.∇x(x, p, v, w)
 
-function ∇_x_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, TR01, AutoDiff}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TR01}
+function ∇_x_mass_matrix(dae::DAEMassBifProblem{Tkind, Tprob, MassFunction{TM, TMt, TR01, AutoDiff, TAM, TdMv}}, x, p, v, w) where {Tkind <: AbstractDAEMassType, Tprob, TM, TMt, TR01, TAM, TdMv}
     # real / imaginary split to stay within ForwardDiff's real arithmetic
     vr = real(v); vi = imag(v)
     wr = real(w); wi = imag(w)
