@@ -1232,3 +1232,124 @@ end
 
 generate_ci_problem(trap::Trapeze, bifprob::AbstractBifurcationProblem, sol::AbstractTimeseriesSolution, period::Real; ktrap...) = generate_ci_problem(trap, bifprob, sol, (zero(period), period); ktrap...)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDEF)
+
+Block-circulant (Fourier-in-time / para-diagonalization) preconditioner for the cyclic matrix ``J_c`` of the periodic orbit functional [`Trapeze`](@ref).
+
+The cyclic part of the jacobian is approximated by a block-circulant matrix built from the two frozen ``N\\times N`` blocks obtained by averaging the jacobian of the vector field ``F'`` over the orbit,
+
+```math
+\\bar{M} = M_a - \\frac{\\bar{h}}{2}\\bar{F}', \\qquad
+\\bar{H} = M_a + \\frac{\\bar{h}}{2}\\bar{F}',
+```
+
+where ``M_a`` is the mass matrix and ``\\bar{h}`` the mean time step. This block-circulant matrix 
+
+
+    ┌                          ┐
+    │  M̄   -H̄                  │
+    │       M̄   -H̄             │
+    │            ⋱     ⋱       │
+    │  -H̄            M̄         │
+    └                          ┘
+
+is diagonalized by the discrete Fourier transform in time, with symbol
+
+```math
+\\Lambda_k = \\bar{M} - \\bar{H}\\,e^{-2\\pi i (k-1)/m}, \\qquad k = 1,\\dots,m,
+```
+
+so that its inverse is applied with one FFT and ``m`` sparse solves, see `LinearAlgebra.ldiv!`.
+
+The preconditioner is meant to be used with the matrix-free option `jacobian = BorderedMatrixFree()` together with a preconditioned Krylov solver, e.g. `GMRESKrylovKit(Pl = P)`. It only acts on the cyclic components ``x_1,\\dots,x_{M-1}`` (of size `N * (M-1)`); the period / phase border is handled exactly by the bordered solver. Accordingly, `ldiv!` also accepts full bordered vectors and leaves the closure slice ``x_M`` and the period unchanged.
+
+!!! note "FFTW"
+    Applying the preconditioner requires `FFTW` to be loaded: the `LinearAlgebra.ldiv!` methods are provided by the `FFTExt` package extension (e.g. run `using FFTW` before building the solver).
+
+# Internal fields
+$(TYPEDFIELDS)
+
+# Constructors
+
+- `POTrapCirculantPrec(trap, u0, par; ref = :average, ε = 0)` builds the preconditioner at the orbit guess `u0`. The keyword `ref` selects the reference jacobian used to freeze the blocks: `:average` averages ``F'`` over the orbit while an integer `ref = i` uses the single time slice ``x_i``. The shift `ε` is added to each symbol ``\\Lambda_k``, which is useful to regularize close-to-singular symbols.
+- The blocks and their factorizations can be refreshed along a branch with `update_preconditioner!(P, trap, u0, par; ref, ε)`.
+
+# Example
+
+```julia
+P  = BK.POTrapCirculantPrec(poTrap, orbitguess, par; ref = :average)
+ls = GMRESKrylovKit(Pl = P)
+```
+"""
+mutable struct POTrapCirculantPrec{TM, TH, TF}
+    "Frozen ``\\bar{M} = M_a - (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
+    M::TM
+
+    "Frozen ``\\bar{H} = M_a + (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
+    H::TH
+
+    "Dimension `N` of a time slice."
+    N::Int
+
+    "Number `m = M - 1` of cyclic time slices on which the preconditioner acts."
+    m::Int
+
+    "Vector of the `m` LU factorizations of the symbols ``\\Lambda_k = \\bar{M} - \\bar{H}e^{-2\\pi i(k-1)/m}``."
+    facts::TF
+
+    "FFT workspace of size `N × m`."
+    Rhat::Matrix{ComplexF64}
+
+    "FFT workspace of size `N × m`."
+    Zhat::Matrix{ComplexF64}
+end
+
+# frozen cyclic blocks M, H from the orbit average of dF (or a single reference slice)
+function _circ_blocks(trap, u0, par; ref = :average)
+    M0, N = size(trap)
+    m = M0 - 1
+    T = _extract_period_fdtrap(trap, u0)
+    xc = get_time_slices(trap, u0)
+    if ref === :average
+        Jbar = jacobian(trap.prob_vf, xc[:, 1], par)
+        Mbar = _get_mass_matrix(trap, xc[:, 1], par)
+        for i in 2:m
+            Jbar = Jbar + jacobian(trap.prob_vf, xc[:, i], par)
+            Mbar = Mbar + _get_mass_matrix(trap, xc[:, i], par)
+        end
+        Jbar = Jbar ./ m
+        Mbar = Mbar ./ m
+    elseif ref isa Integer
+        Jbar = jacobian(trap.prob_vf, xc[:, ref], par)
+        Mbar = _get_mass_matrix(trap, xc[:, ref], par)
+    else
+        error("ref must be :average or an integer time-slice index")
+    end
+    hbar = T * sum(get_time_step(trap, i) for i in 1:m) / m
+    M = SPA.sparse(Mbar - (hbar / 2) .* Jbar)
+    H = SPA.sparse(Mbar + (hbar / 2) .* Jbar)
+    return M, H, m, N
+end
+
+function POTrapCirculantPrec(trap, u0::AbstractVector{𝒯}, par; ref = :average, ε = zero(𝒯)) where {𝒯}
+    M, H, m, N = _circ_blocks(trap, u0, par; ref)
+    facts = [LA.lu(M - H * exp(-2π * im * (k - 1) / m) + ε * LA.I) for k in 1:m]
+    return POTrapCirculantPrec(M, H, N, m, facts, zeros(ComplexF64, N, m), zeros(ComplexF64, N, m))
+end
+
+function update_preconditioner!(P::POTrapCirculantPrec, trap, u0, par; ref = :average, ε = 0.0)
+    M, H, m, N = _circ_blocks(trap, u0, par; ref)
+    P.M = M
+    P.H = H
+    for k in 1:P.m
+        P.facts[k] = LA.lu(M - H * exp(-2π * im * (k - 1) / P.m) + ε * LA.I)
+    end
+    return P
+end
+
+@inline _cyclic_length(P::POTrapCirculantPrec) = P.N * P.m
+
+# The application of the preconditioner is provided by the `FFTExt` package extension and
+# requires `FFTW` to be loaded (e.g. `using FFTW`).
+Base.:\(P::POTrapCirculantPrec, x) = (y = similar(x); LA.ldiv!(y, P, x); y)
