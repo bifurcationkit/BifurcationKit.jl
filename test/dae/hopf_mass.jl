@@ -85,6 +85,36 @@ let
 end
 
 let
+    # mass matrix application `apply_mass_matrix(pb, x, p, dx)`
+    B = [1. 0.5; 0. 0.]
+    prob = BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r))
+    x = [0.2, -0.3]; dx = [0.4, -0.1]
+
+    # default: apply(M(x, p), dx) for a matrix
+    daeprob = BK.DAEMassBifProblem(prob, B)
+    @test BK.apply_mass_matrix(daeprob, x, par_sl, dx) == B * dx
+    # default for a function mass matrix
+    Bfun = (x, p) -> (p.r + 1) .* LA.I(2)
+    daefun = BK.DAEMassBifProblem(prob, Bfun)
+    @test BK.apply_mass_matrix(daefun, x, par_sl, dx) == Bfun(x, par_sl) * dx
+    # default for the identity mass matrix
+    daeI = BK.DAEMassBifProblem(prob, LA.I)
+    @test BK.apply_mass_matrix(daeI, x, par_sl, dx) == dx
+    # user provided application
+    daecustom = BK.DAEMassBifProblem(prob, B; applyM = (x, p, dx) -> 3 .* dx)
+    @test BK.apply_mass_matrix(daecustom, x, par_sl, dx) == 3 .* dx
+    @test BK.apply_mass_matrix(daecustom.M, x, par_sl, dx) == 3 .* dx
+    # re_make: the application is preserved by default and can be replaced
+    daeprob2 = BK.re_make(daecustom; u0 = [1.0, -1.0])
+    @test BK.apply_mass_matrix(daeprob2, x, par_sl, dx) == 3 .* dx
+    daeprob3 = BK.re_make(daecustom; applyM = (x, p, dx) -> -dx)
+    @test BK.apply_mass_matrix(daeprob3, x, par_sl, dx) == -dx
+    # re_make with a new mass matrix falls back on the default application
+    daeprob4 = BK.re_make(daeprob; M = 2 .* LA.I(2))
+    @test BK.apply_mass_matrix(daeprob4, x, par_sl, dx) == 2 .* dx
+end
+
+let
     # Nonconstant mass matrix M(x, p) depending on both the state and the
     # parameters. The Hopf MA linearization must include the ∂ₓM (→ σxx) and
     # ∂ₚM (→ σₚ) contributions of the bordered scalar σ1. We check the analytic

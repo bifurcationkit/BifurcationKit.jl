@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file (hopefully).
 
 ### Added
 - add the mass-adjoint interface `getmassmatrix_adjoint` / `has_massmatrix_adjoint`, and the `MassFunction` structure holding the mass matrix, its adjoint and the optional derivatives `R01` (`∂ₚ⟨w, M(x,p) v⟩`) and `∇x` (`∇ₓ⟨w, M(x,p) v⟩`), exposed through `R01_mass_matrix` / `∇_x_mass_matrix`
+- add the `applyM` field to `MassFunction` (`(x, p, dx) -> M(x,p) * dx`, defaulting to `apply(M(x,p), dx)`) and the `apply_mass_matrix(pb, x, p, dx)` interface; it can be passed through `DAEMassBifProblem(prob, M; applyM = …)` or `re_make`
+- `Trapeze` now resolves its mass matrix from the underlying vector field through `getmassmatrix(prob_vf, x, p)` when the `massmatrix` field is not set, so that a `DAEMassBifProblem` (constant, parameter or state dependent mass) can be discretized; a `massmatrix` provided in the field still takes precedence. For a state dependent `M(x,p)`, the residual evaluates `M` at each time slice while the analytic jacobian treats it as frozen (no `∇ₓM` terms)
 - support mass matrices depending on the state and on the parameters in the Hopf Minimally Augmented formulation (`jacobian_ma = MinAug()` and `MinAugMatrixBased()`): the bordered scalar σ1 now includes the `∂ₓM` and `∂ₚM` contributions, and the former "Non constant mass matrix not taken into account!" guards are removed from `continuation_hopf`
 - add the `jacobian_ma` keyword to `newton_fold` / `newton_hopf`, like in `continuation_fold` / `continuation_hopf`
 

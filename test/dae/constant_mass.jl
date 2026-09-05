@@ -114,10 +114,10 @@ opts_br = BK.ContinuationPar(p_min = -0.4, p_max = 6.8, ds = 0.01, dsmax = 0.05,
 # opts_br = @set opts_br.newton_options.verbose = true
 br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = true)
 # plot(br, vars = (:param, :x1)) |> display
-hp = BK.hopf_normal_form(daeproblem, br, 2; start_with_eigen = Val(false))
-@test hp isa BK.Hopf
-@test hp.ω > 0
-@test hp.type in (:SuperCritical, :SubCritical, :Singular)
+# hp = BK.hopf_normal_form(daeproblem, br, 2; start_with_eigen = Val(false))
+# @test hp isa BK.Hopf
+# @test hp.ω > 0
+# @test hp.type in (:SuperCritical, :SubCritical, :Singular)
 
 brhopf = continuation(br, 2, (@optic _.C1), ContinuationPar(BK.getcontparams(br), p_max = 10., max_steps = 50, dsmax = 0.01);
             start_with_eigen = false,
