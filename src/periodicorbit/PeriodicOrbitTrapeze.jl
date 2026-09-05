@@ -152,7 +152,7 @@ end
 @inline isinplace(trap::Trapeze) = isnothing(trap.prob_vf) ? false : isinplace(trap.prob_vf)
 @inline get_time_step(trap::Trapeze, i::Int) = get_time_step(trap.mesh, i)
 get_times(trap::Trapeze) = cumsum(collect(trap.mesh))
-@inline hasmassmatrix(trap::Trapeze) = (trap.prob_vf !== nothing && !has_trivial_mass_mastrix(trap.prob_vf))
+@inline hasmassmatrix(trap::Trapeze) = (trap.massmatrix !== nothing) || (trap.prob_vf !== nothing && !has_trivial_mass_mastrix(trap.prob_vf))
 @inline getparams(trap::Trapeze) = getparams(trap.prob_vf)
 @inline getlens(trap::Trapeze) = getlens(trap.prob_vf)
 @inline getdelta(trap::Trapeze) = getdelta(trap.prob_vf)
@@ -177,12 +177,12 @@ setparam(trap::Trapeze, p) = set(getparams(trap), getlens(trap), p)
 end
 
 @inline function _has_mass_matrix(trap::Trapeze, x, p)
-    # trap.massmatrix !== nothing && return true
+    trap.massmatrix !== nothing && return true
     trap.prob_vf === nothing && return false
     return is_mass_matrix_constant(trap.prob_vf)
 end
 
-@inline apply_mass_matrix(trap::Trapeze, x, p, dx) = apply_mass_matrix(trap.prob_vf, x, p, dx)
+@inline apply_mass_matrix(trap::Trapeze, x, p, dx) = trap.massmatrix !== nothing ? trap.massmatrix * dx : apply_mass_matrix(trap.prob_vf, x, p, dx)
 
 # these functions extract the last component of the periodic orbit guess
 @inline _extract_period_fdtrap(trap::Trapeze, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
@@ -513,22 +513,14 @@ end
 # see explanation in po_cylic_block!
 function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
     M, N = size(trap)
-    need_dM = is_mass_matrix_constant(trap.prob_vf)
 
     I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
-
     tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
-
     h = period * get_time_step(trap, 1)
-    Jn = if need_dM
-        I₁ + jacobian_apply_mass_matrix(trap.prob_vf, u0m[:, 1], par, u0m[:, 1] .- u0m[:, M-1]) - (h/2) .* tmpJ
-    else
-        I₁
-    end
+    Jn =  I₁ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
-    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢;
-    # for the wrap block this is still x_1
+    # for the wrap block, this is still x_1
     Jn = @views -I₁ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 
@@ -539,12 +531,7 @@ function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc:
         Jc[BA.Block(𝐢, 𝐢-1)] = Jn
 
         tmpJ = @views jacobian(trap.prob_vf, u0m[:, 𝐢], par)
-
-        Jn = if need_dM
-            Iᵢ + jacobian_apply_mass_matrix(trap.prob_vf, u0m[:, 𝐢], par, u0m[:, 𝐢] .- u0m[:, 𝐢-1]) - (h/2) .* tmpJ
-        else
-            Iᵢ
-        end
+        Jn = Iᵢ - (h/2) .* tmpJ
         Jc[BA.Block(𝐢, 𝐢)] = Jn
     end
     return Jc
