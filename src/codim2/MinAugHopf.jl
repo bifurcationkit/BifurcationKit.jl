@@ -15,8 +15,7 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional in the case where the Mass matrix is I, passed as ::Nothing
 hopf_ma_test(𝐇, M, J, a, b, J22, _zero, n, ω::𝒯) where {𝒯} = _hopf_ma_test(𝐇.linbdsolver, M, J, a, b, J22, _zero, n, Complex{𝒯}(0, -ω))
-_hopf_ma_test(linbdsolver, M, J, a, b, J22, _zero, n, shift) = linbdsolver(J, apply(M,a), apply(M,b), J22, _zero, n; shift, Mass = M)
-_hopf_ma_test(linbdsolver, ::TrivialMassMatrix, J, a, b, J22, _zero, n, shift) = linbdsolver(J, a, b, J22, _zero, n; shift)
+_hopf_ma_test(linbdsolver, ::IdentityOperator, J, a, b, J22, _zero, n, a₀ ) = linbdsolver(ShiftedOperator(;J, a₀), a, b, J22, _zero, n)
 
 function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params) where 𝒯
     # These are the equations of the minimally augmented (MA) formulation of the 
