@@ -103,6 +103,9 @@ function _get_bordered_terms(𝐇::HopfMinimallyAugmentedFormulation, x, p::𝒯
     dₚF  = R01(𝐇.prob_vf, x, set(par, lens, p))
     dₚJv = R11(𝐇.prob_vf, x, set(par, lens, p), v)
     σₚ = -VI.inner(w, dₚJv)
+    if is_mass_matrix_constant(𝐇.prob_vf) == false
+        σₚ += _dₚσ_mass(𝐇.prob_vf, x, par0, 𝐇.a, 𝐇.b, v, w, σ1, σ2, ω)
+    end
     σω = Complex{𝒯}(0, 1) * dot_with_mass(w, M, v)
     return (;J_at_xp = J, JAd_at_xp = J★, dₚF, σₚ, δ, ϵ2, v, w, par0, itv, itw, σω, M, σ1, σ2)
 end
@@ -125,12 +128,40 @@ function jacobian(pdpb::HopfMAProblem{Tprob, MinAugMatrixBased}, X::AbstractVect
     σxv2i = @. -(u1i - u2) / ϵ2
     σₓ = @. σxv2r + Complex{𝒯}(0, 1) * σxv2i
 
+    if is_mass_matrix_constant(𝐇.prob_vf) == false
+        # nonconstant mass matrix contribution ∇_x σ1 to the state row of σₓ
+        σₓ .+= _dₓσ_mass(𝐇.prob_vf, x, par0, 𝐇.a, 𝐇.b, v, w, σ1, σ2, ω)
+    end
+
     Jhopf = hcat(J_at_xp, dₚF, VI.zerovector(dₚF))
     Jhopf = vcat(Jhopf, vcat(real(σₓ), real(σₚ), real(σω))')
     Jhopf = vcat(Jhopf, vcat(imag(σₓ), imag(σₚ), imag(σω))')
     return Jhopf
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# contribution of a nonconstant mass matrix M(x, p) to ∂σ1. The border scalar solves
+#     (J  - iωM )v + M a σ1 = 0,   <M b, v> = 1
+#     (J' + iωM')w + M b σ2 = 0,   <M a, w> = 1
+# Differentiating σ1 with respect to the state gives
+#     ∇_x σ1 = iω ∇_x⟨w,Mv⟩ - σ1 ∇_x⟨w,Ma⟩ - conj(σ2) conj.(∇_x⟨v,Mb⟩)
+# the δJ term -<w, δJ v> being handled separately. The derivatives of
+# `⟨w, M(x, p) v⟩` are provided by `∇_x_mass_matrix` / `R01_mass_matrix` (the
+# former can be user provided, see `MassFunction`).
+
+# Returns the vector ∇_x σ1 restricted to the mass contribution.
+function _dₓσ_mass(prob_vf, x, par0, a, b, v, w, σ1, σ2, ω)
+    return Complex{typeof(ω)}(0, 1) * ω * ∇_x_mass_matrix(prob_vf, x, par0, v, w) -
+                                     σ1 * ∇_x_mass_matrix(prob_vf, x, par0, a, w) -
+                         conj(σ2) * conj.(∇_x_mass_matrix(prob_vf, x, par0, b, v))
+end
+
+# parameter direction: σₚ stores the plain ∂_pσ1 (no conjugation).
+function _dₚσ_mass(prob_vf, x, par0, a, b, v, w, σ1, σ2, ω)
+    return Complex{typeof(ω)}(0, 1) * ω * R01_mass_matrix(prob_vf, x, par0, v, w) -
+                                     σ1 * R01_mass_matrix(prob_vf, x, par0, a, w) -
+                          conj(σ2) * conj(R01_mass_matrix(prob_vf, x, par0, b, v))
+end
+
 # Struct to invert the jacobian of the Hopf MA problem.
 struct HopfLinearSolverMinAug <: AbstractLinearSolver; end
 
@@ -185,10 +216,18 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
         σxx1 = VI.inner(σx, x1)
         σxx2 = VI.inner(σx, x2)
     else
+        # ∂_ξσ1 = -⟨w, d²F[ξ,v]⟩ + iωM⟨w,(∂_ξM)v⟩ - σ1⟨w,(∂_ξM)a⟩ - σ2⟨(∂_ξM)b, v⟩
+        # σ_i = -⟨w, ∂_i(dF·v)⟩ = -⟨w, d²F[v, e_i]⟩
+        # hence ⟨σx, ξ⟩ = -⟨w, d²F[v, ξ]⟩ for ξ = x1, x2
         d2Fv = d2F(𝐇.prob_vf, x, par0, v, x1)
         σxx1 = -conj(VI.inner(w, d2Fv))
         d2Fv = d2F(𝐇.prob_vf, x, par0, v, x2)
         σxx2 = -conj(VI.inner(w, d2Fv))
+    end
+    if is_mass_matrix_constant(𝐇.prob_vf) == false
+        σx_mass = _dₓσ_mass(𝐇.prob_vf, x, par0, 𝐇.a, 𝐇.b, v, w, σ1, σ2, ω)
+        σxx1 += VI.inner(σx_mass, x1)
+        σxx2 += VI.inner(σx_mass, x2)
     end
     # We need to be careful here because the dot produces conjugates. 
     # Hence the + dot(σx, x2) and + imag(dot(σx, x1) and not the opposite
@@ -460,9 +499,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 kwargs...) where {Tb, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
     lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1")
-    if is_mass_matrix_constant(prob_vf) == false
-        error("Non constant mass matrix not taken into account!")
-    end
 
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options
@@ -553,9 +589,6 @@ function continuation_hopf(prob,
                         a = nothing,
                         b = nothing,
                         kwargs...)
-    if is_mass_matrix_constant(prob) == false
-        error("Non constant mass matrix not taken into account!")
-    end
     hopfpointguess = hopf_point(br, ind_hopf)
     ω = hopfpointguess.p[2]
     bifpt = br.specialpoint[ind_hopf]
