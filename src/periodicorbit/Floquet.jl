@@ -100,8 +100,7 @@ function MonodromyQaD_matrix_free(sh::Shooting, x, p, du::AbstractVector)
 
     out = copy(du)
 
-    for ii in 1:M
-        # call the jacobian of the flow
+    for ii in 1:M  # call the jacobian of the flow
         @views out .= evolve(sh.flow, Val(:SerialdFlow), xc[:, ii], p, out, sh.ds[ii] * T).du
     end
     return out
@@ -237,7 +236,7 @@ function MonodromyQaD(sh::PoincareShooting, J::AbstractMatrix, x, p)
     tmp = similar(mono)
     r1 = mod(2N, Nj)
     r2 = N
-    for ii = 1:M-1
+    for _ = 1:M-1
         # mono .= J[r+1:r+N, r+1:r+N] * mono
         @views LA.mul!(tmp, J[r1+1:r1+N, r2+1:r2+N], mono)
         mono .= tmp
@@ -253,9 +252,7 @@ end
 # This function is used to reconstruct the spatio-temporal eigenvector of the shooting functional sh
 # at position x from the Floquet eigenvector ζ
 @views function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, x_bar::AbstractVector, p, ζ::AbstractVector)
-    # get the shooting problem
     psh = get_discretization(powrap)
-
     #  ζ is of size (N-1)
     M = get_mesh_size(psh)
     Nm1 = length(ζ)
@@ -282,32 +279,26 @@ end
 # Trapeze
 
 # Matrix-Free version of the monodromy operator
-@views function MonodromyQaD_matrix_free(trap::Trapeze, u0, par, du::AbstractVector)
-    # extraction of various constants
+function MonodromyQaD_matrix_free(trap::Trapeze, po, par, du::AbstractVector)
+    @assert hasmassmatrix(trap) == false # TODO: correct this
     M, N = size(trap)
-
-    # period of the cycle
-    T = getperiod(trap, u0)
-
-    # time step
-    h =  T * get_time_step(trap, 1)
+    T = getperiod(trap, po)
+    h =  T * get_time_step(trap, 1) # current time step
     𝒯 = typeof(h)
 
     out = copy(du)
+    po_s = get_time_slices(po, N, M)
 
-    u0c = get_time_slices(u0, N, M)
+    Jac(i) = jacobian(trap.prob_vf, (@view po_s[:, i]), par)
 
-    out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, M-1], par), out)
-    # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, 1])) \ out
-
-    res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, 1], par), out; a₀ = one(𝒯), a₁ = -h/2)
+    out .= out .+ h/2 .* apply(Jac(M-1), out)
+    res, _ = trap.linsolver(Jac(1), out; a₀ = one(𝒯), a₁ = -h/2) # res = (I - h/2 * Jac(1) \ out
     out .= res
 
     for ii in 2:M-1
         h =  T * get_time_step(trap, ii)
-        out .= out .+ h/2 .* apply(jacobian(trap.prob_vf, u0c[:, ii-1], par), out)
-        # res = (I - h/2 * jacobian(trap.prob_vf, u0c[:, ii])) \ out
-        res, _ = trap.linsolver(jacobian(trap.prob_vf, u0c[:, ii], par), out; a₀ = one(𝒯), a₁ = -h/2)
+        out .= out .+ h/2 .* apply(Jac(ii-1), out)
+        res, _ = trap.linsolver(Jac(ii), out; a₀ = one(𝒯), a₁ = -h/2) # res = (I - h/2 * Jac(ii)) \ out
         out .= res
     end
 
@@ -316,66 +307,58 @@ end
 
 # This function is used to reconstruct the spatio-temporal eigenvector of the Trapeze functional
 # at position x from the Floquet eigenvector ζ
-function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalTrap, u0::AbstractVector, par, ζ::AbstractVector)
-    # get the Trapeze problem
-    disc = get_discretization(powrap)
-
-    # extraction of various constants
-    M, N = size(disc)
-
-    # period of the cycle
-    T = getperiod(disc, u0)
-
-    # time step
-    h =  T * get_time_step(disc, 1)
-    Typeh = typeof(h)
+function (fl::FloquetQaD)(::Val{:ExtractEigenVector}, powrap::PeriodicOrbitFunctionalTrap, po::AbstractVector, par, ζ::AbstractVector)
+    trap = get_discretization(powrap)
+    M, N = size(trap)
+    T = getperiod(trap, po)
+    h =  T * get_time_step(trap, 1) # current time step
+    𝒯 = typeof(h)
 
     out = copy(ζ)
+    po_s = get_time_slices(po, N, M)
+    Jac(i) = jacobian(trap.prob_vf, (@view po_s[:, i]), par)
 
-    u0c = get_time_slices(u0, N, M)
-
-    @views out .= out .+ h/2 .* apply(jacobian(disc.prob_vf, u0c[:, M-1], par), out)
-    # res = (I - h/2 * disc.J(u0c[:, 1])) \ out
-    @views res, _ = disc.linsolver(jacobian(disc.prob_vf, u0c[:, 1], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+    @views out .= out .+ h/2 .* apply(Jac(M-1), out)
+    # res = (I - h/2 * trap.J(po_s[:, 1])) \ out
+    @views res, _ = trap.linsolver(Jac(1), out; a₀ = convert(𝒯, 1), a₁ = -h/2)
     out .= res
     out_a = [copy(out)]
-    # push!(out_a, copy(out))
 
     for ii in 2:M
-        h =  T * get_time_step(disc, ii)
-        @views out .= out .+ h/2 .* apply(jacobian(disc.prob_vf, u0c[:, ii-1], par), out)
-        # res = (I - h/2 * disc.J(u0c[:, ii])) \ out
-        @views res, _ = disc.linsolver(jacobian(disc.prob_vf, u0c[:, ii], par), out; a₀ = convert(Typeh, 1), a₁ = -h/2)
+        h =  T * get_time_step(trap, ii) # current time step
+        @views out .= out .+ h/2 .* apply(Jac(ii-1), out)
+        # res = (I - h/2 * trap.J(po_s[:, ii])) \ out
+        @views res, _ = trap.linsolver(Jac(ii), out; a₀ = convert(𝒯, 1), a₁ = -h/2)
         out .= res
         push!(out_a, copy(out))
     end
-    # push!(out_a, copy(ζ))
 
     return out_a
 end
 
+__mono_matrix_block(Mᵢ, Hᵢ) = Array(Mᵢ) \ Array(Hᵢ)
+
 # Compute the monodromy matrix at `u0` explicitly, not suitable for large systems
-function MonodromyQaD(trap::Trapeze, J, u0, par)
-    # extraction of various constants
+function MonodromyQaD(trap::Trapeze, J, po, par)
     M, N = size(trap)
     Mass = get_mass_matrix(trap)
-
-    # period of the cycle
-    T = getperiod(trap, u0)
-
-    # time step
+    T = getperiod(trap, po)
+    # current time step
     h =  T * get_time_step(trap, 1)
+    po_s = get_time_slices(po, N, M)
 
-    u0c = get_time_slices(u0, N, M)
+    Jac(i) = jacobian(trap.prob_vf, (@view po_s[:, i]), par)
 
-    @views mono = Array(Mass - h/2 * (jacobian(trap.prob_vf, u0c[:, 1], par))) \ Array(Mass + h/2 * jacobian(trap.prob_vf, u0c[:, M-1], par))
+    mono = __mono_matrix_block(Mass - h/2 * Jac(1), 
+                               Mass + h/2 * Jac(M-1))
     temp = similar(mono)
 
     for ii in 2:M-1
-        # for some reason, the next line is faster than doing (I - h/2 * (trap.J(u0c[:, ii]))) \ ...
+        # for some reason, the next line is faster than doing (I - h/2 * (Jac(ii]) \ ...
         # also I - h/2 .* J seems to hurt (a little) the performances
         h =  T * get_time_step(trap, ii)
-        @views temp = Array(Mass - h/2 * (jacobian(trap.prob_vf, u0c[:, ii], par))) \ Array(Mass + h/2 * jacobian(trap.prob_vf, u0c[:, ii-1], par))
+        @views temp = __mono_matrix_block(Mass - h/2 * Jac(ii),
+                                          Mass + h/2 * Jac(ii-1))
         mono .= temp * mono
     end
     return mono

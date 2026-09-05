@@ -720,6 +720,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
         b = _randn(ζ); VI.scale!(b, 1 / scaleζ(b))
         (; v, w) = __compute_bordered_vectors_hopf(bls, bls_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
         ζ = v; ζ★ = w
+        VI.scale!(ζ, 1 / scaleζ(ζ)) # remove the arbitrary scaling of the bordered solve
         λ★ = conj(_λ0)
     end
 
