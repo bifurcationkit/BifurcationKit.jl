@@ -33,7 +33,6 @@ for (op, at) in (
                        Sa <: AbstractLinearSolver,
                        Sbd <: AbstractBorderedLinearSolver,
                        Sbda <: AbstractBorderedLinearSolver,
-                       Tmass,
                        Tn} <: $at{Tprob}
         "Functional F(x, p) - vector field - with all derivatives."
         prob_vf::Tprob
@@ -63,8 +62,6 @@ for (op, at) in (
         linbdsolverAdjoint::Sbda
         "whether to use the hessian of `prob_vf`."
         usehessian::Bool
-        "whether to use a mass matrix M for studying M⋅∂ₜu = F(u), default = I."
-        massmatrix::Tmass
         "norm to normalize vector in update or test"
         norm::Tn
         "Update the problem every such step"
@@ -87,10 +84,9 @@ for (op, at) in (
                     linbdsolver = MatrixBLS();
                     linsolve_adjoint = linsolve,
                     usehessian = true,
-                    massmatrix = LA.I,
                     linbdsolve_adjoint = linbdsolver,
                     _norm = norm,
-                    update_minaug_every_step = 0)
+                    update_minaug_every_step = 1)
         # determine scalar type associated to vectors a and b
         𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         if ~(𝒯  <: Number)
@@ -102,7 +98,7 @@ for (op, at) in (
                     real(one(𝒯)),     # bt
                     real(one(𝒯)),     # gh
                     1,                # zh
-                    linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix,
+                    linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian,
                     _norm, update_minaug_every_step)
     end
 
@@ -110,9 +106,8 @@ for (op, at) in (
     function $op(prob; linsolve = DefaultLS(),
                     linbdsolver = MatrixBLS(),
                     usehessian = true,
-                    massmatrix = LinearAlgebra.I,
                     _norm = norm,
-                    update_minaug_every_step = 0)
+                    update_minaug_every_step = 1)
         a = b = 0.0
         𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
         if ~(𝒯  <: Number)
@@ -124,7 +119,7 @@ for (op, at) in (
                     real(one(𝒯)),     # bt
                     real(one(𝒯)),     # gh
                     1,                # zh
-                    linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step)
+                    linsolve, linsolve, linbdsolver, linbdsolver, usehessian, _norm, update_minaug_every_step)
     end
 
     end

@@ -447,7 +447,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 compute_eigen_elements = false,
                 usehessian = true,
                 kind = HopfCont(),
-                massmatrix = LA.I,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
@@ -471,7 +470,6 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
         linsolve_adjoint = linsolve_adjoint,
         linbdsolve_adjoint = bdlinsolver_adjoint,
         usehessian,
-        massmatrix,
         _norm = normC,
         update_minaug_every_step
         )

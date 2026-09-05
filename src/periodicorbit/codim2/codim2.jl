@@ -30,7 +30,6 @@ for (op, at) in (
                            Sa <: AbstractLinearSolver,
                            Sbd <: AbstractBorderedLinearSolver,
                            Sbda <: AbstractBorderedLinearSolver,
-                           Tmass,
                            Tnorm,
                            Tnewton} <: $at{Tprob}
             "Functional F(x, p) - vector field - with all derivatives"
@@ -69,8 +68,6 @@ for (op, at) in (
             linbdsolverAdjoint::Sbda
             "wether to use the hessian of prob_vf"
             usehessian::Bool
-            "wether to use a mass matrix M for studying M⋅∂tu = F(u), default = I"
-            massmatrix::Tmass
             "norm to normalize vector in update or test"
             norm::Tnorm
             "Update the problem every such step"
@@ -97,10 +94,9 @@ for (op, at) in (
                         linbdsolver = MatrixBLS(); 
                         linsolve_adjoint = linsolve,
                         usehessian = true, 
-                        massmatrix = LinearAlgebra.I,
                         linbdsolve_adjoint = linbdsolver,
                         _norm = norm,
-                        update_minaug_every_step = 0,
+                        update_minaug_every_step = 1,
                         newton_options = nothing,
                         prm = false)
             # determine scalar type associated to vectors a and b
@@ -116,16 +112,15 @@ for (op, at) in (
                         real(one(𝒯)),     # R2
                         real(one(𝒯)),     # R3
                         real(one(𝒯)),     # R4
-                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
+                        linsolve, linsolve_adjoint, linbdsolver, linbdsolve_adjoint, usehessian, _norm, update_minaug_every_step, prm, newton_options)
         end
 
         # empty constructor, mainly used for dispatch
         function $op(prob ;linsolve = DefaultLS(), 
                     linbdsolver = MatrixBLS(), 
                     usehessian = true, 
-                    massmatrix = LinearAlgebra.I,
                     _norm = norm,
-                    update_minaug_every_step = 0,
+                    update_minaug_every_step = 1,
                     newton_options = nothing,
                     prm = false)
             a = b = 0.
@@ -141,7 +136,7 @@ for (op, at) in (
                         real(one(𝒯)),     # R2
                         real(one(𝒯)),     # R3
                         real(one(𝒯)),     # R4
-                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, massmatrix, _norm, update_minaug_every_step, prm, newton_options)
+                        linsolve, linsolve, linbdsolver, linbdsolver, usehessian, _norm, update_minaug_every_step, prm, newton_options)
         end
     end
 end
