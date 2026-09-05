@@ -159,7 +159,8 @@ function _get_states_contResults(iter::DefContIterable, roots::Vector{Tvec}) whe
         error("You must provide roots in the deflation operators. These roots are used as initial conditions for the deflated continuation process.")
     end
     contIt = iter.it
-    _copyto!(contIt.prob.u0, roots[1])
+    u0 = getu0(contIt.prob)
+    _copyto!(u0, roots[1])
     states = [DCState(rt, iterate(contIt)[1]) for rt in roots]
     # allocate branches to hold the result
     branches = [ContResult(contIt, st.state) for st in states]
@@ -350,7 +351,7 @@ function deflatedContinuation(dc_iter::DefContIterable,
                             push!(deflationOp.roots, sol1.u)
 
                             # create a new iterator and iterate it once to set up the ContState
-                            contitnew = @set cont_iter.prob = re_make(cont_iter.prob, u0 = sol1.u, params = sol1.prob.prob.params)
+                            contitnew = @set cont_iter.prob = re_make(cont_iter.prob, u0 = sol1.u, params = getparams(sol1.prob.prob))
                             push!(dcstates, DCState(sol1.u, iterate(contitnew)[1], n_active+1<alg.max_branches))
 
                             push!(branches, ContResult(contitnew, dcstates[end].state))

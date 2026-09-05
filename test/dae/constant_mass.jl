@@ -27,9 +27,16 @@ let
     br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = true)
     # get_normal_form(br, 3)
     # plot(br)
-    brfold = continuation(br, 2, (@optic _.p2), ContinuationPar(br.contparams, detect_bifurcation = 0 ); bothside = true)
+    # locate the Fold and Hopf points of the equilibrium branch by their type:
+    # their order in `br.specialpoint` is not deterministic (random initial guess)
+    ind_fold = findfirst(pt -> pt.type in (:fold, :bp, :nd), br.specialpoint)
+    ind_hopf = findfirst(pt -> pt.type == :hopf, br.specialpoint)
+    @test ind_fold !== nothing
+    @test ind_hopf !== nothing
+
+    brfold = continuation(br, ind_fold, (@optic _.p2), ContinuationPar(br.contparams, detect_bifurcation = 0 ); bothside = true)
     @test :bt in [pt.type for pt in brfold.specialpoint]
-    brhopf = continuation(br, 3, (@optic _.p2); bothside = true)
+    brhopf = continuation(br, ind_hopf, (@optic _.p2); bothside = true)
     @test :bt in [pt.type for pt in brhopf.specialpoint]
 
     # the Bogdanov-Takens normal form (from a branch) is not implemented for DAE.
@@ -49,7 +56,7 @@ let
     # Hopf MA problem: analytic jacobian of `MinAugMatrixBased`
     # (a) the matrix based Hopf continuation detects the same BT point as the
     #     default (AutoDiff) one
-    brhopf_mb = continuation(br, 3, (@optic _.p2);
+    brhopf_mb = continuation(br, ind_hopf, (@optic _.p2);
                 bothside = true,
                 jacobian_ma = BK.MinAugMatrixBased())
     @test :bt in [pt.type for pt in brhopf_mb.specialpoint]

@@ -5,15 +5,18 @@ This event implements the detection of when the parameter values, used during co
 
 For example, you can use it like `continuation(args...; event = SaveAtEvent((1., 2., -3.)))`
 
-The options `use_newton` triggers the use of Newton algorithm to finalise detection.
+The keyword `use_newton` controls how the saved state is finalised:
+
+- `use_newton = false` (default): the event point is simply the last continuation state recorded when the parameter crossed the requested value `p`; it is saved without further refinement, so its accuracy is that of the continuation step / event location;
+- `use_newton = true`: once the event has been located around a target value `p`, the event point is refined by running a Newton solve of `F(x, p) = 0` at the exact parameter `p`, starting from the event state `event_point.x` and using the `newton_options` of the continuation. If it converges, the state `event_point.x` and parameter `event_point.param` are updated to the refined solution and `event_point.precision` is set to the Newton tolerance. Use this when you need an accurate equilibrium located exactly at the requested parameter values.
 """
 function SaveAtEvent(positions::NTuple; use_newton = false) 
     labels = length(positions) == 1 ? ("save",) : ntuple(x -> "save-$x", length(positions))
-    finaliser = use_newton ? finaliser_sae : default_finalise_event!
+    finaliser = use_newton ? _finaliser_sae! : default_finalise_event!
     ContinuousEvent(length(positions), (it, state) -> map(x -> x - getp(state), positions), labels; finaliser, data = positions)
 end
 
-function finaliser_sae(event_point, it, state, success)
+function _finaliser_sae!(event_point, it, state, success)
     p0 = event_point.param
     ps = it.event.data
     p = argmin(x -> abs(x - p0), ps)

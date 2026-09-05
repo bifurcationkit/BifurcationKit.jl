@@ -279,7 +279,7 @@ function newton_hopf(prob,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian = usehessian)
 
-    prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_h = HopfMAProblem(𝐇, nothing, hopfpointguess, nothing, plot_solution(prob), record_from_solution(prob))
 
     # options for the Newton Solver
     opt_hopf = @set options.linsolver = HopfLinearSolverMinAug()

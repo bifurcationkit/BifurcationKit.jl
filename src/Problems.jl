@@ -261,7 +261,7 @@ function R01!(::AutoDiff,
                 dpF,
                 x0,
                 par,
-                p::Number; δ = nothing)
+                p::Number, res_f = nothing; δ = nothing)
     _copyto!(dpF, ForwardDiff.derivative(z -> residual(prob, x0, set(par, getlens(prob), z)), p))
 end
 
@@ -269,11 +269,32 @@ function R01(::AutoDiff,
                 prob::AbstractBifurcationProblem,
                 x,
                 par; δ = nothing)
-    dFdp = VI.zero(x)
+    dFdp = VI.zerovector(x)
     R01!(AutoDiff(), prob, dFdp, x, par, _get(par, getlens(prob)))
     return dFdp
 end
 
+"""
+$(SIGNATURES)
+
+Inplace computation of the derivative of the residual `F` with respect to the
+parameter axis `getlens(prob)`:
+
+    dFdp .= ∂_p F(x, p) ≈ (F(x, p + δ) - F(x, p)) / δ
+
+by forward finite differences with step `δ = getdelta(prob)`.
+
+# Arguments
+- `prob` bifurcation problem
+- `dFdp` output vector, overwritten inplace
+- `x` current solution
+- `par` full set of parameters
+- `p` current value of the parameter `getlens(prob)`
+
+# Optional arguments
+- `res_f` residual `F(x, p)` if already available (avoids one evaluation)
+- `δ` finite difference step, `getdelta(prob)` by default
+"""
 function R01!(::FiniteDifferences,
                 prob::AbstractBifurcationProblem,
                 dFdp,
@@ -295,7 +316,7 @@ function R01(::FiniteDifferences,
                 prob::AbstractBifurcationProblem,
                 x,
                 par; δ = getdelta(prob))
-    dFdp = VI.zero(x)
+    dFdp = VI.zerovector(x)
     R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)))
     return dFdp
 end

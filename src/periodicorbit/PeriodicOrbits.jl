@@ -84,23 +84,24 @@ function generate_solution(pb::AbstractBoundaryValueDiscretization, orbit, perio
 end
 
 for PoType in (:POInterpolation, :BVPInterpolation)
-    ds = """
-    \$(TYPEDEF)
-
-    Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, if `sol::$(string(PoType))`, then one can call
-
-        sol = BifurcationKit.$(string(PoType))(prob_coll, x)
-        sol(t)
-
-    on any time `t`.
-
-    ## Fields
-    \$(TYPEDFIELDS)
-    """
     @eval begin
-        @doc $ds struct $PoType{Tpb, Tx, Tp}
+        @doc """
+        $(TYPEDEF)
+
+        Structure to encode the solution associated to a functional like `::Collocation` or `::Shooting`. In the particular case of `::Collocation`, this allows to use the collocation polynomials to interpolate the solution. Hence, for a solution `sol` of this type, one can call
+
+            sol(t)
+
+        on any time `t`.
+
+        ## Fields
+        $(TYPEDFIELDS)
+        """ struct $PoType{Tpb, Tx, Tp}
+            "Problem."
             pb::Tpb
+            "Solution."
             x::Tx
+            "Parameters"
             pars::Tp
         end
         $PoType(prob::AbstractBoundaryValueDiscretization, x) = $PoType(prob, x, nothing)
@@ -114,19 +115,22 @@ save_solution(::PeriodicOrbitFunctionalSh, x, p) = x
 
 for PSType in (:POSavedSolutionAndState, 
                :BVPSavedSolutionAndState)
-    ds = """
-    \$(TYPEDEF)
-
-    Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
-
-    # Internal fields
-    \$(TYPEDFIELDS)
-    """
     @eval begin
-        @doc $ds struct $PSType{T1, T2, T3, T4}
+        @doc """
+        $(TYPEDEF)
+
+        Structure to save a solution from a PO/BVP functional on the branch. This is useful for branching in case mesh adaptation is used or when the phase condition is adapted. This is for example returned by `save_solution(::PeriodicOrbitFunctionalColl, ...)`
+
+        # Internal fields
+        $(TYPEDFIELDS)
+        """ struct $PSType{T1, T2, T3, T4}
+            "Initial mesh."
             mesh::T1
+            "Solution on time mesh."
             sol::T2
+            "Adapted mesh."
             _mesh::T3
+            "Phase condition."
             ϕ::T4
         end
         @inline saved_solution(saved_sol::$PSType) = saved_sol.sol
@@ -421,7 +425,7 @@ function _continuation(hopfpt::Hopf,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization;
                       verbose = false,
-                      alg = PALC(),
+                      alg,
                       δp = nothing,
                       ampfactor = 1,
                       usedeflation = false,
@@ -543,12 +547,15 @@ function continuation_from_hopf_point(br_hopf::AbstractResult{HopfCont, Tprob},
     hopt_point = br_hopf.sol[ind_pt]
     𝐇 = get_formulation(getprob(br_hopf))
     vector_field = 𝐇.prob_vf
+
     ω = get_frequency(hopt_point.x, 𝐇) |> abs
     x0 = get_solution(hopt_point.x)
     params = getparams(br_hopf, ind_pt)
+
     L = jacobian(vector_field, x0, params)
     L★ = has_adjoint(vector_field) ? jacobian_adjoint(vector_field, x0, params) : adjoint(L)
     Mass = getmassmatrix(vector_field, x0, params)
+
     _tmp_vector_complex =  VI.scale(_copy(x0), one(Complex{VI.scalartype(x0)}))
     a = _randn(_tmp_vector_complex); VI.scale!(a, 1 / scaleζ(a))
     b = _randn(_tmp_vector_complex); VI.scale!(b, 1 / scaleζ(b))

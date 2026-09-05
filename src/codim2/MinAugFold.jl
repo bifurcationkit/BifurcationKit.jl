@@ -230,7 +230,7 @@ function newton_fold(prob::AbstractBifurcationProblem,
         @set bdlinsolver.solver = (isnothing(bdlinsolver.solver) ? options.linsolver : bdlinsolver.solver);
         usehessian)
 
-    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
+    prob_ma = FoldMAProblem(𝐅, nothing, foldpointguess, nothing, plot_solution(prob), record_from_solution(prob))
 
     # options for the Newton Solver
     opt_fold = @set options.linsolver = FoldLinearSolverMinAug()
@@ -442,7 +442,7 @@ function continuation_fold(prob, alg::AbstractContinuationAlgorithm,
 
     # TODO remove this hack
     if prob isa AbstractPeriodicOrbitProblem
-        _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = prob.plotSolution)
+        _plotsol = modify_po_plot(prob_fold, getparams(prob_fold), getlens(prob_fold); plot_solution = plot_solution(prob))
         prob_fold = re_make(prob_fold, plot_solution = _plotsol)
     end
 

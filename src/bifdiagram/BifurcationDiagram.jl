@@ -110,7 +110,7 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
                             linear_algo = nothing,
                             kwargs...)
     kwargs_cont = _keep_continuation_options(values(kwargs))
-    γ = continuation(prob, alg, options(prob.u0, prob.params, 1); kwargs_cont..., linear_algo)
+    γ = continuation(prob, alg, options(getu0(prob), getparams(prob), 1); kwargs_cont..., linear_algo)
     bifurcationdiagram(prob, γ, level, options; 
                         code = (0,), 
                         kwargs...)

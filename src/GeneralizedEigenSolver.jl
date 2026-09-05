@@ -35,7 +35,7 @@ function gev(eig::EigArpack, A, B, nev; kwargs...)
         N = length(eig.kwargs[:v0])
         T = VI.scalartype(eig.kwargs[:v0])
         Jmap = LinearMaps.LinearMap{T}(A, N, N; ismutating = false)
-        λ, ϕ, ncv, = Arpack.eigs(Jmap, B; nev = nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
+        λ, ϕ, ncv, = Arpack.eigs(Jmap, B; nev, which = eig.which, sigma = eig.sigma, eig.kwargs...)
     end
     return __sort_arpack(eig, λ, ϕ, ncv, nev)
 end

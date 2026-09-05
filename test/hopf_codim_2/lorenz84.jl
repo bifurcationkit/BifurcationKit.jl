@@ -445,6 +445,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
 _br_po = BK.continuation_from_hopf_point(hp_codim2_1, 9, 
         ContinuationPar(opts_br; detect_bifurcation = 3, tol_stability = 1e-7, p_max = 10., ds = 0.01, max_steps = 10), 
         Collocation(20, 4);
+        alg = PALC(),
         lens = getlens(br)
         )
 end

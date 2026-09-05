@@ -36,15 +36,18 @@ $(TYPEDFIELDS)
 - `jacobian(pb, x, p)` calls `jacobian(pb.prob_vf, x, p)`
 - `getmassmatrix(pb, x, p)` returns the mass matrix `M(x, p)` (or `pb.M` if it is a constant matrix)
 - `record_from_solution(pb)`, `save_solution(pb, u, pars)`, `update!(pb, iter, state)` are forwarded to `pb.prob_vf`
+- `re_make(pb; M = …, kwargs…)` rebuilds the problem, possibly with another mass matrix
+- the jet methods of the wrapped problem (`R01`, `dF`, `d2F`, `d3F`, …) are forwarded as well
 
 # Constructors
 
 - `DAEMassBifProblem(prob, M; type = ConstantMass)` wraps the bifurcation problem `prob` with the mass matrix `M`, which can be a matrix or a function `M(x, p)`.
-- `DAEMassBifProblem{ConstantMass}(prob, M)` explicitely sets the kind of mass matrix through the type parameter.
+- `DAEMassBifProblem{ConstantMass}(prob, M)` explicitly sets the kind of mass matrix through the type parameter.
+- a `UniformScaling` mass matrix (`I`, `α * I`) is also accepted: the identity case is stored with the marker `IdentityOperator` so that no mass matrix solve is required.
 
 # Remark
 
-The eigenvalues along the continuation are the generalized eigenvalues of `(J(x, p), M(x, p))` where `J` is the jacobian of `prob_vf`, so that stability detection accounts for the mass matrix.
+The eigenvalues along the continuation are the generalized eigenvalues of `(J(x, p), M(x, p))` where `J` is the jacobian of `prob_vf`, so that stability detection accounts for the mass matrix. During `continuation`, the eigen solver is automatically wrapped into `EigenDAE` to compute these generalized eigen-elements.
 
 !!! warning "Mass matrix"
     A mass matrix which depends on the state `x` (as opposed to a constant one, or one depending only on the parameters) is only partially supported: it is evaluated once at the current solution during continuation, but the higher order derivatives of the vector field `F` do not account for derivatives of `M`.
@@ -68,7 +71,7 @@ getparam(dae::DAEMassBifProblem) = getparam(dae.prob_vf)
 residual(dae::DAEMassBifProblem, x, p) = residual(dae.prob_vf, x, p)
 residual!(dae::DAEMassBifProblem, o, x, p) = residual!(dae.prob_vf, o, x, p)
 jacobian(dae::DAEMassBifProblem, x, p) = jacobian(dae.prob_vf, x, p)
-# jacobian!(dae::DAEMassBifProblem, J, x, p) = jacobian!(dae.prob_vf, J, x, p)
+jacobian!(dae::DAEMassBifProblem, J, x, p) = jacobian!(dae.prob_vf, J, x, p)
 jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x, p)
 # constant (matrix like) mass matrices are returned as-is, state dependent ones are evaluated at (x, p)
 
@@ -80,10 +83,10 @@ update!(dae::DAEMassBifProblem, iter, state) = update!(dae.prob_vf, iter, state)
 R01(dae::DAEMassBifProblem, u, pars) = R01(dae.prob_vf, u, pars)
 R02(dae::DAEMassBifProblem, u, pars) = R02(dae.prob_vf, u, pars)
 R11(dae::DAEMassBifProblem, u, pars, du) = R11(dae.prob_vf, u, pars, du)
-dF(dae::DAEMassBifProblem, u, pars, du) = dF(dae.prob_vf, u, pars, du)
-d2F(dae::DAEMassBifProblem, u, pars, du1, du2) = d2F(dae.prob_vf, u, pars, du1, du2)
+dF(dae::DAEMassBifProblem,  u, pars, du) = dF(dae.prob_vf, u, pars, du)
+d2F(dae::DAEMassBifProblem,  u, pars, du1, du2) = d2F(dae.prob_vf, u, pars, du1, du2)
 d2Fc(dae::DAEMassBifProblem, u, pars, du1, du2) = d2Fc(dae.prob_vf, u, pars, du1, du2)
-d3F(dae::DAEMassBifProblem, u, pars, du1, du2, du3) = d3F(dae.prob_vf, u, pars, du1, du2, du3)
+d3F(dae::DAEMassBifProblem,  u, pars, du1, du2, du3) = d3F(dae.prob_vf, u, pars, du1, du2, du3)
 d3Fc(dae::DAEMassBifProblem, u, pars, du1, du2, du3) = d3Fc(dae.prob_vf, u, pars, du1, du2, du3)
 has_hessian(dae::DAEMassBifProblem) = has_hessian(dae.prob_vf)
 # has_adjoint_MF(dae::DAEMassBifProblem) = has_adjoint_MF(dae.prob_vf)

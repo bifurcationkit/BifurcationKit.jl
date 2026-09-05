@@ -91,8 +91,8 @@ function BVPBifProblem(
     params,
     lens;
     jacobian = AutoDiffDense(),
-    record_from_solution = nothing, # default value used for dispatch
-    plot_solution = nothing,
+    record_from_solution = BK.record_sol_default, # default value used for dispatch
+    plot_solution = BK.plot_default,
     update! = BK.update_default
 )
     return BVPBifProblem(
@@ -169,8 +169,8 @@ function re_make(prob::BVPBifProblem;
     u0 = getu0(prob),
     params = getparams(prob),
     lens = getlens(prob),
-    plot_solution = prob.plotSolution,
-    record_from_solution = prob.recordFromSolution,
+    plot_solution = plot_solution(prob),
+    record_from_solution = record_from_solution(prob),
     update! = prob.update!
 )
     return BVPBifProblem(

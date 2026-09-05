@@ -41,7 +41,7 @@ struct SHEigOp{Tsh <: SHLinearOp, Tσ, Tc} <: BK.AbstractEigenSolver
     σ::Tσ
     cache::Tc
 end
-BK.geteigenvector(eig::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
+BK.geteigenvector(::SHEigOp, vecs, n::Union{Int, Array{Int64,1}}) = BK.geteigenvector(EigKrylovKit(), vecs, n)
 
 function SHLinearOp(Nx, lx::T, Ny, ly; AF = AbstractArray{T}) where T
     # AF is a type, it could be CuArray{TY} to run the following on GPU
@@ -78,7 +78,6 @@ function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = conv
     u, l, ν = J
     udiag = @. l + 1 + (2ν) * u - 3 * u^2 - shift
     tmp = copy(udiag); dudiag = copy(udiag)
-    n = size(tmp, 1)
 
     function h(du)
         dudiag .= udiag .* du
@@ -91,7 +90,7 @@ end
 
 function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     @error "" nev
-    u, l, ν = J
+    u, = J
     (;sh, σ) = sheig
     A = du -> sh(J, du; shift = σ)[1]
 
@@ -101,7 +100,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     return 1 ./vals .+ σ, vec, true, info.numops
 end
 
-function F_shfft!(dest, u, p)
+function F_shfft!(dest, u, p, t=0)
     (;l, ν, L) = p
     apply!(dest, L, u, L.l1)
     dest .= @. (-1) * dest + ((l+1) * u + ν * u^2 - u^3)

@@ -4,6 +4,7 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
 # - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
+# - the top-left block J may be a matrix, an operator or a ShiftedOperator: shifted / mass-weighted systems (e.g. shift⋅Mass + J) are encoded in the operator, materialized with getmatrix(J) or applied via apply(J, v).
 
 # Reminder: we want to solve the linear system
 # Cramer's rule gives σ = det(J) / det(M)
@@ -19,7 +20,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                         J, dR, 
                         R, n::𝒯;
                         dotp = getdot(iter).dot,
-                        applyξu! = _get_apply_dot(getdot(iter))) where {𝒯, 𝒯s}
+                        applyξu! = _get_apply_dot(getdot(iter))) where {𝒯}
     # the following parameters are used for the pseudo arc length continuation
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
@@ -80,9 +81,11 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
-# │ (shift⋅I + J)     dR      ││dX│ = │ R │
+# │         J          dR     ││dX│ = │ R │
 # │   ξu * dzu'   ξp * dzp    ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
+# J is the top-left block: shifted systems (shift⋅Mass + J) are encoded by
+# passing a ShiftedOperator as J
 function (lbs::BorderingBLS)(J, dR,
                              dzu, dzp::𝒯,
                              R, n::𝒯,
@@ -90,7 +93,7 @@ function (lbs::BorderingBLS)(J, dR,
                              ξp::𝒯ξ = one(𝒯); 
                              dotp = lbs.dot,
                              applyξu! = nothing # A CORRIGER
-                             ) where {𝒯, 𝒯ξ <: Number, 𝒯s}
+                             ) where {𝒯, 𝒯ξ <: Number}
     # the following parameters are used for the basic arc length continuation
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
@@ -125,7 +128,7 @@ function BEC(lbs::BorderingBLS,
              R, n::𝒯,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
-             dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
+             dotp = lbs.dot)  where {𝒯, 𝒯ξ}
     x1, δx, success, itlinear = lbs.solver(J, R, dR)
     ~success && @debug "Linear solver failed to converge in BorderingBLS."
 
@@ -142,15 +145,11 @@ function residualBEC(lbs::BorderingBLS,
                             dX, dl,
                             ξu::𝒯ξ = one(𝒯), 
                             ξp::𝒯ξ = one(𝒯);
-                            shift::𝒯s = nothing, 
-                            dotp = lbs.dot) where {𝒯, 𝒯ξ, 𝒯s}
+                            dotp = lbs.dot) where {𝒯, 𝒯ξ}
     # we check the precision of the solution from the bordering algorithm
     # at this point, δx is not used anymore, we can use it for computing the residual
-    # hence δx = R - (shift⋅I + J) * dX - dl * dR
+    # hence δX = R - J * dX - dl * dR (J may be a ShiftedOperator)
     δX = apply(J, dX)
-    if ~isnothing(shift)
-        VI.add!(δX, dX, shift)
-    end
     VI.add!(δX, dR, dl)
     VI.add!(δX, R, 1, -1)
     δl = n - ξp * dzp * dl - ξu * dotp(dzu, dX)
@@ -217,16 +216,18 @@ MatrixBLS() = MatrixBLS(nothing)
 # case of a scalar additional linear equation
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
-# │ (shift⋅M + J)     dR      ││dX│ = │ R │
+# │          J         dR     ││dX│ = │ R │
 # │   ξu * dzu'   ξp * dzp    ││dl│   │ n │
 # └                           ┘└  ┘   └   ┘
+# J is the top-left block; shifted / mass-weighted systems (a₀⋅Mass + a₁⋅J) are
+# encoded by passing a ShiftedOperator as J, materialized with getmatrix(J)
 function (lbs::MatrixBLS)(J, dR,
                           dzu, dzp::𝒯, 
                           R::AbstractVecOrMat, n::𝒯,
                           ξu::𝒯 = one(𝒯), 
                           ξp::𝒯 = one(𝒯);
                           dotp = nothing,
-                          applyξu! = nothing)  where {𝒯 <: Number, 𝒯s}
+                          applyξu! = nothing)  where {𝒯 <: Number}
 
     A = getmatrix(J)
     # USE BLOCK ARRAYS LAZY?
@@ -410,7 +411,7 @@ function solve_bls_block(lbs::MatrixFreeBLS,
                                 J, a,
                                 b, c, 
                                 rhst, rhsb;
-                                dotp = LA.dot) where {𝒯s}
+                                dotp = LA.dot)
     linearmap = MatrixFreeBLSmap(J, a, b, c, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(_copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)

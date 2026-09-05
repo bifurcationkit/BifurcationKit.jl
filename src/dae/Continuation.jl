@@ -1,4 +1,4 @@
-function continuation(prob::DAEMassBifProblem,
+function continuation(prob::AbstractDAEBifProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       kwargs...)
@@ -8,7 +8,7 @@ function continuation(prob::DAEMassBifProblem,
     _continuation(prob, alg, contparams_dae; kwargs...)
 end
 
-function continuation(prob::DAEMassBifProblem,
+function continuation(prob::AbstractDAEBifProblem,
                       alg::DefCont,
                       contparams::ContinuationPar;
                       kwargs...)
@@ -21,7 +21,7 @@ function compute_eigenvalues(eigsolver::AbstractEigenSolver,
                              u0,
                              par,
                              nev = getcontparams(iter).nev; 
-                             kwargs...) where {Tkind <: AbstractContinuationKind, Tprob <: DAEMassBifProblem}
+                             kwargs...) where {Tkind <: AbstractContinuationKind, Tprob <: AbstractDAEBifProblem}
     prob = getprob(iter)
     M = getmassmatrix(prob, getx(state), setparam(iter, getp(state)))
     return eigsolver(jacobian(getprob(iter), u0, par), M, nev; kwargs...)

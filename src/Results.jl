@@ -320,7 +320,7 @@ function _contresult(iter,
                      br,
                      x0,
                      contparams::ContinuationPar{T, S, E}) where {T, S, E}
-    # example of bifurcation point
+    # example of bifurcation / special point
     bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
     # save full solution? At least, we keep the first one
     sol = [(x = x0, p = getparam(iter.prob), step = 0)]

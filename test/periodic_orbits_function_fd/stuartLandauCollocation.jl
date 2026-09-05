@@ -384,7 +384,7 @@ let
     # TODO: this does not seem type stable
     @test isconcretetype(return_type( (pred.orbit), typeof((0.1)))) == false
     BK._continuation(_hp, br.prob, _cont_po,
-                    Collocation(20, 5; jacobian = BK.DenseAnalytical()))
+                    Collocation(20, 5; jacobian = BK.DenseAnalytical()); alg=PALC())
 end
 ####################################################################################################
 # test Hopf aBS

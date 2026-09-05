@@ -15,8 +15,8 @@ All notable changes to this project will be documented in this file (hopefully).
 - compute the parameter derivative `dFdp` in the Moore-Penrose algorithm (`newton_moore_penrose`) with the (user provided) `R01`/`R01!` instead of first-order finite differences, and accumulate the number of linear iterations (`itlineartot`)
 
 ### Fixed
-- evaluate all the integrands of the NS Iooss normal form (`neimark_sacker_normal_form_iooss`) at the Gauss points and build the RHS of the homological equations `h20`/`h11` in the row layout of the collocation operator. This removes the former `Icoll` mass-matrix pre-scaling and the ad-hoc `h20 ./= 2Ntst` / `h11 ./= 2Ntst` renormalizations.
-- evaluate all the integrands of the PD Iooss normal form (`period_doubling_normal_form_iooss`) at the Gauss points and build the RHS of the homological equations `h₂`/`h₀₁` in the row layout of the collocation operator, normalizing `ψ₁★` with `∫_gauss` so that `<ψ₁★, F(u₀)> = 1/2`. This removes the former `Icoll` mass-matrix pre-scaling and fixes the scaling of the normal form coefficients.
+- evaluate all the integrands in `neimark_sacker_normal_form_iooss` at the Gauss points and build the RHS of the homological equations `h20`/`h11` in the row layout of the collocation operator. This removes the former `Icoll` mass-matrix pre-scaling and the ad-hoc `h20 ./= 2Ntst` / `h11 ./= 2Ntst` renormalizations.
+- evaluate all the integrands in `period_doubling_normal_form_iooss` at the Gauss points and build the RHS of the homological equations `h₂`/`h₀₁` in the row layout of the collocation operator, normalizing `ψ₁★` with `∫_gauss` so that `<ψ₁★, F(u₀)> = 1/2`. This removes the former `Icoll` mass-matrix pre-scaling and fixes the scaling of the normal form coefficients.
 
 ## [0.8.3]
 

@@ -321,7 +321,7 @@ function newton_bt(prob::AbstractBifurcationProblem,
             J = (x, p) -> finite_differences(z -> 𝐁𝐓(z, p), x))
         optn_bt = @set options.linsolver = DefaultLS()
     else
-        prob_bt = BTMAProblem(𝐁𝐓, jacobian_ma, btpointguess, nothing, prob.plotSolution, prob.recordFromSolution)
+        prob_bt = BTMAProblem(𝐁𝐓, jacobian_ma, btpointguess, nothing, plot_solution(prob), record_from_solution(prob))
         # options for the Newton Solver
         optn_bt = @set options.linsolver = BTLinearSolverMinAug()
     end

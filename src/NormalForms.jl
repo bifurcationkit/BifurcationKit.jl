@@ -943,9 +943,10 @@ function _get_roots_from_red_eqn(bp, _ds, n, 𝒯;
     end
 
     failures = 0
+    u0 = getu0(prob)
     for ci in igs
         if norm(ci) > 0
-            prob.u0 .= [ci...] * amp_igs
+            u0 .= [ci...] * amp_igs
             outdef1 = solve(prob, deflationOp, optn, Val(:autodiff); normN, callback)
             if converged(outdef1)
                 push!(deflationOp, ampfactor .* outdef1.u)
@@ -964,7 +965,7 @@ function _get_roots_from_red_eqn(bp, _ds, n, 𝒯;
         else
             failures += 1
         end
-        prob.u0 .= outdef1.u .+ 𝒯(1//10) .* (rand(𝒯, n) .- 𝒯(1//2))
+        u0 .= outdef1.u .+ 𝒯(1//10) .* (rand(𝒯, n) .- 𝒯(1//2))
     end
 
     return deflationOp.roots

@@ -156,6 +156,8 @@ $(TYPEDEF)
 
 This struct is used to provide the backslash operator `\`. Can be used to solve `J * x = rhs`.
 
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
+
 # Internal fields
 $(TYPEDFIELDS)
 """
@@ -165,14 +167,14 @@ $(TYPEDFIELDS)
 end
 
 # this function is used to solve J * x = rhs
-# the options a₀, a₁ are only used for the Hopf Newton / Continuation
+# shifted systems are encoded in a ShiftedOperator passed as J
 function (l::DefaultLS)(J, rhs)
     return getmatrix(J) \ rhs, true, 1
 end
 
 # this function is used to solve J * x = rhs
 # with multiple RHS. We can cache the factorization in this case
-# the options a₀, a₁ are only used for the Hopf Newton / Continuation
+# shifted systems are encoded in a ShiftedOperator passed as J
 function (l::DefaultLS)(J, rhs1, rhs2)
     if l.useFactorization
         # factorize makes this type-unstable
@@ -189,6 +191,8 @@ $(TYPEDEF)
 
 [Mainly for debugging] This solver is used to test Moore-Penrose continuation. 
 It is a direct solver based on the backslash operator, used to solve `J * x = rhs`.
+
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -208,6 +212,8 @@ end
 $(TYPEDEF)
 
 Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve `J * x = rhs`.
+
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
 
 The struct is mutable so that you can modify the preconditioners.
 
@@ -250,7 +256,6 @@ $(TYPEDFIELDS)
 end
 
 # this function is used to solve J * x = rhs
-# the optional shift is only used for the Hopf Newton / Continuation
 function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; kwargs...) where {𝒯, 𝒯l, 𝒯r}
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
@@ -275,6 +280,8 @@ end
 $(TYPEDEF)
 
 Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to solve `J * x = rhs`.
+
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
 
 The struct is mutable so that you can modify the preconditioners.
 
@@ -314,7 +321,6 @@ $(TYPEDFIELDS)
 end
 
 # this function is used to solve J * x = rhs
-# the optional shift is only used for the Hopf Newton / Continuation
 function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; kwargs...) where {𝒯, 𝒯l}
     if 𝒯l === Nothing
         res, info = KrylovKit.linsolve(J, rhs, 
@@ -360,6 +366,8 @@ $(TYPEDEF)
 
 Create a linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `J * x = rhs`.
 You have access to `cg, cr, gmres, symmlq, cg_lanczos, cg_lanczos_shift_seq`...
+
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
 
 The struct is mutable so that you can modify the preconditioners.
 
@@ -411,6 +419,8 @@ end
 $(TYPEDEF)
 
 Create an inplace linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `J * x = rhs`.
+
+`J` can be an `AbstractMatrix`, a linear operator or a [`ShiftedOperator`](@ref) (possibly wrapping a [`MassAndJacobian`](@ref)) to solve shifted systems.
 
 The Krylov space is pre-allocated. This is really great for GPU but also for CPU.
 
