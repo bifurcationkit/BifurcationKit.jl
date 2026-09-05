@@ -257,7 +257,7 @@ geteigenvector(eigsolve::ShiftInvert, vecs, n::Union{Int, AbstractVector{Int64}}
 function (eig_si::ShiftInvert)(J, nev; kwargs...)
     # (a₀ * I + a₁ * J) * x = rhs
     function Jmap(rhs)
-        eig_si.ls(J, rhs; a₀ = -eig_si.sigma , a₁ = 1)[1]
+        eig_si.ls(ShiftedOperator(;J, a₀ = -eig_si.sigma , a₁ = VI.One()), rhs)[1]
     end
     vals, vecs, cv, n = @time "SI-ev" eig_si.eig(Jmap, nev; kwargs...)
     rescaled_vals = 1 ./vals .+ eig_si.sigma

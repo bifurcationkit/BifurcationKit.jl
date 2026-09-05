@@ -3,7 +3,7 @@ abstract type AbstractBorderedLinearSolver <: AbstractLinearSolver end
 # the following structure, say `struct BDLS <: AbstractBorderedLinearSolver;...;end` 
 # rely on the hypotheses:
 # - the constructor must provide BDLS() and BDLS(::AbstractLinearSolver)
-# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; shift = nothing, dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
+# - the method (ls::BDLS)(J, dR, dzu, dzp, R, n, ξu, ξp; dotp = nothing, applyξu! = nothing) must be provided. dotp is the dot product used for the vector space. Writing dotp(x,y) = dot(x,S,y) for some matrix S, the function applyξu! = mul!(y,S,x)
 
 # Reminder: we want to solve the linear system
 # Cramer's rule gives σ = det(J) / det(M)
@@ -17,8 +17,7 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                         iter::AbstractContinuationIterable,
                         state::AbstractContinuationState,
                         J, dR, 
-                        R, n::𝒯; 
-                        shift::𝒯s = nothing,
+                        R, n::𝒯;
                         dotp = getdot(iter).dot,
                         applyξu! = _get_apply_dot(getdot(iter))) where {𝒯, 𝒯s}
     # the following parameters are used for the pseudo arc length continuation
@@ -30,7 +29,6 @@ function solve_bls_palc(lbs::AbstractBorderedLinearSolver,
                  R, n,
                  θ,          # ξu
                  one(𝒯) - θ; # ξp
-                 shift,
                  dotp,
                  applyξu!)
 end
@@ -90,8 +88,7 @@ function (lbs::BorderingBLS)(J, dR,
                              R, n::𝒯,
                              ξu::𝒯ξ = one(𝒯), 
                              ξp::𝒯ξ = one(𝒯); 
-                             dotp = lbs.dot, 
-                             shift::𝒯s = nothing,
+                             dotp = lbs.dot,
                              applyξu! = nothing # A CORRIGER
                              ) where {𝒯, 𝒯ξ <: Number, 𝒯s}
     # the following parameters are used for the basic arc length continuation
@@ -102,8 +99,8 @@ function (lbs::BorderingBLS)(J, dR,
     # it is better to directly use dotp instead of rescaling ξu
 
     k = 0 # number of BEC iterations
-    BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; shift, dotp)
-    res_bec(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; shift, dotp)
+    BEC0(x, y) = BEC(lbs, J, dR, dzu, dzp, x, y, ξu, ξp; dotp)
+    res_bec(x, y) = residualBEC(lbs, J, dR, dzu, dzp, R, n, x, y, ξu, ξp; dotp)
 
     dX, dl, cv, itlinear = BEC0(R, n)
 
@@ -128,13 +125,8 @@ function BEC(lbs::BorderingBLS,
              R, n::𝒯,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
-             shift::𝒯s = nothing,
              dotp = lbs.dot)  where {𝒯, 𝒯ξ, 𝒯s}
-    if isnothing(shift)
-        x1, δx, success, itlinear = lbs.solver(J, R, dR)
-    else
-        x1, δx, success, itlinear = lbs.solver(J, R, dR; a₀ = shift)
-    end
+    x1, δx, success, itlinear = lbs.solver(J, R, dR)
     ~success && @debug "Linear solver failed to converge in BorderingBLS."
 
     dl = (n - dotp(dzu, x1) * ξu) / (dzp * ξp - dotp(dzu, δx) * ξu)
@@ -233,16 +225,10 @@ function (lbs::MatrixBLS)(J, dR,
                           R::AbstractVecOrMat, n::𝒯,
                           ξu::𝒯 = one(𝒯), 
                           ξp::𝒯 = one(𝒯);
-                          shift::𝒯s = nothing, 
-                          Mass = LA.I,
                           dotp = nothing,
                           applyξu! = nothing)  where {𝒯 <: Number, 𝒯s}
 
-    if isnothing(shift)
-        A = J
-    else
-        A = J + shift * Mass
-    end
+    A = getmatrix(J)
     # USE BLOCK ARRAYS LAZY?
     # A = hcat(A, dR)
     # A = vcat(A, hcat(adjoint(dzu .* ξu), dzp * ξp))
@@ -297,12 +283,11 @@ Composite type to save the bordered linear system with expression
 
 It then solved using Matrix Free algorithm applied to the full operator and not just J as for MatrixFreeBLS
 """
-struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Ts, Td}
+struct MatrixFreeBLSmap{Tj, Ta, Tb, Tc, Td}
     J::Tj
     a::Ta
     b::Tb
     c::Tc
-    shift::Ts
     dot::Td # possibly custom dot product
 end
 
@@ -313,11 +298,7 @@ function (lbmap::MatrixFreeBLSmap)(x::AbstractArray)
     xu = @view x[begin:end-1]
     xp = x[end]
     # _copyto!(out.u, apply(lbmap.J, x.u))
-    if isnothing(lbmap.shift)
-        out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
-    else # we do this to fuse for-loops
-        out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a .+ xu .* lbmap.shift
-    end
+    out[begin:end-1] .= apply(lbmap.J, xu) .+ xp .* lbmap.a
     out[end] = lbmap.dot(lbmap.b, xu)  + lbmap.c  * xp
     return out
 end
@@ -328,9 +309,6 @@ function (lbmap::MatrixFreeBLSmap)(x::BorderedArray{Tv, Tp}) where {Tv, Tp <: Nu
     out = VI.zerovector(x)
     _copyto!(out.u, apply(lbmap.J, x.u))
     VI.add!(out.u, lbmap.a, x.p)
-    if isnothing(lbmap.shift) == false
-        VI.add!(out.u, x.u, lbmap.shift)
-    end
     out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
@@ -341,9 +319,6 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray) where {Tj, Ta <
     _copyto!(out.u, apply(lbmap.J, x.u))
     for ii in eachindex(lbmap.a)
         VI.add!(out.u, lbmap.a[ii], x.p[ii])
-    end
-    if isnothing(lbmap.shift) == false
-        VI.add!(out.u, x.u, lbmap.shift)
     end
     out.p .= lbmap.c * x.p
     for ii in eachindex(lbmap.b)
@@ -356,9 +331,6 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::BorderedArray{Tv, Tp}) where {
     out = VI.zerovector(x)
     _copyto!(out.u, apply(lbmap.J, x.u))
     VI.add!(out.u, lbmap.a, x.p)
-    if isnothing(lbmap.shift) == false
-        VI.add!(out.u, x.u, lbmap.shift)
-    end
     out.p = lbmap.dot(lbmap.b, x.u) + lbmap.c * x.p
     return out
 end
@@ -379,9 +351,6 @@ function (lbmap::MatrixFreeBLSmap{Tj, Ta, Tb})(x::AbstractArray) where {Tj, Ta <
         VI.add!(outu, lbmap.a[ii], xp[ii])
     end
 
-    if isnothing(lbmap.shift) == false
-        VI.add!(outu, xu, lbmap.shift)
-    end
     outp .= lbmap.c * xp
     for ii in eachindex(lbmap.b)
         outp[ii] += lbmap.dot(lbmap.b[ii], xu)
@@ -426,12 +395,11 @@ function (lbs::MatrixFreeBLS{S})(J,   dR,
                                  dzu, dzp::𝒯, 
                                  R,   n::𝒯,
                                  ξu::𝒯ξ = 1, 
-                                 ξp::𝒯ξ = 1; 
-                                 shift = nothing, 
+                                 ξp::𝒯ξ = 1;
                                  dotp = LA.dot,
                                  applyξu! = nothing
                                  ) where {𝒯 <: Number, 𝒯ξ, S}
-    linearmap = MatrixFreeBLSmap(J, dR, VI.scale(dzu, ξu), dzp * ξp, shift, dotp)
+    linearmap = MatrixFreeBLSmap(J, dR, VI.scale(dzu, ξu), dzp * ξp, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(_copy(R), n) : vcat(R, n)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol), get_par_bls(sol), cv, it
@@ -441,10 +409,9 @@ end
 function solve_bls_block(lbs::MatrixFreeBLS, 
                                 J, a,
                                 b, c, 
-                                rhst, rhsb; 
-                                shift::𝒯s = nothing, 
+                                rhst, rhsb;
                                 dotp = LA.dot) where {𝒯s}
-    linearmap = MatrixFreeBLSmap(J, a, b, c, shift, dotp)
+    linearmap = MatrixFreeBLSmap(J, a, b, c, dotp)
     rhs = lbs.use_bordered_array ? BorderedArray(_copy(rhst), rhsb) : vcat(rhst, rhsb)
     sol, cv, it = lbs.solver(linearmap, rhs)
     return get_vec_bls(sol, length(a)), get_par_bls(sol, length(a)), cv, it

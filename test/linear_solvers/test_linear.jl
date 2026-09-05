@@ -71,7 +71,8 @@ end
 let
     for _shift in (0.0, randn(), randn())
         J0 = rand(100, 100)
-        map_bls = BK.MatrixFreeBLSmap(J0, rand(size(J0,1)), rand(size(J0,1)), rand(), _shift, LinearAlgebra.dot)
+        so = BK.ShiftedOperator(J=J0, a₀=_shift)
+        map_bls = BK.MatrixFreeBLSmap(so, rand(size(J0,1)), rand(size(J0,1)), rand(), LinearAlgebra.dot)
         x_bd = BorderedArray(rand(100), rand())
         x_bd_v = vcat(copy(x_bd.u), x_bd.p)
         o1 = map_bls(x_bd)
@@ -128,34 +129,36 @@ let
     # Case with a shift
     sol_explicit = (0.9J0 + 0.1I) \ rhs
 
+    so = BK.ShiftedOperator(J = J0, a₀ = 0.1, a₁ = 0.9)
+
     ls = DefaultLS()
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-16)
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
-    _sol, = ls(x -> J0 * x, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
     ls = GMRESKrylovKit(rtol = 1e-16)
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
-    _sol, = ls(x -> J0 * x, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
     ls = KrylovLS(rtol = 1e-16, Pl = I)
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
     ls = KrylovLSInplace(rtol = 1e-16, Pl = I, m = 100, n = 100, verbose = 0 )
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 
     ls = KrylovLSInplace(rtol = 1e-16, Pl = I, m = 100, n = 100, verbose = 0, is_inplace = true )
-    _sol, = ls(J0, rhs; a₀ = 0.1, a₁ = 0.9)
+    _sol, = ls(so, rhs)
     @test _sol ≈ sol_explicit
 end
 
@@ -175,10 +178,10 @@ let
     _shift = -0.1
     sol_explicit = (J0 + _shift * spdiagm(0 => vcat(ones(length(rhs)-1), 0))) \ rhs
 
-    args_bls = (J0[begin:end-1,1:end-1], J0[begin:end-1,end], J0[end,1:end-1], J0[end,end], rhs[begin:end-1], rhs[end])
+    args_bls = (BK.ShiftedOperator(J=J0[begin:end-1,1:end-1], a₀ = _shift ), J0[begin:end-1,end], J0[end,1:end-1], J0[end,end], rhs[begin:end-1], rhs[end])
 
     linBdsolver = BK.BorderingBLS(solver = DefaultLS(), check_precision=true)
-    sol_bd1u, sol_bd1p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd1u, sol_bd1p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
@@ -186,13 +189,13 @@ let
     ########
     ls = GMRESIterativeSolvers(reltol = 1e-11, N = length(rhs)-1, verbose = true)
     linBdsolver = BK.BorderingBLS(ls)
-    sol_bd2u, sol_bd2p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd2u, sol_bd2p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     linBdsolver = BK.MatrixFreeBLS(ls, false)
-    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
@@ -200,32 +203,32 @@ let
     ########
     ls = GMRESKrylovKit(dim = length(rhs) - 1, rtol = 1e-11, atol = 1e-10, verbose = 3)
     linBdsolver = BK.BorderingBLS(ls)
-    sol_bd2u, sol_bd2p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd2u, sol_bd2p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
     linBdsolver = BK.MatrixBLS(ls)
-    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p
 
     BK.MatrixFreeBLS(nothing)
     linBdsolver = BK.MatrixFreeBLS(ls, false)
-    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     linBdsolver = BK.MatrixFreeBLS(ls, true)
-    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd3u, sol_bd3p, cv, _ = linBdsolver(args_bls...)
     @test cv
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
     linBdsolver = BK.MatrixFreeBLS(GMRESIterativeSolvers(reltol = 1e-9, N = size(J0, 1)))
-    sol_bd4u, sol_bd4p, _, _ = linBdsolver(args_bls...; shift = _shift)
+    sol_bd4u, sol_bd4p, _, _ = linBdsolver(args_bls...)
     @test sol_explicit[begin:end-1] ≈ sol_bd4u
     @test sol_explicit[end] ≈ sol_bd4p
 
@@ -283,7 +286,7 @@ let
     end
 
     # test MatrixFreeBLSmap evaluation
-    blsmap = BK.MatrixFreeBLSmap(Jmf, a, b, c, nothing, dot)
+    blsmap = BK.MatrixFreeBLSmap(Jmf, a, b, c, dot)
     rhs_bd = BorderedArray(rhs[begin:end-m], rhs[end-m+1:end])
     lhs = J0 * rhs
     lhs2 = blsmap(rhs_bd)
@@ -353,7 +356,7 @@ let
         @test norm(J0_b - J0) ≈ 0
 
     args_bls = (J11, J12, J21, J22, rhs[begin:end-1], rhs[end])
-    args_bls_shift = (J, J12, J21, J22, rhs[begin:end-1], rhs[end])
+    args_bls_shift = (BK.ShiftedOperator(;J,a₀= -λ), J12, J21, J22, rhs[begin:end-1], rhs[end])
 
     linBdsolver = BK.MatrixBLS()
         sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(args_bls...)
@@ -361,7 +364,7 @@ let
         @test sol_explicit[end] ≈ sol_bd3p
 
     linBdsolver = BK.MatrixBLS()
-        sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(args_bls_shift..., shift = -λ)
+        sol_bd3u, sol_bd3p, _, _ = @time linBdsolver(args_bls_shift...)
         @test sol_explicit[begin:end-1] ≈ sol_bd3u
         @test sol_explicit[end] ≈ sol_bd3p
 
@@ -371,7 +374,7 @@ let
     @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
-    sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
+    sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls_shift...)
     @test sol_explicit[begin:end-1] ≈ sol_bd1u
     @test sol_explicit[end] ≈ sol_bd1p
 
@@ -381,7 +384,7 @@ let
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls_shift...)
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
@@ -391,7 +394,7 @@ let
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(x->J*x, J12, J21, J22, rhs[begin:end-1], rhs[end]; shift = -λ)
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls_shift[1], J12, J21, J22, rhs[begin:end-1], rhs[end])
     @test sol_explicit[begin:end-1] ≈ sol_bd2u
     @test sol_explicit[end] ≈ sol_bd2p
 
@@ -401,7 +404,7 @@ let
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
-    sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls_shift..., shift = -λ)
+    sol_bd3u, sol_bd3p, _, _ = linBdsolver(args_bls_shift...)
     @test sol_explicit[begin:end-1] ≈ sol_bd3u
     @test sol_explicit[end] ≈ sol_bd3p rtol = 1e-6
 
@@ -414,11 +417,12 @@ let
     ξu = 1.
     ξp = rand()
 
+    args_bls_shift = (BK.ShiftedOperator(;J,a₀= 0.2), J12, J21, J22, rhs[begin:end-1], rhs[end])
     linBdsolver = BK.BorderingBLS(DefaultLS())
-    sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls..., ξu, ξp; shift = 0.2)
+    sol_bd1u, sol_bd1p, _, _ = linBdsolver(args_bls..., ξu, ξp)
 
     linBdsolver = BK.MatrixFreeBLS(ls)
-    sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls..., ξu, ξp; shift = 0.2)
+    sol_bd2u, sol_bd2p, _, _ = linBdsolver(args_bls..., ξu, ξp)
 
     @test sol_bd1u ≈ sol_bd2u
     @test sol_bd1p ≈ sol_bd2p
@@ -513,11 +517,11 @@ let
     @test out[1] ≈ outkk[1] rtol = 1e-7
     outkk = ls(Jmf, x0)
     @test out[1] ≈ outkk[1]
-    outkk = ls(Jmf, x0; a₀ = BK.VI.Zero(), a₁ = BK.VI.One())
-    outkk = ls(Jmf, x0; a₀ = BK.VI.Zero(), a₁ = 1.5)
-    outkk = ls(Jmf, x0; a₀ = BK.VI.One(), a₁ = BK.VI.One())
-    outkk = ls(Jmf, x0; a₀ = BK.VI.One(), a₁ = 1.5)
-    outkk = ls(Jmf, x0; a₀ = 0.5, a₁ = 1.5)
+    outkk = ls(Jmf, x0)
+    outkk = ls(BK.ShiftedOperator(J = Jmf, a₀ = BK.VI.Zero(), a₁ = 1.5), x0)
+    outkk = ls(BK.ShiftedOperator(J = Jmf, a₀ = BK.VI.One(), a₁ = BK.VI.One()), x0)
+    outkk = ls(BK.ShiftedOperator(J = Jmf, a₀ = BK.VI.One(), a₁ = 1.5), x0)
+    outkk = ls(BK.ShiftedOperator(J = Jmf, a₀ = 0.5, a₁ = 1.5), x0)
 
     # test preconditioner
     Pl = lu(J0*0.9)
@@ -527,16 +531,16 @@ let
     @test out[1] ≈ outkk[1]
     outkk = ls(Jmf, x0)
     @test out[1] ≈ outkk[1]
-    outkk = ls(Jmf, x0; a₀ = 0.5, a₁ = 1.5)
+    outkk = ls(BK.ShiftedOperator(J = Jmf, a₀ = 0.5, a₁ = 1.5), x0)
 
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9)
     outit = ls(J0, x0)
     @test out[1] ≈ outit[1]
-    outkk = ls(J0, x0; a₀ = BK.VI.Zero(), a₁ = BK.VI.One())
-    outit = ls(J0, x0; a₀ = BK.VI.Zero(), a₁ = 1.5)
-    outit = ls(J0, x0; a₀ = BK.VI.One(), a₁ = BK.VI.One())
-    outit = ls(J0, x0; a₀ = BK.VI.One(), a₁ = 1.5)
-    outit = ls(J0, x0; a₀ = 0.5, a₁ = 1.5)
+    outkk = ls(J0, x0)
+    outit = ls(BK.ShiftedOperator(J = J0, a₀ = BK.VI.Zero(), a₁ = 1.5), x0)
+    outit = ls(BK.ShiftedOperator(J = J0, a₀ = BK.VI.One(), a₁ = BK.VI.One()), x0)
+    outit = ls(BK.ShiftedOperator(J = J0, a₀ = BK.VI.One(), a₁ = 1.5), x0)
+    outit = ls(BK.ShiftedOperator(J = J0, a₀ = 0.5, a₁ = 1.5), x0)
 
     ls = GMRESIterativeSolvers(N = 100, reltol = 1e-9, ismutating = true)
     outit = ls(J0, x0)
@@ -559,21 +563,21 @@ let
     @test norm(sol0 - sol1/h, Inf) < 1e-8
 
     sol0,_ = ls0(I - h*J0, rhs)
-    sol1,_ = ls0(J0, rhs; a₀ = 1.0, a₁ = -h)
+    sol1,_ = ls0(BK.ShiftedOperator(J = J0, a₀ = 1.0, a₁ = -h), rhs)
     @test norm(sol0 - sol1, Inf) < 1e-8
 
     ls0 = GMRESKrylovKit(atol = 1e-10)
     sol0,_ = ls0(I - h*J0, rhs)
-    sol1,_ = ls0(J0, rhs; a₀ = 1.0, a₁ = -h)
+    sol1,_ = ls0(BK.ShiftedOperator(J = J0, a₀ = 1.0, a₁ = -h), rhs)
     @test norm(sol0 - sol1, Inf) < 1e-8
 
     sol0,_ = ls0(I - h*J0, rhs)
-    sol1,_ = ls0(J0, rhs; a₀ = 1.0/h, a₁ = -1.)
+    sol1,_ = ls0(BK.ShiftedOperator(J = J0, a₀ = 1.0/h, a₁ = -1.), rhs)
     @test norm(sol0 - sol1/h, Inf) < 1e-8
 
 
     sol0,_ = ls0(I - h*J0, rhs)
-    sol1,_ = ls0(J0, rhs; a₀ = 1., a₁ = -h)
+    sol1,_ = ls0(BK.ShiftedOperator(J = J0, a₀ = 1., a₁ = -h), rhs)
     @test norm(sol0 - sol1, Inf) < 1e-8
 end
 ####################################################################################################

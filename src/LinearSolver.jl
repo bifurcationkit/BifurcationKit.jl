@@ -11,10 +11,32 @@ abstract type AbstractIterativeLinearSolver <: AbstractLinearSolver end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-Structure to bundle the mass matrix and the jacobian. This is especially useful for dispatch of linear solvers.
+$(TYPEDEF)
+
+Bundle of a (constant) mass matrix `M` and a Jacobian `J`. It is used to
+dispatch the action of the mass-weighted operator `a₀·M + a₁·J` inside the
+linear solvers, without computing `M` at every solve.
+
+# Fields
+$(TYPEDFIELDS)
+
+# Details
+
+The `_axpy`/`_axpy_op`/`_axpy_op!` helpers dispatch on this type
+(`src/dae/LinearSolver.jl`):
+- when `M` is an [`IdentityOperator`](@ref), the operator reduces to
+  `a₀·I + a₁·J` and only `J` is used;
+- otherwise the mass matrix is taken into account explicitly.
+
+`MassAndJacobian` is typically wrapped in a [`ShiftedOperator`](@ref)
+(e.g. `ShiftedOperator(J = MassAndJacobian(M, L), a₀ = …, a₁ = …)`) to
+solve `(a₀·M + a₁·L)·x = rhs` for the DAE (mass matrix) problems, where
+the shift is applied to the mass matrix rather than to the identity.
 """
 struct MassAndJacobian{TM, TJ}
+    "Mass matrix (constant) or `IdentityOperator`."
     M::TM
+    "Jacobian of the vector field."
     J::TJ
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26,6 +48,43 @@ function (ls::AbstractLinearSolver)(J, rhs1, rhs2; kwargs...)
     return sol1, sol2, flag1 & flag2, (it1, it2)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDEF)
+Lazy representation of the shifted linear operator
+    a₀ · Mass + a₁ · J
+acting on state vectors. Unless `J` is a [`MassAndJacobian`](@ref) (in which
+case its mass matrix is used), the mass matrix is the identity, so that the
+operator reads `a₀·I + a₁·J`.
+# Fields
+$(TYPEDFIELDS)
+# Details
+The shifted matrix is not formed eagerly:
+- `getmatrix(so)` returns the (sparse/dense) matrix `a₀·Mass + a₁·J`, used by
+  direct linear solvers such as `DefaultLS`;
+- `apply(so, v)`, `apply!(o, so, v)` and `so(v)` evaluate
+  `a₀·Mass·v + a₁·J·v` in a matrix-free way for iterative solvers.
+A `ShiftedOperator` is passed as the operator of a solve, e.g.
+`ls(so, rhs)` or `linbdsolver(so, a, b, …)`, replacing the keywords
+`a₀, a₁`. Typical shifted systems it encodes are `(λ − L)` in normal form
+computations, `(I − h/2·J)` in Floquet monodromy steps, and the mass-weighted
+operators `(2iω·M − L)` of the DAE Hopf normal form.
+The sentinel values `a₀ = VI.Zero()` and `a₁ = VI.One()` (defaults) select
+branch-free fast paths in `_axpy`/`_axpy_op`.
+"""
+Base.@kwdef struct ShiftedOperator{TJ, T0, T1}
+    J::TJ
+    a₀::T0 = VI.Zero()
+    a₁::T1 = VI.One()
+end
+
+getmatrix(A::AbstractArray) = A
+getmatrix(A::LA.Factorization) = A # like, SparseArrays.UMFPACK.UmfpackLU
+getmatrix(::IdentityOperator) = LA.I
+getmatrix(SO::ShiftedOperator) = _axpy(SO.J, SO.a₀, SO.a₁)
+apply(SO::ShiftedOperator, v) = _axpy_op(SO.J, v, SO.a₀, SO.a₁)
+apply!(o, SO::ShiftedOperator, v) = _axpy_op!(o, SO.J, v, SO.a₀, SO.a₁)
+(SO::ShiftedOperator)(v) = _axpy_op(SO.J, v, SO.a₀, SO.a₁)
+
 """
 [Internal] This function returns a₀ * Mass + a₁ * J and ensures that we don't perform unnecessary computations like 0*Mass + 1*J.
 Used for the continuation of Hopf points and the computation of Floquet multipliers.
@@ -95,7 +154,7 @@ end
 """
 $(TYPEDEF)
 
-This struct is used to provide the backslash operator `\`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+This struct is used to provide the backslash operator `\`. Can be used to solve `J * x = rhs`.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -105,22 +164,22 @@ $(TYPEDFIELDS)
     useFactorization::Bool = true
 end
 
-# this function is used to solve (a₀ * I + a₁ * J) * x = rhs
+# this function is used to solve J * x = rhs
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
-function (l::DefaultLS)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...)
-    return _axpy(J, a₀, a₁) \ rhs, true, 1
+function (l::DefaultLS)(J, rhs)
+    return getmatrix(J) \ rhs, true, 1
 end
 
-# this function is used to solve (a₀ * I + a₁ * J) * x = rhs
+# this function is used to solve J * x = rhs
 # with multiple RHS. We can cache the factorization in this case
 # the options a₀, a₁ are only used for the Hopf Newton / Continuation
-function (l::DefaultLS)(J, rhs1, rhs2; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...)
+function (l::DefaultLS)(J, rhs1, rhs2)
     if l.useFactorization
         # factorize makes this type-unstable
-        Jfact = LA.factorize(_axpy(J, a₀, a₁))
+        Jfact = LA.factorize(getmatrix(J))
         return Jfact \ rhs1, Jfact \ rhs2, true, (1, 1)
     else
-        _J = _axpy(J, a₀, a₁)
+        _J = getmatrix(J)
         return _J \ rhs1, _J \ rhs2, true, (1, 1)
     end
 end
@@ -140,7 +199,7 @@ $(TYPEDFIELDS)
 end
 
 function (l::DefaultPILS)(J, rhs; kwargs...)
-    return J \ rhs, true, 1
+    return getmatrix(J) \ rhs, true, 1
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Solvers for IterativeSolvers
@@ -148,7 +207,7 @@ end
 """
 $(TYPEDEF)
 
-Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Linear solver based on `gmres` from `IterativeSolvers.jl`. Can be used to solve `J * x = rhs`.
 
 The struct is mutable so that you can modify the preconditioners.
 
@@ -190,18 +249,14 @@ $(TYPEDFIELDS)
     ismutating::Bool = false
 end
 
-# this function is used to solve (a₀ * I + a₁ * J) * x = rhs
+# this function is used to solve J * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(),
-                                               kwargs...) where {𝒯, 𝒯l, 𝒯r}
+function (l::GMRESIterativeSolvers{𝒯, 𝒯l, 𝒯r})(J, rhs; kwargs...) where {𝒯, 𝒯l, 𝒯r}
     # no need to use fancy axpy! here because IterativeSolvers "only" handles AbstractArray
     if l.ismutating == true
-        if ~((a₀ === VI.Zero()) && (a₁ === VI.One()))
-            error("Perturbed inplace linear problem not done yet!")
-        end
         Jmap = J isa AbstractArray ? J : LinearMaps.LinearMap{𝒯}(J, l.N, l.N; ismutating = true)
     else
-        J_map = v -> _axpy_op(J, v, a₀, a₁)
+        J_map = v -> apply(J, v)
         Jmap = LinearMaps.LinearMap{𝒯}(J_map, length(rhs), length(rhs); ismutating = false)
     end
     res = IterativeSolvers.gmres(Jmap, rhs; abstol = l.abstol, reltol = l.reltol,
@@ -219,7 +274,7 @@ end
 """
 $(TYPEDEF)
 
-Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create a linear solver based on `linsolve` from `KrylovKit.jl`. Can be used to solve `J * x = rhs`.
 
 The struct is mutable so that you can modify the preconditioners.
 
@@ -258,13 +313,13 @@ $(TYPEDFIELDS)
     Pl::𝒯l = nothing
 end
 
-# this function is used to solve (a₀ * I + a₁ * J) * x = rhs
+# this function is used to solve J * x = rhs
 # the optional shift is only used for the Hopf Newton / Continuation
-function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) where {𝒯, 𝒯l}
+function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; kwargs...) where {𝒯, 𝒯l}
     if 𝒯l === Nothing
         res, info = KrylovKit.linsolve(J, rhs, 
-                            (a₀ === VI.Zero() ? 0 : a₀), 
-                            (a₁ === VI.One()  ? 1 : a₁); 
+                            0, 
+                            1; 
                             rtol = l.rtol,
                             verbosity = l.verbose,
                             krylovdim = l.dim,
@@ -281,7 +336,6 @@ function (l::GMRESKrylovKit{𝒯, 𝒯l})(J, rhs; a₀ = VI.Zero(), a₁ = VI.On
             # out = similar(dx)
             # ldiv!(out, l.Pl, Jdx)
             out = l.Pl \ Jdx
-            VI.add!(out, dx, a₀, a₁)
             return out
         end
         res, info = KrylovKit.linsolve(_linmap, LA.ldiv!(similar(rhs), l.Pl, _copy(rhs));
@@ -304,7 +358,7 @@ end
 """
 $(TYPEDEF)
 
-Create a linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create a linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `J * x = rhs`.
 You have access to `cg, cr, gmres, symmlq, cg_lanczos, cg_lanczos_shift_seq`...
 
 The struct is mutable so that you can modify the preconditioners.
@@ -341,12 +395,11 @@ function KrylovLS(args...;
     return KrylovLS(KrylovAlg, kwargs, Pl, Pr)
 end
 
-function (l::KrylovLS)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) 
-    J_map = v -> _axpy_op(J, v, a₀, a₁)
+function (l::KrylovLS)(J, rhs; kwargs...)
+    J_map = v -> apply(J, v)
     Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     if l.KrylovAlg in (:cg, :car, :minres, :symmlq)
-        # symmetric solvers
-        # we only pass centered preconditioner
+        # symmetric solvers, we only pass centered preconditioner
         sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl)
     else # non-symmetric solvers
         sol, stats = Krylov.krylov_solve(Val(l.KrylovAlg), Jmap, rhs; l.kwargs..., M = l.Pl, N = l.Pr)
@@ -357,7 +410,7 @@ end
 """
 $(TYPEDEF)
 
-Create an inplace linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `(a₀ * I + a₁ * J) * x = rhs`.
+Create an inplace linear solver based on [Krylov.jl](https://jso.dev/Krylov.jl). Can be used to solve `J * x = rhs`.
 
 The Krylov space is pre-allocated. This is really great for GPU but also for CPU.
 
@@ -404,12 +457,12 @@ function KrylovLSInplace(args...;
     return KrylovLSInplace(workspace, KrylovAlg, kwargs, Pl, Pr, is_inplace)
 end
 
-function (l::KrylovLSInplace)(J, rhs; a₀ = VI.Zero(), a₁ = VI.One(), kwargs...) 
+function (l::KrylovLSInplace)(J, rhs; kwargs...) 
     if l.is_inplace
-        J_map = (o,v) -> _axpy_op!(o, J, v, a₀, a₁)
+        J_map = (o, v) -> apply!(o, J, v)
         Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = true)
     else
-        J_map = v -> _axpy_op(J, v, a₀, a₁)
+        J_map = v -> apply(J, v)
         Jmap = LinearMaps.LinearMap{eltype(rhs)}(J_map, length(rhs), length(rhs); ismutating = false)
     end
     if l.KrylovAlg in (:cg, :car, :minres, :symmlq)
