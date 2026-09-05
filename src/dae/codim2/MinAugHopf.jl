@@ -4,23 +4,24 @@ function _hopf_ma_test(linbdsolver, M, J, a, b, J22, _zero, n, shift)
     return linbdsolver(so, apply(M,a), apply(M,b), J22, _zero, n)
 end
 
-function _init_hopf_vectors_minaug(dae::DAEMassBifProblem, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+function _init_hopf_vectors_minaug(dae::DAEMassBifProblem, xₕ, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     # we use a minimally augmented formulation to set the initial vectors
     # we start with a vector similar to an eigenvector, we must ensure that
     # it is complex valued
-    ζ = VI.scale(_copy(bifpt.x), one(Complex{VI.scalartype(bifpt.x)}))
+    ζ = VI.scale(_copy(xₕ), one(Complex{VI.scalartype(xₕ)}))
     a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
     b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
-    L = jacobian(dae, bifpt.x, parbif)
-    M = getmassmatrix(dae, bifpt.x, parbif)
-    L★ = ~has_adjoint(dae) ? adjoint(L) : jacobian_adjoint(dae, bifpt.x, parbif)
+    L = jacobian(dae, xₕ, parbif)
+    M = getmassmatrix(dae, xₕ, parbif)
+    M★ = ~has_massmatrix_adjoint(dae) ? adjoint(M) : getmassmatrix_adjoint(dae, xₕ, parbif)
+    L★ = ~has_adjoint(dae) ? adjoint(L) : jacobian_adjoint(dae, xₕ, parbif)
 
-    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
+    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, M★, L, L★, ω, a, b, VI.zerovector(a))
 
-    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(dae, bifpt.x, parbif)) norminf(apply(L,v) - complex(0,ω)*apply(M,v)) norminf(apply(L,v) + complex(0,ω)*apply(M,v))
+    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(dae, xₕ, parbif)) norminf(apply(L,v) - complex(0,ω)*apply(M,v)) norminf(apply(L,v) + complex(0,ω)*apply(M,v))
 
-    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(dae, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*adjoint(M)*w) norminf(apply(L★,w) + complex(0,ω)*adjoint(M)*w)
+    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(dae, xₕ, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(M★, w)) norminf(apply(L★,w) + complex(0,ω)*apply(M★, w))
 
     ζad = VI.scale(w,  1 / normC(w))
     ζ   = VI.scale(v,  1 / normC(v))

@@ -291,48 +291,57 @@ function newton_hopf(prob,
     return solve(prob_h, Newton(), opt_hopf; normN, kwargs...)
 end
 
-function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
-            prob = getprob(br),
-            normN = norm,
-            options = br.contparams.newton_options,
-            nev = br.contparams.nev,
+# this version extracts the border vectors
+function newton_hopf(prob,
+            hopfpointguess::BorderedArray,
+            par,
+            options::NewtonPar;
+            nev = 10,
             start_with_eigen = false,
+            bdlinsolver::AbstractBorderedLinearSolver = MatrixBLS(),
+            bdlinsolver_adjoint = bdlinsolver,
             a = nothing,
             b = nothing,
+            ζ = nothing,
+            normN = norm,
             kwargs...)
-    if is_mass_matrix_constant(prob) == false
-        error("Non constant mass matrix not taken into account!")
-    end
-    hopfpointguess = hopf_point(br, ind_hopf)
+    xₕ = hopfpointguess.u
     ω = hopfpointguess.p[2]
+    if start_with_eigen
+        ζ ./= normN(ζ)
+        ζ★ = conj.(ζ)
+        # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iωM
+        λ = Complex(0, ω)
+
+        # jacobian at bifurcation point
+        L = jacobian(prob, xₕ, par)
+        Mass = getmassmatrix(prob, xₕ, par)
+
+        # computation of adjoint eigenvector
+        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, xₕ, par)
+        ζ★, _ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev)
+        ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
+    else
+
+        (; ζ, ζad) = _init_hopf_vectors_minaug(prob, xₕ, par, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normN)
+        ζ★ = ζad
+    end
+
+    # solve the hopf equations
+    return newton_hopf(prob, hopfpointguess, par, ζ, ζ★, options; normN, bdlinsolver, kwargs...)
+end
+
+function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
+            prob = getprob(br),
+            options = br.contparams.newton_options,
+            kw...)
+    hopfpointguess = hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
     options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
     @assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step."
     @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
-    ζ ./= normN(ζ)
-    ζ★ = conj.(ζ)
-
-    if start_with_eigen
-        # computation of adjoint eigenvalue. Recall that b should be a null vector of J-iω
-        λ = Complex(0, ω)
-        p = bifpt.param
-        parbif = setparam(br, p)
-
-        # jacobian at bifurcation point
-        L = jacobian(prob, bifpt.x, parbif)
-        Mass = getmassmatrix(prob, bifpt.x, parbif)
-
-        # computation of adjoint eigenvector
-        L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-        ζ★, _ = _get_target_eigenvector_from_eigensolver(L★, conj(λ), options.eigsolver; nev)
-        ζ★ ./= dot_with_mass(ζ★, Mass, ζ)
-    else
-        (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
-    end
-
-    # solve the hopf equations
-    return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζ★, options; normN, kwargs...)
+    return newton_hopf(prob, hopfpointguess, getparams(br), options; nev = br.contparams.nev, ζ, kw...)
 end
 
 function update!(𝐏𝐛::HopfMAProblem, iter, state::ContState)
@@ -580,7 +589,7 @@ function continuation_hopf(prob,
         ζ★, = _get_target_eigenvector_from_eigensolver(L★, conj(λ), br.contparams.newton_options.eigsolver; nev, verbose = options_cont.newton_options.verbose)
         ζad = VI.scale(ζ★, 1 / dot_with_mass(ζ★, Mass, ζ))
     else
-        (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+        (; ζ, ζad) = _init_hopf_vectors_minaug(prob, bifpt.x, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     end
 
     return continuation_hopf(getprob(br), alg,
@@ -599,24 +608,23 @@ end
 Compute the initial (right / left) eigenvectors `(ζ, ζad)` of the Hopf point
 using the minimally augmented formulation.
 """
-function _init_hopf_vectors_minaug(prob, bifpt, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+function _init_hopf_vectors_minaug(prob, xₕ, parbif, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
     # we use a minimally augmented formulation to set the initial vectors
     # we start with a vector similar to an eigenvector, we must ensure that
     # it is complex valued
-    ζ = VI.scale(_copy(bifpt.x), one(Complex{VI.scalartype(bifpt.x)}))
+    ζ = VI.scale(_copy(xₕ), one(Complex{VI.scalartype(xₕ)}))
     a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
     b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
 
-    L = jacobian(prob, bifpt.x, parbif)
-    L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, bifpt.x, parbif)
-    M = getmassmatrix(prob, bifpt.x, parbif)
+    L = jacobian(prob, xₕ, parbif)
+    L★ = ~has_adjoint(prob) ? adjoint(L) : jacobian_adjoint(prob, xₕ, parbif)
+    M = getmassmatrix(prob, xₕ, parbif)
+    M★ = has_massmatrix_adjoint(prob) ? getmassmatrix_adjoint(prob, xₕ, parbif) : adjoint(M)
 
-    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, L, L★, ω, a, b, VI.zerovector(a))
+    (; v, w, itv, itw) = __compute_bordered_vectors_hopf(bdlinsolver, bdlinsolver_adjoint, M, M★, L, L★, ω, a, b, VI.zerovector(a))
 
-    Mass = M isa IdentityOperator ? LA.I : M
-
-    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L, v) - complex(0,ω)*apply(Mass,v)) norminf(apply(L,v) + complex(0,ω)*v)
-    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, bifpt.x, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(adjoint(Mass),w)) norminf(apply(L★,w) + complex(0,ω)*w)
+    @debug "RIGHT EIGENVECTORS" ω itv norminf(residual(prob, xₕ, parbif)) norminf(apply(L, v) - complex(0,ω)*apply(M,v)) norminf(apply(L,v) + complex(0,ω)*apply(M,v))
+    @debug "LEFT  EIGENVECTORS" ω itw norminf(residual(prob, xₕ, parbif)) norminf(apply(L★, w) - complex(0,ω)*apply(M★,w)) norminf(apply(L★,w) + complex(0,ω)*apply(M★,w))
 
     ζad = VI.scale(w,  1 / normC(w))
     ζ   = VI.scale(v,  1 / normC(v))
