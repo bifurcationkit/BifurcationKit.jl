@@ -41,6 +41,7 @@ function gev(eig::EigArpack, A, B, nev; kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # GEV useful for computation of Floquet exponents based on collocation
+function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...) 
     if A isa AbstractMatrix
         # Solve Ax = λBx using Shift-invert method 
         # (A - σ⋅B)⁻¹ B⋅x = 1/(λ-σ)x
