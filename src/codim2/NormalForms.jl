@@ -743,7 +743,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     # REF1 Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” https://doi.org/10.1137/S0036142998335005.
 
     # formula (7.2) in REF1
-    H20, cv, it = ls(L, B(q0, q0); a₀ = Complex(0, 2ω), a₁ = -1)
+    H20, cv, it = ls(ShiftedOperator(J=L, a₀ = Complex(0, 2ω), a₁ = -1), B(q0, q0))
     ~cv && @debug "[Bautin H20] Linear solver for J did not converge. it = $it"
 
     # formula (7.3) in REF1
@@ -751,7 +751,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     ~cv && @debug "[Bautin H11] Linear solver for J did not converge. it = $it"
 
     # formula (7.4) in REF1
-    H30, cv, it = ls(L, C(q0, q0, q0) .+ 3 .* B(q0, H20); a₀ = Complex(0, 3ω), a₁ = -1)
+    H30, cv, it = ls(ShiftedOperator(J=L,a₀ = Complex(0, 3ω), a₁ = -1), C(q0, q0, q0) .+ 3 .* B(q0, H20))
     ~cv && @debug "[Bautin H30] Linear solver for J did not converge. it = $it"
 
     # formula (7.5) in REF1
@@ -760,7 +760,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     h21 .= G21 .* q0 .- h21    # (7.7)
 
     # formula (7.7) in REF1
-    H21, _, cv, it = bls(L, q0, p0, zero(𝒯), h21, zero(𝒯); shift = Complex{𝒯}(0, -ω))
+    H21, _, cv, it = bls(ShiftedOperator(J=L, a₀ = Complex{𝒯}(0, -ω)), q0, p0, zero(𝒯), h21, zero(𝒯))
     ~cv && @debug "[Bautin H21] Bordered linear solver for J did not converge. it = $it"
 
     # 4-th order coefficient
@@ -781,7 +781,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     # h40 is not needed, so we compute the next formula on page 1114 in REF1
     h31 = D(x0, q0, q0, q0, cq0) .+ 3 .* C(q0, q0, H11) .+ 3 .* C(q0, cq0, H20) .+ 3 .* B(H20, H11)
     h31 .+= B(cq0, H30) .+ 3 .* B(q0, H21) .- (3 * G21) .* H20
-    H31, cv, it = ls(L, h31; a₀ = Complex(0, 2ω), a₁ = -1)
+    H31, cv, it = ls(ShiftedOperator(J=L,a₀ = Complex(0, 2ω), a₁ = -1), h31)
     ~cv && @debug "[Bautin H31] Linear solver for J did not converge. it = $it"
 
     h22 = D(x0, q0, q0, cq0, cq0) .+
@@ -873,17 +873,17 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     h₂₁₀₀ = H21
 
     # formula (19) in REF2
-    Ainv(dx) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); shift = -λ)
+    Ainv(dx) = bls(ShiftedOperator(J=L, a₀ = -λ), q0, p0, zero(𝒯), dx, zero(𝒯))
     h₁₀₁₀, = Ainv(γ₁₁₀ .* q0 .- A1(q0, lens1) .- B(q0, h₀₀₁₀) )
     h₁₀₀₁, = Ainv(γ₁₀₁ .* q0 .- A1(q0, lens2) .- B(q0, h₀₀₀₁) )
 
     # formula (20a) in REF2
     tmp2010 = (2γ₁₁₀) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₁₀) .+ 2 .* B(q0, h₁₀₁₀) .+ B(h₂₀₀₀, h₀₀₁₀) .+ B1(q0, q0, lens1) .+ A1(h₂₀₀₀, lens1))
-    h₂₀₁₀, = ls(L, tmp2010; a₀ = Complex(0, -2ω) )
+    h₂₀₁₀, = ls(ShiftedOperator(J=L,a₀ = Complex(0, -2ω)), tmp2010 )
 
     # formula (20a) in REF2
     tmp2001 = (2γ₁₀₁) .* h₂₀₀₀ .- (C(q0, q0, h₀₀₀₁) .+ 2 .* B(q0, h₁₀₀₁) .+ B(h₂₀₀₀, h₀₀₀₁) .+ B1(q0, q0, lens2) .+ A1(h₂₀₀₀, lens2))
-    h₂₀₀₁, = ls(L, tmp2001; a₀ = Complex(0, -2ω) )
+    h₂₀₀₁, = ls(ShiftedOperator(J=L,a₀ = Complex(0, -2ω)), tmp2001 )
 
     # formula (20b) in REF2
     tmp1110 = 2real(γ₁₁₀) .* h₁₁₀₀ .- (C(q0, cq0, h₀₀₁₀) .+ B(h₁₁₀₀, h₀₀₁₀) .+ 2 .* real(B(cq0, h₁₀₁₀)) .+ B1(q0, cq0, lens1) .+ A1(h₁₁₀₀, lens1))
@@ -1160,10 +1160,9 @@ function zero_hopf_normal_form(𝐏𝐛,
     B = BilinearMap( (dx1, dx2) -> d2F(prob_vf, x0, parbif, dx1, dx2) )
     C = TrilinearMap((dx1, dx2, dx3) -> d3F(prob_vf, x0, parbif, dx1, dx2, dx3) )
     Ainv0(dx; kw...) = bls(L, q0, p0, zero(𝒯), dx, zero(𝒯); kw...)
-    Ainv1(dx; kw...) = bls(L, q1, p1, zero(𝒯), dx, zero(𝒯); kw...)
+    Ainv1(dx; shift, kw...) = bls(ShiftedOperator(J=L, a₀ = shift ), q1, p1, zero(𝒯), dx, zero(𝒯); kw...)
 
     # REF1: Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
-
     # REF2: “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
     
     ω = imag(λI)
@@ -1179,7 +1178,7 @@ function zero_hopf_normal_form(𝐏𝐛,
     h200, = Ainv0(tmp200)
 
     # formula (8.4) in REF1
-    h020, = ls(L, B(q1, q1); a₀ = Complex(0, -2ω)); h020 .*= -1
+    h020, = ls(ShiftedOperator(J=L, a₀ = Complex(0, -2ω)), B(q1, q1)); h020 .*= -1
 
     # formula (8.5) in REF1
     tmp110 = B(q0, q1) .- LA.dot(p1, B(q0, q1)) .* q1
@@ -1291,7 +1290,8 @@ function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T;
         return zh.ζ★.p1
     end
 
-    return (hopf = t -> HopfCurve(t).pars,
+    return (;
+            hopf = t -> HopfCurve(t).pars,
             ω    = t -> HopfCurve(t).ω,
             EigenVec = EigenVec,
             EigenVecAd = EigenVecAd,
@@ -1325,7 +1325,8 @@ function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T;
         return zh.ζ★.p0
     end
 
-    return (fold = t -> FoldCurve(t).pars,
+    return (;
+            fold = t -> FoldCurve(t).pars,
             λ0   = t -> FoldCurve(t).λ0,
             EigenVec = EigenVec,
             EigenVecAd = EigenVecAd,
@@ -1552,11 +1553,11 @@ function hopf_hopf_normal_form(𝐏𝐛,
     # REF2 “Switching to Nonhyperbolic Cycles from Codim 2 Bifurcations of Equilibria in ODEs,” 2005. https://doi.org/10.1016/j.physd.2008.06.006.
 
     # second order, formulas 9.2 - 9.6 in REF1
-    h₂₀₀₀, = ls(-L, B(q1, q1), a₀ = 2λ1)
-    h₀₀₂₀, = ls(-L, B(q2, q2), a₀ = 2λ2)
+    h₂₀₀₀, = ls(ShiftedOperator(J = L, a₀ = 2λ1, a₁ = -1), B(q1, q1))
+    h₀₀₂₀, = ls(ShiftedOperator(J = L, a₀ = 2λ2, a₁ = -1), B(q2, q2))
 
-    h₁₀₁₀, = ls(-L, B(q1, q2),  a₀ = Complex(0, ω1 + ω2))
-    h₁₀₀₁, = ls(-L, B(q1, cq2), a₀ = Complex(0, ω1 - ω2))
+    h₁₀₁₀, = ls(ShiftedOperator(J = L, a₀ = Complex(0, ω1 + ω2), a₁ = -1), B(q1, q2))
+    h₁₀₀₁, = ls(ShiftedOperator(J = L, a₀ = Complex(0, ω1 - ω2), a₁ = -1), B(q1, cq2))
 
     h₁₁₀₀, = ls(L, B(q1, cq1)); h₁₁₀₀ .*= -1
     h₀₀₁₁, = ls(L, B(q2, cq2)); h₀₀₁₁ .*= -1
