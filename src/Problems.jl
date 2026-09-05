@@ -610,23 +610,13 @@ getparam(pb::AbstractBifurcationProblem) = _get(getparams(pb), getlens(pb))
 setparam(pb::AbstractBifurcationProblem, p0) = set(getparams(pb), getlens(pb), p0)
 record_from_solution(pb::AbstractBifurcationProblem) = pb.recordFromSolution
 plot_solution(pb::AbstractBifurcationProblem) = pb.plotSolution
+
 getmassmatrix(::AbstractBifurcationProblem, x, p) = IdentityOperator() # for Hopf continuation
-"""
-$(TYPEDSIGNATURES)
-
-Whether the problem provides a dedicated adjoint of the mass matrix. See
-[`getmassmatrix_adjoint`](@ref). Defaults to `false`.
-"""
+apply_mass_matrix(::AbstractBifurcationProblem, x, p, dx) = dx
 has_massmatrix_adjoint(::AbstractBifurcationProblem) = false
-"""
-$(TYPEDSIGNATURES)
-
-Return the adjoint (conjugate transpose) of the mass matrix `M(x, p)`. It is used
-by the adjoint bordered systems, e.g. for the left eigenvector of the pencil
-`(J - iωM)`. The default is `adjoint(getmassmatrix(prob, x, p))`.
-"""
 getmassmatrix_adjoint(prob::AbstractBifurcationProblem, x, p) = adjoint(getmassmatrix(prob, x, p))
 is_mass_matrix_constant(::AbstractBifurcationProblem) = true
+has_trivial_mass_mastrix(::AbstractBifurcationProblem) = true
 
 # specific to AbstractAllJetBifProblem
 isinplace(pb::AbstractAllJetBifProblem) = isinplace(pb.VF)

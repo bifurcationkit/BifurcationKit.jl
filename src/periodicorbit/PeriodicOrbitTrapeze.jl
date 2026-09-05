@@ -239,7 +239,7 @@ Low-level building block of the Crank-Nicolson scheme implemented by `Trapeze`. 
 
 ``M_a\\,(u_1 - u_2) - h\\,(F(u_1) + F(u_2))``
 
-of the current time slice. The vector `tmp` is a buffer which, on entry, must contain ``F(u_2)`` (it is overwritten with ``F(u_1)`` or ``J(u_1)\\,du_1``); this avoids evaluating the vector field twice since the scheme is applied slice by slice in a cyclic way.
+of the current time slice. The vector `tmp_Fu` is a buffer which, on entry, must contain ``F(u_2)`` (it is overwritten with ``F(u_1)`` or ``J(u_1)\\,du_1``); this avoids evaluating the vector field twice since the scheme is applied slice by slice in a cyclic way.
 
 - if `applyf = Val(true)` (default), ``F(u_1)`` is evaluated with the vector field;
 - if `applyf = Val(false)`, the jacobian action ``J(u_1)\\,du_1`` is used instead (this is the matrix-free expression of the jacobian);
@@ -257,8 +257,8 @@ function potrap_scheme!(trap,
                         applyf::Val{is_applyf} = Val(true)) where {is_linear, is_applyf}
     # this function implements the basic implicit scheme used for the time integration
     # because this function is called in a cyclic manner, we save the value of F(u2)
-    # in the variable tmp in order to avoid recomputing it in a subsequent call
-    # basically tmp is F(u2)
+    # in the variable tmp_Fu in order to avoid recomputing it in a subsequent call
+    # basically tmp_Fu is F(u2)
     # applyf: if true use F and dF otherwise
     if is_linear
         dest .= tmp
@@ -293,18 +293,18 @@ where ``T = x_{M N + 1}`` is the period. It works for inplace / out of place vec
 """
 @views function po_residual!(trap::Trapeze, out, u, par)
     T = getperiod(trap, u, nothing)
-    M, N = size(trap)
+    M, = size(trap)
 
     uc = get_time_slices(trap, u)
     outc = get_time_slices(trap, out)
-
     po_residual_bare!(trap, outc, uc, par, T)
 
     # closure condition ensuring a periodic orbit
     outc[:, M] .= uc[:, M] .- uc[:, 1]
 
+    # multiply by T allows to have a non-zero Jpo[end,end] ; useful for preconditioners
+    phase_cond = (LA.dot(u[begin:end-1], trap.ϕ) - LA.dot(trap.xπ, trap.ϕ)) * T
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(u[begin:end-1], trap.ϕ) - LA.dot(trap.xπ, trap.ϕ)
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond) # this is the phase condition
     else
@@ -334,10 +334,10 @@ Evaluate only the `M - 1` first blocks of `G` (i.e. the Crank-Nicolson residuals
     # fastest is to do out[:, i] = x
     potrap_scheme!(trap, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, outc[:, M])
 
-    for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
-        # this function avoids computing F(uc[:, ii]) twice
-        potrap_scheme!(trap, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, outc[:, M])
+    for 𝐢 in 2:M-1
+        h = T * get_time_step(trap, 𝐢)
+        # this function avoids computing F(uc[:, 𝐢]) twice
+        potrap_scheme!(trap, outc[:, 𝐢], uc[:, 𝐢], uc[:, 𝐢-1], par, h/2, outc[:, M])
     end
 end
 
@@ -366,16 +366,17 @@ Matrix-free expression (jvp) of the jacobian ``dG(u)\\cdot du`` of the PO functi
 
     h = dT * get_time_step(trap, 1)
     potrap_scheme!(trap, outc[:, 1], uc[:, 1], uc[:, M-1], par, h/2, tmp, Val(false))
-    for ii in 2:M-1
-        h = dT * get_time_step(trap, ii)
-        potrap_scheme!(trap, outc[:, ii], uc[:, ii], uc[:, ii-1], par, h/2, tmp, Val(false))
+    for 𝐢 in 2:M-1
+        h = dT * get_time_step(trap, 𝐢)
+        potrap_scheme!(trap, outc[:, 𝐢], uc[:, 𝐢], uc[:, 𝐢-1], par, h/2, tmp, Val(false))
     end
 
     # closure condition ensuring a periodic orbit
     outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     # this is for CuArrays.jl to work in the mode allowscalar(false)
-    phase_cond = LA.dot(du[begin:end-1], trap.ϕ)
+    phase_cond = LA.dot(du[begin:end-1], trap.ϕ) * T + 
+                (LA.dot(u[begin:end-1], trap.ϕ) - LA.dot(trap.xπ, trap.ϕ)) * dT
     if on_gpu(trap)
         return vcat(out[begin:end-1], phase_cond)
     else
@@ -403,7 +404,6 @@ function Aγ!(trap::Trapeze, outc, u0::AbstractVector, par, du::AbstractVector; 
     # du of size N * M
     M, N = size(trap)
     T = _extract_period_fdtrap(trap, u0)
-    u0c = get_time_slices(trap, u0)
 
     # compute the cyclic part
     @views Jc(trap, outc, u0[begin:end-1-N], par, T, du[begin:end-N], outc[:, M])
@@ -429,16 +429,16 @@ function Jc(trap::Trapeze, outc::AbstractMatrix, u0::AbstractVector, par, T, du:
     u0c = reshape(u0, N, M-1)
     duc = reshape(du, N, M-1)
 
-    @views applyJ(trap, tmp, u0c[:, M-1], par, duc[:, M-1])
+    @views applyJ!(trap, tmp, u0c[:, M-1], par, duc[:, M-1])
 
     h = T * get_time_step(trap, 1)
     @views potrap_scheme!(trap, outc[:, 1], u0c[:, 1], u0c[:, M-1],
                                           duc[:, 1], duc[:, M-1], par, h/2, tmp, Val(true); applyf = Val(false))
 
-    for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
-        @views potrap_scheme!(trap, outc[:, ii], u0c[:, ii], u0c[:, ii-1],
-                                               duc[:, ii], duc[:, ii-1], par, h/2, tmp, Val(true); applyf = Val(false))
+    for 𝐢 in 2:M-1
+        h = T * get_time_step(trap, 𝐢)
+        @views potrap_scheme!(trap, outc[:, 𝐢], u0c[:, 𝐢], u0c[:, 𝐢-1],
+                                               duc[:, 𝐢], duc[:, 𝐢-1], par, h/2, tmp, Val(true); applyf = Val(false))
     end
 
     # we also return a Vector version of outc
@@ -493,27 +493,29 @@ function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc:
     # extraction of various constants
     M, N = size(trap)
 
-    Iₙ = _get_mass_matrix(trap)
+    I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
 
     tmpJ = @views jacobian(trap.prob_vf, u0m[:, 1], par)
 
     h = period * get_time_step(trap, 1)
-    Jn = Iₙ - (h/2) .* tmpJ
+    Jn = I₁ - (h/2) .* tmpJ
     Jc[BA.Block(1, 1)] = Jn
 
-    # we could do a Jn .= -M .- ... but we want to allow the sparsity pattern to vary
-    Jn = @views -Iₙ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
+    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢
+    # (frozen in the jacobian); for the wrap block this is still x_1
+    Jn = @views -I₁ - (h/2) .* jacobian(trap.prob_vf, u0m[:, M-1], par)
     Jc[BA.Block(1, M-1)] = Jn
 
-    for ii in 2:M-1
-        h = period * get_time_step(trap, ii)
-        Jn = -Iₙ - (h/2) .* tmpJ
-        Jc[BA.Block(ii, ii-1)] = Jn
+    for 𝐢 in 2:M-1
+        h = period * get_time_step(trap, 𝐢)
+        Iᵢ = _get_mass_matrix(trap, u0m[:, 𝐢], par)
+        Jn = -Iᵢ - (h/2) .* tmpJ
+        Jc[BA.Block(𝐢, 𝐢-1)] = Jn
 
-        tmpJ = @views jacobian(trap.prob_vf, u0m[:, ii], par)
+        tmpJ = @views jacobian(trap.prob_vf, u0m[:, 𝐢], par)
 
-        Jn = Iₙ - (h/2) .* tmpJ
-        Jc[BA.Block(ii, ii)] = Jn
+        Jn = Iᵢ - (h/2) .* tmpJ
+        Jc[BA.Block(𝐢, 𝐢)] = Jn
     end
     return Jc
 end
@@ -611,7 +613,7 @@ Inplace version of `po_jacobian_sparse`: the jacobian ``dG(u_0)`` is stored in t
     J0[:, end] .=  ∂TGpo
 
     # this following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-    J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ
+    J0[N*M+1, eachindex(trap.ϕ)] .=  trap.ϕ .* T
 
     return J0
 end
@@ -640,39 +642,43 @@ Same as the 3-argument version of `po_jacobian_sparse!` but using the precompute
         J0[:, end] .= ∂TGpo
 
         # the following does not depend on u0, so it does not change. However we update it in case the caller updated the section somewhere else
-        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
+        J0[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ .* period
     end
     return J0
 end
 
 @views function _trap_jacobian_sparse!(trap::Trapeze, J0, u0m::AbstractMatrix, period, par, indx; γ = 1)
     M, N = size(trap)
-    Iₙ = _get_mass_matrix(trap)
 
     tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
+    # the mass matrix multiplies (x_ii - x_{ii-1}) and is evaluated at the left slice x_ii
+    # (frozen in the jacobian); for the wrap block this is still x_1
+    I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
+
     h = period * get_time_step(trap, 1)
-    Jn = Iₙ - tmpJ * (h/2)
+    Jn = I₁ - tmpJ * (h/2)
 
     # setblock!(Jc, Jn, 1, 1)
     J0.nzval[indx[1, 1]] .= Jn.nzval
 
-    Jn .= -Iₙ .- jacobian(trap.prob_vf, u0m[:, M-1], par) .* (h/2)
+    Jn .= -I₁ .- jacobian(trap.prob_vf, u0m[:, M-1], par) .* (h/2)
     # setblock!(Jc, Jn, 1, M-1)
     J0.nzval[indx[1, M-1]] .= Jn.nzval
 
-    for ii in 2:M-1
-        h = period * get_time_step(trap, ii)
-        @. Jn = -Iₙ - tmpJ * (h/2)
+    for 𝐢 in 2:M-1
+        h = period * get_time_step(trap, 𝐢)
+        Iᵢ = _get_mass_matrix(trap, u0m[:, 𝐢], par)
+        @. Jn = -Iᵢ - tmpJ * (h/2)
         # the next lines cost the most
-        # setblock!(Jc, Jn, ii, ii-1)
-        J0.nzval[indx[ii, ii-1]] .= Jn.nzval
+        # setblock!(Jc, Jn, 𝐢, 𝐢-1)
+        J0.nzval[indx[𝐢, 𝐢-1]] .= Jn.nzval
 
-        tmpJ .= jacobian(trap.prob_vf, u0m[:, ii], par)# * (h/2)
+        tmpJ .= jacobian(trap.prob_vf, u0m[:, 𝐢], par)# * (h/2)
 
-        @. Jn = Iₙ -  tmpJ * (h/2)
-        # setblock!(Jc, Jn, ii, ii)
-        J0.nzval[indx[ii, ii]] .= Jn.nzval
+        @. Jn = Iᵢ -  tmpJ * (h/2)
+        # setblock!(Jc, Jn, 𝐢, 𝐢)
+        J0.nzval[indx[𝐢, 𝐢]] .= Jn.nzval
     end
 
     # setblock!(Aγ, -γ * Iₙ, M, 1)
@@ -711,20 +717,19 @@ function jacobian_block_diag(trap::Trapeze, u0::AbstractVector, par)
 
     A_diagBlock = BA.BlockArray(SPA.spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
 
-    In = _get_mass_matrix(trap)
-
     u0c = reshape(u0[begin:end-1], N, M)
 
     h = T * get_time_step(trap, 1)
-    @views Jn = In - h/2 .* jacobian(trap.prob_vf, u0c[:, 1], par)
+    @views Jn = _get_mass_matrix(trap, u0c[:, 1], par) - h/2 .* jacobian(trap.prob_vf, u0c[:, 1], par)
     A_diagBlock[BA.Block(1, 1)] = Jn
 
-    for ii in 2:M-1
-        h = T * get_time_step(trap, ii)
-        @views Jn = In - h/2 .* jacobian(trap.prob_vf, u0c[:, ii], par)
-        A_diagBlock[BA.Block(ii, ii)]= Jn
+    for 𝐢 in 2:M-1
+        h = T * get_time_step(trap, 𝐢)
+        @views Jn = _get_mass_matrix(trap, u0c[:, 𝐢], par) - h/2 .* jacobian(trap.prob_vf, u0c[:, 𝐢], par)
+        A_diagBlock[BA.Block(𝐢, 𝐢)]= Jn
     end
-    A_diagBlock[BA.Block(M, M)]= In
+    # the closure block x_M - x_1 is the identity, independent of the mass matrix
+    A_diagBlock[BA.Block(M, M)]= SPA.spdiagm(0 => ones(N))
 
     A_diag_sp = block_to_sparse(A_diagBlock) # most of the computing time is here!!
     return A_diag_sp
@@ -861,9 +866,10 @@ end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
-@with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator}
+@with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator, Tϕ}
     ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
     Aγ::Tag             # Aγ Operator involved in the Jacobian of the PO functional
+    ϕT::Tϕ = nothing    # phase row scaled by the period T*ϕ, kept in sync in the update below
 end
 
 # this function is called whenever the jacobian of G has to be updated
@@ -873,6 +879,8 @@ function (J::POTrapJacobianBordered)(u0::AbstractVector, par; δ = convert(VI.sc
     @views J.∂TGpo .= (po_residual(J.Aγ.prob, vcat(u0[begin:end-1], T + δ), par) .- po_residual(J.Aγ.prob, u0, par)) ./ δ
     # update Aγ
     J.Aγ(u0, par)
+    # the phase condition of the residual is scaled by T, hence the phase row of the jacobian is T * ϕ
+    @. J.ϕT = J.Aγ.prob.ϕ * T
     return J # needed to properly call the linear solver.
 end
 
@@ -886,19 +894,19 @@ end
     # we call J.Aγ.prob(x, par, dx) but we dont have (x, par)
     out1 = apply(J.Aγ, dx[begin:end-1])
     out1 .+= J.∂TGpo[begin:end-1] .* dx[end]
-    return vcat(out1, LA.dot(J.Aγ.prob.ϕ, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
+    return vcat(out1, LA.dot(J.ϕT, dx[begin:end-1]) + dx[end] * J.∂TGpo[end])
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # linear solver for the PO functional, akin to a bordered linear solver
 @with_kw struct PeriodicOrbitTrapBLS{Tl} <: AbstractLinearSolver
-    linsolverbls::Tl = BorderingBLS(solver = AγLinearSolver(), check_precision = false)    # linear solver
+    linsolverbls::Tl = BorderingBLS(solver = AγLinearSolver(), check_precision = false)
 end
 
 # Linear solver associated to POTrapJacobianBordered
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
     dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
-                                             J.Aγ.prob.ϕ, J.∂TGpo[end],
+                                             J.ϕT, J.∂TGpo[end],
                                            rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end
@@ -976,7 +984,7 @@ function _newton_po_from_disc(trap::Trapeze,
             lspo = PeriodicOrbitTrapBLS(BorderingBLS(solver = AγLinearSolver(options.linsolver), check_precision = false))
         end
 
-        jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
+        jacPO = POTrapJacobianBordered(zeros(N * M + 1), Aγ, zero(trap.ϕ))
         wrap_prob = PeriodicOrbitFunctionalTrap(trap, jacPO, orbitguess, nothing, nothing)
         new_options = @set options.linsolver = lspo
     end
@@ -1091,7 +1099,7 @@ function continuation_po(trap::Trapeze,
         end
 
         # we define a specific jacobian for this case
-        jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ)
+        jac = POTrapJacobianBordered(zeros(N * M + 1), Aγ, zero(trap.ϕ))
         probwp = PeriodicOrbitFunctionalTrap(trap, jac, orbitguess, _plotsol, record_po)
         # we change the linear solver
         contParams = @set contParams.newton_options.linsolver = lspo

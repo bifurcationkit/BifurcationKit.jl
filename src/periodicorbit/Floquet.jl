@@ -58,12 +58,12 @@ geteigenvector(eig::FloquetQaD, vecs, n::Union{Int, AbstractVector{Int64}}) = ge
 
 function compute_eigenvalues(fl::FloquetQaD, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; k...)
     wrap = get_wrap_po(iter)
-    if fl.matrix_free
+    monodromy = if fl.matrix_free
         # Matrix Free version
-        monodromy = dx -> MonodromyQaD_matrix_free(get_discretization(wrap), u0, par, dx)
+        dx -> MonodromyQaD_matrix_free(get_discretization(wrap), u0, par, dx)
     else
         J = jacobian(wrap, u0, par) # TODO must not be computed, cf TRAP
-        monodromy = MonodromyQaD(get_discretization(wrap), J, u0, par)
+         MonodromyQaD(get_discretization(wrap), J, u0, par)
     end
     vals, vecs, cv, info = fl.eigsolver(monodromy, nev; iter, state, k...)
 

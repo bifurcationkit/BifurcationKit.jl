@@ -57,7 +57,7 @@ on_gpu(pb::AbstractFiniteDifferencesDiscretization) = pb.ongpu
 has_hessian(pb::AbstractFiniteDifferencesDiscretization) = pb.d2F === nothing
 isinplace(pb::AbstractFiniteDifferencesDiscretization) = isinplace(pb.prob_vf)
 
-function applyJ(pb, dest, x, p, dx) #TODO REMOVE?
+function applyJ!(pb, dest, x, p, dx) #TODO REMOVE?
     if isinplace(pb)
         pb.prob_vf.VF.J(dest, x, p, dx)
     else

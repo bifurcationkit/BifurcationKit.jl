@@ -9,10 +9,8 @@ struct PrecPartialSchur{Ts, Tu, Tsm1, Teigen}
 end
 
 function LinearAlgebra.ldiv!(out, Pl::PrecPartialSchur, rhs::AbstractArray)
-    ########################################################
     # U * Sm1 * Ut + (I - U Ut)
     # U(Sm1 - I)Ut + I
-    ########################################################
     # y = (Pl.U * Pl.Sm1 * transpose(Pl.U) .+ (I - Pl.U * transpose(Pl.U))) * rhs
     y = transpose(Pl.U) * rhs
     y .= Pl.Sm1 * y .- y
@@ -20,10 +18,8 @@ function LinearAlgebra.ldiv!(out, Pl::PrecPartialSchur, rhs::AbstractArray)
 end
 
 function LinearAlgebra.ldiv!(Pl::PrecPartialSchur, rhs::AbstractArray)
-    ########################################################
     # U * Sm1 * Ut + (I - U Ut)
     # U(Sm1 - I)Ut + I
-    ########################################################
     # y = (Pl.U * Pl.Sm1 * transpose(Pl.U) .+ (I - Pl.U * transpose(Pl.U))) * rhs
     y = transpose(Pl.U) * rhs
     y .= Pl.Sm1 * y .- y

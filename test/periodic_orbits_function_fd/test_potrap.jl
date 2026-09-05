@@ -18,65 +18,65 @@ pb = Trapeze(
             rand(2n*M),
             rand(M-1))
 
-pbg = Trapeze(
+pb_gpu = Trapeze(
             prob,
             pb.ϕ,
             pb.xπ,
             pb.mesh.ds ; ongpu = true)
 
-pbi = Trapeze(
+pb_inp = Trapeze(
             probi,
             pb.ϕ,
             pb.xπ,
             pb.mesh.ds)
 @test BK.isinplace(pb) == false
 # BK.POTrapFunctional(pb, res, orbitguess_f)
-# BK.POTrapFunctional(pbi, res, orbitguess_f)
+# BK.POTrapFunctional(pb_inp, res, orbitguess_f)
 res = BK.po_residual(pb, orbitguess_f, par)
-resg = BK.po_residual(pbg, orbitguess_f, par)
-resi = BK.po_residual(pbi, orbitguess_f, par)
+resg = BK.po_residual(pb_gpu, orbitguess_f, par)
+resi = BK.po_residual(pb_inp, orbitguess_f, par)
 @test res == resi
 @test res == resg
 
 res = BK.po_jvp(pb, orbitguess_f, par, orbitguess_f)
-resg = BK.po_jvp(pbg, orbitguess_f, par, orbitguess_f)
-resi = BK.po_jvp(pbi, orbitguess_f, par, orbitguess_f)
+resg = BK.po_jvp(pb_gpu, orbitguess_f, par, orbitguess_f)
+resi = BK.po_jvp(pb_inp, orbitguess_f, par, orbitguess_f)
 @test res == resi
 @test res == resg
 
-BK.po_residual!(pbi, resi, orbitguess_f, par)
-BK.po_jvp!(pbi, resi, orbitguess_f, par, orbitguess_f)
+BK.po_residual!(pb_inp, resi, orbitguess_f, par)
+BK.po_jvp!(pb_inp, resi, orbitguess_f, par, orbitguess_f)
 @test res == resi
 
-# @code_warntype BK.potrap_functional!(pbi, resi, orbitguess_f)
+# @code_warntype BK.po_residual(pb_inp, resi, orbitguess_f)
 
 # using BenchmarkTools
 # @btime BK.po_residual($pb, $orbitguess_f, $par);                    # 6.825 ms (62 allocations: 34.33 MiB)
-# @btime BK.po_residual($pbi, $orbitguess_f, $par);                   # 4.768 ms (2 allocations: 17.17 MiB)
+# @btime BK.po_residual($pb_inp, $orbitguess_f, $par);                   # 4.768 ms (2 allocations: 17.17 MiB)
 # @btime BK.jvp($pb, $orbitguess_f, $par, $orbitguess_f);          # 8.427 ms (122 allocations: 51.50 MiB)
-# @btime BK.jvp($pbi, $orbitguess_f, $par, $orbitguess_f);         # 5.170 ms (2 allocations: 17.17 MiB)
-# @btime BK.po_residual!($pbi, $resi, $orbitguess_f, $par);           # 7.117 ms (0 allocations: 0 bytes)
-# @btime BK.jvp!($pbi, $resi, $orbitguess_f, $par, $orbitguess_f); # 3.900 ms (0 allocations: 0 bytes)
+# @btime BK.jvp($pb_inp, $orbitguess_f, $par, $orbitguess_f);         # 5.170 ms (2 allocations: 17.17 MiB)
+# @btime BK.po_residual!($pb_inp, $resi, $orbitguess_f, $par);           # 7.117 ms (0 allocations: 0 bytes)
+# @btime BK.jvp!($pb_inp, $resi, $orbitguess_f, $par, $orbitguess_f); # 3.900 ms (0 allocations: 0 bytes)
 
 #
 # using IterativeSolvers, LinearMaps
 #
-# Jmap = LinearMap{Float64}(dv -> pbi(orbitguess_f, par, dv), 2n*M+1 ; ismutating = false)
+# Jmap = LinearMap{Float64}(dv -> pb_inp(orbitguess_f, par, dv), 2n*M+1 ; ismutating = false)
 # gmres(Jmap, orbitguess_f; verbose = false, maxiter = 1)
 # gmres(Jmap, orbitguess_f; verbose = false, maxiter = 10)
 
-# Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pbi, o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
+# Jmap! = LinearMap{Float64}((o, dv) -> BK.POTrapFunctionalJac!(pb_inp, o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 1)
 # gmres(Jmap!, orbitguess_f; verbose = false, maxiter = 10)
 #
-# @code_warntype BK.POTrapFunctional!(pbi, resi, orbitguess_f, par)
-# @profiler BK.POTrapFunctionalJac!(pbi, resi, orbitguess_f, par, orbitguess_f)
+# @code_warntype BK.POTrapFunctional!(pb_inp, resi, orbitguess_f, par)
+# @profiler BK.POTrapFunctionalJac!(pb_inp, resi, orbitguess_f, par, orbitguess_f)
 #
-# Jmap2! = LinearMap{Float64}((o, dv) -> pbi(o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
+# Jmap2! = LinearMap{Float64}((o, dv) -> pb_inp(o, orbitguess_f, par, dv), 2n*M+1 ; ismutating = true)
 # gmres(Jmap2!, orbitguess_f; verbose = false, maxiter = 1)
 # gmres(Jmap2!, orbitguess_f; verbose = false, maxiter = 10)
 #
-# Jmap3! = LinearMap{Float64}((o, dv) -> (o .= pbi( orbitguess_f, dv)), 2n*M+1 ; ismutating = true)
+# Jmap3! = LinearMap{Float64}((o, dv) -> (o .= pb_inp( orbitguess_f, dv)), 2n*M+1 ; ismutating = true)
 # gmres(Jmap3!, orbitguess_f; verbose = false, maxiter = 1)
 # gmres(Jmap3!, orbitguess_f; verbose = false, maxiter = 10)
 #
@@ -107,7 +107,7 @@ function _functional(poPb, u0, p)
     outc[:, M] .= u0c[:, M] .- u0c[:, 1]
 
     return vcat(vec(outc),
-            dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ)) # this is the phase condition
+            dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ) * T) # this is the phase condition
 end
 
 function _dfunctional(poPb, u0, p, du)
@@ -143,7 +143,7 @@ function _dfunctional(poPb, u0, p, du)
     outc[:, M] .= duc[:, M] .- duc[:, 1]
 
     return vcat(vec(outc),
-            dot(du[1:end-1], poPb.ϕ)) # this is the phase condition
+            dot(du[1:end-1], poPb.ϕ) * T + dot(u0[1:end-1] .- poPb.xπ, poPb.ϕ) * dT) # this is the phase condition
 
 end
 
