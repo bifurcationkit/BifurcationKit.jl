@@ -91,7 +91,7 @@ par_cgl = (r = 0.5, μ = 0.1, ν = 1.0, c3 = -1.0, c5 = 1.0, Δ = blockdiag(Δ, 
 sol0 = zeros(2Nx, Ny)
 
 # we group the differentials together
-prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@optic _.r); J = Jcgl)
+prob = BK.BifurcationProblem(Fcgl!, vec(sol0), par_cgl, (@optic _.r); J = Jcgl, R01 = BK.FiniteDifferences())
 
 eigls = EigArpack(1.0, :LM)
 opt_newton = NewtonPar(tol = 1e-9, verbose = true, eigsolver = eigls, max_iterations = 20)
@@ -101,7 +101,7 @@ opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.15, ds = 0.001, p_max = 2.5, 
 br = @time continuation(prob, PALC(), opts_br, verbosity = 0)
 ####################################################################################################
 # normal form computation
-hopfpt = get_normal_form(br, 2; autodiff = false)
+hopfpt = get_normal_form(br, 2)
 ####################################################################################################
 # Continuation of the Hopf Point using Jacobian expression
 
@@ -109,6 +109,7 @@ ind_hopf = 1
 optnew = NewtonPar(opts_br.newton_options, verbose = true)
 hopfpoint = newton(br, ind_hopf;
                     options = optnew, 
+                    jacobian_ma = BK.MinAug(), # specific to high dimensions
                     normN = norminf, 
                     start_with_eigen = true)
 BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at l = ", hopfpoint.u.p[1], ", ω = ", hopfpoint.u.p[2], ", from guess l = ", br.specialpoint[ind_hopf].param, "\n")
@@ -116,7 +117,6 @@ BK.converged(hopfpoint) && printstyled(color=:red, "--> We found a Hopf Point at
 br_hopf = continuation(br, 1, (@optic _.γ),
     ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -10.0, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15, save_eigenvectors = false); 
     plot = true,
-    update_minaug_every_step = 1,
     start_with_eigen = false, 
     bothside = false,
     detect_codim2_bifurcation = 2,
@@ -136,24 +136,19 @@ btsol = BK.newton(br_hopf, indbt; jacobian_ma = BK.MinAug(),)
 
 # branch from the BT point
 brfold = continuation(br_hopf, indbt, 
-                    setproperties(br_hopf.contparams; detect_bifurcation = 1, max_steps = 20, save_sol_every_step = 1);
-                    update_minaug_every_step = 1,
+                    ContinuationPar(br_hopf.contparams; max_steps = 40);
                     detect_codim2_bifurcation = 2,
-                    callback_newton = BK.cbMaxNorm(1e5),
                     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
                     jacobian_ma = BK.MinAug(),
                     bothside = true, normC = norminf)
 
-br_hopf2 = @set br_hopf.specialpoint = br_hopf.specialpoint[1:1]
-plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
+plot(br_hopf, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
 # normal form of Zero-Hopf point
 get_normal_form(brfold, 4; autodiff = false, nev = 15)
 
-hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_bifurcation = 1, max_steps = 40, save_sol_every_step = 1);
-    update_minaug_every_step = 1,
+hopf_from_zh = continuation(brfold, 4, ContinuationPar(brfold.contparams; max_steps = 50);
     detect_codim2_bifurcation = 2,
-    callback_newton = BK.cbMaxNorm(1e5),
     start_with_eigen = true,
     plot = true,
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -161,8 +156,14 @@ hopf_from_zh = continuation(brfold, 5, setproperties(brfold.contparams; detect_b
     bothside = false, 
     normC = norminf)
 
-plot(br_hopf2, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
-plot!(hopf_from_zh)
+plot(
+    brfold, 
+    br_hopf,
+    hopf_from_zh
+    ; legend = :topleft, 
+        branchlabel = ["Hopf", "Fold", "Hopf"], 
+        ylims = (0.8,3)
+        )
 ####################################################################################################
 ind_hopf = 1
 # number of time slices
@@ -174,15 +175,22 @@ list_of_time_steps = [pred.orbit(t) for t in LinRange(0, 2pi, M + 1)[1:M]]
 orbitguess_f = vcat(reduce(vcat, list_of_time_steps), pred.period)
 r_hopf = nf_hopf.params.r
 
+ls0 = KrylovLSInplace(;n=2n, m=2n, is_inplace=false, Pl = lu(I + par_cgl.Δ), ldiv = true) # linear solver for Floquet exponents
+
 poTrap = Trapeze(re_make(prob, params = (@set par_cgl.r = r_hopf - 0.01)), 
                     BK.residual(prob, list_of_time_steps[1], (@set par_cgl.r = r_hopf - 0.01)) |> normalize, 
                     zeros(2n), 
                     M, 
-                    2n; jacobian = BK.FullMatrixFree())
+                    2n;
+                    jacobian = BK.FullMatrixFree(), 
+                    )
+# enfore matrix-free jacobian for the vector field
+poTrapMF = deepcopy(poTrap)
+poTrapMF = @set poTrapMF.prob_vf.VF.J = (x, p) ->  (dx -> dFcgl(x, p, dx))
+@reset poTrapMF.linsolver = ls0
 
-ls0 = GMRESIterativeSolvers(N = 2n, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
-poTrapMF = setproperties(poTrap; linsolver = ls0)
-@reset poTrapMF.prob_vf.VF.J = (x, p) ->  (dx -> dFcgl(x, p, dx))
+BK.updatesection!(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
+BK.updatesection!(poTrapMF, orbitguess_f, @set par_cgl.r = r_hopf - 0.01)
 
 BK.po_residual(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
 BK.po_residual(poTrapMF, orbitguess_f, @set par_cgl.r = r_hopf - 0.1) |> plot
@@ -201,17 +209,23 @@ opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds= 0.001, p_max = 
 br_pok2 = continuation(Trapeze(poTrap; jacobian = BK.FullLU()),
             orbitguess_f, PALC(),
             opts_po_cont;
+            DO_NOT_RUN = true,
             verbosity = 2,    plot = true,
             plot_solution = (x ;kwargs...) -> plot_periodic_potrap(x, M, Nx, Ny; kwargs...),
             record_from_solution = (u, p) -> BK.amplitude(u, Nx*Ny, M), normC = norminf)
 ###################################################################################################
-# we use an ILU based preconditioner for the newton method at the level of the full Jacobian of the PO functional
+# Circulant (block-Fourier-in-time) preconditioner P for the cyclic part Jc of the PO jacobian.
+# It is applied to the full bordered jacobian `Jpo`: `ldiv!` only touches the leading cyclic
+# components (slices x_1,...,x_{M-1}) and leaves the closure slice x_M and the period unchanged.
+using FFTW
 Jpo = @time BK.po_jacobian_sparse(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
 
-Precilu = @time ilu(Jpo, τ = 0.005); # ~1 sec
+Prec = BK.POTrapCirculantPrec(poTrap, orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), ref=:average);
+# Prec = @time ilu(Jpo, τ = 0.005);
 
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
-ls(Jpo, rand(ls.N))
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Prec, log=true)
+# ls = KrylovLSInplace(;n=size(Jpo,1), m=size(Jpo,1), is_inplace=false, Pl = Prec, verbose = 0, ldiv = true, rtol = 1e-3);
+ls(Jpo, rand(size(Jpo,1)))
 
 opt_po = @set opt_newton.verbose = true
 @reset opt_po.linsolver = ls
@@ -220,8 +234,9 @@ outpo_f = @time newton(poTrapMF, orbitguess_f, opt_po; normN = norminf);
 BK.converged(outpo_f) && printstyled(color=:red, "--> T = ", outpo_f.u[end])
 plot();BK.plot_periodic_potrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 
-# opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 2, dim = 25)
-opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
+opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 3, dim = 40)
+# opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
+# opt_po = @set opt_po.eigsolver = EigArnoldiMethod(; tol = 1e-3, x₀ = rand(2n))
 opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 1.2, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 3)
 
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
@@ -323,7 +338,7 @@ out_ = similar(sol0f)
 
 probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Precilu, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = P, log=true)
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
@@ -339,9 +354,9 @@ out_po = copy(orbitguess_f)
 opt_po_inp = @set opt_po.linsolver = ls
 outpo_ = @time newton(poTrapMFi, orbitguess_f, opt_po_inp; normN = norminf);
 
-lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Precilu, ldiv = true)
+lsi = BK.KrylovLSInplace(rtol = 1e-3; S = Vector{Float64}, n = length(orbitguess_f), m = length(orbitguess_f), is_inplace = true, memory = 40, Pl = Prec, ldiv = true)
 opt_po_inp_kl = @set opt_po.linsolver = lsi
-# outpo_f = @time newton(poTrapMFi, orbitguess_f,opt_po_inp_kl; normN = norminf, )
+outpo_f = @time newton(poTrapMFi, orbitguess_f,opt_po_inp_kl; normN = norminf, )
 ####################################################################################################
 # Computation of Fold of limit cycle
 function d2Fcglpb(f, x, dx1, dx2)
@@ -357,8 +372,9 @@ par_fold = (@set par_cgl.r = foldpt.p)
 BK.residual(br_po.prob, foldpt.u, par_fold) |> plot
 
 Jpo = BK.po_jacobian_sparse(poTrap, foldpt.u, (@set par_cgl.r = foldpt.p + 0.01));
-Precilu = @time ilu(Jpo, τ = 0.005);
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Precilu, log = true)
+Prec = POTrapCirculantPrec(poTrap, foldpt.u, (@set par_cgl.r = foldpt.p + 0.01), ref = :average);
+Prec = @time ilu(Jpo, τ = 0.002);
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-5, N = size(Jpo, 1), restart = 40, maxiter = 60, Pl = Prec, log = true)
 ls(Jpo, rand(ls.N))
 
 BK.updatesection!(poTrap, foldpt.u, par_fold)
@@ -374,6 +390,7 @@ outfold = @time BK.newton_fold(
         prob = probFold,
         options = (@set opt_po.linsolver = ls),
         bdlinsolver = BorderingBLS(solver = ls, check_precision = false),
+        jacobian_ma = BK.MinAug(),
         )
  BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p," from ", br_po.specialpoint[indfold].param,"\n")
 
@@ -402,7 +419,7 @@ axpby!(a::T, X::CuArray, b::T, Y::CuArray) where {T <: Number} = (Y .= a .* X .+
 
 par_cgl_gpu = @set par_cgl.Δ = CUDA.CUSPARSE.CuSparseMatrixCSC(par_cgl.Δ);
 Jpo = poTrap(Val(:JacFullSparse), orbitguess_f, (@set par_cgl.r = r_hopf - 0.01))
-Precilu = @time ilu(Jpo, τ = 0.003);
+Prec = @time ilu(Jpo, τ = 0.003);
 
 struct LUperso{Tl, Tu}
     L::Tl
@@ -444,33 +461,33 @@ orbitguess_cu = CuArray(orbitguess_f)
 norm(orbitguess_f - Array(orbitguess_cu), Inf)
 
 
-Precilu_gpu = LUperso(LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)), UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))));
+Prec_gpu = LUperso(LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Prec.L)), UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Prec.U'))));
 
-Precilu_host = LUperso((I+Precilu.L), (sparse(Precilu.U')));
+Prec_host = LUperso((I+Prec.L), (sparse(Prec.U')));
 
 rhs = rand(size(Jpo,1))
-    sol_0 = Precilu \ rhs
-    sol_1 = UpperTriangular(sparse(Precilu.U')) \ (LowerTriangular(I+Precilu.L)  \ (rhs))
-    # sol_2 = LowerTriangular(Precilu.U') \ (LowerTriangular(sparse(I+Precilu.L))  \ (rhs))
+    sol_0 = Prec \ rhs
+    sol_1 = UpperTriangular(sparse(Prec.U')) \ (LowerTriangular(I+Prec.L)  \ (rhs))
+    # sol_2 = LowerTriangular(Prec.U') \ (LowerTriangular(sparse(I+Prec.L))  \ (rhs))
     norm(sol_1-sol_0, Inf64)
     # norm(sol_2-sol_0, Inf64)
 
-sol_0 = (I+Precilu.L) \ rhs
-    sol_1 = LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Precilu.L)) \ CuArray(rhs)
+sol_0 = (I+Prec.L) \ rhs
+    sol_1 = LowerTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(I+Prec.L)) \ CuArray(rhs)
     @assert norm(sol_0-Array(sol_1), Inf64) < 1e-10
 
-sol_0 = (Precilu.U)' \ rhs
-    sol_1 = UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Precilu.U'))) \ CuArray(rhs)
+sol_0 = (Prec.U)' \ rhs
+    sol_1 = UpperTriangular(CUDA.CUSPARSE.CuSparseMatrixCSR(sparse(Prec.U'))) \ CuArray(rhs)
     norm(sol_0-Array(sol_1), Inf64)
     @assert norm(sol_0-Array(sol_1), Inf64) < 1e-10
 
 
-sol_0 = Precilu \ rhs
-    sol_1 = ldiv!(Precilu_host, copy(rhs))
+sol_0 = Prec \ rhs
+    sol_1 = ldiv!(Prec_host, copy(rhs))
     @assert norm(sol_1-sol_0, Inf64) < 1e-10
 
-sol_0 = ldiv!(Precilu_gpu, copy(CuArray(rhs)));
-    sol_1 = ldiv!(Precilu_host, copy(rhs))
+sol_0 = ldiv!(Prec_gpu, copy(CuArray(rhs)));
+    sol_1 = ldiv!(Prec_host, copy(rhs))
     norm(sol_1-Array(sol_0), Inf64)
     @assert norm(sol_1-Array(sol_0), Inf64) < 1e-10
 
@@ -486,10 +503,10 @@ poTrapMFGPU = Trapeze(
 poTrapMFGPU(orbitguess_cu, @set par_cgl_gpu.r = r_hopf - 0.1);
 poTrapMFGPU(orbitguess_cu, (@set par_cgl_gpu.r = r_hopf - 0.1), orbitguess_cu);
 
-ls = GMRESKrylovKit(verbose = 2, Pl = Precilu, rtol = 1e-3, dim  = 20)
+ls = GMRESKrylovKit(verbose = 2, Pl = Prec, rtol = 1e-3, dim  = 20)
 outh, = @time ls((Jpo), orbitguess_f) #0.4s
 
-lsgpu = GMRESKrylovKit(verbose = 2, Pl = Precilu_gpu, rtol = 1e-3, dim  = 20)
+lsgpu = GMRESKrylovKit(verbose = 2, Pl = Prec_gpu, rtol = 1e-3, dim  = 20)
 Jpo_gpu = CUDA.CUSPARSE.CuSparseMatrixCSR(Jpo);
 outd, = @time lsgpu(Jpo_gpu, orbitguess_cu);
 

@@ -144,21 +144,44 @@ Same as `finite_differences` but with inplace `F`
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function block_to_sparse(J::BA.AbstractBlockArray)
-    nl, nc = size(J.blocks)
-    # form the first line of blocks
-    res = J[BA.Block(1, 1)]
-    @inbounds for j in 2:nc
-        res = hcat(res, J[BA.Block(1, j)])
+    B = BA.blocks(J)
+    nbr, nbc = size(B)
+    eltype(B) <: SPA.SparseMatrixCSC ||
+        throw(ArgumentError("block_to_sparse requires all blocks to be SparseMatrixCSC"))
+    rowbl = BA.blocklengths(axes(J, 1))
+    colbl = BA.blocklengths(axes(J, 2))
+    rowoff = [0; cumsum(rowbl)]
+    coloff = [0; cumsum(colbl)]
+    m, n = rowoff[end], coloff[end]
+    Tv = mapreduce(eltype, promote_type, B)
+    Ti = Int
+    nnz_tot = 0
+    @inbounds for bj in 1:nbc, bi in 1:nbr
+        nnz_tot += length(B[bi, bj].nzval)
     end
-    # continue with the other lines
-    @inbounds for i in 2:nl
-        line = J[BA.Block(i, 1)]
-        for j in 2:nc
-            line = hcat(line, J[BA.Block(i, j)])
+    rowval = Vector{Ti}(undef, nnz_tot)
+    nzval  = Vector{Tv}(undef, nnz_tot)
+    colptr = Vector{Ti}(undef, n + 1)
+    colptr[1] = 1
+    k = 0
+    @inbounds for bj in 1:nbc
+        c0 = coloff[bj]
+        for lc in 1:colbl[bj]
+            for bi in 1:nbr
+                A  = B[bi, bj]
+                p0 = A.colptr[lc]
+                p1 = A.colptr[lc + 1] - 1
+                ro = rowoff[bi]
+                for p in p0:p1
+                    k += 1
+                    rowval[k] = A.rowval[p] + ro
+                    nzval[k]  = A.nzval[p]
+                end
+            end
+            colptr[c0 + lc + 1] = k + 1
         end
-        res = vcat(res, line)
     end
-    return res
+    return SPA.SparseMatrixCSC(m, n, colptr, rowval, nzval)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

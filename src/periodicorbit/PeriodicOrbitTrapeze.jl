@@ -465,7 +465,6 @@ $(TYPEDSIGNATURES)
 Return the block-by-block (sparse) expression of the matrix ``A_\\gamma``, i.e. the jacobian of the PO functional `G` w.r.t. the space unknowns only (the period column is **not** included). It is a block matrix with `M` blocks of size ``N\\times N`` whose cyclic part is filled by `po_cylic_block!` and whose last block row encodes the periodicity condition ``x_M - \\gamma\\,x_1 = 0`` (``\\gamma = 1`` for the exact jacobian). See `po_jacobian_sparse` for the full jacobian of `G`.
 """
 function po_jacobian_block(trap::Trapeze, u0::AbstractVector, par; γ = 1)
-    # extraction of various constants
     M, N = size(trap)
 
     Aγ = BA.BlockArray(SPA.spzeros(M * N, M * N), N * ones(Int64, M),  N * ones(Int64, M))
@@ -490,7 +489,6 @@ end
 
 # see explanation in po_cylic_block!
 function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
-    # extraction of various constants
     M, N = size(trap)
 
     I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
@@ -526,7 +524,6 @@ $(TYPEDSIGNATURES)
 Return the cyclic (block tridiagonal) matrix ``J_c(u_0)`` of size ``N\\,(M-1)`` as a `BlockArray`, see `po_cylic_block!`.
 """
 function po_cylic_block(trap::Trapeze, u0::AbstractVector, par)
-    # extraction of various constants
     M, N = size(trap)
     Jc = BA.BlockArray(SPA.spzeros((M - 1) * N, (M - 1) * N), N * ones(Int64, M-1),  N * ones(Int64, M-1))
     po_cylic_block!(trap, u0, par, Jc)
@@ -555,11 +552,65 @@ function po_jacobian_sparse(trap::Trapeze, u0::AbstractVector, par; γ = 1, δ =
 
     # this is "bad" for performance. Get converted to SparseMatrix at the next line
     Aγ = block_to_sparse(AγBlock) # most of the computing time is here!!
-    @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
-    Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
 
-    Aγ[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ
-    Aγ[N*M+1, N*M+1] = ∂TGpo[end]
+    ############ Old code
+    # @views Aγ = hcat(Aγ, ∂TGpo[begin:end-1])
+    # Aγ = vcat(Aγ, SPA.spzeros(1, N * M + 1))
+
+    # Aγ[N*M+1, eachindex(trap.ϕ)] .= trap.ϕ .* T
+    # Aγ[N*M+1, N*M+1] = ∂TGpo[end]
+    # return Aγ
+    ############
+
+    # Assemble the bordered matrix (P+1)×(P+1) in a single pass instead of
+    # writing the phase row / period column into the already-built sparse matrix.
+    # Incremental insertion into a CSC is O(nnz·n) here and dominates the cost.
+    # Since P+1 is the largest row index, appending the border entries keeps
+    # `rowval` sorted within each column: the resulting CSC is canonical, no sort.
+    P  = N * M
+    ϕ  = trap.ϕ .* T
+    ∂c = @view ∂TGpo[begin:end-1]
+    c  = ∂TGpo[end]
+
+    Ti = eltype(Aγ.rowval)
+    nnzϕ = count(!iszero, ϕ)
+    nnz∂ = count(!iszero, ∂c) + !iszero(c)
+    Tot  = SPA.nnz(Aγ) + nnzϕ + nnz∂
+
+    rowval = Vector{Ti}(undef, Tot)
+    nzval  = Vector{eltype(Aγ)}(undef, Tot)
+    colptr = Vector{Ti}(undef, P + 2)
+
+    k = 0
+    colptr[1] = 1
+    @inbounds for col in 1:P
+        for p in Aγ.colptr[col]:(Aγ.colptr[col+1]-1)
+            k += 1
+            rowval[k] = Aγ.rowval[p]
+            nzval[k]  = Aγ.nzval[p]
+        end
+        if !iszero(ϕ[col])
+            k += 1
+            rowval[k] = Ti(P + 1)
+            nzval[k]  = ϕ[col]
+        end
+        colptr[col+1] = k + 1
+    end
+    @inbounds for r in 1:P
+        if !iszero(∂c[r])
+            k += 1
+            rowval[k] = Ti(r)
+            nzval[k]  = ∂c[r]
+        end
+    end
+    if !iszero(c)
+        k += 1
+        rowval[k] = Ti(P + 1)
+        nzval[k]  = c
+    end
+    colptr[P+2] = k + 1
+
+    Aγ = SPA.SparseMatrixCSC(P + 1, P + 1, colptr, rowval, nzval)
     return Aγ
 end
 

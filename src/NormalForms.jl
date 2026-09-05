@@ -1021,11 +1021,11 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 @with_kw struct HopfNormalForm{𝒯, 𝒯a, 𝒯b}
-    a::𝒯
-    b::𝒯
-    Ψ001::𝒯a
-    Ψ110::𝒯b
-    Ψ200::𝒯b
+    a::𝒯 = missing
+    b::𝒯 = missing
+    Ψ001::𝒯a = missing
+    Ψ110::𝒯b = missing
+    Ψ200::𝒯b = missing
 end
 
 """
@@ -1187,12 +1187,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
                   ω,
                   parbif, lens,
                   ζ, zero(ζ),
-                  HopfNormalForm(a = missing,
-                               b = missing,
-                               Ψ110 = missing,
-                               Ψ001 = missing,
-                               Ψ200 = missing
-                        ),
+                  HopfNormalForm(),
                 Symbol("?")
         )
     end

@@ -19,26 +19,21 @@ dot_with_mass(ζ★, Mass, ζ) = VI.inner(ζ★, apply(Mass, ζ))
 """
 $(TYPEDEF)
 
-Structure holding a mass matrix (or mass operator) together with its optional
-adjoint and user provided derivatives. It is stored in the field `M` of a
-[`DAEMassBifProblem`](@ref).
+Structure holding a mass matrix (or mass operator) together with its optional adjoint and user provided derivatives. It is stored in the field `M` of a [`DAEMassBifProblem`](@ref).
 
 # Fields
 $(TYPEDFIELDS)
 
 # Constructors
 
-- `MassFunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing)` where `M` is a
-  matrix/operator or a function `M(x, p)`.
+- `MassFunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing, applyM = nothing, dMv = nothing)` where `M` is a matrix/operator or a function `M(x, p)`.
 
-The derivatives are used by the minimally augmented formulations to account for a
-mass matrix depending on the state or the parameters:
+# Methods
 
-- `R01(x, p, v, w)` returns the **scalar** `∂_p ⟨w, M(x, p) v⟩` where `p` is
-  differentiated along the continuation lens. If `nothing`, it is approximated by
-  central finite differences.
-- `∇x(x, p, v, w)` returns the **vector** `∇_x ⟨w, M(x, p) v⟩`. If `nothing`, it is
-  approximated by `ForwardDiff.gradient`.
+The derivatives are used by the minimally augmented formulations to account for a mass matrix depending on the state or the parameters:
+
+- `R01(x, p, v, w)` returns the **scalar** `∂_p ⟨w, M(x, p) v⟩` where `p` is differentiated along the continuation lens. If `nothing`, it is approximated by central finite differences.
+- `∇x(x, p, v, w)` returns the **vector** `∇_x ⟨w, M(x, p) v⟩`. If `nothing`, it is approximated by `ForwardDiff.gradient`.
 """
 struct MassFunction{TM, TMt, TR01, TGx}
     "Mass matrix/operator, or a function `M(x, p)`."
@@ -47,7 +42,7 @@ struct MassFunction{TM, TMt, TR01, TGx}
     Mᵗ::TMt
     "Derivative, with respect to the continuation parameter, of `⟨w, M(x, p) v⟩`: `(x, p, v, w) -> scalar`, or `nothing`."
     R01::TR01
-    "Gradient, with respect to the state, of `⟨w, M(x, p) v⟩`: `(x, p, v, w) -> vector`, or `nothing`."
+    "Gradient, with respect to the state `x`, of `⟨w, M(x, p) v⟩`: `(x, p, v, w) -> vector`, or `nothing`."
     ∇x::TGx
 end
 MassFunction(M; Mᵗ = nothing, R01 = nothing, ∇x = nothing) = MassFunction(M, Mᵗ, R01, ∇x)
@@ -169,6 +164,9 @@ getmassmatrix_adjoint(dae::DAEMassBifProblem, x, p) = getmassmatrix_adjoint(dae.
 is_mass_matrix_constant(::DAEMassBifProblem{ConstantMass}) = true
 is_mass_matrix_constant(::DAEMassBifProblem{IdentityOperator}) = true
 is_mass_matrix_constant(::DAEMassBifProblem) = false
+
+has_trivial_mass_mastrix(::DAEMassBifProblem{IdentityOperator}) = true
+has_trivial_mass_mastrix(::DAEMassBifProblem) = false
 
 # generic constructors, the kind of mass matrix `type` defaults to `ConstantMass`
 function DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), type = ConstantMass)
