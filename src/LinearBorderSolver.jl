@@ -86,14 +86,14 @@ BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)
 # └                           ┘└  ┘   └   ┘
 # J is the top-left block: shifted systems (shift⋅Mass + J) are encoded by
 # passing a ShiftedOperator as J
-function (lbs::BorderingBLS)(J, dR,
+function (lbs::BorderingBLS{Ts})(J, dR,
                              dzu, dzp::𝒯,
                              R, n::𝒯,
                              ξu::𝒯ξ = one(𝒯), 
                              ξp::𝒯ξ = one(𝒯); 
                              dotp = lbs.dot,
                              applyξu! = nothing # A CORRIGER
-                             ) where {𝒯, 𝒯ξ <: Number}
+                             ) where {𝒯, 𝒯ξ <: Number, Ts <: AbstractLinearSolver}
     # the following parameters are used for the basic arc length continuation
     # ξu = θ / length(dz.u)
     # ξp = 1 - θ
@@ -122,13 +122,13 @@ function (lbs::BorderingBLS)(J, dR,
     return dX, dl, cv, itlinear
 end
 
-function BEC(lbs::BorderingBLS,
+function BEC(lbs::BorderingBLS{Ts},
              J,   dR,
              dzu, dzp,
              R, n::𝒯,
              ξu::𝒯ξ = one(𝒯), 
              ξp::𝒯ξ = one(𝒯);
-             dotp = lbs.dot)  where {𝒯, 𝒯ξ}
+             dotp = lbs.dot)  where {𝒯, 𝒯ξ, Ts <: AbstractLinearSolver}
     x1, δx, success, itlinear = lbs.solver(J, R, dR)
     ~success && @debug "Linear solver failed to converge in BorderingBLS."
 

@@ -43,7 +43,7 @@ __get_discretization(disc::AbstractBoundaryValueDiscretization) = disc
 
 function __update_codim1_po!(𝐌𝐚, 
                             iter, 
-                            state)
+                            state::ContState)
     # we extract the AbstractBoundaryValueDiscretization
     disc_po = __get_discretization(𝐌𝐚)
     # we first check that the continuation step was successful

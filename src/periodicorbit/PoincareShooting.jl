@@ -461,7 +461,7 @@ function restore_problem!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting},
     return true
 end
 
-function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, state)
+function update!(wrap::PeriodicOrbitFunctionalSh{ <: PoincareShooting}, iter, state::ContState)
     success = converged(state)
     bisection = in_bisection(state)
     step = state.step

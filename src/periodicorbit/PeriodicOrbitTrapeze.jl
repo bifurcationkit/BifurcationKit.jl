@@ -488,6 +488,7 @@ function po_cylic_block!(trap::Trapeze, u0::AbstractVector, par, Jc::BA.BlockArr
     _trac_cylic_block!(trap, u0m, period, par, Jc)
 end
 
+# see explanation in po_cylic_block!
 function _trac_cylic_block!(trap::Trapeze, u0m::AbstractMatrix, period, par, Jc::BA.BlockArray)
     # extraction of various constants
     M, N = size(trap)
@@ -780,7 +781,7 @@ end
 # implementation of Aγ which catches the LU decomposition of the cyclic matrix
 @with_kw mutable struct AγOperatorLU{Tjc, Tpb} <: AbstractPOTrapAγOperator
     N::Int64 = 0                           # dimension of time slice
-    Jc::Tjc    = lu(SPA.spdiagm(0 => ones(1))) # lu factorisation of the cyclic matrix
+    Jc::Tjc    = LA.lu(SPA.spdiagm(0 => ones(1))) # lu factorisation of the cyclic matrix
     prob::Tpb = nothing                    # PO functional
 end
 

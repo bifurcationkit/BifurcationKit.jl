@@ -216,7 +216,7 @@ Extract the return point and return time from the Newton solution `solΠ` of the
 - The return point is the last time slice of the orbit: `solΠ[end-N:end-1]` where `N` is the state space dimension.
 - The return time is the last entry `tₘ = solΠ[end]` of the solution, which is the period of the collocation solution (the time needed to go from `xₛ` back to the section `Σ`).
 """
-function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ, par, xₛ)
+function _extend(Π::PoincaréMap{ <: PeriodicOrbitFunctionalColl }, solΠ::AbstractVector, par, xₛ)
     coll = get_discretization(Π.probpo)
     N, _, _ = size(coll)
     T⁰ = getperiod(coll, Π.po)

@@ -281,7 +281,7 @@ function newton_fold(br::AbstractBranchResult, ind_fold::Int;
                         kwargs...)
 end
 
-function update!(probma::FoldMAProblem, iter, state)
+function update!(probma::FoldMAProblem, iter, state::ContState)
     # this function is used as an update of 𝐅
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b

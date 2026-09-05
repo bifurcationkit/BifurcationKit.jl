@@ -393,7 +393,7 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
         (;v₁, v₀, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
         return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp, coll, true)
     end
-    return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, nothing, coll, true)
+    return BranchPointPO(bp0.x0, period, nothing, ζ★, nothing, coll, true)
 end
 
 function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
@@ -1393,7 +1393,7 @@ function predictor(nf::PeriodDoublingPO{ <: Trapeze},
         # we double the mesh size
         pbnew = @set pb.mesh.ds = 2M
     else
-        oldmesh = get_times(pb)
+        old_mesh = get_times(pb)
         new_mesh = vcat(old_mesh[begin:end-1] ./2, old_mesh ./2 .+ 1/2)
         pbnew = @set pb.mesh.ds = new_mesh
     end

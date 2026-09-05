@@ -170,9 +170,14 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
 
     compute = callback((;x, res_f, residual = res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
 
-    if linsolver isa AbstractIterativeLinearSolver || (method == iterative)
-        ϕ = _copy(τ0)
-        VI.scale!(ϕ,  one(𝒯) / norm(ϕ))
+    _static_cond_iterative = (linsolver isa AbstractIterativeLinearSolver) || (method === iterative)
+
+    ϕ = if _static_cond_iterative
+            ϕ1 = _copy(τ0)
+            VI.scale!(ϕ1,  one(𝒯) / norm(ϕ1))
+            ϕ1
+        else
+            nothing
     end
 
     while (step < max_iterations) && (res > tol) && line_step && compute
@@ -194,7 +199,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             end
             x .-= @view dx[begin:end-1]
             p -= dx[end]
-        else
+        elseif _static_cond_iterative
             @debug "Moore-Penrose Iterative"
             # A = hcat(J, dFdp); A = vcat(A, ϕ')
             # X .= X .- A \ vcat(res_f, 0)
@@ -204,13 +209,15 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             x = minus!!(x, du)
             p -= dup
             verbose && print_nonlinear_step(step, nothing, itlinear1)
+        else
+            error("Moore-Penrose solvers are not well set")
         end
 
         p = clamp(p, p_min, p_max)
         _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
         res = normN(res_f)
 
-        if method === iterative
+        if _static_cond_iterative
             J = jacobian(prob, x, set(par, paramlens, p))
             _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
             dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!!(dFdp, 1 / ϵ)

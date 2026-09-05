@@ -324,9 +324,9 @@ Return the collocation matrices for evaluation and derivation.
 """
 get_Ls(coll::Collocation) = get_Ls(coll.mesh_cache)
 
-@inline getparams(coll::Collocation) = getparams(coll.prob_vf)
-@inline getlens(coll::Collocation) = getlens(coll.prob_vf)
-@inline setparam(coll::Collocation, p) = setparam(coll.prob_vf, p)
+@inline getparams(coll::Collocation{ <: AbstractBifurcationProblem}) = getparams(coll.prob_vf)
+@inline getlens(coll::Collocation{ <: AbstractBifurcationProblem}) = getlens(coll.prob_vf)
+@inline setparam(coll::Collocation{ <: AbstractBifurcationProblem}, p) = setparam(coll.prob_vf, p)
 
 @inline getperiod(::Collocation, x, par = nothing) = x[end]
 @inline getperiod(coll::Collocation, x::POSavedSolutionAndState, par = nothing) = getperiod(coll, x.sol, par)
@@ -699,7 +699,7 @@ Compute the jacobian of the problem defining the periodic orbits by orthogonal c
 end
 
 @views function _collocation_analytical_jacobian!(J,
-                                    coll::Collocation,
+                                    coll::Collocation{ <: AbstractBifurcationProblem},
                                     u::AbstractVector{𝒯},
                                     pars,
                                     um::AbstractMatrix{𝒯},
@@ -811,7 +811,7 @@ function po_jacobian_block(coll::Collocation,
 end
 
 @views function po_jacobian_block!(J::BA.BlockArray,
-                                coll::Collocation,
+                                coll::Collocation{ <: AbstractBifurcationProblem},
                                 u::AbstractVector{𝒯},
                                 pars;
                                 _transpose::Val{TransposeBool} = Val(false),
@@ -876,7 +876,7 @@ end
     return J
 end
 
-@views function jacobian_poocoll_sparse_indx!(coll::Collocation,
+@views function jacobian_poocoll_sparse_indx!(coll::Collocation{ <: AbstractBifurcationProblem},
                                         J::SPA.AbstractSparseMatrix,
                                         u::AbstractVector{𝒯},
                                         pars,
@@ -1414,10 +1414,11 @@ Internal function to perform mesh adaptation of Collocation problem.
 This can be technical when doing mesh adaptation during NS/PD/Fold continuation as the state space of state is not
 necessarily an AbstractVector. In this case, one can pass the hack update_pred = false
 """
-function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred = true)
+function update_po_coll!(coll::Collocation, po, params, iter, state::ContState, update_pred = true)
     update_section_every_step = coll.update_section_every_step
     step = state.step
     has_mesh_been_updated = false
+    period = getperiod(coll, po, nothing)
 
     # mesh adaptation
     # Carefull, state may be updated!
@@ -1431,7 +1432,6 @@ function update_po_coll!(coll::Collocation, po, params, iter, state, update_pred
         # we keep a copy of the tangent and of the old mesh so that the tangent
         # can be re-interpolated onto the new mesh after the adaptation.
         coll_old = deepcopy(coll)
-        period = getperiod(coll, po, nothing)
         # this resamples po (= state.z.u) onto the new mesh inplace
         adapt = compute_error!(coll, po;
                     verbosity = coll.verbose_mesh_adapt,

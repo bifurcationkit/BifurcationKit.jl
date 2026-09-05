@@ -155,11 +155,11 @@ function _hopf_MA_linear_solver(x, p::𝒯, ω::𝒯, 𝐇::HopfMinimallyAugment
     #           │ σx   σp  σω │
     #           └             ┘
     ########## Resolution of the bordered linear system ########
-    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
+    # J⋅dX      + dpF⋅dp           = du => dX = x1 - dp⋅x2
     # The second equation
-    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
+    #    <σx, dX> +  σp⋅dp + σω⋅dω = du[end-1:end]
     # thus becomes
-    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
+    #   (σp - <σx, x2>)⋅dp + σω⋅dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
     ################### inversion of Jhopf ####################
 
@@ -328,7 +328,7 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     return newton_hopf(prob, hopfpointguess, getparams(br), ζ, ζ★, options; normN, kwargs...)
 end
 
-function update!(𝐏𝐛::HopfMAProblem, iter, state)
+function update!(𝐏𝐛::HopfMAProblem, iter, state::ContState)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
     # we first check that the continuation step was successful

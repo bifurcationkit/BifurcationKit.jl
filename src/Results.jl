@@ -368,7 +368,7 @@ Base.length(br::Branch) = length(br.γ)
 get_solution(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = get_solution(br.γ, ind)
 getprob(br::Branch{Tk, Tp, T}) where {Tk, Tp, T <: ContResult} = getprob(br.γ)
 getkind(br::Branch) = getkind(br.γ)
-getcontparams(br::Branch) = getcontparams(br.γ)
+getcontparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getcontparams(br.γ)
 
 """
 $(TYPEDSIGNATURES)
@@ -378,10 +378,10 @@ Return the bifurcation point of a `::Branch`.
 from(br::Branch) = br.bp
 from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
-_getfirstusertype(br::Branch) = _getfirstusertype(br.γ)
+_getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(br.γ)
 Base.firstindex(br::Branch) = firstindex(br.γ)
 Base.lastindex(br::Branch) = lastindex(br.γ)
-@inline getparams(br::Branch) = getparams(br.γ)
+@inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(br.γ)
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is

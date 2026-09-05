@@ -168,7 +168,7 @@ Solve the linear system associated with the collocation problem for computing pe
     if debug === true
         P = Matrix{𝒯}(LinearAlgebra.I(nⱼ))
         Jtmp = zeros(𝒯, nbcoll + δn + 1, nbcoll)
-        Fₚ = lu(P); Jcop = Fₚ \ J; rhs = Fₚ \ rhs0
+        Fₚ = LA.lu(P); Jcop = Fₚ \ J; rhs = Fₚ \ rhs0
     end
 
     # we build the linear system for the external variables in Jext and rhs_ext

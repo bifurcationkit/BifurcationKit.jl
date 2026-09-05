@@ -134,7 +134,7 @@ function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use the projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
-    @assert length(ζs) == length(ζ★s) "The Gram matrix is not square! G = \n$G $(display(G))"
+    @assert length(ζs) == length(ζ★s) "The Gram matrix is not square!"
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     @debug "[biorthogonalise] Initial Gram matrix" G
     if abs(LA.det(G)) <= 1e-14
@@ -398,7 +398,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     return nothing
 end
 
-get_normal_form1d(br::Branch, ind_bif::Int, Teigvec; kwargs...) = get_normal_form1d(getprob(br), get_contresult(br), ind_bif, Teigvec; kwargs...)
+get_normal_form1d(br::Branch{Tkind, Tprob, <: ContResult}, ind_bif::Int, Teigvec; kwargs...) where {Tkind, Tprob} = get_normal_form1d(getprob(br), get_contresult(br), ind_bif, Teigvec; kwargs...)
 get_normal_form1d(br::ContResult, ind_bif::Int, Teigvec; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif, Teigvec; kwargs...)
 
 """

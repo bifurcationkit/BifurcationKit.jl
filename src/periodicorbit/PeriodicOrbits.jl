@@ -162,7 +162,7 @@ function restore_problem!(wrap::PeriodicOrbitFunctionalSh, x, pars)
     return true
 end
 
-function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state)
+function update!(wrap::Union{PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap}, iter, state::ContState)
     prob = get_discretization(wrap)
     success = converged(state)
     bisection = in_bisection(state)

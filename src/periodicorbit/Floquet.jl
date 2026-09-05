@@ -229,7 +229,7 @@ function MonodromyQaD(sh::PoincareShooting, J::AbstractMatrix, x, p)
     N = div(Nj, M)
 
     if M == 1
-        return I - J
+        return LA.I - J
     end
 
     mono = copy(J[N+1:2N, 1:N])

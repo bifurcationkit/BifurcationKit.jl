@@ -25,14 +25,14 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     N = length(x0)
 
     θ = T(0.5)
-    dotθ = BK.DotTheta(dot)
+    BK.DotTheta(dot)
 
     F(x, p) = @. x^3 - 13 * x - p
     Jac(x, p) = diagm(@. 3x^2 - 13)
 
-    z0 = BorderedArray(x0, p0)
-    τ0 = BorderedArray(rand(T, N), convert(T, 0.2))
-    zpred = BorderedArray(x0, convert(T, 0.3))
+    BorderedArray(x0, p0)
+    BorderedArray(rand(T, N), convert(T, 0.2))
+    BorderedArray(x0, convert(T, 0.3))
     optn  = NewtonPar{T, DefaultLS, DefaultEig}(verbose = false, tol = 1e-6)
     optc  = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = T(0.01), η = 10)
 

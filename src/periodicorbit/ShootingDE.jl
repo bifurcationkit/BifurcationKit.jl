@@ -283,7 +283,6 @@ function generate_ci_problem(shooting::Shooting,
         probsh = Shooting(prob_de, alg, prob_mono, alg, centers; 
         sh_kw...,
         ksh...)
-        @info has_mono_DE(probsh.flow)
     end
     
     if ~use_bordered_array
@@ -291,7 +290,7 @@ function generate_ci_problem(shooting::Shooting,
         cish = reduce(vcat, centers)
         cish = vcat(cish, tspan[2]-tspan[1])
     else
-        cish = BorderedArray(VectorOfArray(deepcopy(centers)), tspan[2]-tspan[1])
+        cish = BorderedArray(RecursiveArrayTools.VectorOfArray(deepcopy(centers)), tspan[2]-tspan[1])
     end
     
     return probsh, cish

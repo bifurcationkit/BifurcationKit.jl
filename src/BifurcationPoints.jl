@@ -369,7 +369,7 @@ end
 type(::Hopf) = :Hopf
 type(::NeimarkSacker) = :NeimarkSacker
 
-Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
+Hopf(x0, p, ω, params, lens, ζ, ζ★, nf) = Hopf(x0, nothing, p, ω, params, lens, ζ, ζ★, nf, real(nf.b1) * real(nf.b3) < 0 ? :SuperCritical : :SubCritical)
 
 function Base.show(io::IO, bp::Hopf)
     plens = get_lens_symbol(bp.lens)

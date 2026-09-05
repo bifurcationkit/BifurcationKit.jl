@@ -577,13 +577,12 @@ $(TYPEDSIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
-function _correct_event_labels(contres::ContResult)
-    if contres.prob.prob isa AbstractMinimallyAugmentedFormulation == false
-        return contres
-    end
-    if contres.prob.prob isa FoldMinimallyAugmentedFormulation
+_correct_event_labels(contres::ContResult) = contres
+
+function _correct_event_labels(contres::ContResult{Tkind}) where {Tkind <: Union{FoldCont, HopfCont}}
+    if Tkind == FoldCont
         conversion = Dict(:bp => :bt, :hopf => :zh, :fold => :cusp, :nd => :nd, :btbp => :bt)
-    elseif contres.prob.prob isa HopfMinimallyAugmentedFormulation
+    elseif Tkind == HopfCont
         conversion = Dict(:bp => :zh, :hopf => :hh, :fold => :nd, :nd => :nd, :ghbt => :bt, :btgh => :bt, :btbp => :bt)
     else
         throw("Error! this should not occur. Please open an issue on the website of BifurcationKit.jl")

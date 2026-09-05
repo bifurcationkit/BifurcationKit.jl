@@ -165,11 +165,11 @@ function NSMALinearSolver(x, p::𝒯, ω::𝒯, 𝐍𝐒::NeimarkSackerMinimally
     #           └             ┘
     # where σx := ∂ₓσ and σp := ∂ₚσ
     ########## Resolution of the bordered linear system ########
-    # J * dX      + dpF * dp           = du => dX = x1 - dp * x2
+    # J⋅dX      + dpF⋅dp           = du => dX = x1 - dp⋅x2
     # The second equation
-    #    <σx, dX> +  σp * dp + σω * dω = du[end-1:end]
+    #    <σx, dX> +  σp⋅dp + σω⋅dω = du[end-1:end]
     # thus becomes
-    #   (σp - <σx, x2>) * dp + σω * dω = du[end-1:end] - <σx, x1>
+    #   (σp - <σx, x2>)⋅dp + σω⋅dω = du[end-1:end] - <σx, x1>
     # This 2 x 2 system is then solved to get (dp, dω)
     ########################## Extraction of function names ########################################
     # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
@@ -234,7 +234,7 @@ get_wrap_po(pb::NSMAProblem) = get_wrap_po(get_formulation(pb))
 # we add :hopfpb in order to use HopfEig
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function update!(𝐏𝐛::NSMAProblem, iter, state)
+function update!(𝐏𝐛::NSMAProblem, iter, state::ContState)
     # it is called to update the Minimally Augmented problem
     # by updating the vectors a, b
     # we first check that the continuation step was successful
