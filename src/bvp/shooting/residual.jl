@@ -11,14 +11,19 @@ function bvp_residual(d_bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, X, p)
     t0, tf = get_time_interval(model)
     M = mesh_size(disc)
 
+    # The time span is fixed by the model (free quantities like tf must be
+    # encoded as constant state components, cf. issues #312/#315)
+    N = n * M
+    length(X) == N || throw(ArgumentError("bvp_residual: expected length(X) == $N, got $(length(X))"))
+
     # Extract shooting points and period
-    Xm = reshape(@view(X[1:n*M]), n, M)
+    Xm = reshape(@view(X[1:N]), n, M)
     T = tf - t0
 
-    # Allocate output
-    out = similar(X)
-    outm = reshape(@view(out[1:n*M]), n, M)
-    
+    # Allocate output; every entry is written by bvp_residual_bare!
+    out = similar(X, N)
+    outm = reshape(out, n, M)
+
     # Core residual computation using BVP-specific po_residual_bare!
     bvp_residual_bare!(d_bvp, outm, Xm, p, T)
     return out
