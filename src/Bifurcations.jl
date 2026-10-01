@@ -58,7 +58,7 @@ function locate_fold!(contres::ContResult, iter::ContIterable, state::ContState)
             step = length(branch) - 1,
             status = :guess,
             δ = (0, 0),
-            precision = -1.,
+            precision = -one(getp(state)),
             interval = (lazy_params[n_br-1].param, lazy_params[n_br-1].param)))
         return true
     else

@@ -32,8 +32,8 @@ function _finaliser_sae!(event_point, it, state, success)
                             p = p)
     if converged(sol)
         _copyto!(event_point.x, sol.u)
-        @reset event_point.param = p
-        @reset event_point.precision = newton_options.tol
+        @reset event_point.param = oftype(event_point.param, p)
+        @reset event_point.precision = oftype(event_point.precision, newton_options.tol)
         state.z.p = p
     end
     event_point
