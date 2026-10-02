@@ -113,6 +113,23 @@ opts_bratu = ContinuationPar(p_min = 0., p_max = 4., ds = 0.05, dsmax = 0.2, max
         @test maximum(br.branch.param) > 2.9
     end
 
+    # the algorithms that clamp a trial point into the box (`project_bounds`) exist only in newer NonlinearSolve
+    projecting = try
+        NewtonRaphson(; linsolve = LUFactorization(), project_bounds = true)
+    catch error
+        error isa MethodError || rethrow()
+        nothing
+    end
+    if !isnothing(projecting)
+        @testset "an algorithm that projects onto the box ends the branch at p_max" begin
+            opts = ContinuationPar(opts_bratu; p_max = 3., max_steps = 80)
+            br = continuation(prob_bratu, PALC(; corrector = NonlinearSolveCorrector(projecting)), opts)
+            @test all(point -> norm(F_bratu(point.x, (λ = point.p,)), Inf) < 1e-8, br.sol)
+            @test all(br.branch.param .<= 3.)
+            @test maximum(br.branch.param) > 2.9
+        end
+    end
+
     @testset "a dense linear solver rejects matrix-free Jacobians" begin
         prob = BifurcationProblem(F_bratu, zeros(5), (λ = 0.1,), (@optic _.λ); J = J_bratu_free)
         @test_throws ArgumentError BK.solve(prob, NonlinearSolveCorrector(NewtonRaphson()), NewtonPar())
