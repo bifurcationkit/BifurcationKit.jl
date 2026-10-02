@@ -1,6 +1,6 @@
 using Test
 using BifurcationKit, LinearAlgebra
-using NonlinearSolve: NewtonRaphson, TrustRegion, JacobianReuse, LUFactorization
+using NonlinearSolve: NewtonRaphson, TrustRegion, BoundedTrustRegion, JacobianReuse, LUFactorization, KrylovJL_GMRES
 const BK = BifurcationKit
 ####################################################################################################
 # Bratu problem u'' + λ exp(u) = 0, which has a fold at λ ≈ 3.51
@@ -14,6 +14,34 @@ function F_bratu(x, p)
         out[i] = (left - 2x[i] + right) / h^2 + p.λ * exp(x[i])
     end
     out
+end
+
+# the tridiagonal Jacobian of `F_bratu`, dense, and as the function `dx -> J dx` of a matrix-free problem
+function J_bratu(x, p)
+    n = length(x)
+    h = 1 / (n + 1)
+    return Tridiagonal(fill(1 / h^2, n - 1), -2 / h^2 .+ p.λ .* exp.(x), fill(1 / h^2, n - 1))
+end
+
+J_bratu_free(x, p) = dx -> J_bratu(x, p) * dx
+
+# `precs` of `KrylovJL_GMRES`: the LU of the dense Jacobian (bordered by PALC), counting its builds
+struct DenseLUPreconditioner
+    bordered::Bool
+    λ::Float64
+    builds::Base.RefValue{Int}
+end
+
+function (preconditioner::DenseLUPreconditioner)(A, ::Any)
+    w = A.u
+    x = w
+    λ = preconditioner.λ
+    if preconditioner.bordered
+        x = w[begin:end-1]
+        λ = w[end]
+    end
+    preconditioner.builds[] += 1
+    return (lu(BK.corrector_matrix(A.p, w, Matrix(J_bratu(x, (; λ))))), I)
 end
 
 prob_bratu = BifurcationProblem(F_bratu, zeros(20), (λ = 0.01,), (@optic _.λ))
@@ -77,8 +105,48 @@ opts_bratu = ContinuationPar(p_min = 0., p_max = 4., ds = 0.05, dsmax = 0.2, max
         @test all(br.branch.param .<= 0.2)
     end
 
-    @testset "matrix-free Jacobians are rejected" begin
-        prob = BifurcationProblem(F_bratu, zeros(5), (λ = 0.1,), (@optic _.λ); J = (x, p) -> (dx -> dx))
+    @testset "an algorithm with box constraints ends the branch at p_max" begin
+        opts = ContinuationPar(opts_bratu; p_max = 3., max_steps = 80)
+        br = continuation(prob_bratu, PALC(; corrector = NonlinearSolveCorrector(BoundedTrustRegion(; linsolve = LUFactorization()))), opts)
+        @test all(point -> norm(F_bratu(point.x, (λ = point.p,)), Inf) < 1e-8, br.sol)
+        @test all(br.branch.param .<= 3.)
+        @test maximum(br.branch.param) > 2.9
+    end
+
+    @testset "a dense linear solver rejects matrix-free Jacobians" begin
+        prob = BifurcationProblem(F_bratu, zeros(5), (λ = 0.1,), (@optic _.λ); J = J_bratu_free)
         @test_throws ArgumentError BK.solve(prob, NonlinearSolveCorrector(NewtonRaphson()), NewtonPar())
+    end
+
+    prob_free = BifurcationProblem(F_bratu, zeros(20), (λ = 0.01,), (@optic _.λ); J = J_bratu_free)
+    free_policy = JacobianReuse(max_age = 50)
+
+    @testset "a matrix-free Newton solve reaches the root of the dense one" begin
+        prob = re_make(prob_free; params = (λ = 1.,), u0 = fill(0.1, 20))
+        sol0 = BK.solve(re_make(prob_bratu; params = (λ = 1.,), u0 = fill(0.1, 20)), Newton(), NewtonPar(tol = 1e-12))
+        builds = Ref(0)
+        alg = NewtonRaphson(; linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(false, 1., builds)), jacobian_reuse = free_policy)
+        sol1 = BK.solve(prob, NonlinearSolveCorrector(alg), NewtonPar(tol = 1e-9))
+        @test BK.converged(sol1)
+        @test norm(sol0.u - sol1.u, Inf) < 1e-7
+        # the preconditioner is built when the policy refreshes it, not at every iterate
+        @test builds[] < sol1.itnewton
+    end
+
+    @testset "matrix-free PALC follows the dense branch, rebuilding the preconditioner only when reuse refreshes it" begin
+        # BifurcationKit's own parts of the continuation (start point, tangent) need an iterative solver too
+        linsolver = GMRESKrylovKit(dim = 20, rtol = 1e-12, atol = 1e-12)
+        opts = ContinuationPar(p_min = 0., p_max = 4., ds = 0.05, dsmax = 0.2, max_steps = 60, detect_bifurcation = 0, newton_options = NewtonPar(; tol = 1e-9, linsolver))
+        builds_fresh, builds_reused = Ref(0), Ref(0)
+        for (builds, reuse_jacobian) in ((builds_fresh, false), (builds_reused, true))
+            # GMRES at the default relative tolerance leaves residuals above `tol`, which BifurcationKit rejects as a failed step
+            alg = NewtonRaphson(; linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(true, 0., builds), atol = 1e-12, rtol = 1e-12), jacobian_reuse = free_policy)
+            corrector = NonlinearSolveCorrector(alg; reuse_jacobian)
+            br = continuation(prob_free, PALC(; corrector, bls = MatrixFreeBLS(linsolver)), opts)
+            @test all(point -> norm(F_bratu(point.x, (λ = point.p,)), Inf) < 1e-8, br.sol)
+            @test any(diff(br.branch.param) .< 0)
+            @test maximum(point -> point.p, br.sol) ≈ maximum(point -> point.p, br_default.sol) atol = 0.02
+        end
+        @test builds_reused[] < builds_fresh[]
     end
 end
