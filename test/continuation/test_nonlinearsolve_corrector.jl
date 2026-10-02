@@ -45,6 +45,15 @@ opts_bratu = ContinuationPar(p_min = 0., p_max = 4., ds = 0.05, dsmax = 0.2, max
         end
     end
 
+    @testset "a Jacobian carried across steps stays on the branch" begin
+        # `reuse_jacobian = true`: the policy of `alg`, not each new step, decides when the Jacobian is rebuilt
+        alg = NewtonRaphson(; linsolve = LUFactorization(), jacobian_reuse = JacobianReuse(max_age = 50))
+        br = continuation(prob_bratu, PALC(; corrector = NonlinearSolveCorrector(alg; reuse_jacobian = true)), opts_bratu)
+        @test all(point -> norm(F_bratu(point.x, (λ = point.p,)), Inf) < 1e-8, br.sol)
+        @test any(diff(br.branch.param) .< 0)
+        @test maximum(point -> point.p, br.sol) ≈ maximum(point -> point.p, br_default.sol) atol = 0.02
+    end
+
     @testset "Newton solve" begin
         prob = re_make(prob_bratu; params = (λ = 1.,), u0 = fill(0.1, 20))
         sol0 = BK.solve(prob, Newton(), NewtonPar(tol = 1e-12))

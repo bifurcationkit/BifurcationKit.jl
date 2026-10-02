@@ -5,9 +5,10 @@ Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/sta
 
 # Constructor
 
-    NonlinearSolveCorrector(alg; solve_kwargs...)
+    NonlinearSolveCorrector(alg; reuse_jacobian = false, solve_kwargs...)
 
 - `alg` is any `NonlinearSolve` algorithm that accepts a user Jacobian, for example `NewtonRaphson(; linsolve = LUFactorization())` or `TrustRegion()`. The Jacobian reuse (`jacobian_reuse = JacobianReuse(...)`) and the linear solver (`linsolve`, with its preconditioners) are options of `alg`.
+- `reuse_jacobian = true` carries the Jacobian, its age and its factorization from one corrector to the next (`reinit!(cache, u0; p, reuse_jacobian = true)`), so the reuse policy of `alg` decides when to rebuild it across continuation steps, not only within one. It needs a NonlinearSolve.jl whose `reinit!` accepts `reuse_jacobian`. With the default `false`, every corrector starts from a fresh Jacobian.
 - `solve_kwargs` are passed to `NonlinearSolve.init`. The tolerance `tol` and the number of iterations `max_iterations` always come from `NewtonPar`, not from here.
 
 # Usage
@@ -23,7 +24,7 @@ Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/sta
 
 The bordered system `[F(x, p); N(x, p)] = 0` of PALC (`N` is the arclength constraint) is solved in `(x, p)`, with the Jacobian `[J ∂ₚF; ∇N]` assembled from `jacobian(prob, x, p)` (which must be an `AbstractMatrix`), a forward difference for `∂ₚF` and the exact `∇N`. It is rebuilt only when `alg` asks for it, which is what makes `jacobian_reuse` effective, whereas BifurcationKit's Newton rebuilds it at every iteration.
 
-One NonlinearSolve cache is built at the first corrector and `reinit!` at the next ones, so what `alg` keeps in it between solves (factorizations, preconditioners, the Jacobian) survives from one continuation step to the next. Use a new `NonlinearSolveCorrector` for a new problem.
+One NonlinearSolve cache is built at the first corrector and `reinit!` at the next ones, which keeps its allocations; whether the Jacobian survives from one step to the next is `reuse_jacobian`. Use a new `NonlinearSolveCorrector` for a new problem.
 
 !!! warning "Differences with the default corrector"
     - the vector `x` must be an `AbstractVector` and the Jacobian an `AbstractMatrix`.
@@ -39,17 +40,19 @@ struct NonlinearSolveCorrector{Talg, Tkw <: NamedTuple} <: AbstractNonLinearSolv
     alg::Talg
     "keyword arguments passed to `NonlinearSolve.init`"
     solve_kwargs::Tkw
+    "carry the Jacobian from one corrector to the next (`reinit!(...; reuse_jacobian)`)"
+    reuse_jacobian::Bool
     "cache of the bordered problem of PALC, built at the first corrector"
     palc_cache::Base.RefValue{Any}
     "cache of the problem at fixed parameter (Natural, `solve`), built at the first corrector"
     fixed_cache::Base.RefValue{Any}
 end
 
-function NonlinearSolveCorrector(alg; solve_kwargs...)
+function NonlinearSolveCorrector(alg; reuse_jacobian::Bool = false, solve_kwargs...)
     if isnothing(Base.get_extension(@__MODULE__, :NonlinearSolveExt))
         error("`NonlinearSolveCorrector` requires the package NonlinearSolve.jl. Please run `using NonlinearSolve` first.")
     end
-    return NonlinearSolveCorrector(alg, NamedTuple(solve_kwargs), Ref{Any}(nothing), Ref{Any}(nothing))
+    return NonlinearSolveCorrector(alg, NamedTuple(solve_kwargs), reuse_jacobian, Ref{Any}(nothing), Ref{Any}(nothing))
 end
 
 # implemented in `ext/NonlinearSolveExt`

@@ -85,7 +85,12 @@ module NonlinearSolveExt
         key = CacheKey(options.tol, options.max_iterations, length(u0))
         if !isnothing(slot[]) && first(slot[]) == key
             cache = last(slot[])
-            SciMLBase.reinit!(cache, u0; p = ctx)
+            # only passed when asked, so a NonlinearSolve without the keyword works with the default
+            if corrector.reuse_jacobian
+                SciMLBase.reinit!(cache, u0; p = ctx, reuse_jacobian = true)
+            else
+                SciMLBase.reinit!(cache, u0; p = ctx)
+            end
         else
             f = SciMLBase.NonlinearFunction{false}(residual; jac = jacobian)
             problem = SciMLBase.NonlinearProblem(f, u0, ctx)
