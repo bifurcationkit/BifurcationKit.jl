@@ -69,7 +69,7 @@ end
 # fold points recorded in the problem's float type
 let
     for T in (Float64, Float32)
-        prob = BK.BifurcationProblem((u, p) -> @. u^3 - u - (p.λ - 1), T[-1.3247179], (λ = zero(T),), (@optic _.λ))
+        prob = BK.BifurcationProblem((u, p) -> (@. u^3 - u - (p.λ - 1)), T[-1.3247179], (λ = zero(T),), (@optic _.λ))
         opts = ContinuationPar(ds = T(0.05), dsmax = T(0.1), p_min = zero(T), p_max = T(2), max_steps = 400, detect_fold = true, detect_bifurcation = 0, newton_options = NewtonPar(tol = 100eps(T)))
         br = continuation(prob, PALC(), opts)
         folds = filter(sp -> sp.type == :fold, br.specialpoint)
