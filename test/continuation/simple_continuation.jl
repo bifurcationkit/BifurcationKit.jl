@@ -65,7 +65,7 @@ let
         @test length(folds) == 2
         @test all(sp -> sp.param isa T && sp.precision isa T, folds)
         # a Newton-refined saved point keeps the branch's float type
-        br = continuation(prob, PALC(), ContinuationPar(opts; detect_fold = false); event = BK.SaveAtEvent((0.25,), use_newton = true))
+        br = continuation(prob, PALC(), ContinuationPar(opts; detect_fold = false, detect_event = 2); event = BK.SaveAtEvent((0.25,), use_newton = true))
         saved = filter(sp -> sp.type == :save, br.specialpoint)
         @test length(saved) == 1
         @test only(saved).param isa T && only(saved).param ≈ T(0.25)
