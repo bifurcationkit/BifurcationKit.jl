@@ -181,6 +181,8 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     stopcontinuation::Bool = false
     "perform step size adaptation."
     stepsizecontrol::Bool = true
+    "factor by which step size control multiplies `ds` after the current step. Set by the corrector when the algorithm decides it (for example `PALC` with `step_acceptance`), `nothing` otherwise."
+    step_factor::Union{Nothing, T} = nothing
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
@@ -218,6 +220,7 @@ function Base.copy(state::ContState)
         ds               = state.ds,
         stopcontinuation = state.stopcontinuation,
         stepsizecontrol  = state.stepsizecontrol,
+        step_factor      = state.step_factor,
         n_unstable          = state.n_unstable,
         n_imag              = state.n_imag,
         convergedEig        = state.convergedEig,
@@ -240,6 +243,7 @@ function Base.copyto!(dest::ContState, src::ContState)
         dest.ds               = src.ds
         dest.stopcontinuation = src.stopcontinuation
         dest.stepsizecontrol  = src.stepsizecontrol
+        dest.step_factor      = src.step_factor
         dest.n_unstable       = src.n_unstable
         dest.n_imag           = src.n_imag
         dest.convergedEig     = src.convergedEig
