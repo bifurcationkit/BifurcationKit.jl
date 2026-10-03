@@ -2,28 +2,39 @@ abstract type AbstractTravelingWaveDiscretization end
 """
 $(TYPEDEF)
 
-This composite type implements a functional for freezing symmetries in order, for example, to compute traveling waves (TW). Note that you can freeze many symmetries, not just one, by passing many Lie generators. `TWModel` is a discretization: the residual of the frozen system is obtained by wrapping `pb` into a `TravellingWave` functional, `residual(TravellingWave(pb), x, par)`, which computes:
+Composite type implementing the freezing of continuous symmetries to compute,
+for example, traveling waves (TW). Several symmetries can be frozen at once by
+passing many Lie generators. `TWModel` is a discretization: the residual of the
+frozen system is obtained by wrapping `pb` into a `TravellingWave` functional,
+`residual(TravellingWave(pb), x, par)`, which computes:
 
-                    ┌                   ┐
-                    │ f(x, par) - s⋅∂⋅x │
-                    │   <x - u₀, ∂⋅u₀>  │
-                    └                   ┘
+                    ┌                                      ┐
+                    │ f(x, par) - ∑ᵢ sᵢ ⋅ ∂ᵢ ⋅ x            │
+                    │   ⟨x - u₀, ∂ᵢ ⋅ u₀⟩,  i = 1, …, N_g   │
+                    └                                      ┘
+
+The unknowns are `(u, s₁, …, s_{N_g})`, *i.e.* the state `u` with the speeds `sᵢ` appended at the end. The reference solution `u₀` (and the vectors `∂ᵢ ⋅ u₀`) is updated during continuation, see [`updatesection!`](@ref).
 
 # Arguments
-- `prob` bifurcation problem with continuous symmetries
-- `∂::Tuple` tuple of Lie generators. In effect, each of these is an (differential) operator which can be specified as a (sparse) matrix or as an operator implementing `LinearAlgebra.mul!`.
+- `prob_vf` bifurcation problem with continuous symmetries, must be an `AbstractBifurcationProblem`
+- `∂::Tuple` tuple of Lie generators. Each of these is a (differential) operator, *e.g.* a (sparse) matrix or an operator implementing `LinearAlgebra.mul!`.
 - `u₀` reference solution
 
-# Additional Constructor(s)
+# Keyword arguments
+- `DAE = fill(true, length(∂))` vector of flags, one per symmetry. If `DAE[i] = true`, the i-th phase condition is `⟨u - u₀, ∂ᵢ ⋅ u₀⟩ = 0` (phase fixed relative to the reference solution); if `false`, it reduces to `⟨u, ∂ᵢ ⋅ u₀⟩ = 0`.
+- `jacobian = AutoDiff()` type of jacobian used in the Newton iterations, one of:
+    - `AutoDiff()`: dense jacobian via ForwardDiff
+    - `FiniteDifferences()`: dense finite differences
+    - `FullLU()`: (sparse) assembly of the frozen jacobian using the jacobian of the underlying problem `prob_vf`
+    - `MatrixFree()`: matrix-free evaluation of the jacobian-vector product
+    - `AutoDiffMF()`: matrix-free jacobian-vector product via ForwardDiff
+- `update_section_every_step = 1`: the reference solution `u₀` is updated every `update_section_every_step` steps during continuation.
 
-    pb = TWModel(prob, ∂, u₀; kw...)
-
-This simplified call handles the case where a single symmetry needs to be frozen.
-
-# Useful function
-
-- `updatesection!(pb::TWModel, u0)` updates the reference solution of the problem using `u0`.
-- `nb_constraints(::TWModel)` number of constraints (or Lie generators)
+# Useful functions
+- `updatesection!(pb::TWModel, U₀)` updates the reference solution using `U₀` (state with speeds appended).
+- `nb_constraints(::TWModel)` number of constraints (or Lie generators).
+- `newton(pb::TWModel, orbitguess, options)` finds a frozen solution.
+- `continuation(pb::TWModel, orbitguess, alg, contParams)` continues the wave.
 
 # Internal fields
 $(TYPEDFIELDS)
@@ -37,10 +48,11 @@ $(TYPEDFIELDS)
     u₀::Tu0
     "generator ⋅ u₀"
     ∂u₀::TDu0 = (∂ * u₀,)
+    "Vector of flags, one per symmetry. When `true`, the corresponding phase condition is `⟨u - u₀, ∂⋅u₀⟩ = 0` (phase fixed relative to the reference solution `u₀`); when `false`, it reduces to `⟨u, ∂⋅u₀⟩ = 0`."
     DAE::Vector{Bool} = fill(true, nc)
     "[Internal] number of constraints."
     nc::Int = 1
-    "Jacobian for the full problem."
+    "Type of jacobian for the frozen problem, one of `AutoDiff()`, `FiniteDifferences()`, `FullLU()`, `MatrixFree()` or `AutoDiffMF()`."
     jacobian::Tj = AutoDiff()
     "Update the section every `update_section_every_step` step during continuation."
     update_section_every_step::UInt = 1
@@ -133,8 +145,7 @@ function _jvp_VF_plus_D!(pb,
                         ds::Tuple,
                         pars,
                         ::Val{add_ds} = Val(true)) where {add_ds}
-    J = jacobian(pb.prob_vf, u, pars)
-    out .= apply(J, du)
+    out .= dF(pb.prob_vf, u, pars, du)
     applyD!(pb, out, s, du)
     if add_ds
         applyD!(pb, out, ds, u)
@@ -215,6 +226,7 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
+isinplace(tw::WrapTW) = false
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
