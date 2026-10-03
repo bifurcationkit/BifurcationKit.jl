@@ -99,6 +99,10 @@ Returns a variable containing the parameters to affect the `continuation` algori
     @assert ~(detect_bifurcation > 1 && save_eig_every_step > 1) "We must at least save all eigenvalues for detection of bifurcation points. Please use save_eig_every_step = 1 or detect_bifurcation = 1."
 end
 
+# The keyword defaults are Float64 literals, so e.g. a Float32 `ds` leaves the positional
+# arguments mixed: convert them to the float type of `newton_options`.
+ContinuationPar(dsmin, dsmax, ds, a, p_min, p_max, max_steps, newton_options::NewtonPar{T, S, E}, args...) where {T, S, E} = ContinuationPar{T, S, E}(dsmin, dsmax, ds, a, p_min, p_max, max_steps, newton_options, args...)
+
 @inline compute_eigenelements(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline compute_eigenvalues(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline save_eigenvectors(cp::ContinuationPar) = cp.save_eigenvectors
