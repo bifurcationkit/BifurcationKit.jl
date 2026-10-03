@@ -61,14 +61,18 @@ Update `state` metadata (`converged`, `itnewton`, `itlinear`) from the solution 
 and save the previous solution `state.z` into `state.z_old` for step-size control / fallback
 when converged. Does **not** overwrite `state.z` with `sol.u` — that is left to the caller
 (e.g., to allow mesh adaptation or field-specific updates first).
+
+A converged `sol` that the algorithm refuses (`accepted = false`, for example a step that failed
+an acceptance test of [`PALC`](@ref)) is recorded as not converged and `state.z_old` is kept.
 """
 function _update_field_but_not_solution!(state::AbstractContinuationState,
-                                         sol::NonLinearSolution)
-    state.converged = sol.converged
+                                         sol::NonLinearSolution;
+                                         accepted::Bool = true)
+    state.converged = sol.converged && accepted
     state.itnewton  = sol.itnewton
     state.itlinear  = sol.itlineartot
     # record previous solution
-    if converged(sol)
+    if converged(state)
         _copyto!(state.z_old, state.z)
     end
 end
@@ -102,13 +106,19 @@ function _step_size_control!(state, contparams::ContinuationPar, verbosity)
         (verbosity > 0) && printstyled("Halving ds to $(dsnew)\n", color = :red)
 
     else
-        dsnew = _step_growth(ds, contparams.a, contparams.newton_options.max_iterations, state.itnewton)
+        # the corrector may have decided the growth itself, otherwise control the Newton iteration count
+        if isnothing(state.step_factor)
+            dsnew = _step_growth(ds, contparams.a, contparams.newton_options.max_iterations, state.itnewton)
+        else
+            dsnew = ds * state.step_factor
+        end
     end
 
     dsnew = clamp_ds(dsnew, contparams)
 
     # we do not stop the continuation
     state.ds = dsnew
+    state.step_factor = nothing
     state.stopcontinuation = false
     return
 end
