@@ -3,7 +3,10 @@ struct NormalisedDot{Tdot}
 end
 (dt::NormalisedDot)(x, y) = dt.dot(x, y) / length(x)
 
-__scaling_function_dot_palc(x) = VI.scale!(x, 1/length(x))
+# 1 / length(x) in the scalar type of x: `1 / length(x)` is a Float64 and promotes Float32 states
+_inverse_length(x) = inv(convert(VI.scalartype(x), length(x)))
+
+__scaling_function_dot_palc(x) = VI.scale!(x, _inverse_length(x))
 
 """
 $(TYPEDEF)
