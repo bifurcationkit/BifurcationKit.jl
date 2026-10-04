@@ -226,7 +226,7 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
-isinplace(tw::WrapTW) = false
+isinplace(tw::TWModel) = false
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
