@@ -266,7 +266,21 @@ end
 function _jacobian_tw(prob::WrapTW, ::FiniteDifferences, x, p)
     return finite_differences(z -> residual(prob, z, p), x)
 end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apply_mass_matrix(wrap::WrapTW, x, p, dx) = apply(getmassmatrix(wrap, x, p), dx)
 
+function getmassmatrix(wrap::WrapTW, x::AbstractVector, p)
+    twprob = get_discretization(wrap)
+    # @error "getmassmatrix(::WrapTW"
+    Mass = getmassmatrix(twprob.prob_vf, x, p)
+    if Mass isa IdentityOperator
+        N = length(x)
+        return SPA.spdiagm(vcat(ones(N - twprob.nc), zeros(twprob.nc)))
+    else
+        return SPA.blockdiag(Mass, SPA.sparse(LA.I, twprob.nc, twprob.nc))
+    end
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function newton(tw::TWModel, 
                 orbitguess, 
                 optn::NewtonPar; 
