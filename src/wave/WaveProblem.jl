@@ -266,7 +266,23 @@ end
 function _jacobian_tw(prob::WrapTW, ::FiniteDifferences, x, p)
     return finite_differences(z -> residual(prob, z, p), x)
 end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# these are wrappers for MTW (e.g. Trapeze)
+has_trivial_mass_mastrix(::WrapTW) = false
+apply_mass_matrix(wrap::WrapTW, x, p, dx) = apply(getmassmatrix(wrap, x, p), dx)
 
+function getmassmatrix(wrap::WrapTW, x::AbstractVector, p)
+    twprob = get_discretization(wrap)
+    # @error "getmassmatrix(::WrapTW"
+    Mass = getmassmatrix(twprob.prob_vf, x, p)
+    if Mass isa IdentityOperator
+        N = length(x)
+        return SPA.spdiagm(vcat(ones(N - twprob.nc), zeros(twprob.nc)))
+    else
+        return SPA.blockdiag(Mass, SPA.sparse(LA.I, twprob.nc, twprob.nc))
+    end
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function newton(tw::TWModel, 
                 orbitguess, 
                 optn::NewtonPar; 
@@ -278,7 +294,7 @@ function newton(tw::TWModel,
     return solve(wrap, Newton(), optn; kwargs...,)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitProblem};
+function re_make(prob::AbstractWaveProblem;
                 u0 = prob.u0,
                 lens = getlens(prob),
                 params = getparams(prob),
