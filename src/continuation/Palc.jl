@@ -86,7 +86,7 @@ Additional information is available on the [website](https://bifurcationkit.gith
 $(TYPEDFIELDS)
 
 """
-@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl, Tangle <: Union{Nothing, Real, Symbol}, Tcap <: Real} <: AbstractContinuationAlgorithm
+@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl} <: AbstractContinuationAlgorithm
     "Tangent (predictor), must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, etc."
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
@@ -99,17 +99,12 @@ $(TYPEDFIELDS)
     dotθ::Tdot = DotTheta()
     "Step control by the quality of the corrector, a [`CorrectorQuality`](@ref) or `nothing` (the default). With `nothing`, `ds` is controlled by the number of Newton iterations, see the parameter `a` of [`ContinuationPar`](@ref)."
     step_control::Tctl = nothing
-    "Reject a step whose tangent at the new point makes an angle of more than the limit `max_angle` (radians) with the tangent at the previous point. `nothing`, the default, accepts any angle. A number is the limit. `:derived` (it needs `step_control` with a `max_distance`) takes the largest turn that a predictor of the step's length `h = |ds|` can follow within `max_distance`, `min(2 max_distance / h, max_angle_cap)`: it misses a curve that turns by `θ` by about `h θ / 2`, so a larger turn lands the corrector where the predictor cannot reach on this branch, which is a jump. The angle is that between consecutive tangents, bounded by Allgower and Georg, *Numerical Continuation Methods*: `angmax = π / 3` in Program 3 (Euler-Newton with Broyden updates) and `amax = 30°` in Program 4 (bifurcation handling); Program 1 has no angle test. A `Bordered` predictor computes the new tangent for the test and the next predictor takes it, so its direction follows the previous one and the angle is at most `π / 2`. Any other predictor compares the chord of the step, which stands for the new tangent (for `Secant`, the angle between consecutive chords). `π / 2` is the orientation test of Gambit (`PathTracer::TracePath`)."
-    max_angle::Tangle = nothing
-    "Largest limit, in radians, of `max_angle = :derived`."
-    max_angle_cap::Tcap = π / 2
+    "Orientation test of Gambit's path tracer (`PathTracer::TracePath`, src/solvers/path/path.cc): reject a step whose new tangent has a negative dot product with the previous one (they point more than `π / 2` apart). A `Bordered` tangent is then oriented like Gambit's, by the sign of the determinant of the bordered matrix (the orientation of the curve: `det([J dFdl; τ'])` is positive), fixed to the direction of travel at the start, instead of by alignment with the previous tangent, which cannot flip. It needs a `MatrixBLS` solver. A `Secant` tangent is the chord, which is compared with the previous tangent. Off by default."
+    orientation_check::Bool = false
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
-    @assert ~(max_angle isa Real) || 0 < max_angle <= π "max_angle must lie in (0, π] radians"
-    @assert ~(max_angle isa Symbol) || max_angle === :derived "max_angle must be a number, `nothing` or `:derived`"
-    @assert ~(max_angle === :derived) || (step_control isa CorrectorQuality && ~isnothing(step_control.max_distance)) "max_angle = :derived needs a step_control with a max_distance"
-    @assert 0 < max_angle_cap <= π "max_angle_cap must lie in (0, π] radians"
+    @assert ~orientation_check || tangent isa Union{Secant, Bordered} "orientation_check needs a Secant or Bordered tangent"
 end
 get_bordered_linsolver(alg::PALC) = alg.bls
 getdot(alg::PALC) = alg.dotθ
@@ -147,6 +142,9 @@ function initialize!(state::AbstractContinuationState,
     gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
     _copyto!(state.z, state.z_old)
+    if alg.orientation_check
+        initial_orientation!(state, iter, alg)
+    end
     # then update the predictor state.z_pred
     update_predictor!(state, iter, alg, nrm)
 end
@@ -184,15 +182,6 @@ update_predictor!(state::AbstractContinuationState,
                   ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
-"""
-$(TYPEDSIGNATURES)
-
-The largest angle in radians between consecutive tangents that a step of size `ds` may have, or `nothing` for any: `max_angle` itself when it is a number, and for `:derived` the turn `2 max_distance / |ds|` that a predictor of that length follows within `control.max_distance`, at most `cap`.
-"""
-turn_limit(::Nothing, cap::Real, control, ds::Real) = nothing
-turn_limit(max_angle::Real, cap::Real, control, ds::Real) = max_angle
-turn_limit(::Symbol, cap::Real, control::CorrectorQuality, ds::Real) = min(2 * control.max_distance / abs(ds), cap)
-
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
@@ -206,10 +195,10 @@ function corrector!(state::AbstractContinuationState,
     end
     # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there
     control = alg.step_control
-    max_angle = alg.max_angle
+    orientation_check = alg.orientation_check
     if ~stepsizecontrol(state)
         control = nothing
-        max_angle = nothing
+        orientation_check = false
     end
     sol, quality = _newton_palc(it, state, getdot(alg);
                                 linearbdalgo = alg.bls,
@@ -220,12 +209,11 @@ function corrector!(state::AbstractContinuationState,
 
     accepted = converged(sol)
     next_tangent = nothing
-    limit = turn_limit(max_angle, alg.max_angle_cap, control, state.ds)
-    if accepted && ~isnothing(limit)
+    if accepted && orientation_check
         cosine, next_tangent = turn_cosine(alg.tangent, state, it, sol.u, getdot(alg))
-        accepted = cosine >= cos(limit)
+        accepted = cosine >= 0
         if ~accepted && it.verbosity > 0
-            printstyled("Step rejected: the angle between the tangents is $(acos(clamp(cosine, -1, 1))) rad, more than $limit\n", color = :red)
+            printstyled("Step rejected: the new tangent points away from the previous one (dot product $cosine)\n", color = :red)
         end
     end
 

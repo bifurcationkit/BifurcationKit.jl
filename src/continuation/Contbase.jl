@@ -63,7 +63,7 @@ when converged. Does **not** overwrite `state.z` with `sol.u` — that is left t
 (e.g., to allow mesh adaptation or field-specific updates first).
 
 A converged `sol` that the algorithm refuses (`accepted = false`, for example a step that failed
-the angle test `max_angle` of [`PALC`](@ref)) is recorded as not converged and `state.z_old` is kept.
+the orientation test of [`PALC`](@ref)) is recorded as not converged and `state.z_old` is kept.
 """
 function _update_field_but_not_solution!(state::AbstractContinuationState,
                                          sol::NonLinearSolution;

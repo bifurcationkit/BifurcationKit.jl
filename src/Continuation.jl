@@ -185,6 +185,8 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     step_factor::Union{Nothing, T} = nothing
     "tangent at the new solution, which the corrector computed to measure the turn of the tangent (`PALC` with `max_angle` and a `Bordered` predictor). The next predictor takes it instead of computing it again. `nothing` otherwise."
     next_tangent::Union{Nothing, Tv} = nothing
+    "sign (±1) of the determinant orientation of a `Bordered` tangent relative to the direction of travel, set at the start (`PALC` with `orientation_check`)."
+    orientation::Int = 1
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
@@ -224,6 +226,7 @@ function Base.copy(state::ContState)
         stepsizecontrol  = state.stepsizecontrol,
         step_factor      = state.step_factor,
         next_tangent     = isnothing(state.next_tangent) ? nothing : _copy(state.next_tangent),
+        orientation      = state.orientation,
         n_unstable          = state.n_unstable,
         n_imag              = state.n_imag,
         convergedEig        = state.convergedEig,
@@ -248,6 +251,7 @@ function Base.copyto!(dest::ContState, src::ContState)
         dest.stepsizecontrol  = src.stepsizecontrol
         dest.step_factor      = src.step_factor
         dest.next_tangent     = isnothing(src.next_tangent) ? nothing : _copy(src.next_tangent)
+        dest.orientation      = src.orientation
         dest.n_unstable       = src.n_unstable
         dest.n_imag           = src.n_imag
         dest.convergedEig     = src.convergedEig

@@ -73,10 +73,10 @@ let
 
     # both are off by default
     @test PALC().step_control === nothing
-    @test PALC().max_angle === nothing
+    @test ~PALC().orientation_check
 
     for tangent in (Secant(), Bordered())
-        br = continuation(make_problem(Float64), PALC(; tangent, step_control = CorrectorQuality(), max_angle = π / 2), options(Float64))
+        br = continuation(make_problem(Float64), PALC(; tangent, step_control = CorrectorQuality(), orientation_check = true), options(Float64))
         # it follows the branch through both folds
         @test count(sp -> sp.type == :fold, br.specialpoint) == 2
         @test all(point -> norm(F(point.x, (λ = point.p,)), Inf) < 1e-7, br.sol)
@@ -89,7 +89,7 @@ let
     end
 
     # without them ds follows the Newton iteration count, which grows it faster than max_growth
-    legacy = continuation(make_problem(Float64), PALC(step_control = nothing, max_angle = nothing), options(Float64))
+    legacy = continuation(make_problem(Float64), PALC(step_control = nothing, orientation_check = false), options(Float64))
     @test count(sp -> sp.type == :fold, legacy.specialpoint) == 2
     legacy_ds = abs.(legacy.branch.ds)
     @test any(legacy_ds[2:(end - 1)] .> 1.1 .* legacy_ds[begin:(end - 2)])
@@ -112,82 +112,71 @@ let
     end
 end
 ####################################################################################################
-# the angle test: the angle between the tangents at both ends of a step
+# orientation_check: determinant orientation of a Bordered tangent, rejection on a negative dot product
 let
     F(u, p) = @. u^2 + p.λ^2 - 1
     prob = BifurcationProblem(F, [sqrt(0.75)], (λ = -0.5,), (@optic _.λ))
     options = ContinuationPar(ds = 0.3, dsmin = 1e-6, dsmax = 0.3, p_min = -2., p_max = 2., max_steps = 30, detect_fold = false, detect_bifurcation = 0, newton_options = NewtonPar(tol = 1e-10))
     dotθ = BK.DotTheta()
 
-    point(φ) = BorderedArray([cos(φ)], sin(φ))
-    unit_tangent(φ) = BorderedArray([-sin(φ) / sqrt(0.5)], cos(φ) / sqrt(0.5))
-    # on the circle u^2 + λ^2 = 1, in the norm of the arc length constraint (θ = 1/2, one component), the angle between the tangents at two points is the angle between the points
+    point(φ::Float64) = BorderedArray([cos(φ)], sin(φ))
+    unit_tangent(φ::Float64) = BorderedArray([-sin(φ) / sqrt(0.5)], cos(φ) / sqrt(0.5))
+    # in the norm of the arc length constraint (θ = 1/2) the angle between tangents is the angle between points
     φ0 = -π / 6
-    for tangent in (Secant(), Bordered())
-        iter = ContIterable(prob, PALC(; tangent, max_angle = π / 2), options)
-        state = iterate(iter)[1]
-        state.z = point(φ0)
-        state.τ = unit_tangent(φ0)
-        state.ds = 0.3
-        # a Bordered tangent is the tangent at the new point, a Secant one stands for it by the chord
-        turn = if tangent isa Bordered
-            0.4
-        else
-            0.2
-        end
-        cosine, next = BK.turn_cosine(tangent, state, iter, point(φ0 + 0.4), dotθ)
-        @test cosine ≈ cos(turn) rtol = 1e-6
-        @test isnothing(next) == (tangent isa Secant)
-        if tangent isa Bordered
-            @test next.u ≈ unit_tangent(φ0 + 0.4).u rtol = 1e-6
-            @test next.p ≈ unit_tangent(φ0 + 0.4).p rtol = 1e-6
-        end
-        # a radial chord is at right angles to the tangent
-        if tangent isa Secant
-            @test first(BK.turn_cosine(tangent, state, iter, BorderedArray([1.3cos(φ0)], 1.3sin(φ0)), dotθ)) ≈ 0 atol = 1e-12
-            # a negative ds walks along `-τ`
-            state.ds = -0.3
-            @test first(BK.turn_cosine(tangent, state, iter, point(φ0 - 0.4), dotθ)) ≈ cos(0.2) rtol = 1e-6
-            @test first(BK.turn_cosine(tangent, state, iter, point(φ0 + 0.4), dotθ)) ≈ -cos(0.2) rtol = 1e-6
-        end
+    iter = ContIterable(prob, PALC(; tangent = Bordered(), orientation_check = true), options)
+    state = iterate(iter)[1]
+    state.z = point(φ0)
+    state.τ = unit_tangent(φ0)
+    state.ds = 0.3
+    state.orientation = 1
+    # the determinant orientation is that of the curve, the same on both sides of a quarter turn, where alignment with the previous tangent
+    # would reverse it
+    for φ in (φ0 + 0.4, φ0 + 2.0, φ0 - 2.0)
+        aligned = BK.bordered_tangent(state, iter, point(φ), dotθ)
+        oriented = BK.bordered_tangent(state, iter, point(φ), dotθ; by_determinant = true)
+        @test oriented.u ≈ unit_tangent(φ).u rtol = 1e-6
+        @test oriented.p ≈ unit_tangent(φ).p rtol = 1e-6
+        @test dotθ(state.τ, aligned, 0.5) ≥ 0
+        cosine, next = BK.turn_cosine(Bordered(), state, iter, point(φ), dotθ)
+        @test cosine ≈ cos(φ - φ0) atol = 1e-6
+        @test next.u ≈ oriented.u
+    end
+    # the orientation sign flips the whole field
+    state.orientation = -1
+    @test BK.bordered_tangent(state, iter, point(φ0 + 0.4), dotθ; by_determinant = true).p ≈ -unit_tangent(φ0 + 0.4).p rtol = 1e-6
+    # a Secant tangent is the chord: its cosine is that of consecutive chords, and the sign of ds is the direction
+    state.orientation = 1
+    for ds in (0.3, -0.3)
+        state.ds = ds
+        cosine, next = BK.turn_cosine(Secant(), state, iter, point(φ0 + sign(ds) * 0.4), dotθ)
+        @test cosine ≈ cos(0.2) rtol = 1e-6
+        @test isnothing(next)
+        @test first(BK.turn_cosine(Secant(), state, iter, point(φ0 - sign(ds) * 0.4), dotθ)) ≈ -cos(0.2) rtol = 1e-6
     end
 
-    # on this circle consecutive tangents turn by 0.44 rad (Bordered) and consecutive chords by 0.46 rad (Secant) with ds = 0.3:
-    # π / 4 refuses no step, either way round, and the Bordered tangent computed for the test is the one the next predictor takes
-    for tangent in (Secant(), Bordered()), ds in (0.3, -0.3)
+    # the start sets the sign of the orientation to the direction of travel, whichever way ds points
+    for ds in (0.3, -0.3), tangent in (Secant(), Bordered())
         plain = continuation(prob, PALC(; tangent), ContinuationPar(options; ds))
-        checked = continuation(prob, PALC(; tangent, max_angle = π / 4), ContinuationPar(options; ds))
-        @test checked.branch.param == plain.branch.param
+        checked = continuation(prob, PALC(; tangent, orientation_check = true), ContinuationPar(options; ds))
+        @test checked.branch.param ≈ plain.branch.param rtol = 1e-10
         @test length(checked.branch) == 31
     end
 
-    # a threshold under the angle of a step refuses it and halves ds until the tangents are close enough:
-    # the same 30 steps cover less of the circle
-    for tangent in (Secant(), Bordered())
-        plain = continuation(prob, PALC(; tangent), options)
-        tight = continuation(prob, PALC(; tangent, max_angle = 1e-2), options)
-        @test sum(abs, diff(tight.branch.param)) < sum(abs, diff(plain.branch.param)) / 2
-    end
-
-    # the derived limit: the turn a predictor of length |ds| follows within max_distance, at most the cap
-    control = CorrectorQuality(; max_distance = 0.05)
-    @test BK.turn_limit(:derived, π / 2, control, 0.1) ≈ 1
-    @test BK.turn_limit(:derived, π / 2, control, -0.1) ≈ 1
-    @test BK.turn_limit(:derived, π / 2, control, 0.01) == π / 2
-    @test BK.turn_limit(:derived, 0.3, control, 0.1) == 0.3
-    @test BK.turn_limit(0.7, π / 2, control, 0.1) == 0.7
-    @test isnothing(BK.turn_limit(nothing, π / 2, control, 0.1))
-    @test_throws AssertionError PALC(max_angle = :derived)
-    @test_throws AssertionError PALC(max_angle = :derived, step_control = CorrectorQuality())
-    @test_throws AssertionError PALC(max_angle = :other)
-    @test_throws AssertionError PALC(max_angle = 4.0)
-    @test_throws AssertionError PALC(max_angle_cap = 0.0)
-    # a distance that allows every step here (limit above the circle's turn) refuses none, a small cap refuses them
-    for tangent in (Secant(), Bordered())
-        plain = continuation(prob, PALC(; tangent, step_control = CorrectorQuality(; max_distance = 1.0, max_contraction = nothing)), options)
-        loose = continuation(prob, PALC(; tangent, max_angle = :derived, step_control = CorrectorQuality(; max_distance = 1.0, max_contraction = nothing)), options)
-        @test loose.branch.param == plain.branch.param
-        capped = continuation(prob, PALC(; tangent, max_angle = :derived, max_angle_cap = 1e-2, step_control = CorrectorQuality(; max_distance = 1.0, max_contraction = nothing)), options)
-        @test sum(abs, diff(capped.branch.param)) < sum(abs, diff(plain.branch.param)) / 2
+    # a corrector landing past a quarter turn is refused with the check and accepted without it
+    # (a Secant chord that makes progress cannot turn back, so only Bordered is tested)
+    far = point(φ0 + 2.0)
+    for (check, turns_back) in ((true, true), (false, false))
+        let alg = PALC(; tangent = Bordered(), orientation_check = check)
+            iter = ContIterable(prob, alg, options)
+            state = iterate(iter)[1]
+            state.z = point(φ0)
+            state.τ = unit_tangent(φ0)
+            state.orientation = 1
+            state.z_pred = far
+            state.ds = dotθ(far.u .- state.z.u, state.τ.u, far.p - state.z.p, state.τ.p, 0.5)
+            BK.corrector!(state, iter, alg)
+            @test BK.converged(state) == ~turns_back
+            @test (state.z.p ≈ far.p) == ~turns_back
+        end
     end
 end
