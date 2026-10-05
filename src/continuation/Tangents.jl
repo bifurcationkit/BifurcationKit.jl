@@ -156,7 +156,11 @@ Set `state.orientation` so that the determinant orientation of a `Bordered` tang
 function initial_orientation!(state::AbstractContinuationState, iter::AbstractContinuationIterable, alg::PALC{<:Bordered})
     state.orientation = 1
     τ = bordered_tangent(state, iter, state.z, getdot(alg); by_determinant = true)
-    state.orientation = convert(Int, sign(getdot(alg)(state.τ.u, τ.u, state.τ.p, τ.p, getθ(iter))))
+    alignment = getdot(alg)(state.τ.u, τ.u, state.τ.p, τ.p, getθ(iter))
+    state.orientation = 1
+    if alignment < 0
+        state.orientation = -1
+    end
     return state
 end
 
