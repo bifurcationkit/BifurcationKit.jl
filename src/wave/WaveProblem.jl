@@ -89,11 +89,12 @@ end
 
 function Base.show(io::IO, tw::TWModel)
     println(io, "┌─ Travelling wave functional")
-    println(io, "├─ type          : Vector{", VI.scalartype(tw.u₀), "}")
-    println(io, "├─ # constraints : ", tw.nc)
-    println(io, "├─ lens          : ", get_lens_symbol(getlens(tw.prob_vf)))
-    println(io, "├─ jacobian      : ", tw.jacobian)
-    println(io, "└─ DAE           : ", tw.DAE)
+    println(io, "├─ type           : Vector{", VI.scalartype(tw.u₀), "}")
+    println(io, "├─ # constraints  : ", tw.nc)
+    println(io, "├─ lens           : ", get_lens_symbol(getlens(tw.prob_vf)))
+    println(io, "├─ update section : ", tw.update_section_every_step)
+    println(io, "├─ jacobian       : ", tw.jacobian)
+    println(io, "└─ DAE            : ", tw.DAE)
 end
 
 # we put type information to ensure the user pass a correct u0
@@ -226,7 +227,7 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
-isinplace(tw::WrapTW) = false
+isinplace(tw::TWModel) = false
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
@@ -245,7 +246,7 @@ function update!(wrap::WrapTW, iter, state::ContState)
     step = state.step
     z = getsolution(state)
     if success && mod_counter(step, update_section_every_step) && bisection == false
-        @debug "[Periodic orbit] update section"
+        @debug "[Wave problem] update section"
         # Trapeze and Shooting need the parameters for section update:
         updatesection!(prob, z.u)
     end
@@ -265,7 +266,23 @@ end
 function _jacobian_tw(prob::WrapTW, ::FiniteDifferences, x, p)
     return finite_differences(z -> residual(prob, z, p), x)
 end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# these are wrappers for MTW (e.g. Trapeze)
+has_trivial_mass_mastrix(::WrapTW) = false
+apply_mass_matrix(wrap::WrapTW, x, p, dx) = apply(getmassmatrix(wrap, x, p), dx)
 
+function getmassmatrix(wrap::WrapTW, x::AbstractVector, p)
+    twprob = get_discretization(wrap)
+    # @error "getmassmatrix(::WrapTW"
+    Mass = getmassmatrix(twprob.prob_vf, x, p)
+    if Mass isa IdentityOperator
+        N = length(x)
+        return SPA.spdiagm(vcat(ones(N - twprob.nc), zeros(twprob.nc)))
+    else
+        return SPA.blockdiag(Mass, SPA.sparse(LA.I, twprob.nc, twprob.nc))
+    end
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function newton(tw::TWModel, 
                 orbitguess, 
                 optn::NewtonPar; 
@@ -277,6 +294,16 @@ function newton(tw::TWModel,
     return solve(wrap, Newton(), optn; kwargs...,)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function re_make(prob::AbstractWaveProblem;
+                u0 = prob.u0,
+                lens = getlens(prob),
+                params = getparams(prob),
+                record_from_solution = prob.recordFromSolution,
+                plot_solution = plot_solution(prob))
+    disc = re_make(get_discretization(prob); params)
+    setproperties(prob; disc, u0, plotSolution = plot_solution, recordFromSolution = record_from_solution)
+end
+
 function record_from_solution(iter::ContIterable{TravellingWaveCont},
                               state::AbstractContinuationState)
     probTW = getprob(iter)
@@ -340,7 +367,7 @@ function continuation(prob::TWModel,
                     kwargs...)
     # define the mass matrix for the eigensolver
     N = length(orbitguess)
-    B = SPA.spdiagm(vcat(ones(N-1), zeros(prob.nc)))
+    B = SPA.spdiagm(vcat(ones(N - prob.nc), zeros(prob.nc)))
     # convert eigsolver to generalised one
     old_eigsolver = contParams.newton_options.eigsolver
     contParamsWave = @set contParams.newton_options.eigsolver = convert_to_wave_eigen_solver(eigsolver, old_eigsolver, B)

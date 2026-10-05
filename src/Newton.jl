@@ -28,9 +28,9 @@ $(TYPEDFIELDS)
     "Active linesearch."
     linesearch::Bool = false
     "damping."
-    α::T = convert(typeof(tol), 1.0)
+    α::T = oftype(tol, 1.0)
     "minimal damping."
-    αmin::T = convert(typeof(tol), 0.001)
+    αmin::T = oftype(tol, 0.001)
     @assert 0 <= α <= 1
     @assert 0 <= tol "Tolerance must be non negative."
 end
