@@ -113,10 +113,6 @@ module BifurcationKit
     include("periodicorbit/codim2/BifurcationPoints.jl")
     include("periodicorbit/codim2/NormalForms.jl")
 
-    # wave problem
-    include("wave/WaveProblem.jl")
-    include("wave/EigSolver.jl")
-
     # BVP problem
     include("bvp/BVP.jl")
 
@@ -128,6 +124,10 @@ module BifurcationKit
     include("dae/LinearSolver.jl")
     include("dae/codim2/MinAugHopf.jl")
     include("dae/codim2/MinAugFold.jl")
+
+    # wave problem
+    include("wave/WaveProblem.jl")
+    include("wave/EigSolver.jl")
 
     # plotting
     include("plotting/Utils.jl")

@@ -156,7 +156,7 @@ let
     BK.applyD(tw_model, rand(2n))
 
     # we test update section
-    BK.updatesection!(tw_model, tw_model.u₀)
+    BK.updatesection!(tw_model, vcat(tw_model.u₀,0))
 end
 ####################################################################################################
 # test newton method

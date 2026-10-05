@@ -505,7 +505,7 @@ for (op, at, kd) in (
             @inline get_discretization(pb::$op) = pb.disc
             @inline isinplace(pb::$op) = isinplace(get_discretization(pb))
             residual(pb::$op, x, p) = residual($kd(get_discretization(pb)), x, p)
-            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), $kd, o, x, p)
+            residual!(pb::$op, o, x, p) = residual!($kd(get_discretization(pb)), o, x, p)
             @inline getdelta(pb::$op) = getdelta(get_discretization(pb))
         end
     end
@@ -700,10 +700,12 @@ end
 
 function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitProblem};
                 u0 = prob.u0,
-                params = getparams(prob)
+                params = getparams(prob),
+                record_from_solution = prob.recordFromSolution,
+                plot_solution = plot_solution(prob)
                 )
     disc = re_make(get_discretization(prob); params)
-    new_prob = setproperties(prob; disc, u0)
+    new_prob = setproperties(prob; disc, u0, plotSolution = plot_solution, recordFromSolution = record_from_solution)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # simple trait for dispatching on user passed functions

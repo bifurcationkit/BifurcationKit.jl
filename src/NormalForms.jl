@@ -1156,10 +1156,10 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
-    eigRes = br.eig
+    eig_data = br.eig[bifpt.idx]
 
     # eigenvalue
-    λ = eigRes[bifpt.idx].eigenvals[bifpt.ind_ev]
+    λ = eig_data.eigenvals[bifpt.ind_ev]
     ω = imag(λ)
     if ω < 0 # important for a positive period in the predictor
         ω = abs(ω); λ = conj(λ)
@@ -1168,7 +1168,7 @@ function hopf_normal_form(prob::AbstractBifurcationProblem,
 
     # right eigenvector
     ζ = if haseigenvector(br) 
-            _copy(geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev))
+            _copy(geteigenvector(options.eigsolver, eig_data.eigenvecs, bifpt.ind_ev))
         else
             if start_with_eigen_type
                 # we recompute the eigen-elements if there were not saved during the computation of the branch

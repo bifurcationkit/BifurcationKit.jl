@@ -218,12 +218,12 @@ br_pok2 = continuation(Trapeze(poTrap; jacobian = BK.FullLU()),
 # It is applied to the full bordered jacobian `Jpo`: `ldiv!` only touches the leading cyclic
 # components (slices x_1,...,x_{M-1}) and leaves the closure slice x_M and the period unchanged.
 using FFTW
-Jpo = @time BK.po_jacobian_sparse(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
+# Jpo = @time BK.po_jacobian_sparse(poTrap, orbitguess_f, @set par_cgl.r = r_hopf - 0.01); # 0.5sec
 
 Prec = BK.POTrapCirculantPrec(poTrap, orbitguess_f, (@set par_cgl.r = r_hopf - 0.01), ref=:average);
 # Prec = @time ilu(Jpo, τ = 0.005);
 
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Prec, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, restart = 40, maxiter = 50, Pl = Prec, log=true)
 # ls = KrylovLSInplace(;n=size(Jpo,1), m=size(Jpo,1), is_inplace=false, Pl = Prec, verbose = 0, ldiv = true, rtol = 1e-3);
 ls(Jpo, rand(size(Jpo,1)))
 
@@ -237,7 +237,7 @@ plot();BK.plot_periodic_potrap(outpo_f.u, M, Nx, Ny; ratio = 2);title!("")
 opt_po = @set opt_po.eigsolver = EigKrylovKit(tol = 1e-3, x₀ = rand(2n), verbose = 3, dim = 40)
 # opt_po = @set opt_po.eigsolver = EigArpack(; tol = 1e-3, v0 = rand(2n))
 # opt_po = @set opt_po.eigsolver = EigArnoldiMethod(; tol = 1e-3, x₀ = rand(2n))
-opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 1.2, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 3)
+opts_po_cont = ContinuationPar(dsmin = 0.0001, dsmax = 0.03, ds = 0.001, p_max = 1.5, max_steps = 250, plot_every_step = 3, newton_options = (@set opt_po.linsolver = ls), nev = 5, tol_stability = 1e-5, detect_bifurcation = 3)
 
 br_po = @time continuation(poTrapMF, outpo_f.u, PALC(), opts_po_cont;
         verbosity = 3,
@@ -338,7 +338,7 @@ out_ = similar(sol0f)
 
 probInplace = BifurcationProblem(Fcgl!, vec(sol0), (@set par_cgl.r = r_hopf - 0.01), (@optic _.r); J = dFcgl!, inplace = true)
 
-ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, N = size(Jpo,1), restart = 40, maxiter = 50, Pl = Prec, log=true)
+ls = GMRESIterativeSolvers(verbose = false, reltol = 1e-3, restart = 40, maxiter = 50, Pl = Prec, log=true)
 ls(Jpo, rand(ls.N))
 
 ls0 = GMRESIterativeSolvers(N = 2Nx*Ny, reltol = 1e-9)#, Pl = lu(I + par_cgl.Δ))
