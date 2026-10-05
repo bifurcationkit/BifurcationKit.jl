@@ -10,10 +10,11 @@ The step is rejected, as if the corrector had not converged (`ds` is halved and 
 - a later Newton step contracts too slowly: ``d_k / (d_{k-1} + \\text{tol}\\,\\eta) >`` `max_contraction`. The corrector is stopped at once. `tol` is `newton_options.tol`. The rate has no units, so its default `0.6` needs no tuning.
 
 A test is switched off with `nothing`, in which case it neither rejects a step nor slows `ds`.
+With `max_growth = nothing` the tests only reject steps and `ds` follows the Newton iteration count after every accepted step, as without step control.
 
 # Step size
 
-After an accepted step, `ds` is multiplied by `1 / deceleration` with
+After an accepted step (and unless `max_growth = nothing`), `ds` is multiplied by `1 / deceleration` with
 
 `deceleration = max(1 / max_growth, max_growth * sqrt(d₁ / max_distance), max_growth * sqrt(c_k / max_contraction) for k ≥ 2)`
 
@@ -30,24 +31,24 @@ $(TYPEDFIELDS)
 
     CorrectorQuality(; max_distance = nothing, max_contraction = 0.6, max_growth = 1.1, η = 0.1)
 
-Gambit's values are `max_distance = 0.4` (in log probabilities), `max_contraction = 0.6`, `max_growth = 1.1` and `η = 0.1`.
+`max_growth = nothing` leaves the step size to the Newton iteration count. Gambit's values are `max_distance = 0.4` (in log probabilities), `max_contraction = 0.6`, `max_growth = 1.1` and `η = 0.1`.
 """
 struct CorrectorQuality{T <: Real}
     "Largest allowed length of the first Newton step, or `nothing` for no test."
     max_distance::Union{Nothing, T}
     "Largest allowed contraction rate of the Newton steps after the first, or `nothing` for no test."
     max_contraction::Union{Nothing, T}
-    "Largest factor by which `ds` grows in one step, also the factor in the deceleration. Must exceed 1."
-    max_growth::T
+    "Largest factor by which `ds` grows in one step, also the factor in the deceleration, or `nothing` to leave the step size to the Newton iteration count. Must exceed 1."
+    max_growth::Union{Nothing, T}
     "Offset `tol * η` in the contraction rate, which avoids dividing by a vanishing Newton step."
     η::T
 
-    function CorrectorQuality{T}(max_distance::Union{Nothing, Real}, max_contraction::Union{Nothing, Real}, max_growth::Real, η::Real) where {T <: Real}
+    function CorrectorQuality{T}(max_distance::Union{Nothing, Real}, max_contraction::Union{Nothing, Real}, max_growth::Union{Nothing, Real}, η::Real) where {T <: Real}
         @assert _is_positive(max_distance) "max_distance must be positive or nothing"
         @assert _is_positive(max_contraction) "max_contraction must be positive or nothing"
-        @assert max_growth > 1 "max_growth must exceed 1"
+        @assert isnothing(max_growth) || max_growth > 1 "max_growth must exceed 1 or be nothing"
         @assert η >= 0 "η must be non-negative"
-        return new{T}(_as(T, max_distance), _as(T, max_contraction), convert(T, max_growth), convert(T, η))
+        return new{T}(_as(T, max_distance), _as(T, max_contraction), _as(T, max_growth), convert(T, η))
     end
 end
 
@@ -56,7 +57,7 @@ _is_positive(x::Real) = x > 0
 _as(::Type{T}, ::Nothing) where {T <: Real} = nothing
 _as(::Type{T}, x::Real) where {T <: Real} = convert(T, x)
 
-function CorrectorQuality(; max_distance::Union{Nothing, Real} = nothing, max_contraction::Union{Nothing, Real} = 0.6, max_growth::Real = 1.1, η::Real = 0.1)
+function CorrectorQuality(; max_distance::Union{Nothing, Real} = nothing, max_contraction::Union{Nothing, Real} = 0.6, max_growth::Union{Nothing, Real} = 1.1, η::Real = 0.1)
     given = filter(!isnothing, (max_distance, max_contraction, max_growth, η))
     T = float(promote_type(map(typeof, given)...))
     return CorrectorQuality{T}(max_distance, max_contraction, max_growth, η)
@@ -77,7 +78,12 @@ struct StepQuality{T <: Real}
 end
 
 """The quality of a corrector that has not taken a Newton step: it asks for the largest growth, `1 / deceleration = max_growth`."""
-StepQuality(control::CorrectorQuality{T}) where {T <: Real} = StepQuality{T}(zero(T), inv(control.max_growth), 0)
+StepQuality(control::CorrectorQuality{T}) where {T <: Real} = StepQuality{T}(zero(T), _initial_deceleration(control.max_growth), 0)
+
+_initial_deceleration(max_growth::Real) = inv(max_growth)
+_initial_deceleration(::Nothing) = 0
+_deceleration(max_growth::Real, ratio::Real) = max_growth * sqrt(ratio)
+_deceleration(::Nothing, ratio::Real) = 0
 
 """
 $(TYPEDSIGNATURES)
@@ -119,13 +125,25 @@ function observe(control::CorrectorQuality{T}, quality::StepQuality{T}, distance
     else
         ratio = _load(control.max_contraction, contraction_rate(control, quality, distance, tol))
     end
-    deceleration = max(quality.deceleration, control.max_growth * sqrt(ratio))
+    deceleration = max(quality.deceleration, _deceleration(control.max_growth, ratio))
     return StepQuality{T}(distance, deceleration, quality.steps + 1)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Factor by which an accepted step multiplies `ds`.
+Factor by which an accepted step multiplies `ds`, or `nothing` when `control` leaves the step size to the Newton iteration count.
 """
-growth_factor(quality::StepQuality)::typeof(quality.deceleration) = inv(quality.deceleration)
+function growth_factor(control::CorrectorQuality, quality::StepQuality{T})::Union{Nothing, T} where {T <: Real}
+    if isnothing(control.max_growth)
+        return nothing
+    end
+    return inv(quality.deceleration)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Whether the growth of `ds` after the step is limited by `max_growth`: no test asked for a deceleration beyond the lowest one, `1 / max_growth`.
+"""
+growth_capped(control::CorrectorQuality, quality::StepQuality) = quality.deceleration <= _initial_deceleration(control.max_growth)

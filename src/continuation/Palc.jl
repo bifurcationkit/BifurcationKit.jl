@@ -225,7 +225,8 @@ function corrector!(state::AbstractContinuationState,
         _copyto!(state.z, sol.u)
         state.next_tangent = next_tangent
         if ~isnothing(control)
-            state.step_factor = growth_factor(quality)
+            state.step_factor = growth_factor(control, quality)
+            @debug "step growth" _group = :step_control step_factor = state.step_factor capped = ~isnothing(control.max_growth) && growth_capped(control, quality)
         end
     end
     return true

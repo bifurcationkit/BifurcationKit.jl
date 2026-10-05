@@ -12,14 +12,14 @@ let
 
     quality = BK.StepQuality(control)
     # no Newton step: the largest growth
-    @test BK.growth_factor(quality) ≈ 1.1
+    @test BK.growth_factor(control, quality) ≈ 1.1
 
     # first step: rejected from max_distance on
     @test ~BK.rejects_step(control, quality, 0.39, tol)
     @test BK.rejects_step(control, quality, 0.4, tol)
     # a short first step still allows the largest growth, a long one slows it down by sqrt(d / max_distance) * max_growth
-    @test BK.growth_factor(BK.observe(control, quality, 0.1, tol)) ≈ 1.1
-    @test BK.growth_factor(BK.observe(control, quality, 0.3, tol)) ≈ inv(1.1 * sqrt(0.3 / 0.4))
+    @test BK.growth_factor(control, BK.observe(control, quality, 0.1, tol)) ≈ 1.1
+    @test BK.growth_factor(control, BK.observe(control, quality, 0.3, tol)) ≈ inv(1.1 * sqrt(0.3 / 0.4))
 
     # later steps: rejected when d_k / (d_{k-1} + tol η) exceeds max_contraction
     after_first = BK.observe(control, quality, 0.3, tol)
@@ -36,7 +36,15 @@ let
     off = CorrectorQuality(max_distance = nothing, max_contraction = nothing)
     @test ~BK.rejects_step(off, BK.StepQuality(off), 1e6, tol)
     @test ~BK.rejects_step(off, BK.observe(off, BK.StepQuality(off), 1e6, tol), 1e12, tol)
-    @test BK.growth_factor(BK.observe(off, BK.observe(off, BK.StepQuality(off), 1e6, tol), 1e12, tol)) ≈ 1.1
+    @test BK.growth_factor(off, BK.observe(off, BK.observe(off, BK.StepQuality(off), 1e6, tol), 1e12, tol)) ≈ 1.1
+    # the growth is capped by max_growth when no test asked for more deceleration
+    @test BK.growth_capped(control, quality)
+    @test BK.growth_capped(control, BK.observe(control, quality, 0.1, tol))
+    @test ~BK.growth_capped(control, BK.observe(control, quality, 0.3, tol))
+    # max_growth = nothing leaves ds to the Newton iteration count: no factor, tests still reject
+    unfactored = CorrectorQuality(max_distance = 0.4, max_growth = nothing)
+    @test BK.growth_factor(unfactored, BK.observe(unfactored, BK.StepQuality(unfactored), 0.3, tol)) === nothing
+    @test BK.rejects_step(unfactored, BK.StepQuality(unfactored), 0.4, tol)
     # the distance test is off alone
     no_distance = CorrectorQuality()
     @test ~BK.rejects_step(no_distance, BK.StepQuality(no_distance), 1e6, tol)
@@ -93,6 +101,12 @@ let
     @test count(sp -> sp.type == :fold, legacy.specialpoint) == 2
     legacy_ds = abs.(legacy.branch.ds)
     @test any(legacy_ds[2:(end - 1)] .> 1.1 .* legacy_ds[begin:(end - 2)])
+
+    # with max_growth = nothing ds follows the Newton iteration count again, the tests still refuse steps
+    unfactored = continuation(make_problem(Float64), PALC(step_control = CorrectorQuality(; max_distance = 0.4, max_growth = nothing)), options(Float64))
+    @test count(sp -> sp.type == :fold, unfactored.specialpoint) == 2
+    unfactored_ds = abs.(unfactored.branch.ds)
+    @test any(unfactored_ds[2:(end - 1)] .> 1.1 .* unfactored_ds[begin:(end - 2)])
 
     # a short distance to the curve limits the step, the other test off
     only_distance(max_distance) = CorrectorQuality(; max_distance, max_contraction = nothing)
