@@ -52,16 +52,17 @@ let
     @test_throws AssertionError CorrectorQuality(max_contraction = -1.0)
 end
 ####################################################################################################
-# the sign of the dot product between the tangent and the chord of a step, in the norm of the arc length constraint
+# the cosine of the angle between the tangent and the chord of a step, in the norm of the arc length constraint
 let
     dotθ = BK.DotTheta()
     τ = BorderedArray([1.0], 0.0)
     z = BorderedArray([0.0], 0.0)
-    @test BK.chord_dot(dotθ, τ, z, BorderedArray([2.0], 0.0), 0.5) > 0
-    @test BK.chord_dot(dotθ, τ, z, BorderedArray([-2.0], 0.0), 0.5) < 0
-    @test BK.chord_dot(dotθ, τ, z, BorderedArray([0.0], 3.0), 0.5) ≈ 0 atol = 1e-15
+    @test BK.chord_cosine(dotθ, τ, z, BorderedArray([2.0], 0.0), 0.5) ≈ 1
+    @test BK.chord_cosine(dotθ, τ, z, BorderedArray([-2.0], 0.0), 0.5) ≈ -1
+    @test BK.chord_cosine(dotθ, τ, z, BorderedArray([0.0], 3.0), 0.5) ≈ 0 atol = 1e-15
+    @test BK.chord_cosine(dotθ, τ, z, BorderedArray([1.0], 1.0), 0.5) ≈ cos(π / 4)
     # an empty chord does not turn
-    @test BK.chord_dot(dotθ, τ, z, z, 0.5) == 0
+    @test BK.chord_cosine(dotθ, τ, z, z, 0.5) == 1
 end
 ####################################################################################################
 # continuation with the step control: u^3 - u - (p - 1) = 0 has two folds, p ≈ 0.615 and p ≈ 1.385
@@ -72,10 +73,10 @@ let
 
     # both are off by default
     @test PALC().step_control === nothing
-    @test ~PALC().orientation_check
+    @test PALC().max_angle === nothing
 
     for tangent in (Secant(), Bordered())
-        br = continuation(make_problem(Float64), PALC(; tangent, step_control = CorrectorQuality(), orientation_check = true), options(Float64))
+        br = continuation(make_problem(Float64), PALC(; tangent, step_control = CorrectorQuality(), max_angle = π / 2), options(Float64))
         # it follows the branch through both folds
         @test count(sp -> sp.type == :fold, br.specialpoint) == 2
         @test all(point -> norm(F(point.x, (λ = point.p,)), Inf) < 1e-7, br.sol)
@@ -88,7 +89,7 @@ let
     end
 
     # without them ds follows the Newton iteration count, which grows it faster than max_growth
-    legacy = continuation(make_problem(Float64), PALC(step_control = nothing, orientation_check = false), options(Float64))
+    legacy = continuation(make_problem(Float64), PALC(step_control = nothing, max_angle = nothing), options(Float64))
     @test count(sp -> sp.type == :fold, legacy.specialpoint) == 2
     legacy_ds = abs.(legacy.branch.ds)
     @test any(legacy_ds[2:(end - 1)] .> 1.1 .* legacy_ds[begin:(end - 2)])
@@ -111,32 +112,41 @@ let
     end
 end
 ####################################################################################################
-# the orientation test: the sign of the dot product between the direction of travel and the chord of a step
+# the angle test: the angle between the direction of travel and the chord of a step
 let
     F(u, p) = @. u^2 + p.λ^2 - 1
     prob = BifurcationProblem(F, [sqrt(0.75)], (λ = -0.5,), (@optic _.λ))
     options = ContinuationPar(ds = 0.3, dsmin = 1e-6, dsmax = 0.3, p_min = -2., p_max = 2., max_steps = 30, detect_fold = false, detect_bifurcation = 0, newton_options = NewtonPar(tol = 1e-10))
     dotθ = BK.DotTheta()
 
-    iter = ContIterable(prob, PALC(orientation_check = true), options)
+    iter = ContIterable(prob, PALC(max_angle = π / 2), options)
     state = iterate(iter)[1]
     state.τ = BorderedArray([0.0], 1.0)
     state.z = BorderedArray([0.5], 0.0)
     ahead = BorderedArray([0.5], 0.3)
     behind = BorderedArray([0.5], -0.3)
+    sideways = BorderedArray([0.8], 0.0)
     state.ds = 0.3
-    @test BK.orientation_dot(state, iter, ahead, dotθ) > 0
-    @test BK.orientation_dot(state, iter, behind, dotθ) < 0
+    @test BK.chord_angle_cosine(state, iter, ahead, dotθ) ≈ 1
+    @test BK.chord_angle_cosine(state, iter, behind, dotθ) ≈ -1
+    @test BK.chord_angle_cosine(state, iter, sideways, dotθ) ≈ 0 atol = 1e-15
     # a negative ds walks along `-τ`
     state.ds = -0.3
-    @test BK.orientation_dot(state, iter, ahead, dotθ) < 0
-    @test BK.orientation_dot(state, iter, behind, dotθ) > 0
+    @test BK.chord_angle_cosine(state, iter, ahead, dotθ) ≈ -1
+    @test BK.chord_angle_cosine(state, iter, behind, dotθ) ≈ 1
 
-    # with a good corrector the test never refuses a step, either way round and with either predictor
+    # consecutive chords of this circle turn by 0.46 rad (Secant) or 0.44 rad (Bordered) with ds = 0.3:
+    # π / 4 refuses no step, either way round and with either predictor
     for tangent in (Secant(), Bordered()), ds in (0.3, -0.3)
         plain = continuation(prob, PALC(; tangent), ContinuationPar(options; ds))
-        checked = continuation(prob, PALC(; tangent, orientation_check = true), ContinuationPar(options; ds))
+        checked = continuation(prob, PALC(; tangent, max_angle = π / 4), ContinuationPar(options; ds))
         @test checked.branch.param == plain.branch.param
         @test length(checked.branch) == 31
     end
+
+    # a threshold under the angle of a step refuses it and halves ds until the chord is straight enough:
+    # the same 30 steps cover less of the circle
+    plain = continuation(prob, PALC(), options)
+    tight = continuation(prob, PALC(; max_angle = 1e-2), options)
+    @test sum(abs, diff(tight.branch.param)) < sum(abs, diff(plain.branch.param)) / 2
 end

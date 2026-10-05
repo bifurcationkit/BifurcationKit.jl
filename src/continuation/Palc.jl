@@ -46,21 +46,25 @@ _get_apply_dot(dt::DotTheta) = dt.apply!
 """
 $(TYPEDSIGNATURES)
 
-Dot product, in the norm of `dt`, between the tangent `τ` at `z` and the chord from `z` to `znew`. Only its sign matters.
+Cosine, in the norm of `dt`, of the angle between the tangent `τ` at `z` and the chord from `z` to `znew`. An empty chord has cosine 1: it does not turn.
 """
-function chord_dot(dt::DotTheta, τ::BorderedArray, z::BorderedArray, znew::BorderedArray, θ::Real)
+function chord_cosine(dt::DotTheta, τ::BorderedArray, z::BorderedArray, znew::BorderedArray, θ::Real)
     Δ = _copy(znew)
     Δ = VI.add!!(Δ, z, -one(θ))
-    return dt(τ.u, Δ.u, τ.p, Δ.p, θ)
+    length_chord = dt(Δ.u, Δ.p, θ)
+    if iszero(length_chord)
+        return one(length_chord)
+    end
+    return dt(τ.u, Δ.u, τ.p, Δ.p, θ) / (dt(τ.u, τ.p, θ) * length_chord)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Dot product, in the norm of `dt`, between the direction of travel `sign(ds) τ` at `state.z` and the chord to `znew`. The chord stands for the tangent at `znew`, whose sign the tangent predictors take from the previous one (a `Bordered` tangent computed there cannot oppose it), and which a `Secant` predictor computes from the chord. A negative value means that the continuation turns back on itself, as in the orientation test of Gambit (`PathTracer::TracePath`).
+Cosine of the angle between the direction of travel `sign(ds) τ` at `state.z` and the chord to `znew`. The chord stands for the tangent at `znew`, whose sign the tangent predictors take from the previous one (a `Bordered` tangent computed there cannot oppose it), and which a `Secant` predictor computes from the chord. With a `Bordered` predictor the angle of the chord is half the angle between the tangents at its ends, with a `Secant` one (whose tangent is the previous chord) the whole angle between consecutive chords. An angle past `π / 2` means that the continuation turns back on itself, as in the orientation test of Gambit (`PathTracer::TracePath`).
 """
-function orientation_dot(state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
-    return sign(state.ds) * chord_dot(dt, state.τ, state.z, znew, getθ(iter))
+function chord_angle_cosine(state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
+    return sign(state.ds) * chord_cosine(dt, state.τ, state.z, znew, getθ(iter))
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # equation of the arc length constraint
@@ -90,7 +94,7 @@ Additional information is available on the [website](https://bifurcationkit.gith
 $(TYPEDFIELDS)
 
 """
-@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl} <: AbstractContinuationAlgorithm
+@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl, Tangle <: Union{Nothing, Real}} <: AbstractContinuationAlgorithm
     "Tangent (predictor), must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, etc."
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
@@ -103,8 +107,8 @@ $(TYPEDFIELDS)
     dotθ::Tdot = DotTheta()
     "Step control by the quality of the corrector, a [`CorrectorQuality`](@ref) or `nothing` (the default). With `nothing`, `ds` is controlled by the number of Newton iterations, see the parameter `a` of [`ContinuationPar`](@ref)."
     step_control::Tctl = nothing
-    "Reject a step whose converged point lies behind the step: the chord from the previous point has a negative dot product with the tangent there, which means that the continuation turns back on itself (Gambit's orientation test). Off by default."
-    orientation_check::Bool = false
+    "Reject a step whose chord from the previous point makes an angle with the tangent there of more than `max_angle` radians, or `nothing`, the default, to accept any angle. The chord stands for the tangent at the new point: its angle is half the angle between the tangents at its ends for a `Bordered` predictor, and the whole angle between consecutive chords for a `Secant` one, whose tangent is the previous chord. `π / 2` is the orientation test of Gambit (the continuation turns back on itself). Allgower and Georg, *Numerical Continuation Methods*, bound the angle between consecutive tangents: `angmax = π / 3` in Program 3 (Euler-Newton with Broyden updates) and `amax = 30°` in Program 4 (bifurcation handling); Program 1 has no angle test."
+    max_angle::Tangle = nothing
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
@@ -189,10 +193,10 @@ function corrector!(state::AbstractContinuationState,
     end
     # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there
     control = alg.step_control
-    orientation_check = alg.orientation_check
+    max_angle = alg.max_angle
     if ~stepsizecontrol(state)
         control = nothing
-        orientation_check = false
+        max_angle = nothing
     end
     sol, quality = _newton_palc(it, state, getdot(alg);
                                 linearbdalgo = alg.bls,
@@ -202,11 +206,11 @@ function corrector!(state::AbstractContinuationState,
                                 kwargs...)
 
     accepted = converged(sol)
-    if accepted && orientation_check
-        orientation = orientation_dot(state, it, sol.u, getdot(alg))
-        accepted = orientation >= 0
+    if accepted && ~isnothing(max_angle)
+        cosine = chord_angle_cosine(state, it, sol.u, getdot(alg))
+        accepted = cosine >= cos(max_angle)
         if ~accepted && it.verbosity > 0
-            printstyled("Step rejected: the tangent at the new point is opposite to the previous one (dot product $orientation)\n", color = :red)
+            printstyled("Step rejected: the angle between its chord and the tangent is $(acos(clamp(cosine, -1, 1))) rad, more than $max_angle\n", color = :red)
         end
     end
 
