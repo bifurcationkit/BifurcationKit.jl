@@ -3,10 +3,12 @@ abstract type AbstractOneParamCont <: AbstractContinuationKind end
 abstract type AbstractTwoParamCont <: AbstractContinuationKind end
 abstract type AbstractTwoParamPeriodicOrbitCont <: AbstractTwoParamCont end
 
-struct EquilibriumCont <: AbstractOneParamCont end
+abstract type AbstractOneParamContEquilibrium <: AbstractOneParamCont end
+
+struct EquilibriumCont <: AbstractOneParamContEquilibrium end
 struct PeriodicOrbitCont <: AbstractOneParamCont end
-struct BoundaryValueProblemCont <: AbstractOneParamCont end
-struct TravellingWaveCont <: AbstractOneParamCont end
+struct BoundaryValueProblemCont <: AbstractOneParamContEquilibrium end
+struct TravellingWaveCont <: AbstractOneParamContEquilibrium end
 
 struct FoldCont <: AbstractTwoParamCont end
 struct HopfCont <: AbstractTwoParamCont end

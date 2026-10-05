@@ -40,26 +40,38 @@ Returns a variable containing the parameters to affect the `continuation` algori
 
 !!! tip "Mutating"
     For performance reasons, we decided to use an immutable structure to hold the parameters. One can use the package `Accessors.jl` to drastically simplify the mutation of different fields. See tutorials for more examples.
+
+!!! tip "Lower precision (Float32)"
+    You can switch to a lower floating point precision by passing `ds`
+    with the appropriate type; all floating point fields (and the default
+    `newton_options`) are then converted to match the type of `ds`:
+    ```julia
+    # Float32 continuation parameters
+    ContinuationPar(ds = 0.01f0, dsmax = 0.1f0)
+    ```
+    Note that the eigen solver must support the chosen precision:
+    `DefaultEig()` follows the type of the Jacobian, whereas `EigArpack`
+    only supports `Float64`.
 """
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation
-    dsmin::T    = 1e-4
-    dsmax::T    = 1e-1
     ds::T       = 1e-2
+    dsmin::T    = oftype(ds, 1e-4)
+    dsmax::T    = oftype(ds, 1e-1)
 
     # parameters for continuation
-    a::T    = 0.5 # aggressiveness factor for step size adaptation
+    a::T    = oftype(ds, 0.5) # aggressiveness factor for step size adaptation
 
     # parameters bound
-    p_min::T    = -1.0
-    p_max::T    =  1.0
+    p_min::T    = oftype(ds, -1.0)
+    p_max::T    = oftype(ds,  1.0)
 
     # maximum number of continuation steps
     max_steps::Int64  = 400
 
     # Newton solver parameters
-    newton_options::NewtonPar{T, S, E} = NewtonPar()
-    η::T = 150.                         # parameter to estimate tangent at first point by finite differences
+    newton_options::NewtonPar{T, S, E} = NewtonPar{typeof(ds), DefaultLS, DefaultEig}()
+    η::T = oftype(ds, 150)              # parameter to estimate tangent at first point by finite differences
 
     save_to_file::Bool = false          # save to file?
     save_sol_every_step::Int64 = 1      # at what steps do we save the current solution
@@ -72,17 +84,17 @@ Returns a variable containing the parameters to affect the `continuation` algori
     plot_every_step::Int64 = 10
 
     # handling bifurcation points
-    tol_stability::T = 1e-10              # lower bound for stability of equilibria and periodic orbits
+    tol_stability::T = oftype(ds, 1e-10)              # lower bound for stability of equilibria and periodic orbits
     detect_fold::Bool = true              # detect fold points?
     detect_bifurcation::Int64 = 3         # detect other bifurcation points?
-    dsmin_bisection::T = 1e-16            # dsmin for the bisection algorithm when locating bifurcation points
+    dsmin_bisection::T = oftype(ds, 1e-16)            # dsmin for the bisection algorithm when locating bifurcation points
     n_inversion::Int64 = 2                # number of sign inversions in bisection algorithm
     max_bisection_steps::Int64 = 25       # maximum number of bisection steps
-    tol_bisection_eigenvalue::T = 1e-16   # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
+    tol_bisection_eigenvalue::T = oftype(ds, 1e-16)   # tolerance on real part of eigenvalue to detect bifurcation points in the bisection steps. Must be small otherwise Shooting and friends will fail detecting bifurcations.
 
     # handling event detection
     detect_event::Int64 = 0               # event location
-    tol_param_bisection_event::T = 1e-16  # tolerance on value of parameter
+    tol_param_bisection_event::T = oftype(ds, 1e-16)  # tolerance on value of parameter
     detect_loop::Bool = false             # detect if the branch loops
 
     # various tests to ensure everything is right

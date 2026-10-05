@@ -700,10 +700,12 @@ end
 
 function re_make(prob::Union{AbstractWaveProblem, AbstractWrapperPeriodicOrbitProblem};
                 u0 = prob.u0,
-                params = getparams(prob)
+                params = getparams(prob),
+                record_from_solution = prob.recordFromSolution,
+                plot_solution = plot_solution(prob)
                 )
     disc = re_make(get_discretization(prob); params)
-    new_prob = setproperties(prob; disc, u0)
+    new_prob = setproperties(prob; disc, u0, plotSolution = plot_solution, recordFromSolution = record_from_solution)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # simple trait for dispatching on user passed functions

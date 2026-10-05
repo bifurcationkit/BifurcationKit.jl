@@ -98,7 +98,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       plot_solution = plot_solution(getprob(br)),
                       tol_fold = 1e-3,
                       kwargs_deflated_newton = (),
-                      kwargs...) where {Tprob, 𝒯eigvec, Tkind <: Union{EquilibriumCont, BoundaryValueProblemCont}}
+                      kwargs...) where {Tprob, 𝒯eigvec, Tkind <: AbstractOneParamContEquilibrium}
     # The usual branch switching algorithm is described in the work of Keller. 
     # "Numerical solution of bifurcation and nonlinear eigenvalue problems."
     # We do not use this algorithm but instead compute the Lyapunov-Schmidt decomposition and solve the polynomial equation.
