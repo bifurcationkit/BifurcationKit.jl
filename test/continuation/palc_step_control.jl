@@ -193,4 +193,37 @@ let
             @test (state.z.p ≈ far.p) == ~turns_back
         end
     end
+
+    # a predictor beyond p_max is corrected at the bound by Newton's method at fixed parameter: the tests apply to that step too
+    φ1 = 0.4
+    bound_options = ContinuationPar(options; p_max = 0.7)
+    bounded_state(alg, z_pred) = let iter = ContIterable(prob, alg, bound_options)
+        state = iterate(iter)[1]
+        state.z = point(φ1)
+        state.τ = unit_tangent(φ1)
+        state.orientation = 1
+        state.z_pred = z_pred
+        state.ds = 0.3
+        BK.corrector!(state, iter, alg)
+        state
+    end
+    on_branch = BorderedArray([0.5], 1.2)
+    over_the_top = BorderedArray([-0.3], 1.2)
+    for (check, turns_back) in ((true, true), (false, false))
+        alg = PALC(; tangent = Bordered(), orientation_check = check)
+        # past the top of the circle the corrector lands on the way back, where the tangent points away from the previous one
+        state = bounded_state(alg, over_the_top)
+        @test BK.converged(state) == ~turns_back
+        @test (state.z.u[1] ≈ -sqrt(1 - 0.7^2)) == ~turns_back
+        # a landing on the branch ahead is always accepted
+        state = bounded_state(alg, on_branch)
+        @test BK.converged(state)
+        @test state.z.p == 0.7
+        @test state.z.u[1] ≈ sqrt(1 - 0.7^2)
+    end
+    # the distance test refuses a Newton step that is long
+    for (max_distance, accepted) in ((1e-3, false), (1.0, true))
+        alg = PALC(; tangent = Bordered(), step_control = CorrectorQuality(; max_distance))
+        @test BK.converged(bounded_state(alg, on_branch)) == accepted
+    end
 end

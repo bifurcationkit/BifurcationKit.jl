@@ -21,7 +21,7 @@ After an accepted step (and unless `max_growth = nothing`), `ds` is multiplied b
 where `c_k = d_k / (d_{k-1} + tol η)`. So `ds` grows by at most the factor `max_growth` per step and shrinks as the distance or the contraction approach their limits. A step after which the predictor was already a solution (no Newton step) grows by `max_growth`. The result is clamped to `[dsmin, dsmax]`.
 
 !!! note "Where it applies"
-    The tests and the step size rule apply to the steps of the `PALC` corrector. A step that falls back on the `Natural` corrector (at the bounds `p_min`, `p_max`) is not tested. Neither is a step of the bisection that locates special points, whose `ds` is prescribed.
+    The tests and the step size rule apply to the steps of the `PALC` corrector, also to a step whose predictor lies beyond `p_min` or `p_max` and is corrected at the bound by Newton's method at fixed parameter (the `Natural` corrector; the lengths of its Newton steps have no parameter component). They do not apply to a step of the bisection that locates special points, whose `ds` is prescribed.
 
 # Fields
 

@@ -182,6 +182,31 @@ update_predictor!(state::AbstractContinuationState,
                   ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
+"""
+$(TYPEDSIGNATURES)
+
+The corrector of a step whose predictor lies beyond `p_min` or `p_max`: the predictor is put on the bound and Newton's method solves `F(x, p) = 0` there (the `Natural` corrector), with the tests of `control` on the lengths of its steps, taken in the norm of the arc length constraint with no parameter component. Returns the solution and its quality like `_newton_palc`.
+"""
+function _newton_at_bound(iter::AbstractContinuationIterable,
+                          state::AbstractContinuationState,
+                          dotθ,
+                          control;
+                          kwargs...)
+    𝒯 = eltype(iter)
+    θ = getθ(iter)
+    p = clamp_predp(state.z_pred.p, iter)
+    sol, quality = _newton_quality(iter.prob,
+                                   state.z_pred.u,
+                                   setparam(iter, p),
+                                   iter.contparams.newton_options;
+                                   normN = iter.normC,
+                                   callback = iter.callback_newton,
+                                   control,
+                                   step_length = u -> sqrt(dotθ(u, u, zero(𝒯), zero(𝒯), θ)),
+                                   kwargs...)
+    return NonLinearSolution(BorderedArray(sol.u, p), sol.prob, sol.residuals, sol.converged, sol.itnewton, sol.itlineartot), quality
+end
+
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
@@ -189,10 +214,6 @@ function corrector!(state::AbstractContinuationState,
     # a growth decided by an earlier step must not outlive it
     state.step_factor = nothing
     state.next_tangent = nothing
-    if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
-        state.z_pred.p = clamp_predp(state.z_pred.p, it)
-        return corrector!(state, it, Natural(); kwargs...)
-    end
     # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there
     control = alg.step_control
     orientation_check = alg.orientation_check
@@ -200,12 +221,17 @@ function corrector!(state::AbstractContinuationState,
         control = nothing
         orientation_check = false
     end
-    sol, quality = _newton_palc(it, state, getdot(alg);
-                                linearbdalgo = alg.bls,
-                                normN = it.normC,
-                                callback = it.callback_newton,
-                                control,
-                                kwargs...)
+    if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
+        state.z_pred.p = clamp_predp(state.z_pred.p, it)
+        sol, quality = _newton_at_bound(it, state, getdot(alg), control; kwargs...)
+    else
+        sol, quality = _newton_palc(it, state, getdot(alg);
+                                    linearbdalgo = alg.bls,
+                                    normN = it.normC,
+                                    callback = it.callback_newton,
+                                    control,
+                                    kwargs...)
+    end
 
     accepted = converged(sol)
     next_tangent = nothing
