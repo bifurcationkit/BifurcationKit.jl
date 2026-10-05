@@ -183,6 +183,8 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     stepsizecontrol::Bool = true
     "factor by which step size control multiplies `ds` after the current step. Set by the corrector when the algorithm decides it (for example `PALC` with `step_control`), `nothing` otherwise."
     step_factor::Union{Nothing, T} = nothing
+    "tangent at the new solution, which the corrector computed to measure the turn of the tangent (`PALC` with `max_angle` and a `Bordered` predictor). The next predictor takes it instead of computing it again. `nothing` otherwise."
+    next_tangent::Union{Nothing, Tv} = nothing
 
     # the following values encode the current, previous number of unstable (resp. imaginary) eigen values
     # it is initialized as -1 when unknown
@@ -221,6 +223,7 @@ function Base.copy(state::ContState)
         stopcontinuation = state.stopcontinuation,
         stepsizecontrol  = state.stepsizecontrol,
         step_factor      = state.step_factor,
+        next_tangent     = isnothing(state.next_tangent) ? nothing : _copy(state.next_tangent),
         n_unstable          = state.n_unstable,
         n_imag              = state.n_imag,
         convergedEig        = state.convergedEig,
@@ -244,6 +247,7 @@ function Base.copyto!(dest::ContState, src::ContState)
         dest.stopcontinuation = src.stopcontinuation
         dest.stepsizecontrol  = src.stepsizecontrol
         dest.step_factor      = src.step_factor
+        dest.next_tangent     = isnothing(src.next_tangent) ? nothing : _copy(src.next_tangent)
         dest.n_unstable       = src.n_unstable
         dest.n_imag           = src.n_imag
         dest.convergedEig     = src.convergedEig

@@ -67,11 +67,15 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 # │      J            dFdl    ││τu│ = │ 0 │
 # │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
 # └                           ┘└  ┘   └   ┘
-# it is updated inplace
-function gettangent!(state::AbstractContinuationState,
-                    iter::AbstractContinuationIterable,
-                    ::Bordered, 
-                    dotθ)
+"""
+$(TYPEDSIGNATURES)
+
+The `Bordered` tangent at the point `z`, a new `BorderedArray` with ``\\|τ\\|_θ = 1``. The border row is the tangent `state.τ` of the previous point, whose direction the new tangent takes (`<τ, τ_old> > 0`).
+"""
+function bordered_tangent(state::AbstractContinuationState,
+                          iter::AbstractContinuationIterable,
+                          z::BorderedArray,
+                          dotθ)
     (iter.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(iter.prob)
     τ = state.τ
@@ -79,18 +83,18 @@ function gettangent!(state::AbstractContinuationState,
     T = eltype(iter)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(iter.prob, state.z.u, setparam(iter, state.z.p + ϵ))
-    dFdl = minus!!(dFdl, residual(iter.prob, state.z.u, setparam(iter, state.z.p)))
+    dFdl = residual(iter.prob, z.u, setparam(iter, z.p + ϵ))
+    dFdl = minus!!(dFdl, residual(iter.prob, z.u, setparam(iter, z.p)))
     dFdl = VI.scale!!(dFdl, 1/ϵ)
 
-    # compute jacobian at the current solution
-    J = jacobian(iter.prob, state.z.u, setparam(iter, state.z.p))
+    # compute jacobian at the point
+    J = jacobian(iter.prob, z.u, setparam(iter, z.p))
 
     # extract tangent as solution of the above bordered linear system
     τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),
                                         iter, state,
                                         J, dFdl,
-                                        VI.zerovector(state.z.u), 
+                                        VI.zerovector(z.u), 
                                         one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
@@ -98,9 +102,36 @@ function gettangent!(state::AbstractContinuationState,
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
     α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
 
-    _copyto!(τ.u, τu)
-    τ.p = τp
-    VI.scale!(τ, α)
+    τnew = _copy(τ)
+    _copyto!(τnew.u, τu)
+    τnew.p = τp
+    VI.scale!(τnew, α)
+    return τnew
+end
+
+function gettangent!(state::AbstractContinuationState,
+                    iter::AbstractContinuationIterable,
+                    ::Bordered, 
+                    dotθ)
+    τ = bordered_tangent(state, iter, state.z, dotθ)
+    _copyto!(state.τ.u, τ.u)
+    state.τ.p = τ.p
+    return state.τ
+end
+"""
+$(TYPEDSIGNATURES)
+
+Cosine of the angle between the tangent at `state.z` and the tangent at `znew`, in the norm of `dt`, and the new tangent when this computed it (`nothing` otherwise). A `Bordered` predictor computes the tangent at `znew` (and the next predictor takes it), whose direction it takes from the previous one, so the angle is at most `π / 2`. Any other predictor compares the direction of travel `sign(ds) τ` with the chord to `znew`, which stands for the new tangent: for `Secant`, whose tangent is the previous chord, this is the angle between consecutive chords.
+"""
+function turn_cosine(::Bordered, state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
+    τ = state.τ
+    τnew = bordered_tangent(state, iter, znew, dt)
+    θ = getθ(iter)
+    return dt(τ.u, τnew.u, τ.p, τnew.p, θ) / (dt(τ, θ) * dt(τnew, θ)), τnew
+end
+
+function turn_cosine(::AbstractTangentComputation, state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
+    return sign(state.ds) * chord_cosine(dt, state.τ, state.z, znew, getθ(iter)), nothing
 end
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

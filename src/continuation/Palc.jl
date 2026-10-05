@@ -58,14 +58,6 @@ function chord_cosine(dt::DotTheta, τ::BorderedArray, z::BorderedArray, znew::B
     return dt(τ.u, Δ.u, τ.p, Δ.p, θ) / (dt(τ.u, τ.p, θ) * length_chord)
 end
 
-"""
-$(TYPEDSIGNATURES)
-
-Cosine of the angle between the direction of travel `sign(ds) τ` at `state.z` and the chord to `znew`. The chord stands for the tangent at `znew`, whose sign the tangent predictors take from the previous one (a `Bordered` tangent computed there cannot oppose it), and which a `Secant` predictor computes from the chord. With a `Bordered` predictor the angle of the chord is half the angle between the tangents at its ends, with a `Secant` one (whose tangent is the previous chord) the whole angle between consecutive chords. An angle past `π / 2` means that the continuation turns back on itself, as in the orientation test of Gambit (`PathTracer::TracePath`).
-"""
-function chord_angle_cosine(state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
-    return sign(state.ds) * chord_cosine(dt, state.τ, state.z, znew, getθ(iter))
-end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # equation of the arc length constraint
 arc_length_eq(dt::DotTheta, u, p, du, dp, θ, ds) = dt(u, du, p, dp, θ) - ds
@@ -94,7 +86,7 @@ Additional information is available on the [website](https://bifurcationkit.gith
 $(TYPEDFIELDS)
 
 """
-@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl, Tangle <: Union{Nothing, Real}} <: AbstractContinuationAlgorithm
+@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tctl, Tangle <: Union{Nothing, Real, Symbol}, Tcap <: Real} <: AbstractContinuationAlgorithm
     "Tangent (predictor), must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, etc."
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
@@ -107,11 +99,17 @@ $(TYPEDFIELDS)
     dotθ::Tdot = DotTheta()
     "Step control by the quality of the corrector, a [`CorrectorQuality`](@ref) or `nothing` (the default). With `nothing`, `ds` is controlled by the number of Newton iterations, see the parameter `a` of [`ContinuationPar`](@ref)."
     step_control::Tctl = nothing
-    "Reject a step whose chord from the previous point makes an angle with the tangent there of more than `max_angle` radians, or `nothing`, the default, to accept any angle. The chord stands for the tangent at the new point: its angle is half the angle between the tangents at its ends for a `Bordered` predictor, and the whole angle between consecutive chords for a `Secant` one, whose tangent is the previous chord. `π / 2` is the orientation test of Gambit (the continuation turns back on itself). Allgower and Georg, *Numerical Continuation Methods*, bound the angle between consecutive tangents: `angmax = π / 3` in Program 3 (Euler-Newton with Broyden updates) and `amax = 30°` in Program 4 (bifurcation handling); Program 1 has no angle test."
+    "Reject a step whose tangent at the new point makes an angle of more than the limit `max_angle` (radians) with the tangent at the previous point. `nothing`, the default, accepts any angle. A number is the limit. `:derived` (it needs `step_control` with a `max_distance`) takes the largest turn that a predictor of the step's length `h = |ds|` can follow within `max_distance`, `min(2 max_distance / h, max_angle_cap)`: it misses a curve that turns by `θ` by about `h θ / 2`, so a larger turn lands the corrector where the predictor cannot reach on this branch, which is a jump. The angle is that between consecutive tangents, bounded by Allgower and Georg, *Numerical Continuation Methods*: `angmax = π / 3` in Program 3 (Euler-Newton with Broyden updates) and `amax = 30°` in Program 4 (bifurcation handling); Program 1 has no angle test. A `Bordered` predictor computes the new tangent for the test and the next predictor takes it, so its direction follows the previous one and the angle is at most `π / 2`. Any other predictor compares the chord of the step, which stands for the new tangent (for `Secant`, the angle between consecutive chords). `π / 2` is the orientation test of Gambit (`PathTracer::TracePath`)."
     max_angle::Tangle = nothing
+    "Largest limit, in radians, of `max_angle = :derived`."
+    max_angle_cap::Tcap = π / 2
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
+    @assert ~(max_angle isa Real) || 0 < max_angle <= π "max_angle must lie in (0, π] radians"
+    @assert ~(max_angle isa Symbol) || max_angle === :derived "max_angle must be a number, `nothing` or `:derived`"
+    @assert ~(max_angle === :derived) || (step_control isa CorrectorQuality && ~isnothing(step_control.max_distance)) "max_angle = :derived needs a step_control with a max_distance"
+    @assert 0 < max_angle_cap <= π "max_angle_cap must lie in (0, π] radians"
 end
 get_bordered_linsolver(alg::PALC) = alg.bls
 getdot(alg::PALC) = alg.dotθ
@@ -170,7 +168,12 @@ function _getpredictor_palc!(state::AbstractContinuationState,
     # state.z has been updated only if converged(state) == true
     if converged(state)
         @debug "Update tangent"
-        gettangent!(state, iter, alg.tangent, getdot(alg))
+        if isnothing(state.next_tangent)
+            gettangent!(state, iter, alg.tangent, getdot(alg))
+        else
+            _copyto!(state.τ, state.next_tangent)
+            state.next_tangent = nothing
+        end
     end
     # then update the predictor state.z_pred
     update_predictor!(state, iter, alg, nrm)
@@ -181,12 +184,22 @@ update_predictor!(state::AbstractContinuationState,
                   ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
+"""
+$(TYPEDSIGNATURES)
+
+The largest angle in radians between consecutive tangents that a step of size `ds` may have, or `nothing` for any: `max_angle` itself when it is a number, and for `:derived` the turn `2 max_distance / |ds|` that a predictor of that length follows within `control.max_distance`, at most `cap`.
+"""
+turn_limit(::Nothing, cap::Real, control, ds::Real) = nothing
+turn_limit(max_angle::Real, cap::Real, control, ds::Real) = max_angle
+turn_limit(::Symbol, cap::Real, control::CorrectorQuality, ds::Real) = min(2 * control.max_distance / abs(ds), cap)
+
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
                     kwargs...)
     # a growth decided by an earlier step must not outlive it
     state.step_factor = nothing
+    state.next_tangent = nothing
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         return corrector!(state, it, Natural(); kwargs...)
@@ -206,11 +219,13 @@ function corrector!(state::AbstractContinuationState,
                                 kwargs...)
 
     accepted = converged(sol)
-    if accepted && ~isnothing(max_angle)
-        cosine = chord_angle_cosine(state, it, sol.u, getdot(alg))
-        accepted = cosine >= cos(max_angle)
+    next_tangent = nothing
+    limit = turn_limit(max_angle, alg.max_angle_cap, control, state.ds)
+    if accepted && ~isnothing(limit)
+        cosine, next_tangent = turn_cosine(alg.tangent, state, it, sol.u, getdot(alg))
+        accepted = cosine >= cos(limit)
         if ~accepted && it.verbosity > 0
-            printstyled("Step rejected: the angle between its chord and the tangent is $(acos(clamp(cosine, -1, 1))) rad, more than $max_angle\n", color = :red)
+            printstyled("Step rejected: the angle between the tangents is $(acos(clamp(cosine, -1, 1))) rad, more than $limit\n", color = :red)
         end
     end
 
@@ -220,6 +235,7 @@ function corrector!(state::AbstractContinuationState,
     # update solution
     if accepted
         _copyto!(state.z, sol.u)
+        state.next_tangent = next_tangent
         if ~isnothing(control)
             state.step_factor = growth_factor(quality)
         end
