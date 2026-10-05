@@ -67,7 +67,6 @@ let
 end
 ####################################################################################################
 # fold points recorded in the problem's float type
-# commented for F32 error until https://github.com/bifurcationkit/BifurcationKit.jl/pull/355
 let
     for T in (Float64, Float32)
         prob = BK.BifurcationProblem((u, p) -> (@. u^3 - u - (p.λ - 1)), T[-1.3247179], (λ = zero(T),), (@optic _.λ))
