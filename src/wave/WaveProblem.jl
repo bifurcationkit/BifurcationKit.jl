@@ -227,7 +227,8 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
-isinplace(tw::TWModel) = false
+isinplace(::TWModel) = false
+has_hessian(::WrapTW) = true # for Fold/hopf continuation
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false

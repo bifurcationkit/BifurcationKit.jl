@@ -237,6 +237,7 @@ type(::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function printnf1d(io, nf; prefix = "")
+    isnothing(nf) && return
     println(io, prefix * "┌─ a01 = ", nf.a01)
     println(io, prefix * "├─ a02 = ", nf.a02)
     println(io, prefix * "├─ b11 = ", nf.b11)

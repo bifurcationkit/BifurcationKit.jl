@@ -127,6 +127,7 @@ module BifurcationKit
     # wave problem
     include("wave/WaveProblem.jl")
     include("wave/EigSolver.jl")
+    include("wave/codim2.jl")
 
     # plotting
     include("plotting/Utils.jl")

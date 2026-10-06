@@ -48,6 +48,7 @@ $(TYPEDFIELDS)
 - `type(br, ind)` returns the type of the ind-th bifurcation point.
 - `br[k+1]` gives information about the k-th step. A typical run yields the following.
 - `get_solution(br, ind)` returns the ind-th solution.
+- `getcontparams(br)` return the continuation parameters.
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
@@ -247,9 +248,9 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
         error("Error in indexing eigenvalues. Please open an issue on the website.")
     end
     if verbose
-        println("──> For ", get_lens_symbol(br), " = ", br.branch[ind].param)
-        println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-        println("──> Eigenvalues for continuation step ", br.eig[ind+1].step)
+        println("──▶ For ", get_lens_symbol(br), " = ", br.branch[ind].param)
+        println("──▶ There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
+        println("──▶ Eigenvalues for continuation step ", br.eig[ind+1].step)
     end
     ~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
     br.eig[ind+1].eigenvals
@@ -295,6 +296,56 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
         for ii in eachindex(br.specialpoint)
             _show(io, br.specialpoint[ii], ii, String(get_lens_symbol(br)))
         end
+    end
+end
+
+function print_specialpoints(io::IO, br)
+    p = String(get_lens_symbol(br))
+
+    println(io)
+    println(io, "┌──────┬────────────┬──────────────┬────────────────────────────┬───────────┬─────────────┬──────────┬──────┐")
+    println(io, "│  Nb  │    type    │      p       │          interval          │ precision │   status    │    δ     │ step │")
+    println(io, "├──────┼────────────┼──────────────┼────────────────────────────┼───────────┼─────────────┼──────────┼──────┤")
+
+    for ii in eachindex(br.specialpoint)
+        _print_specialpoint_line(io, br.specialpoint[ii], ii)
+    end
+
+    println(io, "└──────┴────────────┴──────────────┴────────────────────────────┴───────────┴─────────────┴──────────┴──────┘")
+end
+
+
+function _print_specialpoint_line(io::IO, bp::SpecialPoint, ii::Int)
+    type(bp) == :none && return
+
+    if type(bp) == :endpoint
+        # Endpoint : pas d'intervalle, précision, status ou δ
+        @printf(io,
+            "│ %4d │ %10s │ %+10.8f  │ %26s │ %9s │ %11s │ %8s │ %4d │\n",
+            ii,
+            string(type(bp)),
+            bp.param,
+            "",
+            "",
+            "",
+            "",
+            bp.step
+        )
+    else
+        interval = @sprintf("(%+.8f, %+.8f)", bp.interval[1], bp.interval[2])
+        delta    = @sprintf("(%2d, %2d)", bp.δ[1], bp.δ[2])
+
+        @printf(io,
+            "│ %4d │ %10s │ %+10.8f  │ %-26s │ %9.1e │ %11s │ %8s │ %4d │\n",
+            ii,
+            string(type(bp)),
+            bp.param,
+            interval,
+            bp.precision,
+            @sprintf("%9s", bp.status),
+            delta,
+            bp.step
+        )
     end
 end
 

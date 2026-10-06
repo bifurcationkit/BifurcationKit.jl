@@ -829,6 +829,7 @@ for op in (
         end
         (fr::$op)(x, p; kwargs...) = fr.user_record_from_solution(x, p; kwargs...)
         (fr::$op{Nothing})(x, p; kwargs...) = fr.vf_record_from_solution(x, p; kwargs...)
+        (fr::$op{Nothing, Nothing})(x, p; kwargs...) = (norm(x))
         $op(u::$op, vf) = u # constructor, do not iterate the same structure
     end
 end
