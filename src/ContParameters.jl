@@ -70,7 +70,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
     max_steps::Int64  = 400
 
     # Newton solver parameters
-    newton_options::NewtonPar{T, S, E} = NewtonPar{typeof(ds), DefaultLS, DefaultEig}()
+    newton_options::NewtonPar{T, S, E} = NewtonPar{typeof(ds), typeof(DefaultLS()), typeof(DefaultEig())}()
     η::T = oftype(ds, 150)              # parameter to estimate tangent at first point by finite differences
 
     save_to_file::Bool = false          # save to file?
