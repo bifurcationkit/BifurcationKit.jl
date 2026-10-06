@@ -700,24 +700,25 @@ function _continuation(prob::AbstractBifurcationProblem,
     # They could have been placed in ContinuationPar but it would have been less convenient.
     # Init the continuation parameters
     contparams = init(contparams, prob, alg)
+    contparams_fwd = contparams
+    contparams_bwd = @set contparams.ds = -contparams.ds
 
     # update the parameters of alg
     # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
-    alg = update(alg, contparams, linear_algo)
+    alg = update(alg, contparams_fwd, linear_algo)
 
     # perform continuation
-    itfwd = ContIterable(prob, alg, contparams; kwargs...)
+    itfwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
     if bothside
-        # we deepcopy the iterator here because some problems
-        # are changed inplace like in Min. Aug. problems or 
-        # periodic orbits computation
-        itbwd = deepcopy(itfwd)
-        @reset itbwd.contparams.ds = -contparams.ds
-
+        # forward case
+        initial_state, = iterate(itfwd)
         resfwd = continuation(itfwd)
+        # backward
+        itbwd = ContIterable(prob, alg, contparams_bwd; kwargs...)
+        update_problem!(itbwd, initial_state)
         resbwd = continuation(itbwd)
+        # merge results
         contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?
-
         # we have to update the branch if saved on a file
         itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
         return contresult
@@ -725,7 +726,7 @@ function _continuation(prob::AbstractBifurcationProblem,
         contresult = continuation(itfwd)
         # we have to update the branch if saved on a file,
         # basically this removes "branchfw" or "branchbw" in file and append "branch"
-        itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
+        getcontparams(itfwd).save_to_file && save_to_file(itfwd, contresult)
         return contresult
     end
 end
