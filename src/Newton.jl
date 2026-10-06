@@ -66,9 +66,18 @@ end
 @inline converged(sol::NonLinearSolution) = sol.converged
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar;
+function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar; kwargs...)
+    return first(_newton_quality(prob, x0, params0, options; kwargs...))
+end
+
+"""
+[`_newton`](@ref) which also returns the quality of the corrector (the lengths of its Newton steps, as `step_length` measures them) when `control::CorrectorQuality` is passed. A step that the tests of `control` reject stops the iteration and the solution is recorded as not converged.
+"""
+function _newton_quality(prob::AbstractBifurcationProblem, x0, params0, options::NewtonPar;
                     normN = norm,
                     callback = cb_default,
+                    control = nothing,
+                    step_length = nothing,
                     kwargs...)
     # Extract parameters
     (;tol, max_iterations, verbose) = options
@@ -85,6 +94,14 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
     # total number of linear iterations
     itlineartot = 0
 
+    # what the corrector has shown of its quality, only followed when the step is tested
+    quality = nothing
+    if ~isnothing(control)
+        control = CorrectorQuality{typeof(res)}(control)
+        quality = StepQuality(control)
+    end
+    rejected = false
+
     verbose && print_nonlinear_step(step, res)
 
     # invoke callback before algo really starts
@@ -95,6 +112,16 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
         u, cv, itlinear = options.linsolver(J, fx)
         ~cv && @debug "Linear solver for J did not converge."
         itlineartot += sum(itlinear)
+
+        if ~isnothing(quality)
+            distance = convert(typeof(res), step_length(u))
+            if rejects_step(control, quality, distance, tol)
+                rejected = true
+                verbose && printstyled("Step rejected by the corrector quality tests at Newton step $(quality.steps + 1)\n", color = :red)
+                break
+            end
+            quality = observe(control, quality, distance, tol)
+        end
 
         # x = x - J \ fx
         minus!!(x, u) # we use this form instead of just `x .= x .- u` to deal
@@ -111,9 +138,9 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
         compute = callback((;x, fx, J, residual = res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
     ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
-    flag = (residuals[end] < tol) & callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
+    flag = (residuals[end] < tol) & callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...) & ~rejected
     verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
-    return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
+    return NonLinearSolution(x, prob, residuals, flag, step, itlineartot), quality
 end
 
 """

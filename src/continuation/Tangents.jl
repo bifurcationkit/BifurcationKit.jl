@@ -67,11 +67,41 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 # │      J            dFdl    ││τu│ = │ 0 │
 # │  θ/N ⋅ τ.u     (1-θ)⋅τ.p  ││τp│   │ 1 │
 # └                           ┘└  ┘   └   ┘
-# it is updated inplace
-function gettangent!(state::AbstractContinuationState,
-                    iter::AbstractContinuationIterable,
-                    ::Bordered, 
-                    dotθ)
+"""
+$(TYPEDSIGNATURES)
+
+Whether the `Bordered` tangents of `iter` are oriented by the determinant of the bordered matrix (`PALC` with `orientation_check`).
+"""
+orients_by_determinant(iter::AbstractContinuationIterable) = iter.alg isa PALC && iter.alg.orientation_check
+
+"""
+$(TYPEDSIGNATURES)
+
+The sign of the determinant of the bordered matrix of the tangent, `[J dFdl; θ τ.u' (1 - θ) τ.p]` with `τ = state.τ`, built as `MatrixBLS` builds it. Another bordered linear solver does not give it.
+"""
+function bordered_determinant_sign(::MatrixBLS, iter::AbstractContinuationIterable, state::AbstractContinuationState, J, dFdl)
+    θ = getθ(iter)
+    τ = state.τ
+    A = vcat(hcat(getmatrix(J), dFdl), hcat(LA.adjoint(τ.u .* θ), τ.p * (one(θ) - θ)))
+    apply = _get_apply_dot(getdot(iter))
+    if ~isnothing(apply)
+        apply(@view(A[end, begin:end-1]))
+    end
+    return last(LA.logabsdet(A))
+end
+
+bordered_determinant_sign(lbs::AbstractBorderedLinearSolver, ::AbstractContinuationIterable, ::AbstractContinuationState, J, dFdl) = error("orientation_check orients a Bordered tangent by a determinant, which only MatrixBLS gives, not $(typeof(lbs))")
+
+"""
+$(TYPEDSIGNATURES)
+
+The `Bordered` tangent at the point `z`, a new `BorderedArray` with ``\\|τ\\|_θ = 1``. The border row is the tangent `state.τ` of the previous point. With `by_determinant = false` the new tangent takes its direction (`<τ, τ_old> > 0`); with `by_determinant = true` it is oriented as the curve is, by the sign of the determinant of the bordered matrix (`det([J dFdl; τ']) > 0`, Gambit's orientation) times `state.orientation`, and can point against the previous tangent.
+"""
+function bordered_tangent(state::AbstractContinuationState,
+                          iter::AbstractContinuationIterable,
+                          z::BorderedArray,
+                          dotθ;
+                          by_determinant::Bool = false)
     (iter.verbosity > 0) && println("Predictor: Bordered")
     ϵ = getdelta(iter.prob)
     τ = state.τ
@@ -79,28 +109,77 @@ function gettangent!(state::AbstractContinuationState,
     T = eltype(iter)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(iter.prob, state.z.u, setparam(iter, state.z.p + ϵ))
-    dFdl = minus!!(dFdl, residual(iter.prob, state.z.u, setparam(iter, state.z.p)))
+    dFdl = residual(iter.prob, z.u, setparam(iter, z.p + ϵ))
+    dFdl = minus!!(dFdl, residual(iter.prob, z.u, setparam(iter, z.p)))
     dFdl = VI.scale!!(dFdl, 1/ϵ)
 
-    # compute jacobian at the current solution
-    J = jacobian(iter.prob, state.z.u, setparam(iter, state.z.p))
+    # compute jacobian at the point
+    J = jacobian(iter.prob, z.u, setparam(iter, z.p))
 
     # extract tangent as solution of the above bordered linear system
     τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),
                                         iter, state,
                                         J, dFdl,
-                                        VI.zerovector(state.z.u), 
+                                        VI.zerovector(z.u), 
                                         one(T)) # Right-hand side
     ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
-    α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
+    if by_determinant
+        α *= bordered_determinant_sign(get_bordered_linsolver(iter), iter, state, J, dFdl) * state.orientation
+    else
+        α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
+    end
 
-    _copyto!(τ.u, τu)
-    τ.p = τp
-    VI.scale!(τ, α)
+    τnew = _copy(τ)
+    _copyto!(τnew.u, τu)
+    τnew.p = τp
+    VI.scale!(τnew, α)
+    return τnew
+end
+
+function gettangent!(state::AbstractContinuationState,
+                    iter::AbstractContinuationIterable,
+                    ::Bordered, 
+                    dotθ)
+    τ = bordered_tangent(state, iter, state.z, dotθ; by_determinant = orients_by_determinant(iter))
+    _copyto!(state.τ.u, τ.u)
+    state.τ.p = τ.p
+    return state.τ
+end
+"""
+$(TYPEDSIGNATURES)
+
+Set `state.orientation` so that the determinant orientation of a `Bordered` tangent at the start points along the secant tangent `state.τ`, the direction of travel. A `Secant` tangent has no determinant orientation.
+"""
+function initial_orientation!(state::AbstractContinuationState, iter::AbstractContinuationIterable, alg::PALC{<:Bordered})
+    state.orientation = 1
+    τ = bordered_tangent(state, iter, state.z, getdot(alg); by_determinant = true)
+    alignment = getdot(alg)(state.τ.u, τ.u, state.τ.p, τ.p, getθ(iter))
+    state.orientation = 1
+    if alignment < 0
+        state.orientation = -1
+    end
+    return state
+end
+
+initial_orientation!(state::AbstractContinuationState, ::AbstractContinuationIterable, ::PALC) = state
+
+"""
+$(TYPEDSIGNATURES)
+
+Cosine, in the norm of `dt`, of the angle between the tangent at `state.z` and the tangent at `znew`, and the new tangent when this computed it (`nothing` otherwise). A `Bordered` predictor computes the tangent at `znew` oriented by the determinant (and the next predictor takes it). Any other predictor compares the direction of travel `sign(ds) τ` with the chord to `znew`, which stands for the new tangent.
+"""
+function turn_cosine(::Bordered, state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
+    τ = state.τ
+    τnew = bordered_tangent(state, iter, znew, dt; by_determinant = true)
+    θ = getθ(iter)
+    return dt(τ.u, τnew.u, τ.p, τnew.p, θ) / (dt(τ, θ) * dt(τnew, θ)), τnew
+end
+
+function turn_cosine(::AbstractTangentComputation, state::AbstractContinuationState, iter::AbstractContinuationIterable, znew::BorderedArray, dt::DotTheta)
+    return sign(state.ds) * chord_cosine(dt, state.τ, state.z, znew, getθ(iter)), nothing
 end
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
