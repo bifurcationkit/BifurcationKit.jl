@@ -208,9 +208,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     (;p_min, p_max) = contparams
     linsolver = get_bordered_linsolver(iter)
 
-    # record the damping parameter
-    α0 = α
-
     N(u, _p) = arc_length_eq(dotθ, u, z0.u, _p - z0.p, τ0.u, τ0.p, θ, ds)
     normAC(resf, resn) = max(normN(resf), abs(resn))
 
@@ -270,8 +267,12 @@ function newton_palc(iter::AbstractContinuationIterable,
                     α /= 2
                 end
             end
-            # we put back the initial value
-            α = α0
+            # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
+            # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
+            if !line_step
+                _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+                res_n  = N(x, p); res = normAC(res_f, res_n)
+            end
         else
             x = minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
