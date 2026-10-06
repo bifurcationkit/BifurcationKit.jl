@@ -133,6 +133,19 @@ function SpecialPoint(it::ContIterable,
                         interval)
 end
 
+function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
+    if type(bp) == :none ; return; end
+    @printf(io, "- #%3i, ", ii)
+    if type(bp) == :endpoint
+        printstyled(io, @sprintf("%8s", type(bp)); bold=true)
+        @printf(io, " at %s ≈ %+4.8f,                                                                     step = %3i\n", p, bp.param, bp.step)
+    else
+        printstyled(io, @sprintf("%8s", type(bp)); bold=true, color=:blue)
+        @printf(io, " at %s ≈ %+4.8f ∈ (%+4.8f, %+4.8f), |δp|=%1.0e, [", p, bp.param, bp.interval..., bp.precision)
+        printstyled(io, @sprintf("%9s", bp.status); bold=true, color=(bp.status == :converged) ? :green : :red)
+        @printf(io, "], δ = (%2i, %2i), step = %3i\n", bp.δ..., bp.step)
+    end
+end
 
 function is_bifurcation(sp::SpecialPoint)
     type(sp) in (:bp, :fold, :hopf, :nd, :cusp, :gh, :bt, :zh, :hh, :ns, :pd,)
