@@ -5,15 +5,18 @@ function bvp_residual(d_bvp::DiscretizedBVP{<: BVPModel, <: Trapeze}, X, p)
     n = state_dimension(model)
     M = disc.M
 
+    N = n * M
+    length(X) == N || throw(ArgumentError("bvp_residual: expected length(X) == $N, got $(length(X))"))
+
     interval = get_time_interval(model)
     δT = interval[2] - interval[1]
 
     # Extract time slices
-    Xm = reshape(@view(X[1:n*M]), n, M)
+    Xm = reshape(@view(X[1:N]), n, M)
 
-    # Get output buffer; element type follows X (covers Dual numbers in AD)
-    out = similar(X)
-    outm = reshape(@view(out[1:n*M]), n, M)
+    # Allocate output; every entry is written below (element type follows X, covers Dual numbers in AD)
+    out = similar(X, N)
+    outm = reshape(out, n, M)
 
     # Sequential trapezoid scheme for M-1 intervals using potrap_scheme!.
     # M time points span [t0, tf] via M-1 intervals with normalized mesh weights.

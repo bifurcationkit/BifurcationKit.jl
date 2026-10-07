@@ -22,8 +22,10 @@ Returns a `NamedTuple` with fields:
 function get_periodic_orbit(bvp::DiscretizedBVP, X, p)
     n = state_dimension(bvp)
     disc = get_discretizer(bvp)
-    T = X[end]
-    
+    # The time span is fixed by the model, not stored in X
+    t0, tf = get_time_interval(get_model(bvp))
+    T = tf - t0
+
     return _get_periodic_orbit(disc, X, n, T)
 end
 
