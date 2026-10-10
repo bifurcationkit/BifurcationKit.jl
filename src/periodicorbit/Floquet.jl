@@ -256,7 +256,6 @@ end
     #  ζ is of size (N-1)
     M = get_mesh_size(psh)
     Nm1 = length(ζ)
-    dx = similar(x_bar, length(ζ) + 1)
 
     x_barc = reshape(x_bar, Nm1, M)
     xc = similar(x_bar, Nm1 + 1)

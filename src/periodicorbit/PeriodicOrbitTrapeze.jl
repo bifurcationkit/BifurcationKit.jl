@@ -1357,31 +1357,29 @@ P  = BK.POTrapCirculantPrec(poTrap, orbitguess, par; ref = :average)
 ls = GMRESKrylovKit(Pl = P)
 ```
 """
-mutable struct POTrapCirculantPrec{TM, TH, TF}
+mutable struct POTrapCirculantPrec{TM, TH, TF, T}
     "Frozen ``\\bar{M} = M_a - (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
     M::TM
-
     "Frozen ``\\bar{H} = M_a + (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
     H::TH
-
     "Dimension `N` of a time slice."
     N::Int
-
     "Number `m = M - 1` of cyclic time slices on which the preconditioner acts."
     m::Int
-
     "Vector of the `m` LU factorizations of the symbols ``\\Lambda_k = \\bar{M} - \\bar{H}e^{-2\\pi i(k-1)/m}``."
     facts::TF
-
     "FFT workspace of size `N × m`."
-    Rhat::Matrix{ComplexF64}
-
+    Rhat::Matrix{Complex{T}}
     "FFT workspace of size `N × m`."
-    Zhat::Matrix{ComplexF64}
+    Zhat::Matrix{Complex{T}}
 end
 
-# frozen cyclic blocks M, H from the orbit average of dF (or a single reference slice)
-function _circ_blocks(trap, u0, par; ref = :average)
+@inline _cyclic_length(P::POTrapCirculantPrec) = P.N * P.m
+
+# frozen cyclic blocks M, H from the orbit average of dF (or a single reference slice).
+# For a state dependent mass, the averaged jacobian dMv of the mass application is added
+# to the diagonal block M (the sub-diagonal block H has no such term)
+@views function _circ_blocks(trap, u0, par; ref = :average)
     M0, N = size(trap)
     m = M0 - 1
     T = _extract_period_fdtrap(trap, u0)
@@ -1409,22 +1407,28 @@ end
 
 function POTrapCirculantPrec(trap, u0::AbstractVector{𝒯}, par; ref = :average, ε = zero(𝒯)) where {𝒯}
     M, H, m, N = _circ_blocks(trap, u0, par; ref)
-    facts = [LA.lu(M - H * exp(-2π * im * (k - 1) / m) + ε * LA.I) for k in 1:m]
-    return POTrapCirculantPrec(M, H, N, m, facts, zeros(ComplexF64, N, m), zeros(ComplexF64, N, m))
+    facts = [LA.lu(M - H * cis(-2π * (k - 1) / m) + ε * LA.I) for k in 1:m]
+    return POTrapCirculantPrec(M, H, N, m, facts, zeros(Complex{𝒯}, N, m), zeros(Complex{𝒯}, N, m))
 end
 
 function update_preconditioner!(P::POTrapCirculantPrec, trap, u0, par; ref = :average, ε = 0.0)
     M, H, m, N = _circ_blocks(trap, u0, par; ref)
     P.M = M
     P.H = H
-    for k in 1:P.m
-        P.facts[k] = LA.lu(M - H * exp(-2π * im * (k - 1) / P.m) + ε * LA.I)
+    for k in 1:m
+        P.facts[k] = LA.lu(M - H * cis(-2π * (k - 1) / m) + ε * LA.I)
     end
     return P
 end
 
-@inline _cyclic_length(P::POTrapCirculantPrec) = P.N * P.m
-
 # The application of the preconditioner is provided by the `FFTExt` package extension and
 # requires `FFTW` to be loaded (e.g. `using FFTW`).
-Base.:\(P::POTrapCirculantPrec, x) = (y = similar(x); LA.ldiv!(y, P, x); y)
+function LA.ldiv!(y, ::POTrapCirculantPrec, x)
+    error("`POTrapCirculantPrec` requires the FFTW extension. Run `using FFTW` to enable the circulant preconditioner.")
+end
+
+function Base.:\(P::POTrapCirculantPrec, x)
+    y = similar(x)
+    LA.ldiv!(y, P, x)
+    return y
+end

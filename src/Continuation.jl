@@ -660,10 +660,10 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`solve`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)
-- `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch but before saving the current `state` to it! For advanced use:
-    - the state `state::ContState` of the continuation iterator is passed in `kwargs`. This can be used for testing whether this is called from bisection for locating bifurcation points / events: `in_bisection(state)` for example. This allows to escape some personal code in this case.
-    Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
-    - the iterator `iter::ContIterable` of the continuation is passed in `kwargs`.
+- `finalise_solution = (z, tau, step, contResult; state, iter, kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch but before saving the current `state` to it! For advanced use:
+
+      - the state `state::ContState` of the continuation iterator is passed in `kwargs`. This can be used for testing whether this is called from bisection for locating bifurcation points / events: `in_bisection(state)` for example. This allows to escape some personal code in this case.
+      - the iterator `iter::ContIterable` of the continuation is passed in `kwargs`.
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newton_options.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
@@ -680,6 +680,9 @@ Compute the continuation curve associated to the functional `F` which is stored 
 
 !!! tip "Debug mode"
     Use debug mode to access more information about the progression of the continuation run, like iterative solvers convergence, problem update, ...
+
+!!! tip "More control"
+    Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 """
 function continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
