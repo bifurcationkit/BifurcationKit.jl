@@ -187,7 +187,7 @@ module BifurcationKit
     export get_normal_form, hopf_normal_form, predictor, normal_form
 
     # automatic bifurcation diagram
-    export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP
+    export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP, getbranches
 
     # Periodic orbit computation
     export generate_solution, getperiod, get_periodic_orbit, guess_from_hopf, generate_ci_problem

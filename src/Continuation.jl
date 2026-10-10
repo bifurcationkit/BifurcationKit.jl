@@ -687,10 +687,8 @@ Compute the continuation curve associated to the functional `F` which is stored 
 function continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
-                      linear_algo = nothing,
-                      bothside::Bool = false,
                       kwargs...)
-    _continuation(prob, alg, contparams; linear_algo, bothside, kwargs...)
+    _continuation(prob, alg, contparams;kwargs...)
 end
 
 function _continuation(prob::AbstractBifurcationProblem,

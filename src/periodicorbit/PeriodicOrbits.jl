@@ -426,7 +426,7 @@ function _continuation(hopfpt::Hopf,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization;
                       verbose = false,
-                      alg,
+                      alg = PALC(),
                       δp = nothing,
                       ampfactor = 1,
                       usedeflation = false,

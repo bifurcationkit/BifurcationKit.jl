@@ -493,15 +493,20 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ <: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
-    "Set of branches branching off the bifurcation point `bp`."
+    "Set of branche(s) branching off the bifurcation point `bp`."
     γ::T
-    "Bifurcation point. It is thought as the root of the branches in γ."
+    "Bifurcation point. It is thought as the root of the branche(s) in γ."
     bp::Tbp
     function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ <: AbstractResult{Tkind, Tprob}} }}
         return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
     end
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@ref) or a vector of branches when the `Branch` was obtained by branching from an Nd bifurcation point using [`continuation`](@ref) / `multicontinuation`.
+"""
 @inline getbranches(br::Branch) = getfield(br, :γ)
 Base.length(br::Branch) = length(getbranches(br))
 @inline kernel_dimension(br::Branch, ind) = kernel_dimension(getbranches(br), ind)
