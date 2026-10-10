@@ -53,7 +53,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
     `DefaultEig()` follows the type of the Jacobian, whereas `EigArpack`
     only supports `Float64`.
 """
-@with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+@with_kw_noshow struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation
     ds::T    = 1e-2
     dsmin::T = oftype(ds, 1e-4)
