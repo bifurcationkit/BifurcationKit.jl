@@ -16,12 +16,12 @@ end
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.001137, 0.891483, 0.062345]
 
-function record_from_solution(x,p; k...)
+function record_from_solution(x, p; k...)
     (x = x[1], y = x[2], s = x[3])
 end
 
 prob = ODEBifProblem(COm!, z0, par_com, (@optic _.q2); record_from_solution)
-opts_br = ContinuationPar(dsmax = 0.015, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 6, detect_bifurcation = 3)
+opts_br = ContinuationPar(dsmax = 0.01, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 8, detect_bifurcation = 3)
 br = @time continuation(prob, PALC(), opts_br;
     normC = norminf,
     bothside = true
@@ -30,7 +30,7 @@ br = @time continuation(prob, PALC(), opts_br;
 plot(br)
 ####################################################################################################
 # periodic orbits
-function plotSolution(x, p; state, iter, k...)
+@views function plotSolution(x, p; state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "", k...)
     plot!(xtt.t, xtt[2,:]; label = "", k...)
@@ -39,7 +39,7 @@ function plotSolution(x, p; state, iter, k...)
     plot!(br; subplot = 1, putspecialptlegend = false, xlims = (1.02, 1.07))
 end
 
-function plotSolution(ax, x, p; ax1 = nothing, state, iter, k...)
+@views function plotSolution(ax, x, p; ax1 = nothing, state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     lines!(ax1, br)
     lines!(ax, xtt.t, xtt[1,:]; k...)
@@ -48,7 +48,7 @@ function plotSolution(ax, x, p; ax1 = nothing, state, iter, k...)
     scatter!(ax, xtt.t, xtt[1,:]; markersize = 1.5, k...)
 end
 
-function record_from_solution_po(x, p; iter, state, k...)
+@views function record_from_solution_po(x, p; iter, state, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
@@ -59,43 +59,38 @@ args_po = (    record_from_solution = record_from_solution_po,
     plot_solution = plotSolution,
     normC = norminf)
 
-opts_po_cont = ContinuationPar(opts_br, dsmax = 1., ds= 2e-2, dsmin = 1e-6, p_max = 5., p_min=-5.,
-max_steps = 300, detect_bifurcation = 3, plot_every_step = 10, tol_stability = 1e-3)
+opts_po_cont = ContinuationPar(opts_br, dsmax = 0.1, ds= 1e-2, dsmin = 1e-7, p_max = 5., p_min=-5.,
+max_steps = 800, detect_bifurcation = 3, plot_every_step = 30, tol_stability = 1e-3)
 
-brpo = @time continuation(br, 2, opts_po_cont,
-    Collocation(50, 4 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 200, verbose_mesh_adapt = false);
-    # verbosity = 0, plot = true,
+brpo = @time continuation(br, 5, opts_po_cont,
+    Collocation(50, 5 ; jacobian = BK.DenseAnalyticalInplace(), meshadapt = true, K = 1000, verbose_mesh_adapt = false);
+    # verbosity = 2, plot = true,
     normC = norminf,
-    alg = PALC(),
+    alg = PALC(tangent = Bordered()),
     δp = 0.00025,
     linear_algo = COPBLS(),
     callback_newton = BK.cbMaxNormAndΔp(1., 1.0e-3),
-    bothside = true,
+    # bothside = true,
     args_po...
     )
 
-plot(br, brpo, branchlabel = ["eq","max"])
-xlims!((1.037, 1.055))
+plot(br, brpo, branchlabel = ["eq","max"]);xlims!((1.037, 1.055))
 scatter!(br)
 plot!(brpo.param, brpo.min, label = "min", xlims = (1.037, 1.055))
 ####################################################################################################
-sn_codim2 = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, ds = -0.001, n_inversion = 6) ; plot = true,
+sn_codim2 = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, ds = -0.001, n_inversion = 6) ;
     normC = norminf,
-    update_minaug_every_step = 1,
     bothside = true,
     )
 
 plot(sn_codim2)
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plot!(br,xlims=(0.8,1.8))
 
-hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, max_steps = 50) ; plot = true,
-    verbosity = 3,
+hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, max_steps = 50) ;
     normC = norminf,
-    detect_codim2_bifurcation = 2,
-    update_minaug_every_step = 1,
     bothside = true,
     bdlinsolver = MatrixBLS())
 
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
 plot!(hp_codim2, vars=(:q2, :x), branchlabel = "Hopf")
-plot!(br,xlims=(0.6,1.5))
+plot!(br, xlims=(0.6,1.5))

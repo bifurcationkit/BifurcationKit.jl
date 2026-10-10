@@ -32,7 +32,9 @@ end
 internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.predictor, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.predictor)
 @inline getθ(alg::MoorePenrose) = getθ(alg.predictor)
-get_bordered_linsolver(alg::MoorePenrose) = alg.ls
+function get_bordered_linsolver(alg::MoorePenrose) # this is essentially for tangent prediction
+    return  alg.ls isa AbstractBorderedLinearSolver ? alg.ls : get_bordered_linsolver(alg.predictor)
+end
 
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.predictor)))"
 
