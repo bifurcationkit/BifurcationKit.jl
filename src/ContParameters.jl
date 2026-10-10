@@ -114,6 +114,8 @@ end
 @inline compute_eigenelements(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline compute_eigenvalues(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline save_eigenvectors(cp::ContinuationPar) = cp.save_eigenvectors
+@inline get_newton_options(cp::ContinuationPar) = cp.newton_options
+@inline geteigensolver(cp::ContinuationPar) = geteigensolver(get_newton_options(cp))
 
 # clamp ds value
 clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)

@@ -15,7 +15,6 @@ _namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x).
 """
 _mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Structure to hold continuation result
 """
 $(TYPEDEF)
 
@@ -164,6 +163,7 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 
 # get the bordered linear solver used for the branch
 get_bordered_linsolver(br::AbstractBranchResult) = get_bordered_linsolver(getalg(br))
+geteigensolver(br::ContResult) = geteigensolver(getcontparams(br))
 
 """
     setparam(br, p0)
@@ -295,146 +295,6 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
         println(io, prefix * "└─ Special points:")
         print_specialpoints(io, br)
     end
-end
-
-function print_specialpoints(io::IO, br)
-    p = String(get_lens_symbol(br))
-    rows = NamedTuple[]
-    for ii in eachindex(br.specialpoint)
-        bp = br.specialpoint[ii]
-        type(bp) == :none && continue
-        if type(bp) == :endpoint
-            push!(rows, (
-                ii        = string(ii),
-                type      = string(type(bp)),
-                param     = @sprintf("%+.8f", bp.param),
-                interval  = "",
-                precision = "",
-                status    = "",
-                δ         = "",
-                step      = string(bp.step),
-            ))
-        else
-            push!(rows, (
-                ii        = string(ii),
-                type      = string(type(bp)),
-                param     = @sprintf("%+.8f", bp.param),
-                interval  = @sprintf("(%+.8f, %+.8f)", bp.interval...),
-                precision = @sprintf("%1.0e", bp.precision),
-                status    = string(bp.status),
-                δ         = @sprintf("(%2d, %2d)", bp.δ...),
-                step      = string(bp.step),
-            ))
-        end
-    end
-    isempty(rows) && return
-
-    headers = (
-        ii        = "Nb",
-        type      = "type",
-        param     = p,
-        interval  = "interval",
-        precision = "precision",
-        status    = "status",
-        δ         = "δ",
-        step      = "step",
-    )
-
-    widths = (
-        ii        = max(textwidth(headers.ii), maximum(textwidth(r.ii) for r in rows), 2),
-        type      = max(textwidth(headers.type), maximum(textwidth(r.type) for r in rows), 10),
-        param     = max(textwidth(headers.param), maximum(textwidth(r.param) for r in rows), 10),
-        interval  = max(textwidth(headers.interval), maximum(textwidth(r.interval) for r in rows), 26),
-        precision = max(textwidth(headers.precision), maximum(textwidth(r.precision) for r in rows), 9),
-        status    = max(textwidth(headers.status), maximum(textwidth(r.status) for r in rows), 11),
-        δ         = max(textwidth(headers.δ), maximum(textwidth(r.δ) for r in rows), 8),
-        step      = max(textwidth(headers.step), maximum(textwidth(r.step) for r in rows), 4),
-    )
-
-    center(s, w) = begin
-        s = string(s)
-        n = textwidth(s)
-
-        if n >= w
-            s
-        else
-            left  = fld(w - n, 2)
-            right = w - n - left
-            " "^left * s * " "^right
-        end
-    end
-
-    border(left, middle, right) = begin
-        println(
-            io,
-            left,
-            "─"^(widths.ii + 2),        middle,
-            "─"^(widths.type + 2),      middle,
-            "─"^(widths.param + 2),     middle,
-            "─"^(widths.interval + 2),  middle,
-            "─"^(widths.precision + 2), middle,
-            "─"^(widths.status + 2),    middle,
-            "─"^(widths.δ + 2),         middle,
-            "─"^(widths.step + 2),
-            right,
-        )
-    end
-    println(io)
-    border("┌", "┬", "┐")
-    println(
-        io,
-        "│ ", center(headers.ii,        widths.ii),
-        " │ ", center(headers.type,      widths.type),
-        " │ ", center(headers.param,     widths.param),
-        " │ ", center(headers.interval,  widths.interval),
-        " │ ", center(headers.precision, widths.precision),
-        " │ ", center(headers.status,    widths.status),
-        " │ ", center(headers.δ,         widths.δ),
-        " │ ", center(headers.step,      widths.step),
-        " │",
-    )
-    border("├", "┼", "┤")
-
-    for r in rows
-        print(io, "│ ", lpad(r.ii, widths.ii), " │ ")
-        if r.type == "endpoint"
-            printstyled(
-                io,
-                lpad(r.type, widths.type);
-                bold = true,
-            )
-        else
-            printstyled(
-                io,
-                lpad(r.type, widths.type);
-                bold = true,
-                color = :blue,
-            )
-        end
-        print(io, " │ ")
-        print(io, lpad(r.param, widths.param), " │ ")
-        print(io, lpad(r.interval, widths.interval), " │ ")
-        print(io, lpad(r.precision, widths.precision), " │ ")
-        if isempty(r.status)
-            print(io, " "^widths.status)
-        else
-            printstyled(
-                io,
-                lpad(r.status, widths.status);
-                bold = true,
-                color = (r.status == "converged") ? :green : :red,
-            )
-        end
-        print(io, " │ ")
-        print(io, lpad(r.δ, widths.δ), " │ ")
-        print(io, lpad(r.step, widths.step), " │")
-        println(io)
-    end
-
-    # ------------------------------------------------------------------
-    # Bottom
-    # ------------------------------------------------------------------
-    border("└", "┴", "┘")
 end
 
 # This function is important because it provides the eigenelements corresponding to bp stored in br. 
@@ -666,4 +526,144 @@ function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
         @debug "b2-b1"
         return _cat!(_reverse(br1), br2)
     end
+end
+
+function print_specialpoints(io::IO, br)
+    p = String(get_lens_symbol(br))
+    rows = NamedTuple[]
+    for ii in eachindex(br.specialpoint)
+        bp = br.specialpoint[ii]
+        type(bp) == :none && continue
+        if type(bp) == :endpoint
+            push!(rows, (
+                ii        = string(ii),
+                type      = string(type(bp)),
+                param     = @sprintf("%+.8f", bp.param),
+                interval  = "",
+                precision = "",
+                status    = "",
+                δ         = "",
+                step      = string(bp.step),
+            ))
+        else
+            push!(rows, (
+                ii        = string(ii),
+                type      = string(type(bp)),
+                param     = @sprintf("%+.8f", bp.param),
+                interval  = @sprintf("(%+.8f, %+.8f)", bp.interval...),
+                precision = @sprintf("%1.0e", bp.precision),
+                status    = string(bp.status),
+                δ         = @sprintf("(%2d, %2d)", bp.δ...),
+                step      = string(bp.step),
+            ))
+        end
+    end
+    isempty(rows) && return
+
+    headers = (
+        ii        = "Nb",
+        type      = "type",
+        param     = p,
+        interval  = "interval",
+        precision = "precision",
+        status    = "status",
+        δ         = "δ",
+        step      = "step",
+    )
+
+    widths = (
+        ii        = max(textwidth(headers.ii), maximum(textwidth(r.ii) for r in rows), 2),
+        type      = max(textwidth(headers.type), maximum(textwidth(r.type) for r in rows), 10),
+        param     = max(textwidth(headers.param), maximum(textwidth(r.param) for r in rows), 10),
+        interval  = max(textwidth(headers.interval), maximum(textwidth(r.interval) for r in rows), 26),
+        precision = max(textwidth(headers.precision), maximum(textwidth(r.precision) for r in rows), 9),
+        status    = max(textwidth(headers.status), maximum(textwidth(r.status) for r in rows), 11),
+        δ         = max(textwidth(headers.δ), maximum(textwidth(r.δ) for r in rows), 8),
+        step      = max(textwidth(headers.step), maximum(textwidth(r.step) for r in rows), 4),
+    )
+
+    center(s, w) = begin
+        s = string(s)
+        n = textwidth(s)
+
+        if n >= w
+            s
+        else
+            left  = fld(w - n, 2)
+            right = w - n - left
+            " "^left * s * " "^right
+        end
+    end
+
+    border(left, middle, right) = begin
+        println(
+            io,
+            left,
+            "─"^(widths.ii + 2),        middle,
+            "─"^(widths.type + 2),      middle,
+            "─"^(widths.param + 2),     middle,
+            "─"^(widths.interval + 2),  middle,
+            "─"^(widths.precision + 2), middle,
+            "─"^(widths.status + 2),    middle,
+            "─"^(widths.δ + 2),         middle,
+            "─"^(widths.step + 2),
+            right,
+        )
+    end
+    println(io)
+    border("┌", "┬", "┐")
+    println(
+        io,
+        "│ ", center(headers.ii,        widths.ii),
+        " │ ", center(headers.type,      widths.type),
+        " │ ", center(headers.param,     widths.param),
+        " │ ", center(headers.interval,  widths.interval),
+        " │ ", center(headers.precision, widths.precision),
+        " │ ", center(headers.status,    widths.status),
+        " │ ", center(headers.δ,         widths.δ),
+        " │ ", center(headers.step,      widths.step),
+        " │",
+    )
+    border("├", "┼", "┤")
+
+    for r in rows
+        print(io, "│ ", lpad(r.ii, widths.ii), " │ ")
+        if r.type == "endpoint"
+            printstyled(
+                io,
+                lpad(r.type, widths.type);
+                bold = true,
+            )
+        else
+            printstyled(
+                io,
+                lpad(r.type, widths.type);
+                bold = true,
+                color = :blue,
+            )
+        end
+        print(io, " │ ")
+        print(io, lpad(r.param, widths.param), " │ ")
+        print(io, lpad(r.interval, widths.interval), " │ ")
+        print(io, lpad(r.precision, widths.precision), " │ ")
+        if isempty(r.status)
+            print(io, " "^widths.status)
+        else
+            printstyled(
+                io,
+                lpad(r.status, widths.status);
+                bold = true,
+                color = (r.status == "converged") ? :green : :red,
+            )
+        end
+        print(io, " │ ")
+        print(io, lpad(r.δ, widths.δ), " │ ")
+        print(io, lpad(r.step, widths.step), " │")
+        println(io)
+    end
+
+    # ------------------------------------------------------------------
+    # Bottom
+    # ------------------------------------------------------------------
+    border("└", "┴", "┘")
 end

@@ -34,27 +34,27 @@ $(TYPEDFIELDS)
 More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 """
 Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg <: AbstractContinuationAlgorithm, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
-    "type of solution computed during continuation, e.g. `EquilibriumCont` or `PeriodicOrbitCont`"
+    "type of solution computed during continuation, e.g. `EquilibriumCont` or `PeriodicOrbitCont`."
     kind::Tkind
-    "bifurcation problem to be continued, see [`BifurcationProblem`](@ref)"
+    "bifurcation problem to be continued, see [`BifurcationProblem`](@ref)."
     prob::Tprob
-    "continuation algorithm, e.g. [`PALC`](@ref) or [`MoorePenrose`](@ref)"
+    "continuation algorithm, e.g. [`PALC`](@ref) or [`MoorePenrose`](@ref)."
     alg::Talg
-    "continuation parameters, see [`ContinuationPar`](@ref)"
+    "continuation parameters, see [`ContinuationPar`](@ref)."
     contparams::ContinuationPar{T, S, E}
-    "whether to plot the branch during continuation"
+    "whether to plot the branch during continuation."
     plot::Bool = false
-    "structure for event detection"
+    "structure for event detection."
     event::Tevent = nothing
-    "norm used in the nonlinear solver to measure the size of the corrections"
+    "norm used in the nonlinear solver to measure the size of the corrections."
     normC::TnormC
-    "function called at the end of each continuation step, see [`continuation`](@ref)"
+    "function called at the end of each continuation step, see [`continuation`](@ref)."
     finalise_solution::Tfinalisesolution
-    "callback called after each newton iteration, see [`continuation`](@ref)"
+    "callback called after each newton iteration, see [`continuation`](@ref)."
     callback_newton::TcallbackN
-    "level of verbosity, must belong to {0,1,2,3}"
+    "level of verbosity, must belong to {0,1,2,3}."
     verbosity::UInt8 = 2
-    "name of the file where the branch is saved if `save_to_file = true` in [`ContinuationPar`](@ref)"
+    "name of the file where the branch is saved if `save_to_file = true` in [`ContinuationPar`](@ref)."
     filename::String
 end
 
@@ -69,7 +69,7 @@ function ContIterable(prob::AbstractBifurcationProblem,
                       finalise_solution = finalise_default,
                       callback_newton = cb_default,
                       event = nothing,
-                      verbosity = 0, 
+                      verbosity = 0,
                       kwargs...) where {T <: Real, S, E}
     if ~isempty(kwargs)
         @error "Unrecognized keyword arguments found."
@@ -93,7 +93,7 @@ function ContIterable(prob::AbstractBifurcationProblem,
                         filename)
 end
 
-Base.eltype(it::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T
+Base.eltype(::ContIterable{Tkind, Tprob, Talg, T}) where {Tkind, Tprob, Talg, T} = T
 # getters
 @inline getprob(it::ContIterable) = it.prob
 @inline getlens(it::ContIterable) = getlens(getprob(it))
@@ -377,11 +377,11 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     verbose && printstyled("━"^54*"\n"*"─"^(lalgo÷2)*" ", algo_string, " "*"─"^(lalgo÷2)*"\n\n", bold = true, color = :red)
 
     # newton parameters
-    (;p_min, p_max, max_steps, newton_options, η, ds) = getcontparams(it)
+    (;p_min, p_max, newton_options, η, ds) = getcontparams(it)
 
     if !(p_min <= p₀ <= p_max)
         @error "Initial continuation parameter $(String(get_lens_symbol(getlens(prob)))) = $p₀ must be within bounds [p_min, p_max] = [$p_min, $p_max]"
-        throw("Stopping continuation.")
+        error("Stopping continuation.")
     end
 
     # apply Newton algorithm to initial guess
@@ -396,7 +396,7 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
     if  ~converged(sol₀)
         printstyled("\nNewton failed to converge for the initial guess on the branch. Residuals:\n", color = :red)
         display(sol₀.residuals)
-        throw("Stopping continuation.")
+        error("Stopping continuation.")
     end
     if verbose
         print("\n──▶ convergence of initial guess = ")

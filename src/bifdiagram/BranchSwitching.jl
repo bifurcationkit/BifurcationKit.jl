@@ -428,9 +428,7 @@ function multicontinuation(br::Tbr0,
     # points from which to compute the branches before and after the bifurcation point
     seeds = [(_sol, -ds, -dscont) for _sol in defOpm[2:end]]
     append!(seeds, [(_sol, ds, dscont) for _sol in defOpp[2:end]])
-
-    isempty(seeds) && return nothing
-
+    isempty(seeds) && return nothing #TODO: should be EmptyBranch?
     branches = [_continue(_sol, _dp, _ds) for (_sol, _dp, _ds) in seeds]
     return Branch(convert(Vector{typeof(first(branches))}, branches), bpnf)
 end

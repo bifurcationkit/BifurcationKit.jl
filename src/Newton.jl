@@ -35,6 +35,8 @@ $(TYPEDFIELDS)
     @assert 0 <= tol "Tolerance must be non negative."
 end
 
+@inline geteigensolver(np::NewtonPar) = np.eigsolver
+
 """
 Structure which holds the solution from application of Newton-Krylov algorithm to a nonlinear problem.
 

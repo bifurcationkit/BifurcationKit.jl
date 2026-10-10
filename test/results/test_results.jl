@@ -10,6 +10,10 @@ f(u, p) = @. p.r * u - u^3
     @reset opt.newton_options.verbose = true
     contres = BK.continuation(prob, PALC(), opt)
     @test typeof(contres) <: BK.ContResult
+
+    # geteigensolver on ContResult
+    @test BK.geteigensolver(contres) == BK.geteigensolver(opt)
+
     bp = contres.specialpoint[1] # pitchfork bifurcation
 
     # Test slicing of ContResult object
