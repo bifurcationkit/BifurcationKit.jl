@@ -592,7 +592,7 @@ Branch switching at a bifurcation point of periodic orbits (PO) specified by a `
 
 # Arguments
 - `br` branch of periodic orbits
-- `ind_bif` index of the branch point
+- `ind_bif` index of the bifurcation point (BP/PD)
 - `_contParams` continuation parameters, see [`continuation`](@ref)
 
 # Optional arguments
@@ -668,8 +668,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         # find the bifurcated branch using deflation
         deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(VI.scalartype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
-        solbif = newton(new_disc, orbitguess, deflationOp,
-            (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
+        solbif = newton(new_disc, orbitguess, deflationOp, (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         if converged(solbif) == false
             error("Deflated newton did not converge")
         end

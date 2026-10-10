@@ -307,7 +307,7 @@ function save!(br::ContResult,
     if (it.contparams.save_sol_every_step > 0 && 
         (mod_counter(state.step, it.contparams.save_sol_every_step)) || 
         ~done(it, state))
-        push!(br.sol, (x = save_solution(it.prob, _copy(getx(state)), setparam(it.prob, getp(state))),
+        push!(br.sol, (x = save_solution(getprob(it), _copy(getx(state)), setparam(getprob(it), getp(state))),
                        p = getp(state),
                        step = state.step))
     end
@@ -623,7 +623,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
     return contRes
 end
 
-function continuation(it::ContIterable)
+function continuation(iter::ContIterable)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # The return type of this method, e.g. ContResult
     # is not known at compile time so we
@@ -632,12 +632,16 @@ function continuation(it::ContIterable)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     # We compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
-    state, = iterate(it)
+    state, = iterate(iter)
     isnothing(state) && return nothing # todo return EmptyBranch(FailedState())
+    return continuation(iter, state)
+end
+
+function continuation(iter::ContIterable, state::ContState)
     # variable to hold the result from continuation, i.e. a branch
-    contRes = ContResult(it, state)
+    contresult = ContResult(iter, state)
     # perform the continuation
-    return continuation!(it, state, contRes)
+    return continuation!(iter, state, contresult)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -692,14 +696,13 @@ function _continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       linear_algo = nothing,
-                      bothside::Val{bothside_bool} = Val(false),
-                      kwargs...) where {bothside_bool}
+                      bothside::Val{bothside_type} = Val(false),
+                      kwargs...) where {bothside_type}
     # Note that bothside and kwargs are parameters that are easy to switch for debug/plot purposes. 
     # They could have been placed in ContinuationPar but it would have been less convenient.
     # Init the continuation parameters
     contparams = init(contparams, prob, alg)
     contparams_fwd = contparams
-    contparams_bwd = @set contparams.ds = -contparams.ds
 
     # update the parameters of alg
     # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
@@ -707,14 +710,18 @@ function _continuation(prob::AbstractBifurcationProblem,
 
     # perform continuation
     itfwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
-    if bothside_bool
-        # forward case
-        initial_state, = iterate(itfwd)
-        resfwd = continuation(itfwd)
-        # backward
-        itbwd = ContIterable(prob, alg, contparams_bwd; kwargs...)
-        update_problem!(itbwd, initial_state)
-        resbwd = continuation(itbwd)
+    if bothside_type
+        # we first run the two newton steps to get the crude tangent and solutions
+        initial_cont_state, = iterate(itfwd)
+        initial_parameters = setparam(getprob(itfwd), getp(initial_cont_state))
+        initial_solution = save_solution(itfwd.prob, _copy(getx(initial_cont_state)), initial_parameters)
+        # forward continuation
+        resfwd = continuation(itfwd, copy(initial_cont_state))
+        # backward continuation
+        initial_cont_state.ds *= -1
+        itbwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
+        restore_problem!(getprob(itbwd), initial_solution, initial_parameters)
+        resbwd = continuation(itbwd, initial_cont_state)
         # merge results
         contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?
         # we have to update the branch if saved on a file

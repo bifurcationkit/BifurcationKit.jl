@@ -322,7 +322,7 @@ function _contresult(iter,
     # example of bifurcation / special point
     bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
     # save full solution? At least, we keep the first one
-    sol = [(x = x0, p = getparam(iter.prob), step = 0)]
+    sol = [(x = x0, p = getparam(getprob(iter)), step = 0)]
     eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
     _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
     return ContResult(
