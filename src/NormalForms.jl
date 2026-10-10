@@ -1310,7 +1310,6 @@ This function provides prediction for the periodic orbits branching off the Hopf
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 """
 function predictor(hp::Hopf, ds; ampfactor = 1)
-    # get the element type
     𝒯 = VI.scalartype(hp.x0)
     # get the normal form
     nf = hp.nf
@@ -1384,7 +1383,12 @@ The `BifurcationProblem` must represent xₙ₊₁ = F(xₙ, pars).
 function period_doubling_normal_form(prob::AbstractBifurcationProblem,
                                      pt::PeriodDoubling, 
                                      ls::AbstractLinearSolver;
+                                     detailed::Val{detailed_type} = Val(false),
                                      verbose::Bool = false)
+    if ~detailed_type
+        return pt
+    end
+
     (;x0, p, lens) = pt
     parbif = set(pt.params, lens, p)
     ζ = pt.ζ |> real
@@ -1470,8 +1474,12 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
                             pt::NeimarkSacker,
                             ls::AbstractLinearSolver;
-                            detailed = false, # TODO use Val{...}
-                            verbose::Bool = false)
+                            detailed::Val{detailed_type} = Val(false),
+                            verbose::Bool = false) where {detailed_type}
+    if ~detailed_type
+        return pt
+    end
+
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)
     cζ = conj.(pt.ζ)
@@ -1487,17 +1495,15 @@ function neimark_sacker_normal_form(prob::AbstractBifurcationProblem,
 
     # (I−L)⋅Ψ001 = R001
     # no need for bordered linear solver
-    if detailed
-        R001 = R01(prob, x0, parbif)
-        Ψ001, cv, it = ls(ShiftedOperator(;J, a₁ = -1), -R001)
-        ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
+    R001 = R01(prob, x0, parbif)
+    Ψ001, cv, it = ls(ShiftedOperator(;J, a₁ = -1), -R001)
+    ~cv && @debug "[NS Ψ001] Linear solver for J did not converge. it = $it"
 
-        # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
-        av = R11(prob, x0, parbif, ζ)
-        av .+= 2 .* R2(ζ, Ψ001)
-        a = LA.dot(ζ★, av) * cis(-ω)
-        verbose && println("──▶ a  = ", a)
-    end
+    # a = ⟨R11(ζ) + 2R20(ζ,Ψ001),ζ★⟩
+    av = R11(prob, x0, parbif, ζ)
+    av .+= 2 .* R2(ζ, Ψ001)
+    a = LA.dot(ζ★, av) * cis(-ω)
+    verbose && println("──▶ a  = ", a)
 
     # (exp(2iω)−L)⋅Ψ200 = R20(ζ,ζ)
     R20 = R2(ζ, ζ)

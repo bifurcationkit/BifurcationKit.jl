@@ -214,7 +214,7 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = false,
+                    start_with_eigen = Val(false), # used to filter the option
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
 
@@ -263,7 +263,7 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = false,
+                    start_with_eigen = Val(false), # used to filter the option
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     bifpt = br.specialpoint[ind_bif]

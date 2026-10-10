@@ -634,6 +634,7 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     #########
     # compute v1
+    # the problem pbwrap should have been restored here.
     # we first compute the floquet eigenvector for μ = -1
     # we use an extended linear system for this
     jac = jacobian(pbwrap, saved_solution(pd.x0), par)
@@ -1100,6 +1101,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
 
     #########
     # compute v1
+    # the problem pbwrap should have been restored here.
     # we first compute the NS floquet eigenvector
     # we use an extended linear system for this with periodic BC
     # J = D  -  T*A(t) + iθ/T

@@ -84,7 +84,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
     plot_every_step::Int64 = 10
 
     # handling bifurcation points
-    tol_stability::T = oftype(ds, 1e-10)              # lower bound for stability of equilibria and periodic orbits
+    tol_stability::T = oftype(ds, 1e-10)  # lower bound for stability of equilibria and periodic orbits
     detect_fold::Bool = true              # detect fold points?
     detect_bifurcation::Int64 = 3         # detect other bifurcation points?
     dsmin_bisection::T = oftype(ds, 1e-16)            # dsmin for the bisection algorithm when locating bifurcation points
@@ -119,6 +119,21 @@ end
 
 # clamp ds value
 clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)
+
+function Base.show(io::IO, cp::ContinuationPar{T, S, E}; prefix = "    ") where {T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+    printstyled(io, "ContinuationPar{$T, $S, $E}\n", bold = true, color = :blue)
+    fields = sort(collect(fieldnames(typeof(cp))); by = String)
+    for (i, f) in enumerate(fields)
+            print(io, prefix, i == lastindex(fields) ? "└─ " : (i == firstindex(fields) ? "┌─ " : "├─ "))
+            print(io, f, " = ")
+            if (getfield(cp, f) isa NewtonPar) == false
+                show(io, getfield(cp, f))
+            else
+                print(io, "NewtonPar{$T, $S, $E}")
+            end
+            println(io)
+    end
+end
 
 """
 Allows to alter the continuation parameters based on the bifurcation problem and the continuation algorithm.
