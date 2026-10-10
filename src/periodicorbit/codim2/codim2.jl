@@ -232,11 +232,11 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       options_cont::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization;
                       detect_codim2_bifurcation::Int = 0,
-                      autodiff = true,
+                      normal_form_kwargs = (),
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-    nf = get_normal_form(getprob(br), br, ind_bif; detailed = Val(true), autodiff)
+    nf = get_normal_form(getprob(br), br, ind_bif; normal_form_kwargs...)
     _contParams = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; kwargs...)
     @reset _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
     return _continuation(nf, br, _contParams, disc; kwargs...)

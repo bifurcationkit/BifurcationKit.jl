@@ -24,31 +24,20 @@ For collocation, the default method to compute the NF of Period-doubling and Nei
 """
 function get_normal_form(wrap::AbstractWrapperPeriodicOrbitProblem,
                         br::AbstractResult{ <: PeriodicOrbitCont}, 
-                        id_bif::Int,
-                        Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                        nev::Int = length(eigenvalsfrombif(br, id_bif)),
-                        verbose = false,
-                        ζs = nothing,
-                        lens = getlens(br),
-                        scaleζ = norm,
-                        autodiff = false,
-                        δ = getdelta(wrap),
-                        k...) where {𝒯eigvec}
+                        id_bif::Int;
+                        k...)
     bifpt = br.specialpoint[id_bif]
 
     if bifpt.type == :endpoint
         error("Don't select an end point!")
     end
 
-    # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, scaleζ, k...)
-
     if bifpt.type == :pd
-        return period_doubling_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return period_doubling_normal_form(wrap, br, id_bif; k...)
     elseif bifpt.type == :bp
-        return branch_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return branch_normal_form(wrap, br, id_bif; k...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return neimark_sacker_normal_form(wrap, br, id_bif; k...)
     end
     error("Normal form for $(bifpt.type) not yet implemented.")
 end
@@ -58,8 +47,8 @@ end
 """
 function branch_normal_form(pbwrap,
                             br,
-                            ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             verbose = false,
                             lens = getlens(br),
                             scaleζ = norminf,
@@ -99,8 +88,8 @@ end
 
 function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                             br,
-                            ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
@@ -234,8 +223,8 @@ end
 
 function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                             br,
-                            ind_bif::Int,
-                            ::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             verbose = false,
                             nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             prm::Val{prm_type} = Val(false),
@@ -421,8 +410,8 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function period_doubling_normal_form(pbwrap,
                                 br,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
@@ -453,8 +442,8 @@ end
 
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                                      br,
-                                     ind_bif::Int,
-                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                     ind_bif::Int;
+                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                      nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                      verbose = false,
                                      lens = getlens(br),
@@ -573,8 +562,8 @@ end
 
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 verbose = false,
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
@@ -954,8 +943,8 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
@@ -977,8 +966,8 @@ end
 
 function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 verbose = false,
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
@@ -1298,8 +1287,8 @@ end
 
 function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),

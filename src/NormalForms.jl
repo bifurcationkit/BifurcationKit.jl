@@ -212,51 +212,31 @@ Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` t
 """
 function get_normal_form(prob::AbstractBifurcationProblem,
                          br::AbstractBranchResult,
-                         id_bif::Int,
-                         Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                         nev = length(eigenvalsfrombif(br, id_bif)),
-                         verbose = false,
-                         lens = getlens(br),
-
-                         detailed = Val(true),
-                         autodiff = true,
-                         scaleζ = LA.norm,
-
-                         ζs = nothing,
-                         ζs_ad = nothing,
-
-                         bls = MatrixBLS(),
-                         bls_adjoint = bls,
-                         bls_block = bls,
-                         bls_block_adjoint = bls_block,
-
-                         start_with_eigen = Val(true), # TODO FIND A BETTER name
-                        ) where {𝒯eigvec}
+                         id_bif::Int;
+                         kwargs...
+                        )
     bifpt = br.specialpoint[id_bif]
 
     if (bifpt.type in (:endpoint,)) || ~(bifpt.type in (:hopf, :cusp, :bt, :gh, :zh, :hh, :bp, :nd, :fold))
         error("Normal form for $(bifpt.type) not implemented.")
     end
 
-    # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, scaleζ, start_with_eigen, detailed)
-
     if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
+        return hopf_normal_form(prob, br, id_bif; kwargs...)
     elseif bifpt.type == :cusp
-        return cusp_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
+        return cusp_normal_form(prob, br, id_bif; kwargs...)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
+        return bogdanov_takens_normal_form(prob, br, id_bif; kwargs...)
     elseif bifpt.type == :gh
-        return bautin_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
+        return bautin_normal_form(prob, br, id_bif; kwargs...)
     elseif bifpt.type == :zh
-        return zero_hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint)
+        return zero_hopf_normal_form(prob, br, id_bif; kwargs...)
     elseif bifpt.type == :hh
-        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint)
+        return hopf_hopf_normal_form(prob, br, id_bif; kwargs...)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
-        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint)
+        return get_normal_form1d(prob, br, id_bif; kwargs...)
     end
-    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block, bls_block_adjoint)
+    return get_normal_formNd(prob, br, id_bif; kwargs...)
 end
 
 @inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
@@ -278,8 +258,8 @@ Compute the reduced equation based on [1] page 295 and [2].
 """
 function get_normal_form1d(prob::AbstractBifurcationProblem,
                     br::AbstractBranchResult,
-                    ind_bif::Int,
-                    Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                    ind_bif::Int;
+                    Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                     verbose::Bool = false,
                     lens = getlens(br),
@@ -730,8 +710,8 @@ Compute the reduced equation / normal form for a bifurcation point whose jacobia
 """
 function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
-                            id_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            id_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             nev::Int = length(eigenvalsfrombif(br, id_bif)),
                             verbose::Bool = false,
                             lens = getlens(br),
@@ -1172,8 +1152,8 @@ Once the normal form `hopfnf` has been computed, you can call `predictor(hopfnf,
 """
 function hopf_normal_form(prob::AbstractBifurcationProblem,
                           br::AbstractBranchResult,
-                          ind_hopf::Int,
-                          Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                          ind_hopf::Int;
+                          Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                           nev::Int = length(eigenvalsfrombif(br, ind_hopf)),
                           verbose::Bool = false,
                           lens = getlens(br),
@@ -1383,11 +1363,9 @@ The `BifurcationProblem` must represent xₙ₊₁ = F(xₙ, pars).
 function period_doubling_normal_form(prob::AbstractBifurcationProblem,
                                      pt::PeriodDoubling, 
                                      ls::AbstractLinearSolver;
-                                     detailed::Val{detailed_type} = Val(false),
-                                     verbose::Bool = false)
-    if ~detailed_type
-        return pt
-    end
+                                     detailed::Val{detailed_type} = Val(true),
+                                     verbose::Bool = false) where {detailed_type}
+    if ~detailed_type; return pt; end
 
     (;x0, p, lens) = pt
     parbif = set(pt.params, lens, p)
@@ -1474,11 +1452,9 @@ Compute the Neimark-Sacker normal form.
 function neimark_sacker_normal_form(prob::AbstractBifurcationProblem, 
                             pt::NeimarkSacker,
                             ls::AbstractLinearSolver;
-                            detailed::Val{detailed_type} = Val(false),
+                            detailed::Val{detailed_type} = Val(true),
                             verbose::Bool = false) where {detailed_type}
-    if ~detailed_type
-        return pt
-    end
+    if ~detailed_type; return pt; end
 
     (;x0, p, lens, ω, ζ, ζ★) = pt
     parbif = set(pt.params, lens, p)

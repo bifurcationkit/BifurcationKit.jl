@@ -36,8 +36,8 @@ let
     # normal form computation
     # we set the bifurcation point for exact computations
     @reset br.specialpoint[1].param = 0.
-    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζs = [1., 0], ζs_ad = [1., 1])
-    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζs = [1., 0], ζs_ad = [1., 1])
+    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζ = [1., 0], ζ_ad = [1., 1])
+    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζ = [1., 0], ζ_ad = [1., 1])
 
     # direct call to get_normal_form1d with detailed = Val(false)
     bp1d = BK.get_normal_form1d(prob, br, 1;
@@ -80,7 +80,7 @@ let
     @test norm(pred_bd.x1 - pred.x1, Inf) < 1e-7
 
     prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
-    bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
+    bp = BK.get_normal_form(prob2, br, 1; verbose = false)
     @test BK.istranscritical(bp) == true
     show(bp)
 end
@@ -91,7 +91,7 @@ let
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
     br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
     @test BK.haseigenvector(br_noev) == false
-    bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
+    bp = BK.get_normal_form(br_noev, 1; verbose=false)
     bp = BK.get_normal_form(br_noev, 1; verbose=false)
     BK._predictor(bp, 0.01)
     nf = bp.nf
@@ -233,7 +233,6 @@ let
         bp2d = BK.get_normal_form(br, 1; 
                                         ζs = [[1, 0.], [0, 1.]],
                                         ζs_ad = give_ad ? [[1, 0], [0, 1]] : nothing, 
-                                        autodiff = true, 
                                         verbose = true)
         @info give_ad
         @test vf.nf.a01 ≈ bp2d.nf.a01 atol = 1e-10
@@ -269,7 +268,6 @@ let
         bp2d = BK.get_normal_form(br, 1; 
                                     ζs = [[1, 0, 0.], [0, 1, 0.]],
                                     ζs_ad = [[1, 0, 1], [0., 1, 0]], 
-                                    autodiff, 
                                     verbose = false)
 
         # direct call to get_normal_formNd with detailed = Val(false)
@@ -417,7 +415,7 @@ let
 
     bp2d = BK.get_normal_form(br, 1)
     # res = predictor(bp2d, 0.001;  verbose = false, perturb = identity, ampfactor = 1, nbfailures = 4)
-    # deflationOp = DeflationOperator(2, 1.0, [zeros(3)]; autodiff = true)
+    # deflationOp = DeflationOperator(2, 1.0, [zeros(3)]; )
 
     bdiag = bifurcationdiagram(probD6, PALC(), 3,
         (args...) -> setproperties(opts_br; p_min = -0.250, p_max = .4, ds = 0.001, dsmax = 0.005, n_inversion = 4, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
@@ -490,8 +488,8 @@ let
         @test isconcretetype(return_type(BK.hopf_normal_form, typeof((BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1))) )
 
         hp = BK.get_normal_form(br, 1; detailed = Val(false))
-        hp = BK.get_normal_form(br, 1; autodiff, start_with_eigen = Val(false))
-        hp = BK.get_normal_form(br, 1; autodiff)
+        hp = BK.get_normal_form(br, 1; start_with_eigen = Val(false))
+        hp = BK.get_normal_form(br, 1; )
         BK.type(hp)
 
         nf = hp.nf
@@ -619,6 +617,7 @@ let
         hp_fromBT = continuation(sn_codim2, 1, opt;
             verbosity = 0, plot = false,
             δp = 1e-4,
+            normal_form_kwargs = (autodiff = false,),
             update_minaug_every_step = 1,
             )
         # plot(sn_codim2, hp_fromBT)
@@ -687,14 +686,10 @@ function Fzh!(f, u, p)
     w0, u1, u2 = u
     ua = u1^2 + u2^2
     w1 = complex(u1, u2)
-
     f[1] = β1 + G200/2 * w0^2 + G011 * ua + G300/6 * w0^3 + G111 * w0 * ua
-
     tmp = (β2 + complex(0,1)) * w1 + G110 * w0 * w1 + G210/2 * w0^2 * w1 + G021/2 * w1 * ua
-
     f[2] = real(tmp)
     f[3] = imag(tmp)
-
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
@@ -751,7 +746,6 @@ function Fhh!(f, u, p)
 
     ua1 = abs2(w1)
     ua2 = abs2(w2)
-
 
     tmp1 = (β1 + complex(0, ω1)) * w1 + G2100/2 * w1 * ua1 + G1011 * w1 * ua2 + G3100/12 * w1 * ua1^2 + G2111/2 * w1 * ua1 * ua2 + G1022/4 * w1 * ua2^2
 

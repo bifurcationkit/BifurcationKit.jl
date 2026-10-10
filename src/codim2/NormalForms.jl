@@ -15,8 +15,8 @@ Compute the Cusp normal form.
   With `Val(false)`, only the eigen-elements are computed and `nf = nothing`.
 """
 function cusp_normal_form(𝐏𝐛,
-                            br::AbstractBranchResult, ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            br::AbstractBranchResult, ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
@@ -510,8 +510,8 @@ Compute the Bogdanov-Takens normal form.
 - `start_with_eigen = Val(true)` whether to seed the construction of the Jordan basis using the eigensolver (`Val(true)`) or using random vectors and a bordered linear system (`Val(false)`).
 """
 function bogdanov_takens_normal_form(𝐏𝐛,
-                                    br::AbstractBranchResult, ind_bif::Int,
-                                    Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                    br::AbstractBranchResult, ind_bif::Int;
+                                    Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                     δ = getdelta(𝐏𝐛),
                                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
@@ -652,19 +652,19 @@ function bogdanov_takens_normal_form(𝐏𝐛,
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function bautin_normal_form(𝐏𝐛::HopfMAProblem,
-                            br::AbstractBranchResult, ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            br::AbstractBranchResult, ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
                             lens = getlens(br),
                             scaleζ = norm,
-                            detailed = false,
                             bls = MatrixBLS(),
                             bls_adjoint = bls,
+                            detailed::Val{detailed_type} = Val(true),
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
-                            ) where {𝒯eigvec, start_with_eigen_type}
+                            ) where {𝒯eigvec, start_with_eigen_type, detailed_type}
     @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
@@ -851,7 +851,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     )
 
     # case of simplified normal form
-    if detailed == false
+    if detailed_type == false
         return pt
     end
 
@@ -1018,8 +1018,8 @@ function _extract_hopf_hopf_eigenpairs(eigenvals, ω0)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function zero_hopf_normal_form(𝐏𝐛,
-                                br::AbstractBranchResult, ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                br::AbstractBranchResult, ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
@@ -1030,7 +1030,7 @@ function zero_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)
+                                detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
@@ -1393,8 +1393,8 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::𝒯;
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function hopf_hopf_normal_form(𝐏𝐛,
-                                br::AbstractBranchResult, ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                br::AbstractBranchResult, ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
@@ -1405,7 +1405,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)
+                                detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 

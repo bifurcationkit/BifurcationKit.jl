@@ -625,11 +625,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       ampfactor = 1,
                       usedeflation = false,
                       linear_algo = nothing,
-                      detailed::Val{detailed_type} = Val(true),
-                      prm::Val{prm_type} = Val(getprob(br) isa PeriodicOrbitFunctionalColl ? false : true),
-                      use_normal_form = true,
-                      autodiff_nf = true,
-                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem, detailed_type, prm_type}
+                      normal_form_kwargs = (
+                        detailed = Val(true),
+                        prm = Val(getprob(br) isa PeriodicOrbitFunctionalColl ? false : true),
+                        autodiff = true,
+                      ),
+                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem}
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
     if ~(bptype in (:pd, :bp, :nd))
@@ -639,9 +640,8 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         error("Only simple bifurcation points are handled properly")
     end
 
-    detailed = Val(detailed_type && use_normal_form)
-    nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
-    pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
+    nf = get_normal_form(br, ind_bif; normal_form_kwargs...)
+    pred = predictor(nf, δp, ampfactor)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     new_disc = get_discretization(pred.prob) # modified discretization

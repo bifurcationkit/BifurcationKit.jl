@@ -462,21 +462,10 @@ end
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         options_cont::ContinuationPar = br.contparams;
                         alg = getalg(br),
-                        δp = nothing, 
-                        ampfactor::Real = 1,
-                        nev = options_cont.nev,
+                        δp = nothing,
                         detect_codim2_bifurcation::Int = 0,
                         update_minaug_every_step = 1,
-                        Teigvec = _getvectortype(br),
-                        scaleζ = norm,
-                        start_with_eigen = false,
-                        autodiff_nf = false,
-                        detailed = Val(true),
-                        ζs = nothing,
-                        ζs_ad = nothing,
-                        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-                        bdlinsolver_adjoint = bdlinsolver,
-                        bdlinsolver_block = bdlinsolver,
+                        normal_form_kwargs = (),
                         kwargs...) where {Tkind <: AbstractTwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -497,22 +486,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     optionsCont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
-
-    # scalar type
-    Ty = eltype(Teigvec)
-
     # compute the normal form of the bifurcation point
-    nf = get_normal_form(getprob(br), br, ind_bif, Teigvec; 
-                            nev,
+    nf = get_normal_form(getprob(br), br, ind_bif; 
+                            nev = options_cont.nev,
+                            Teigvec = _getvectortype(br),
                             verbose,
-                            scaleζ,
-                            autodiff = autodiff_nf,
-                            detailed,
-                            bls = bdlinsolver,
-                            bls_adjoint = bdlinsolver_adjoint,
-                            bls_block = bdlinsolver_block,
-                            ζs,
-                            ζs_ad)
+                            bls = getprob(br).prob.linbdsolver,
+                            bls_adjoint = getprob(br).prob.linbdsolver,
+                            normal_form_kwargs...,
+                            )
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? optionsCont.ds : δp
@@ -520,20 +502,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     if prob_ma isa FoldMinimallyAugmentedFormulation || bif_type == :hh
         # define guess for the first Hopf point on the branch
         pred = predictor(nf, Val(:HopfCurve), ds)
-
         # new continuation parameters
         parcont = pred.hopf(ds)
-
         # new full parameters
         params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
-
         # guess for the Hopf point
         hopfpt = BorderedArray(nf.x0 .+ pred.x0(ds), [parcont[1], pred.ω(ds)])
-
         # estimates for eigenvectors for ±iω
         ζ = pred.EigenVec(ds)
         ζstar = pred.EigenVecAd(ds)
-
         # put back original options
         @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
@@ -554,20 +531,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     else
         @assert prob_ma isa HopfMinimallyAugmentedFormulation
         pred = predictor(nf, Val(:FoldCurve), 0.)
-
         # new continuation parameters
         parcont = pred.fold(ds)
-
         # new full parameters
         params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
-
         # guess for the fold point
         foldpt = BorderedArray(nf.x0 .+ 0 .* pred.x0(ds), parcont[1])
-
         # estimates for null eigenvectors
         ζ = pred.EigenVec(ds) |> real
         ζstar = pred.EigenVecAd(ds) |> real
-
         # put back original options
         @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
@@ -611,6 +583,4 @@ function _correct_event_labels(contres::ContResult{Tkind}) where {Tkind <: Union
     return contres
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int)
-    real(br.l1[ind]) < 0
-end
+is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int) = real(br.l1[ind]) < 0

@@ -55,16 +55,16 @@ Returns a variable containing the parameters to affect the `continuation` algori
 """
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation
-    ds::T       = 1e-2
-    dsmin::T    = oftype(ds, 1e-4)
-    dsmax::T    = oftype(ds, 1e-1)
+    ds::T    = 1e-2
+    dsmin::T = oftype(ds, 1e-4)
+    dsmax::T = oftype(ds, 1e-1)
 
     # parameters for continuation
-    a::T    = oftype(ds, 0.5) # aggressiveness factor for step size adaptation
+    a::T = oftype(ds, 0.5) # aggressiveness factor for step size adaptation
 
     # parameters bound
-    p_min::T    = oftype(ds, -1.0)
-    p_max::T    = oftype(ds,  1.0)
+    p_min::T = oftype(ds, -1.0)
+    p_max::T = oftype(ds,  1.0)
 
     # maximum number of continuation steps
     max_steps::Int64  = 400
@@ -138,15 +138,15 @@ end
 """
 Allows to alter the continuation parameters based on the bifurcation problem and the continuation algorithm.
 """
-function init(contparams::ContinuationPar{T,S,E}, 
+function init(contparams::ContinuationPar{T, S, E}, 
                ::AbstractBifurcationProblem, 
-               ::AbstractContinuationAlgorithm) where {T,S,E}
+               ::AbstractContinuationAlgorithm) where {T, S, E}
     return contparams
 end
 
-function init(contparams::ContinuationPar{T,S,E}, 
+function init(contparams::ContinuationPar{T, S, E}, 
                prob::Union{ODEBifProblem, DAEMassBifProblem}, 
-               ::AbstractContinuationAlgorithm) where {T,S,E <: DefaultEig}
+               ::AbstractContinuationAlgorithm) where {T, S, E <: DefaultEig}
     n = length(getu0(prob))
     @reset contparams.nev = n
     return contparams

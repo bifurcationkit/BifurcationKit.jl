@@ -275,7 +275,7 @@ br_po = @time continuation(
 plot(br, br_po, label = "")
 
 # period-doubling normal form
-get_normal_form(br_po, 1, detailed = false)
+get_normal_form(br_po, 1; detailed = Val(false))
 
 # aBS from PD
 # CQ NE CONVERGE PAS VERS PD CF REMAKE?
