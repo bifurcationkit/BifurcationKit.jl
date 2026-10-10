@@ -136,6 +136,8 @@ module BifurcationKit
     include("Diffeqwrap.jl")
 
     function save_to_file end
+    save_to_file(iter, sol, p, i, br) = error("`save_to_file` requires the JLD2 extension. Run `using JLD2` to enable saving branches to file.")
+    save_to_file(iter, br) = error("`save_to_file` requires the JLD2 extension. Run `using JLD2` to enable saving branches to file.")
 
     # linear solvers
     export norminf

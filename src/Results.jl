@@ -511,6 +511,12 @@ getalg(br::Branch) = getalg(getbranches(br))
 getkind(br::Branch) = getkind(getbranches(br))
 getcontparams(br::Branch) = getcontparams(getbranches(br))
 
+kernel_dimension(br::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
+get_solution(br::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getprob(br::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getalg(br::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getcontparams(br::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
+
 """
 $(TYPEDSIGNATURES)
 
