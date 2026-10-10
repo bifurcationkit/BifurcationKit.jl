@@ -257,6 +257,16 @@ end
 
 plot(brdc::DCResult; kP...) = plot(brdc.branches...; kP...)
 
+# allow to plot a Branch holding several branches (from an Nd bifurcation point)
+function plot!(ax1, br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}; kw...) where {Tkind, Tprob}
+    for contres in getbranches(br)
+        plot!(ax1, Branch(contres, getfield(br, :bp)); kw...)
+    end
+    ax1
+end
+
+plot(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}; branchlabel = ["$i" for i = 1:length(br)], kP...) where {Tkind, Tprob} = plot([Branch(contres, getfield(br, :bp)) for contres in getbranches(br)]...; branchlabel, kP...)
+
 function plot(brs::AbstractBranchResult...; branchlabel = ["$i" for i = 1:length(brs)], kP...)
     if length(brs) == 0
         return

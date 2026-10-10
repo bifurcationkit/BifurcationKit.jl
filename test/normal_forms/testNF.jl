@@ -388,6 +388,16 @@ let
 
     br1 = BK.continuation(br, 1,
         setproperties(opts_br; n_inversion = 4, dsmax = 0.005, ds = 0.001, max_steps = 100, p_max = 1.); normC = norminf, verbosedeflation = false)
+    # test the new API: multicontinuation returns a Branch holding a vector of branches
+    @test br1 isa Branch
+    @test BK.getbranches(br1) isa AbstractVector{ <: ContResult}
+    @test length(br1) >= 1
+    @test br1[1] isa Branch
+    @test BK.from(br1) isa BK.NdBranchPoint
+    @test BK.getbranches(br1[1]) isa ContResult
+    plot(br1)
+    plot(br, br1)
+    plot(br1, br)
     # plot(br1..., br, plotfold=false, putbifptlegend=false)
 
     bp2d = BK.get_normal_form(br, 1)

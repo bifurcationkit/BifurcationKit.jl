@@ -28,6 +28,8 @@ module MakieExt
                            plotAllDCBranch,
                            plot_DCont_branch,
                            AbstractResult,
+                           Branch,
+                           getbranches,
                            NSCont, PDCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont,
                            HopfCont,
                            is_supercritical

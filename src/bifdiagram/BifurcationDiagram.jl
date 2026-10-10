@@ -35,6 +35,7 @@ get_branch(tree::BifDiagNode) = tree.γ
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
+add!(tree::BifDiagNode, γ::Branch{Tk, Tp, <: Vector{ <: ContResult}}, level::Int, code::Int) where {Tk, Tp} = foreach(x -> add!(tree, Branch(x, getfield(γ, :bp)), level, code), getbranches(γ))
 add!(::BifDiagNode, ::Nothing, ::Int, ::Int) = nothing
 get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
@@ -200,13 +201,13 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 end
                 verbose && _show(stdout, node.γ.specialpoint[id], id)
 
-                # in the case of a Transcritical bifurcation, we compute the other branch
-                if ~isnothing(γ) && ~(γ isa Vector)
-                    if ~halfbranch && from(γ) isa Transcritical
+                # in the case of a Transcritical / Pitchfork bifurcation, we compute the other branch
+                if ~isnothing(γ) && ~halfbranch && ~(γ isa Branch{<: Any, <: Any, <: Vector{ <: ContResult}})
+                    bp = from(γ)
+                    if bp isa Transcritical
                         γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _dsfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
-                    end
-                    if ~halfbranch && from(γ) isa Pitchfork
+                    elseif bp isa Pitchfork
                         γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _ampfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end

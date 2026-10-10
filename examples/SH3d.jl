@@ -184,10 +184,10 @@ br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 1
     # callback_newton = cb,
     normC = norminf)
 
-BK.plot(br, br1...)
-BK.plot(br1...)
+BK.plot(br, br1)
+BK.plot(br1)
 
-BK.plot(br1...)
+BK.plot(br1)
 
 fig = Figure(resolution = (1200, 900))
 for i=1:min(25,length(br1))

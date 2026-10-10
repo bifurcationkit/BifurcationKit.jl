@@ -432,15 +432,13 @@ function multicontinuation(br::Tbr0,
             empty(alg), getlens(br),
             (@set options_cont.ds = _ds); kwargs...)
     end
-    # TODO: it should be a Branch of vectors not a vector of Branches. We duplicate bpnf
-    branches_no_type = [Branch(_continue(defOpm[id], -ds, -dscont), bpnf) for id in 2:length(defOpm)]
 
-    for id in 2:length(defOpp)
-        br = _continue(defOpp[id], ds, dscont); push!(branches_no_type, Branch(br, bpnf))
-        # br = _continue(defOpp[id], ds, -dscont); push!(branches_no_type, Branch(br, bpnf))
-    end
-    # # plus branches_no_type is a Vector{Any} so we have to hack a bit. Using a Branch of vectors would probably help
-    Tbr = typeof(first(branches_no_type))
-    branches = convert(Vector{Tbr}, branches_no_type)
-    return branches
+    # points from which to compute the branches before and after the bifurcation point
+    seeds = [(_sol, -ds, -dscont) for _sol in defOpm[2:end]]
+    append!(seeds, [(_sol, ds, dscont) for _sol in defOpp[2:end]])
+
+    isempty(seeds) && return nothing
+
+    branches = [_continue(_sol, _dp, _ds) for (_sol, _dp, _ds) in seeds]
+    return Branch(convert(Vector{typeof(first(branches))}, branches), bpnf)
 end

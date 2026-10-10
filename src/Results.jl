@@ -516,11 +516,23 @@ getalg(br::Branch) = getalg(getbranches(br))
 getkind(br::Branch) = getkind(getbranches(br))
 getcontparams(br::Branch) = getcontparams(getbranches(br))
 
-kernel_dimension(br::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
-get_solution(br::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getprob(br::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getalg(br::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getcontparams(br::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
+# for a Branch holding a vector of branches, delegate to the first branch
+@inline kernel_dimension(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, ind) where {Tk, Tp} = kernel_dimension(first(getbranches(br)), ind)
+get_solution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, ind) where {Tk, Tp} = get_solution(first(getbranches(br)), ind)
+getprob(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getprob(first(getbranches(br)))
+getalg(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getalg(first(getbranches(br)))
+getcontparams(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getcontparams(first(getbranches(br)))
+
+haseigenvalues(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvalues, getbranches(br))
+hassolution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(hassolution, getbranches(br))
+haseigenvector(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvector, getbranches(br))
+_hasstability(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(_hasstability, getbranches(br))
+
+kernel_dimension(::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
+get_solution(::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getprob(::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getalg(::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getcontparams(::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
 
 """
 $(TYPEDSIGNATURES)
@@ -531,19 +543,22 @@ from(br::Branch) = getfield(br, :bp)
 from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
 _getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(getbranches(br))
+_getfirstusertype(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}; k...) where {Tk, Tp} = _getfirstusertype(first(getbranches(br)); k...)
 Base.firstindex(br::Branch) = firstindex(getbranches(br))
 Base.lastindex(br::Branch) = lastindex(getbranches(br))
 @inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(getbranches(br))
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
-Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(getbranches(br), s)
+Base.getproperty(br::Branch{Tk, Tp, <: ContResult}, s::Symbol) where {Tk, Tp} = s in (:γ, :bp) ? getfield(br, s) : getproperty(getbranches(br), s)
 Base.getindex(br::Branch, k::Int) = getindex(getbranches(br), k)
+# for a Branch holding a vector of branches, br[k] is the k-th branch as a Branch
+Base.getindex(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, k::Int) where {Tk, Tp} = Branch(getbranches(br)[k], getfield(br, :bp))
 Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(getbranches(br), k))
 
 Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, getbranches(br); comment = " from $(type(br.bp)) bifurcation point.", k...)
 
-function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: AbstractVector}
+function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: Vector{ <: ContResult}}
     for contresult in getbranches(br)
         show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
     end
