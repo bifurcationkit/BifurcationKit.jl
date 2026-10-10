@@ -1443,20 +1443,20 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
     # we update the problem by doubling Ntst
     # we need to save the mesh for adaptation
     old_mesh = getmesh(pbnew)
-    new_mesh = vcat(old_mesh[begin:end-1]/2, old_mesh ./2 .+ 1/2)
+    new_mesh = vcat(old_mesh[begin:end-1] / 2, old_mesh ./2 .+ 1/2)
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
     update_mesh!(pbnew, new_mesh)
 
     # parameter to scale time
     time_factor = 1
 
-    if ~override # we use predictor from normal form
+    if ~override # we use the predictor from the normal form
         if nf.prm == true && ~isnothing(nf.nf.nf)
             # normal form based on Poincaré return map
             pred = predictor(nf.nf, δp)
             ampfactor *= pred.x1
             δp = pred.δp
-        elseif nf.prm == false && get(nf.nf.nf, :c₁₁, nothing) != nothing
+        elseif nf.prm == false && ~isnothing(get(nf.nf.nf, :c₁₁, nothing))
             # Iooss normal form
             (;c₁₁, b3) = nf.nf.nf
             c₃ = b3

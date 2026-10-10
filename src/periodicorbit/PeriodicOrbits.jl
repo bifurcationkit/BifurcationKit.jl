@@ -405,11 +405,11 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization ;
                       bif_prob = getprob(br),
-                      kwargs_nf = (),
+                      normal_form_kwargs = (),
                       kwargs...)
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev = length(eigenvalsfrombif(br, ind_bif)), verbose, kwargs_nf...)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev = length(eigenvalsfrombif(br, ind_bif)), verbose, normal_form_kwargs...)
     return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 

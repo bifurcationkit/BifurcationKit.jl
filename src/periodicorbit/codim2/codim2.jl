@@ -584,8 +584,7 @@ function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
     restore_problem!(pbwrap, bifpt.x, par)
     x0 = saved_solution(pointguess.u)
 
-    (; ζ, ζad) = _init_pd_vectors_minaug(
-        pbwrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
+    (; ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
     return continuation_pd(pbwrap, alg,
         pointguess, par,
@@ -617,8 +616,7 @@ function _continuation_ns_po(br, ind_bif::Int64, lens2::AllOpticTypes,
     x0 = saved_solution(pointguess.u)
 
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    (; ζ, ζad) = _init_ns_vectors_minaug(
-        pbwrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
+    (; ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
     return continuation_ns(pbwrap, alg,
         pointguess, par,

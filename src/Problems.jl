@@ -286,7 +286,7 @@ by forward finite differences with step `δ = getdelta(prob)`.
 
 # Arguments
 - `prob` bifurcation problem
-- `dFdp` output vector, overwritten inplace
+- `dFdp` output vector, overwritten inplace. It must have the same layout as the residual `F(x, p)`, which may differ from that of `x`.
 - `x` current solution
 - `par` full set of parameters
 - `p` current value of the parameter `getlens(prob)`
@@ -309,15 +309,17 @@ function R01!(::FiniteDifferences,
         res_f = residual(prob, x, set(par, getlens(prob), p))
     end
     dFdp = minus!!(dFdp, res_f)
-    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = VI.scale!!(dFdp, one(𝒯) / ϵ)
 end
 
 function R01(::FiniteDifferences,
                 prob::AbstractBifurcationProblem,
                 x,
                 par; δ = getdelta(prob))
-    dFdp = VI.zerovector(x)
-    R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)))
+    res_f = residual(prob, x, par)
+    # dFdp lives in the residual space, whose layout may differ from the state x
+    dFdp = VI.zerovector(res_f)
+    R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)), res_f; δ)
     return dFdp
 end
 
