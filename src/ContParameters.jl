@@ -4,7 +4,7 @@ $(TYPEDEF)
 Returns a variable containing the parameters to affect the `continuation` algorithm used to solve `F(x, p) = 0`.
 
 # Arguments
-- `dsmin, dsmax` are the minimum, maximum allowed arc-length value. It controls the density of points in the computed branch of solutions.
+- `dsmin, dsmax` are the minimum, maximum allowed arc-length value. It controls the density of points in the computed branch of solutions. `dsmin` defaults to `floatmin(typeof(ds))`: the step is halved after a failed correction until it would become subnormal, a floor that does not depend on the units of the problem.
 - `ds = 0.01` is the initial arc-length.
 - `p_min, p_max` allowed parameter range for `p`
 - `max_steps = 100` maximum number of continuation steps
@@ -56,7 +56,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
 @with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation
     ds::T       = 1e-2
-    dsmin::T    = oftype(ds, 1e-4)
+    dsmin::T    = floatmin(typeof(ds))
     dsmax::T    = oftype(ds, 1e-1)
 
     # parameters for continuation
