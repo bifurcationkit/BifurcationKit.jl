@@ -721,6 +721,7 @@ function _continuation(prob::AbstractBifurcationProblem,
         initial_cont_state.ds *= -1
         itbwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
         restore_problem!(getprob(itbwd), initial_solution, initial_parameters)
+        update_predictor!(initial_cont_state, itbwd)
         resbwd = continuation(itbwd, initial_cont_state)
         # merge results
         contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?

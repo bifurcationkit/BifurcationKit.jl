@@ -31,10 +31,9 @@ parlor = (α = 1//4, β = 1, G = .25, δ = 1.04, γ = 0.987, T=0.04,F=3.)
 
 opts_br = ContinuationPar(p_min = -1.5, p_max = 3.0, ds = 0.001, dsmax = 0.025,
     detect_bifurcation = 3,
-    n_inversion = 6, max_bisection_steps = 25,
+    n_inversion = 6,
+    newton_options = NewtonPar(max_iterations = 25),
     nev = 4, max_steps = 252)
-
-@reset opts_br.newton_options.max_iterations = 25
 
 z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105288273117459]
 
@@ -51,7 +50,8 @@ br = @time continuation(prob,
                         alg,
                         opts_br;
                         normC = norminf,
-                        bothside = Val(true))
+                        bothside = Val(true)
+                        )
 
 @test br.alg.tangent isa Bordered
 @test br.alg.bls isa MatrixBLS

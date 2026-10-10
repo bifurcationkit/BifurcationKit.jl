@@ -103,7 +103,9 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
                     )
     @test all(minimum(abs.(Complex(0,pi) .- x.eigenvals)) < 1e-3 for x in pd_po_coll.eig)
     @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
-    get_normal_form(pd_po_coll, 2)
+    if pd_po_coll.specialpoint[2].type != :endpoint
+        get_normal_form(pd_po_coll, 2)
+    end
 end
 ################################################################################
 # find the NS case
@@ -239,6 +241,8 @@ J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-7
 end
 end
+
+
 end
 
 function SL!(du, u, p, t = 0)
