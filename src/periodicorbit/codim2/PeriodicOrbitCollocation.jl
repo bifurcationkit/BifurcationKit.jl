@@ -167,23 +167,16 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     pbwrap = deepcopy(getprob(br))
     # we put the problem back to the state it was
     restore_problem!(pbwrap, bifpt.x, par_pd)
+    x0 = saved_solution(pdpointguess.u)
 
     # get the PD eigenvectors
-    J = jacobian_period_doubling_with_border(pbwrap, saved_solution(pdpointguess.u), par_pd)
-    nj = size(J, 1)
-    J[end, :] .= rand(nj) # must be close to kernel
-    J[:, end] .= rand(nj)
-    J[end, end] = 0
-    rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
-    p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
+    (;ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par_pd, bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
-    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, saved_solution(pdpointguess.u), par_pd)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation
     continuation_pd(pbwrap, alg,
         pdpointguess, par_pd,
         getlens(br), lens2,
-        p, q,
+        ζ, ζad,
         options_cont;
         kwargs...,
         prm,
@@ -215,26 +208,24 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
+
+    par_ns = setparam(br, bifpt.param)
     nspointguess = ns_point(br, ind_bif)
+    # wrap of collocation functional
+    pbwrap = deepcopy(getprob(br))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par_ns)
+    x0 = saved_solution(nspointguess.u)
 
     # get the NS eigenvectors
-    par = setparam(br, bifpt.param)
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    J = jacobian_neimark_sacker_with_border(getprob(br), saved_solution(nspointguess.u), par, imag(λₙₛ))
-    nj = size(J, 1)
-    J[end, :] .= rand(nj) # must be close to eigenspace
-    J[:, end] .= rand(nj)
-    J[end, end] = 0
-
-    rhs = zeros(nj); rhs[end] = 1
-    q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
-    p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
+    (;ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par_ns, imag(λₙₛ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
     # perform continuation
-    continuation_ns(getprob(br), alg,
-        nspointguess, setparam(br, nspointguess.p[1]),
+    continuation_ns(pbwrap, alg,
+        nspointguess, par_ns,
         getlens(br), lens2,
-        p, q,
+        ζ, ζad,
         options_cont;
         kwargs...,
         prm,

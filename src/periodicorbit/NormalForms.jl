@@ -99,10 +99,10 @@ end
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
 
+    # we then put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    # we then put the problem back to the state it was
-    restore_problem!(pbwrap, x0, pars)
     period = getperiod(prob_sh, x0, pars)
 
     # we compute the kernel:
@@ -229,10 +229,10 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
     # we put the problem back to the state it was
-    restore_problem!(pbwrap, x0, par)
+    restore_problem!(pbwrap, bifpt.x, par)
+    # we need this conversion when running on GPU and loading the branch from the disk
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x)) 
 
     bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type || ~detailed_type
@@ -447,10 +447,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
 
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, x0, pars)
 
     # let us compute the kernel
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
@@ -567,10 +567,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, x0, par)
 
     pd0 = PeriodDoubling(x0, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type
@@ -973,10 +973,10 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
 
     par = setparam(br, bifpt.param)
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, x0, par)
 
     period = getperiod(coll, x0, par)
 
@@ -1296,6 +1296,8 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
     period = getperiod(sh, bifpt.x, pars)
 
     # get the eigenvalue

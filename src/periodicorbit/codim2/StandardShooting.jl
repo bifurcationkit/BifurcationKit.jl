@@ -100,7 +100,6 @@ end
             im1 = (ii == 1) ? M : ii-1
             # call jacobian of the flow, jacobian-vector product
             tmp = dflow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
-
             if ii==1
                 outc[:, ii] .= tmp .+ α .* dxc[:, im1]
             else
@@ -212,36 +211,34 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
                     start_with_eigen = Val(false), # used to filter the option
+                    bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
+    bifpt = br.specialpoint[ind_bif]
+    biftype = br.specialpoint[ind_bif].type
+    @assert biftype == :pd "Please open an issue on BifurcationKit website"
 
-        bifpt = br.specialpoint[ind_bif]
-        pdpointguess = pd_point(br, ind_bif)
+    par_pd = setparam(br, bifpt.param)
+    pdpointguess = pd_point(br, ind_bif)
+    # wrap of shooting functional
+    pbwrap = deepcopy(getprob(br))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par_pd)
+    x0 = saved_solution(pdpointguess.u)
 
-        # copy the problem for not mutating the one passed by the user
-        pbwrap = getprob(br)
+    # get the PD eigenvectors
+    (;ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par_pd, bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
-        # get the parameters
-        par_pd = setparam(br, pdpointguess.p)
-
-        # compute the full eigenvector, version with bordered problem
-        ls = options_cont.newton_options.linsolver
-        J = jacobian_period_doubling(pbwrap, bifpt.x, par_pd)
-        rhs = zero(bifpt.x)[begin:end-1]; rhs[end] = 1
-        q, = ls(J, rhs); q ./= norm(q) #≈ ker(J)
-        # p, = ls(transpose(J), rhs); p ./= norm(p)
-        p = copy(q)
-
-        # perform continuation
-        continuation_pd(getprob(br), alg,
-            pdpointguess, setparam(br, pdpointguess.p),
-            getlens(br), lens2,
-            # ζs, ζs_ad,
-            p, q,
-            options_cont;
-            kwargs...,
-            kind = PDPeriodicOrbitCont(),
-            )
+    # perform continuation
+    continuation_pd(pbwrap, alg,
+        pdpointguess, par_pd,
+        getlens(br), lens2,
+        ζ, ζad,
+        options_cont;
+        kwargs...,
+        bdlinsolver,
+        kind = PDPeriodicOrbitCont(),
+        )
 end
 
 """
@@ -265,30 +262,25 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     bifpt = br.specialpoint[ind_bif]
     biftype = bifpt.type
-
     @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
-    nspointguess = ns_point(br, ind_bif)
 
-    # copy the problem for not mutating the one passed by the user
-    pbwrap = getprob(br)
     par_ns = setparam(br, bifpt.param)
+    nspointguess = ns_point(br, ind_bif)
+    # wrap of collocation functional
+    pbwrap = deepcopy(getprob(br))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, par_ns)
+    x0 = saved_solution(nspointguess.u)
 
-    # compute the eigenspace
+    # get the NS eigenvectors
     λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    ωₙₛ = λₙₛ / 1im
-
-    J = jacobian_neimark_sacker(pbwrap, bifpt.x, par_ns, ωₙₛ)
-    nj = length(bifpt.x) - 1
-    q, = bdlinsolver(J, Complex.(rand(nj)), Complex.(randn(nj)), 0, Complex.(zeros(nj)), 1)
-    q ./= norm(q)
-    p = conj(q)
+    (;ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par_ns, imag(λₙₛ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
     # perform continuation
-    continuation_ns(getprob(br), alg,
-        nspointguess, setparam(br, nspointguess.p[1]),
+    continuation_ns(pbwrap, alg,
+        nspointguess, par_ns,
         getlens(br), lens2,
-        p, q,
-        # ζs, copy(ζs_ad),
+        ζ, ζad,
         options_cont;
         kwargs...,
         bdlinsolver,

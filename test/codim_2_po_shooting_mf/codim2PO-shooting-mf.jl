@@ -40,16 +40,13 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-# @info "import AD"
-# import AbstractDifferentiation as AD
-# @info "import Zygote"
+# import DifferentiationInterface as DI
 # using Zygote, SciMLSensitivity
 
 probsh, cish = generate_ci_problem( Shooting(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
     alg = Rodas5(),
     jacobian = BK.AutoDiffMF(),
     # jacobian = BK.FiniteDifferencesMF(),
-    # parallel = true,
     )
 
 function flow(x0, prob0, tm, p = prob0.p)
@@ -62,7 +59,19 @@ function my_R01(x, pars, tΣ, lens, p₀)
     zero(x)
 end
 
+flowmap(z, p, tm) = ODE.solve(
+    ODE.remake(prob_de; u0 = z, tspan = (0, tm), p = p), alg
+)[end]
+
+
+function vjp_flow_forwarddiff(fl, x, pars, dx, tm; kwargs...)
+    Jf = ForwardDiff.jacobian(z -> BK.evolve(fl, z, pars, tm; kwargs...).u, x)
+    return adjoint(Jf) * dx
+end
+
+my_vjp = (x, p, dx, tm) -> vjp_flow_forwarddiff(probsh.flow, x, p, dx, tm)
 @reset probsh.flow.R01 = my_R01
+@reset probsh.flow.vjp = my_vjp
 
 lspo = GMRESIterativeSolvers(verbose = false, N = length(cish), abstol = 1e-12, reltol = 1e-10)
 eigpo = EigKrylovKit(x₀ = rand(4))
@@ -138,6 +147,8 @@ sol2 = ODE.solve(ODE.remake(sol2.prob, tspan = (0,10), u0 = sol2.u[end]), Rodas5
 probshns, ci = generate_ci_problem( Shooting(M=3), re_make(prob, params = sol2.prob.p), ODE.remake(prob_de, p = par_pop2), sol2, 1.; alg = Rodas5(),
             jacobian = BK.AutoDiffMF()
             )
+@reset probshns.flow.R01 = my_R01
+@reset probshns.flow.vjp = my_vjp
 
 # @reset probshns.flow.vjp = (x,p,dx,tm) -> AD.pullback_function(AD.ZygoteBackend(), z->flow(z, prob_de,tm,p), x)(dx)[1]
 

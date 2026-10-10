@@ -74,7 +74,6 @@ function __compute_bordered_vectors_ns(linbdsolver, linbdsolver_adjoint, JNS, JN
     # we solve JNS' w + b σ2 = 0 with <a, w> = 1 ; i.e. Nᵗ[w, σ2] = [0, 1]
     w, σ2, cv, itw = linbdsolver_adjoint(JNS★, b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "[NS] Bordered linear solver for JNS' did not converge."
-
     return (; v, w, itv, itw, σ1, σ2)
 end
 
