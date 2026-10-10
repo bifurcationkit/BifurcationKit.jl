@@ -631,7 +631,7 @@ function continuation(it::ContIterable)
     # this is also true for states (record function, eigenvectors, events, ...)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    # we compute the cache for the continuation, i.e. state::ContState
+    # We compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
     state, = iterate(it)
     isnothing(state) && return nothing
@@ -651,7 +651,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 
 # Arguments:
 - `prob::AbstractBifurcationProblem` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
-- `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(),...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
+- `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(), ...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
 - `contparams::ContinuationPar` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:

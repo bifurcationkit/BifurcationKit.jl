@@ -335,7 +335,7 @@ function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, app
     end
 end
 ####################################################################################################
-plotAllDCBranch(branches) = plot(branches...)
+plotAllDCBranch(::BK_Makie, branches) = plot(branches...)
 
 function plot_DCont_branch(::BK_Makie, 
                             branches, 

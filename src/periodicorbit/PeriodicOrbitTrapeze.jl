@@ -184,7 +184,6 @@ end
 
 @inline apply_mass_matrix(trap::Trapeze, x, p, dx) = trap.massmatrix !== nothing ? trap.massmatrix * dx : apply_mass_matrix(trap.prob_vf, x, p, dx)
 
-# these functions extract the last component of the periodic orbit guess
 @inline _extract_period_fdtrap(trap::Trapeze, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
@@ -834,10 +833,8 @@ Update the section used for the phase constraint at the current guess `x`: the r
     @debug "Update section TRAP"
     M, N = size(trap)
     xc = get_time_slices(trap, x)
-
     # update the reference point
     trap.xπ .= x[begin:end-1]
-
     # update the normals
     for ii in 0:M-1
         # ii2 = (ii+1)<= M ? ii+1 : ii+1-M
@@ -942,9 +939,12 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator, Tϕ}
-    ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
-    Aγ::Tag             # Aγ Operator involved in the Jacobian of the PO functional
-    ϕT::Tϕ = nothing    # phase row scaled by the period T*ϕ, kept in sync in the update below
+    "derivative of the PO functional G w.r.t. T."
+    ∂TGpo::T∂ = nothing
+    "Aγ Operator involved in the Jacobian of the PO functional."
+    Aγ::Tag
+    "phase row scaled by the period T*ϕ, kept in sync in the update."
+    ϕT::Tϕ = nothing
 end
 
 # this function is called whenever the jacobian of G has to be updated
@@ -981,8 +981,8 @@ end
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
     dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
-                                             J.ϕT, J.∂TGpo[end],
-                                           rhs[begin:end-1], rhs[end])
+                                                   J.ϕT, J.∂TGpo[end],
+                                                   rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end
 
@@ -1021,7 +1021,7 @@ function _jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::Tuple{FullSparseInpl
     po_jacobian_sparse!(trap, _J, x, p, _indx)
 end
 
-_jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::FullLU, x, p) = po_jacobian_sparse(get_discretization(wrap), x, p)
+_jacobian_po(wrap::PeriodicOrbitFunctionalTrap, ::FullLU, x, p) = po_jacobian_sparse(get_discretization(wrap), x, p)
 POTrapJacobianBordered
 _jacobian_po(::PeriodicOrbitFunctionalTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
@@ -1325,7 +1325,7 @@ where ``M_a`` is the mass matrix and ``\\bar{h}`` the mean time step. This block
     ┌                          ┐
     │  M̄   -H̄                  │
     │       M̄   -H̄             │
-    │            ⋱     ⋱       │
+    │            ⋱     ⋱      │
     │  -H̄            M̄         │
     └                          ┘
 
