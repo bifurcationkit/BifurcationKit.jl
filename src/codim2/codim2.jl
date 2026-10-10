@@ -339,17 +339,18 @@ end
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     𝒯 = _getvectortype(br)
     bifpt = br.specialpoint[ind]
+    saved = bifpt.x.x
     # get the biurcation point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
-        x0 = convert(𝒯.parameters[1], saved_solution(bifpt.x.x))
+        x0 = convert(𝒯.parameters[1], saved_solution(saved))
     else
-        x0 = convert(𝒯, saved_solution(bifpt.x.x))
+        x0 = convert(𝒯, saved_solution(saved))
     end
     # parameters for vector field
     p1 = bifpt.x.p1
     p2 = bifpt.param
     parbif = _set(getparams(br), get_lenses(br), (p1, p2))
-    return (x = x0, params = parbif)
+    return (x0 = x0, parbif = parbif, saved = saved)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

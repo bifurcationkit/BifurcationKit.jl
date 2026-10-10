@@ -66,9 +66,9 @@ function cusp_normal_form(𝐏𝐛,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -557,9 +557,9 @@ function bogdanov_takens_normal_form(𝐏𝐛,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     𝒯 = VI.scalartype(𝒯eigvec)
     # jacobian at bifurcation point
@@ -705,9 +705,9 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -1069,9 +1069,9 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     x0 = if Teigvec <: BorderedArray
         convert(Teigvec.parameters[1], x0)
@@ -1446,9 +1446,9 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)

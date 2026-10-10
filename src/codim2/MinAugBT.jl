@@ -395,7 +395,8 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
     ζad = _copy(ζ)
 
     if start_with_eigen
-        x0, parbif = get_bif_point_codim2(br, ind_bt)
+        (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bt)
+        restore_problem!(prob_ma.prob_vf, saved, parbif)
 
         # jacobian at bifurcation point
         L = jacobian(prob_ma.prob_vf, x0, parbif)
@@ -419,7 +420,8 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         b = ζad
         b = rand(length(ζ))
         𝒯 = VI.scalartype(a)
-        x0, parbif = get_bif_point_codim2(br, ind_bt)
+        (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bt)
+        restore_problem!(prob_ma.prob_vf, saved, parbif)
         L = jacobian(prob_ma.prob_vf, x0, parbif)
         newb, _, cv, it = bdlinsolver(L, a, b, zero(𝒯), zero(a), one(𝒯))
         ~cv && @debug "[Bogdanov-Takens] Bordered linear solver for J did not converge."
