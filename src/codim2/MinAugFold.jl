@@ -543,8 +543,7 @@ function _init_fold_vectors_minaug(prob, x₀, par₀, bdlinsolver, bdlinsolver_
 
     (; v, w, itv, itw) = __compute_bordered_vectors_fold(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
 
-    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v))
-    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, par₀)) norminf(apply(L★, w))
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v)) norminf(apply(L★, w))
 
     ζad = w; VI.scale!(ζad, 1 / normC(ζad))
     ζ   = v; VI.scale!(ζ,   1 / normC(ζ))

@@ -400,7 +400,7 @@ let
     x0 = rand(3); @test norm(FbpD6(x0, BK.setparam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
     br1 = BK.continuation(br, 1,
-        setproperties(opts_br; n_inversion = 4, dsmax = 0.005, ds = 0.001, max_steps = 100, p_max = 1.); normC = norminf, verbosedeflation = false)
+        setproperties(opts_br; n_inversion = 4, dsmax = 0.005, ds = 0.001, max_steps = 100, p_max = 1.); normC = norminf, deflated_newton_kwargs = (verbosedeflation = false,))
     # test the new API: multicontinuation returns a Branch holding a vector of branches
     @test br1 isa Branch
     @test BK.getbranches(br1) isa AbstractVector{ <: ContResult}
@@ -513,10 +513,10 @@ let
     Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
     par = (β1 = 0.0, β2 = -0.01, c = 3.)
     prob = BK.ODEBifProblem(Fcusp, [0.01], par, (@optic _.β1))
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
+    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3)
     br = continuation(prob, PALC(), opts_br;)
 
-    sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+    sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40) ;
         update_minaug_every_step = 1,
         bdlinsolver = MatrixBLS(),
         jacobian_ma = BK.MinAug(),
@@ -551,11 +551,11 @@ let
         par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
         prob  = BK.ODEBifProblem(_F, [0.01, 0.01], par, (@optic _.β1))
         opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8)
 
         br = continuation(prob, PALC(), opts_br; bothside = Val(true), verbosity = 0)
 
-        sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+        sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40) ;
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
             bdlinsolver = MatrixBLS()
@@ -565,7 +565,7 @@ let
         @test length(unique(sn_codim2.BT)) == length(sn_codim2)
         plot(sn_codim2)
 
-        hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
+        hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
             bothside = Val(true),
@@ -653,7 +653,7 @@ let
         prob = BK.ODEBifProblem(_F, [0.01, 0.01], par_sl, (@optic _.r))
 
         opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8)
 
         @reset opts_br.newton_options.verbose = false
         @reset opts_br.newton_options.tol = 1e-12
@@ -661,7 +661,7 @@ let
 
         br = continuation(prob, PALC(), opts_br)
 
-        hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
+        hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
             detect_codim2_bifurcation = 2,
             start_with_eigen = true,
             update_minaug_every_step = 1,

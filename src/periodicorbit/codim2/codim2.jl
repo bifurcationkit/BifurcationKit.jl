@@ -222,6 +222,22 @@ function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, ite
     return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = newpar); iter, state)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDSIGNATURES)
+
+Automatic branch switching at a codim 2 bifurcation point (Bautin, Zero-Hopf or Hopf-Hopf) detected on a curve of Fold / Hopf points, to a curve of Fold / Neimark-Sacker bifurcation points of periodic orbits.
+
+# Arguments
+- `br` branch of Fold or Hopf points computed with [`continuation`](@ref)
+- `ind_bif` index of the codim 2 bifurcation point in `br`
+- `options_cont` continuation parameters for the bifurcated curve of periodic orbits
+- `disc` discretization used to compute periodic orbits, see [Periodic orbits based on orthogonal collocation](@ref) or [Periodic orbits based on the shooting method](@ref)
+
+# Optional arguments
+- `detect_codim2_bifurcation::Int = 0` whether to detect codim 2 bifurcation points on the bifurcated curve, see [`continuation`](@ref)
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` to skip the computation of the normal form coefficients.
+- `kwargs` optional arguments passed to [`continuation`](@ref), e.g. `δp` and `ampfactor` used to build the initial guess on the bifurcated curve
+"""
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,

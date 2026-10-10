@@ -113,7 +113,7 @@ begin
         
         ns_p = get_normal_form(br_po_bp, 1; detailed = Val(true), prm = Val(true))
         @test_skip ns_p.nf.nf.b/(imag(ns_p.nf.nf.b)) ≈ (-6.724846398058799 - 52.018420910967144im)/(- 52.018420910967144) rtol = 1e-1
-        @test_skip ns_p.nf.type == :SuperCritical
+        @test ns_p.nf.type == :SuperCritical
         
         ns = get_normal_form(br_po_bp, 1; detailed = Val(true), prm = Val(false))
         # @test ns.nf.nf.a ≈ 1.2086369211684012 + 2.0403410963243346e-17im rtol = 1e-2

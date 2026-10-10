@@ -173,14 +173,14 @@ bp=get_normal_form(br, 3; nev = 30, bls = BorderingBLS(solver = optnew.linsolver
 br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
     plot = true, verbosity = 3,
     δp = 0.005,
-    verbosedeflation = true,
+    deflated_newton_kwargs = (verbosedeflation = true,),
     finalise_solution = (z, tau, step, contResult; k...) -> begin
         if isnothing(br.eig) == true
             Base.display(contResult.eig[end].eigenvals)
         end
         true
     end,
-    scaleζ = norminf,
+    normal_form_kwargs = (scaleζ = norminf,),
     # callback_newton = cb,
     normC = norminf)
 

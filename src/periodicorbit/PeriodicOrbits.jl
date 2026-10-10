@@ -391,7 +391,7 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `bif_prob = getprob(br)` bifurcation problem used both for the Hopf normal form and for building the periodic orbit problem. It must correspond to `br` (same equations, `lens` and parameters).
-- `kwargs_nf = ()` `NamedTuple` of keyword arguments passed to [`hopf_normal_form`](@ref). For example, use `kwargs_nf = (detailed = Val(false),)` or `kwargs_nf = (start_with_eigen = Val(false),)`.
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`hopf_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` or `normal_form_kwargs = (start_with_eigen = Val(false),)`.
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
 - all `kwargs` from [`continuation`](@ref)
 
@@ -599,11 +599,7 @@ Branch switching at a bifurcation point of periodic orbits (PO) specified by a `
 - `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `use_normal_form = true` if `false`, the predictor is based on the couple `δp, ampfactor`.
-
-## For normal form
-- `detailed = true` whether to fully compute the normal form or a very simplified version.
-- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (prm = Val(true),)` to compute the period-doubling normal form with the Poincaré return map.
 
 ## For continuation
 - `linear_algo = nothing`, same as for [`continuation`](@ref); when `nothing`, a `BorderingBLS` is built from `_contParams.newton_options.linsolver`.

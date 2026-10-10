@@ -54,15 +54,12 @@ Automatic branch switching at branch points based on a computation of the normal
 - `δp` used to specify a specific value for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep. Can also be used to select the upper/lower branch in Pitchfork bifurcations. See also `use_normal_form` below.
 - `use_normal_form = true`. If `use_normal_form = true`, the normal form is computed as well as its predictor and a guess is automatically formed. If `use_normal_form = false`, the parameter value `p = p₀ + δp` and the guess `x = x₀ + ampfactor .* e` (where `e` is a vector of the kernel) are used as initial guess. This is useful in case automatic branch switching does not work.
-- `nev` number of eigenvalues to be computed to get the right eigenvector
-- `scaleζ = norm` pass a norm to normalize vectors during normal form computation
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` to skip the computation of the normal form coefficients.
 - `plot_solution` change plot solution method in the problem `getprob(br)`
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated
-- `verbosedeflation` print deflated newton iterations
-- `max_iter_deflation` number of newton steps in deflated newton
-- `perturb = identity` which perturbation function to use during deflated newton
+- `deflated_newton_kwargs = ()` `NamedTuple` of keyword arguments controlling the deflated newton used when `usedeflation = true`. Available keys: `max_iter_deflation` (number of newton steps in the deflated newton), `verbosedeflation` (whether to print the deflated newton iterations), `perturb_guess = identity` (perturbation function applied to the guess from the predictor just before the deflated-newton correction) and `linsolver` (linear solver used for the deflated newton).
 - `Teigvec = _getvectortype(br)` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
-- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one and to [`get_normal_form`](@ref).
+- `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
     In the case of a very large model and use of special hardware (GPU, cluster), we suggest to decouple the computation of the reduced equation, the predictor and the bifurcated branches. Have a look at `methods(BifurcationKit.multicontinuation)` to see how to call these versions. These methods has been tested on GPU with very high memory pressure.
@@ -79,7 +76,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       Teigvec::𝒯eigvec = _getvectortype(br), # used in deflation, not just for normal form
                       normal_form_kwargs = (),
 
-                      verbosedeflation = false,
                       usedeflation::Bool = false,
                       deflated_newton_kwargs = (
                             max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
@@ -203,12 +199,11 @@ Automatic branch switching at branch points based on a computation of the normal
 - `alg = getalg(br)` continuation algorithm to be used, default value: `getalg(br)`
 - `δp` used to specify a particular guess for the parameter on the bifurcated branch which is otherwise determined by `options_cont.ds`. This allows to use a step larger than `options_cont.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `nev` number of eigenvalues to be computed to get the right eigenvector
-- `verbosedeflation = false` whether to display the nonlinear deflation iterations (see [Deflated problems](@ref Deflated-problems)) to help finding the guess on the bifurcated branch
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref).
+- `deflated_newton_kwargs = ()` `NamedTuple` of keyword arguments controlling the deflated newton. Available keys: `max_iter_deflation` (number of newton steps in the deflated newton), `verbosedeflation` (whether to print the deflated newton iterations), `perturb_guess = identity` (perturbation function applied to the guess from the predictor just before the deflated-newton correction) and `linsolver` (linear solver used for the deflated newton).
 - `scaleζ` norm used to normalize eigenbasis when computing the reduced equation
 - `Teigvec` type of the eigenvector. Useful when `br` was loaded from a file and this information was lost
 - `ζs` basis of the kernel
-- `perturb_guess = identity` perturb the guess from the predictor just before the deflated-newton correction
 - `kwargs` optional arguments to be passed to [`continuation`](@ref), the regular `continuation` one.
 
 !!! tip "Advanced use"
@@ -244,7 +239,8 @@ function multicontinuation(br::AbstractBranchResult,
                            ampfactor::Real = 1,
                            perturb = identity,
                            kwargs...)
-    verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
+    deflated_newton_kwargs = get(kwargs, :deflated_newton_kwargs, ())
+    verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(deflated_newton_kwargs, :verbosedeflation, true) : false
     ds = abs(isnothing(δp) ? options_cont.ds : δp)
     # get prediction from solving the reduced equation
     rootsNFm, rootsNFp = predictor(bp, ds;  verbose, perturb, ampfactor)

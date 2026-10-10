@@ -246,7 +246,6 @@ for Rij in _field_jet
 end
 
 function Base.show(io::IO, jet::Jet; prefix = "")
-    color = :cyan; bold = true
     println(io, prefix * "┌─ Tayor jet [fields not shown are nothing]")
     for Rij in _field_jet
         rij = getproperty(jet, Rij)
@@ -309,7 +308,7 @@ function R01!(::FiniteDifferences,
         res_f = residual(prob, x, set(par, getlens(prob), p))
     end
     dFdp = minus!!(dFdp, res_f)
-    dFdp = VI.scale!!(dFdp, one(𝒯) / ϵ)
+    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
 end
 
 function R01(::FiniteDifferences,
