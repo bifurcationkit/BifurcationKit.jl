@@ -164,8 +164,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     step = 0
 
     # total number of linear iterations
-    itlinear = 0
-    itlineartot = 0
+    itlinear = itlinear1 = itlineartot = 0
 
     verbose && print_nonlinear_step(step, res)
     line_step = true

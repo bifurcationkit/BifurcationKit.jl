@@ -92,6 +92,8 @@ get_cache(bvp::DiscretizedBVP) = bvp.cache
 
 BK.record_from_solution(bvp::DiscretizedBVP) = BK.record_from_solution(get_model(bvp))
 BK.plot_solution(bvp::DiscretizedBVP) = BK.plot_solution(get_model(bvp))
+BK.getparams(bvp::DiscretizedBVP) = BK.getparams(get_model(bvp))
+BK.getlens(bvp::DiscretizedBVP) = BK.getlens(get_model(bvp))
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Display

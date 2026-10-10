@@ -33,7 +33,7 @@ $(TYPEDFIELDS)
 
 More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 """
-Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg <: AbstractContinuationAlgorithm, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
     "type of solution computed during continuation, e.g. `EquilibriumCont` or `PeriodicOrbitCont`"
     kind::Tkind
     "bifurcation problem to be continued, see [`BifurcationProblem`](@ref)"
