@@ -10,8 +10,8 @@ function continuation(prob::AbstractBifurcationProblem,
                       x1::Tv, p1::Real, # second point on the branch
                       alg, lens::AllOpticTypes,
                       contParams::ContinuationPar;
-                      bothside::Bool = false,
-                      kwargs...) where Tv
+                      bothside::Val{bs} = Val(false),
+                      kwargs...) where {Tv, bs}
     # update alg linear solver with contParams.newton_options.linsolver
     alg = update(alg, contParams, nothing)
     # check the sign of ds
@@ -19,26 +19,24 @@ function continuation(prob::AbstractBifurcationProblem,
     # create an iterable
     _contParams = @set contParams.ds = abs(contParams.ds) * dsfactor
     prob2 = re_make(prob; lens, params = par0)
-    if ~bothside
-        it = ContIterable(prob2, alg, _contParams; kwargs...)
-        return continuation(it, x0, _get(par0, lens), x1, p1)
+    p0 = _get(par0, lens)
+    itfw = ContIterable(prob2, alg, _contParams; kwargs...)
+    if ~bs
+        return continuation(itfw, x0, p0, x1, p1)
     else
-        itfw = ContIterable(prob2, alg, _contParams; kwargs...)
         itbw = deepcopy(itfw)
-        resfw = continuation(itfw, x0, _get(par0, lens), x1, p1)
-        resbw = continuation(itbw, x1, p1, x0, _get(par0, lens))
+        resfw = continuation(itfw, x0, p0, x1, p1)
+        resbw = continuation(itbw, x1, p1, x0, p0)
         return _merge(resfw, resbw)
     end
 end
 
 function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
-    # we compute the cache for the continuation, i.e. state::ContState
-    # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
+    # We compute the cache for the continuation, i.e. state::ContState.
+    # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent.
     state, _ = iterate_from_two_points(it, x0, p0, x1, p1)
-    # variable to hold the result from continuation, i.e. a branch
-    contRes = ContResult(it, state)
-    # perform the continuation
-    return continuation!(it, state, contRes)
+    contres = ContResult(it, state)
+    return continuation!(it, state, contres)
 end
 
 """
@@ -81,7 +79,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       use_normal_form = true,
                       bls = get_bordered_linsolver(br),
                       bls_block = bls,
-
 
                       nev = options_cont.nev,
                       scaleζ = norm,
@@ -145,13 +142,13 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                             tol_fold)
 
     # compute predictor for a point on new branch
-    if ~use_normal_form
-        pred = (;x0 = bp.x0, 
+    pred = if ~use_normal_form # TODO: merge with detailed = false
+              (;x0 = bp.x0, 
                 x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
                 p =  bp.p + ds, 
                 amp = ampfactor)
     else
-        pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
+        predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
     end
 
     if isnothing(pred)
@@ -281,13 +278,10 @@ function multicontinuation(br::AbstractBranchResult,
                            kwargs...)
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true & get(kwargs, :verbosedeflation, true) : false
-
     # compute predictor for point on new branch
     ds = abs(isnothing(δp) ? options_cont.ds : δp)
-
     # get prediction from solving the reduced equation
     rootsNFm, rootsNFp = predictor(bp, ds;  verbose, perturb, ampfactor)
-
     return multicontinuation(br, bp, (before = rootsNFm, after = rootsNFp), options_cont; δp, plot_solution, kwargs...)
 end
 
@@ -381,7 +375,6 @@ function multicontinuation(br::AbstractBranchResult,
                     options_cont;
                     δp,
                     Teigvec,
-                    verbosedeflation,
                     max_iter_deflation,
                     kwargs...)
 end
@@ -408,7 +401,6 @@ function multicontinuation(br::Tbr0,
                            options_cont::ContinuationPar = br.contparams ;
                            alg = getalg(br),
                            δp = nothing,
-                           verbosedeflation = false,
                            max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
                            plot_solution = plot_solution(getprob(br)),
                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
