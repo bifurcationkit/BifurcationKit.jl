@@ -3,7 +3,10 @@ function d2F(wrapsh::PeriodicOrbitFunctionalSh, x, p, dx1, dx2)
 end
 
 # if the jacobian is matrix based, use transpose
-@inline has_adjoint(::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }) where {𝒯p, 𝒯j} = ~(𝒯j <: AbstractJacobianMatrix)
+@inline function has_adjoint(wrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }) where {𝒯p, 𝒯j}
+    disc = get_discretization(wrap)
+    return ~(𝒯j <: AbstractJacobianMatrix) || (isnothing(disc.flow.vjp) == false)
+end
 @inline has_jvp(wrap::PeriodicOrbitFunctionalSh) = has_jvp(get_discretization(wrap))
 
 function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par) where {𝒯p, 𝒯j}
