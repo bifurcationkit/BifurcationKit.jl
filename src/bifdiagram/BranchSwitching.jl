@@ -35,10 +35,8 @@ function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
     # we compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
     state, _ = iterate_from_two_points(it, x0, p0, x1, p1)
-
     # variable to hold the result from continuation, i.e. a branch
     contRes = ContResult(it, state)
-
     # perform the continuation
     return continuation!(it, state, contRes)
 end

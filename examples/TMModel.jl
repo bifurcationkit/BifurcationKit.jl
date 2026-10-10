@@ -28,7 +28,7 @@ br_hopf = @time BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
         jacobian_ma = BK.MinAugMatrixBased(),
-        bothside = true,)
+        bothside = Val(true),)
 plot(br_hopf)
 ####################################################################################################
 # continuation parameters

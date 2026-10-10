@@ -106,7 +106,7 @@ let
     br3 = continuation(br_noev, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
     @test isnothing(BK.multicontinuation(br_noev, 1))
 
-    br4 = continuation(br_noev, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
+    br4 = continuation(br_noev, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = Val(true))
 
     # automatic bifurcation diagram (Transcritical)
     bdiag = bifurcationdiagram(prob, PALC(), 2,
@@ -124,7 +124,7 @@ let
     @test nf.b11   ≈ 3.23              atol = 1e-10
     @test nf.b20/2 ≈ -prob.params.x2   atol = 1e-6
     @test nf.b30/6 ≈  prob.params.x3   atol = 1e-10
-    br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
+    br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = Val(true))
     plot(br, br2)
 end
 ####################################################################################################
@@ -177,7 +177,7 @@ let
     Fdegenerate(x, p) = [x[1]^2 - p[1]^2]
     prob = BK.ODEBifProblem(Fdegenerate, [1.], (-1.0), 1; record_from_solution = (x,p;k...)->x[1])
     br = continuation(prob, PALC(), ContinuationPar(n_inversion = 6); normC = norminf)
-    br1 = continuation(br, 1, verbosity = 0, bothside = true)
+    br1 = continuation(br, 1, verbosity = 0, bothside = Val(true))
     bp = get_normal_form(br, 1; verbose = true)
     show(bp)
     predictor(bp, 0.1)
@@ -525,7 +525,7 @@ let
         opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
         opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
 
-        br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
+        br = continuation(prob, PALC(), opts_br; bothside = Val(true), verbosity = 0)
 
         sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
             detect_codim2_bifurcation = 2,
@@ -540,7 +540,7 @@ let
         hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
-            bothside = true,
+            bothside = Val(true),
             bdlinsolver = MatrixBLS(),
             )
 

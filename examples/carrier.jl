@@ -40,6 +40,8 @@ record_from_solution(x, p; k...) = (x[2]-x[1]) * sum(x->x^2, x)
 
 prob = BK.BifurcationProblem(F_carr, zeros(N), par_car, (@optic _.ϵ);
     J = Jac_carr,
+    R01 = BK.FiniteDifferences(),
+    R02 = BK.FiniteDifferences(),
     record_from_solution)
 
 optnew = NewtonPar(tol = 1e-8, verbose = true)

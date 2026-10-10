@@ -27,7 +27,7 @@ opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_
 alg = PALC()
 br = @time continuation(prob, alg, opts_br;
     plot = false, verbosity = 0, normC = norminf,
-    bothside = true)
+    bothside = Val(true))
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################

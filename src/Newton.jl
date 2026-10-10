@@ -110,9 +110,9 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
 
         compute = callback((;x, fx, J, residual = res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
-    ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
     flag = (residuals[end] < tol) & callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
     verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
+    ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
     return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
 

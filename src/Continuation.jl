@@ -630,15 +630,12 @@ function continuation(it::ContIterable)
     # use a function barrier
     # this is also true for states (record function, eigenvectors, events, ...)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     # We compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
     state, = iterate(it)
-    isnothing(state) && return nothing
-
+    isnothing(state) && return nothing # todo return EmptyBranch(FailedState())
     # variable to hold the result from continuation, i.e. a branch
     contRes = ContResult(it, state)
-
     # perform the continuation
     return continuation!(it, state, contRes)
 end
@@ -656,7 +653,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 
 # Optional Arguments:
 - `plot = false` whether to plot the solution/branch/spectrum while computing the branch
-- `bothside = false` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
+- `bothside = Val(false)` compute the branches on the two sides of the initial parameter value `p0`, merge them and return it.
 - `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`solve`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)
@@ -695,8 +692,8 @@ function _continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       linear_algo = nothing,
-                      bothside::Bool = false,
-                      kwargs...)
+                      bothside::Val{bothside_bool} = Val(false),
+                      kwargs...) where {bothside_bool}
     # Note that bothside and kwargs are parameters that are easy to switch for debug/plot purposes. 
     # They could have been placed in ContinuationPar but it would have been less convenient.
     # Init the continuation parameters
@@ -710,7 +707,7 @@ function _continuation(prob::AbstractBifurcationProblem,
 
     # perform continuation
     itfwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
-    if bothside
+    if bothside_bool
         # forward case
         initial_state, = iterate(itfwd)
         resfwd = continuation(itfwd)
@@ -721,12 +718,12 @@ function _continuation(prob::AbstractBifurcationProblem,
         # merge results
         contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?
         # we have to update the branch if saved on a file
+        # basically this removes "branchfw" or "branchbw" in file and append "branch"
         itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
         return contresult
     else
         contresult = continuation(itfwd)
         # we have to update the branch if saved on a file,
-        # basically this removes "branchfw" or "branchbw" in file and append "branch"
         getcontparams(itfwd).save_to_file && save_to_file(itfwd, contresult)
         return contresult
     end

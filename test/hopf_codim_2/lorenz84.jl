@@ -54,7 +54,7 @@ br = @time continuation(prob,
                         alg,
                         opts_br;
                         normC = norminf,
-                        bothside = true)
+                        bothside = Val(true))
 
 @test br.alg.tangent isa Bordered
 @test br.alg.bls isa MatrixBLS
@@ -91,7 +91,7 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
     update_minaug_every_step = 1,
     start_with_eigen = true,
     record_from_solution = recordFromSolutionLor,
-    bothside = true,
+    bothside = Val(true),
     bdlinsolver = MatrixBLS())
 
 @test hp_codim2_test.specialpoint[2].param ≈ +0.02627393 rtol = 1e-5
@@ -248,7 +248,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T)
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    # bothside = true,
+    # bothside = Val(true),
     record_from_solution = recordFromSolutionLor,
     event = SaveAtEvent((0.001,.01)),
     bdlinsolver = MatrixBLS())
@@ -263,7 +263,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    bothside = false,
+    bothside = Val(false),
     jacobian_ma = BK.AutoDiff(),
     event = SaveAtEvent((-0.05,.0)),
     record_from_solution = recordFromSolutionLor,
@@ -292,7 +292,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    bothside = true,
+    bothside = Val(true),
     jacobian_ma = BK.AutoDiff(),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
@@ -352,7 +352,7 @@ hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = 0.001, dsm
     # δp = 0.001,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    bothside = false,
+    bothside = Val(false),
     )
 @test hp_from_zh.kind isa BK.HopfCont
 @test length(hp_from_zh.γ.specialpoint) == 4
@@ -366,7 +366,7 @@ hp_from_hh = continuation(hp_from_zh, 3, ContinuationPar(opts_br, ds = 0.001, ds
     # δp = 0.001,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    bothside = false,
+    bothside = Val(false),
     )
 @test hp_from_hh.kind isa BK.HopfCont
 
@@ -437,7 +437,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = false,
-    bothside = true,
+    bothside = Val(true),
     jacobian_ma = BK.MinAug(),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
