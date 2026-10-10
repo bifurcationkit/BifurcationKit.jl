@@ -15,29 +15,22 @@ $(TYPEDFIELDS)
 @with_kw mutable struct Multiple{T <: Real, Tvec, Tpred <: PALC} <: AbstractContinuationAlgorithm
     "Tangent predictor used."
     alg::Tpred = PALC()
-
     "Save the current tangent."
     τ::Tvec
-
     "Damping in Newton iterations, 0 < α < 1."
     α::T
-
     "Number of predictors"
     nb::Int64
-
     "Index of the largest converged predictor."
     currentind::Int64 = 0
-
     "Index for lookup in residual history."
     pmimax::Int64 = 1
-
     "Maximum index for lookup in residual history."
     imax::Int64 = 4
-
     "Factor to increase ds upon successful step."
     dsfact::T = 1.5
 end
-Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, T(0)), α, nb)
+Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, zero(T)), α, nb)
 Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
 get_bordered_linsolver(alg::Multiple) = get_bordered_linsolver(alg.alg)

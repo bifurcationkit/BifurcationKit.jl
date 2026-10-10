@@ -193,7 +193,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
                 ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             else
                 # dx = pinv(Array(Jb)) * res_f #seems to work better than the following
-                dx = LinearAlgebra.pinv(Array(Jb)) * res_f
+                dx = LA.pinv(Array(Jb)) * res_f
                 flag = true
                 itlinear = 1
             end
