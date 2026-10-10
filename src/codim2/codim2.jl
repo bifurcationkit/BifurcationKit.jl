@@ -204,11 +204,8 @@ residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> residual(𝐏𝐛, z, p), x)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = getdelta(𝐏𝐛)) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (residual(𝐏𝐛, x .+ 1e-8 .* dx, p) .- residual(𝐏𝐛, x .- 1e-8 .* dx, p)) ./ (2e-8)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, pbma = 𝐏𝐛.prob)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional for Fold/PD

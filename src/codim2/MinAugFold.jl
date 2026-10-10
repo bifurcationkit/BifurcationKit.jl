@@ -27,8 +27,7 @@ function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where �
     #       a should be a null vector of J'
     # we solve J⋅v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
-    a = 𝐅.a
-    b = 𝐅.b
+    (;a, b) = 𝐅
     # update parameter
     par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
@@ -62,12 +61,10 @@ function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J, J�
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
     v, _, cv, itv = linbdsolver(J, a, b, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge."
-
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
     w, _, cv, itw = linbdsolver_adjoint(J★, b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
-
     return (; v, w, itv, itw)
 end
 

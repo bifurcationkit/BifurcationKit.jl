@@ -150,22 +150,17 @@ __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args..
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 
-jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalTrap, x, par) =
+jacobian_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
     error("Period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalTrap, x, par, ω) =
+jacobian_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
     error("Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_adjoint_period_doubling(pbwrap::PeriodicOrbitFunctionalTrap, x, par) =
+jacobian_adjoint_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
     error("Adjoint period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_adjoint_neimark_sacker(pbwrap::PeriodicOrbitFunctionalTrap, x, par, ω) =
+jacobian_adjoint_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
     error("Adjoint Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
 
-function is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int)
-    real(br.CH[ind]) < 0
-end
-
-function is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int)
-    real(br.GPD[ind]) < 0
-end
+is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int) = real(br.CH[ind]) < 0
+is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int) = real(br.GPD[ind]) < 0
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation

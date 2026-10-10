@@ -31,8 +31,7 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     # In the notations of Govaerts 2000, a = w, b = v
     # Thus, b should be a null vector of J - iω⋅M
     #       a should be a null vector of J'+ iω⋅M'
-    a = 𝐇.a
-    b = 𝐇.b
+    (;a, b) = 𝐇
     # update parameter
     par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + M⋅a σ1 = 0 with <M⋅b, v> = 1

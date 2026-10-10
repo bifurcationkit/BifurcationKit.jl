@@ -3,25 +3,22 @@ function d2F(wrapsh::PeriodicOrbitFunctionalSh, x, p, dx1, dx2)
 end
 
 # if the jacobian is matrix based, use transpose
-@inline has_adjoint(::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }) where {Tp, Tj} = ~(Tj <: AbstractJacobianMatrix)
+@inline has_adjoint(::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }) where {𝒯p, 𝒯j} = ~(𝒯j <: AbstractJacobianMatrix)
 @inline has_jvp(wrap::PeriodicOrbitFunctionalSh) = has_jvp(get_discretization(wrap))
 
-# this function is necessary for pdtest to work in PDMinimallyAugmented problem
-function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj}
-    dx -> jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, 1, dx)
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par) where {𝒯p, 𝒯j}
+    dx -> jacobian_pd_ns_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, 1, dx)
 end
 
-# this function is necessary for the jacobian of a PDMinimallyAugmented problem
 function jacobian_adjoint_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par)
     dx -> jacobian_adjoint_period_doubling_matrix_free(pbwrap, x, par, dx)
 end
 
-jacobian_adjoint_period_doubling_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, 1, dx)
+jacobian_adjoint_period_doubling_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, dx) = jacobian_adjoint_pd_ns_matrix_free(pbwrap, x, par, 1, dx)
+jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω, dx) = jacobian_adjoint_pd_ns_matrix_free(pbwrap, x, par, -cis(-ω), dx)
 
-jacobian_adjoint_neimark_sacker_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω, dx) = jacobian_adjoint_pd_nf_matrix_free(pbwrap, x, par, -cis(-ω), dx)
-
-# same as above but matrix based
-function jacobian_period_doubling_with_border(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+# matrix-based jacobian of PeriodicOrbitFunctionalSh with PD boundary condition and phase condition
+function jacobian_period_doubling_with_border(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par) where {𝒯p, 𝒯j <: AbstractJacobianMatrix}
     M = get_mesh_size(get_discretization(pbwrap))
     N = div(length(x) - 1, M)
     Jac = jacobian(pbwrap, x, par)
@@ -31,13 +28,15 @@ function jacobian_period_doubling_with_border(pbwrap::PeriodicOrbitFunctionalSh{
     return J
 end
 
-function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par) where {Tp, Tj <: AbstractJacobianMatrix}
+# matrix-based jacobian of PeriodicOrbitFunctionalSh with PD boundary condition without phase condition
+function jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par) where {𝒯p, 𝒯j <: AbstractJacobianMatrix}
     J = jacobian_period_doubling_with_border(pbwrap, x, par)
-    return J[begin:end-1, begin:end-1]
+    return J[begin:end-1, begin:end-1] # TODO: we still want a copy?
 end
 
 # matrix free linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
+# no phase condition is encoded
+@views function jacobian_pd_ns_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
     sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -53,17 +52,16 @@ function jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     # jacobian of the flow
     dflowDE(_x, _dx, _T) = ForwardDiff.derivative(z -> evolve(sh.flow, _x .+ z .* _dx, par, _T).u, 0)
     dflow(_x, _dx, _T) = dflowDE(_x, real.(_dx), _T) .+ im .* dflowDE(_x, imag.(_dx), _T)
-    dflow(_x, _dx::T, _T) where {T <: AbstractArray{<: Real}} = dflowDE(_x, _dx, _T)
+    dflow(_x, _dx::T, _T) where {T <: AbstractArray{ <: Real}} = dflowDE(_x, _dx, _T)
     if ~isparallel(sh)
         for ii in 1:M
             ip1 = (ii == M) ? 1 : ii+1
             # call jacobian of the flow, jacobian-vector product
             tmp = dflow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
-
             if ii<M
-                outc[:, ii] .= @views tmp .- dxc[:, ip1]
+                outc[:, ii] .= tmp .- dxc[:, ip1]
             else
-                outc[:, ii] .= @views tmp .+ α .* dxc[:, ip1]
+                outc[:, ii] .= tmp .+ α .* dxc[:, ip1]
             end
         end
     else
@@ -79,7 +77,7 @@ function jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
 end
 
 # matrix free adjoint linear operator associated to the monodromy whose zeros are used to detect PD/NS points
-function jacobian_adjoint_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
+@views function jacobian_adjoint_pd_ns_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, α::𝒯, dx) where 𝒯
     sh = get_discretization(pbwrap)
     T  = getperiod(sh, x)
     M  = get_mesh_size(sh)
@@ -104,9 +102,9 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <
             tmp = dflow(xc[:, ii], dxc[:, ii], sh.ds[ii] * T)
 
             if ii==1
-                outc[:, ii] .= @views tmp .+ α .* dxc[:, im1]
+                outc[:, ii] .= tmp .+ α .* dxc[:, im1]
             else
-                outc[:, ii] .= @views tmp .- dxc[:, im1]
+                outc[:, ii] .= tmp .- dxc[:, im1]
             end
         end
     else
@@ -121,8 +119,8 @@ function jacobian_adjoint_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <
     return out
 end
 
-function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj}
-    dx -> jacobian_pd_nf_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, -cis(ω), dx)
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par, ω) where {𝒯p, 𝒯j}
+    dx -> jacobian_pd_ns_matrix_free(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, -cis(ω), dx)
 end
 
 function jacobian_neimark_sacker_with_border(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
@@ -135,12 +133,11 @@ function jacobian_neimark_sacker_with_border(pbwrap::PeriodicOrbitFunctionalSh{ 
     return J
 end
 
-function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{Tp, Tj} }, x, par, ω) where {Tp, Tj <: AbstractJacobianMatrix}
+function jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting{𝒯p, 𝒯j} }, x, par, ω) where {𝒯p, 𝒯j <: AbstractJacobianMatrix}
     J = jacobian_neimark_sacker_with_border(pbwrap, x, par, ω)
     return J[begin:end-1, begin:end-1]
 end
 
-# this function is necessary for the jacobian of a PDMinimallyAugmented problem
 function jacobian_adjoint_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω)
     dx -> jacobian_adjoint_neimark_sacker_matrix_free(pbwrap, x, par, ω, dx)
 end
