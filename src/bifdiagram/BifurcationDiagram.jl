@@ -193,7 +193,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
-                γ = letsbranch(id, pt, level)
+                γ = _letsbranch_for_bd(node.γ, id, pt, level, options; kwargs...)
                 add!(node, γ, level+1, id)
                 if ~isnothing(γ) && verbose 
                     printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
@@ -203,11 +203,11 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 # in the case of a Transcritical bifurcation, we compute the other branch
                 if ~isnothing(γ) && ~(γ isa Vector)
                     if ~halfbranch && from(γ) isa Transcritical
-                        γ = letsbranch(id, pt, level; _dsfactor = -1)
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _dsfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                     if ~halfbranch && from(γ) isa Pitchfork
-                        γ = letsbranch(id, pt, level; _ampfactor = -1)
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _ampfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                 end
