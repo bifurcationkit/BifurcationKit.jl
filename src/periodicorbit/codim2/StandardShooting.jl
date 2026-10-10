@@ -217,31 +217,8 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
                     bdlinsolver = MatrixBLS(),
                     Jᵗ = nothing,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
-    bifpt = br.specialpoint[ind_bif]
-    biftype = br.specialpoint[ind_bif].type
-    @assert biftype == :pd "Please open an issue on BifurcationKit website"
-
-    par_pd = setparam(br, bifpt.param)
-    pdpointguess = pd_point(br, ind_bif)
-    # wrap of shooting functional
-    pbwrap = deepcopy(getprob(br))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par_pd)
-    x0 = saved_solution(pdpointguess.u)
-
-    # get the PD eigenvectors
-    (;ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par_pd, bdlinsolver, bdlinsolver, nothing, nothing, norm)
-
-    # perform continuation
-    continuation_pd(pbwrap, alg,
-        pdpointguess, par_pd,
-        getlens(br), lens2,
-        ζ, ζad,
-        options_cont;
-        kwargs...,
-        bdlinsolver,
-        kind = PDPeriodicOrbitCont(),
-        )
+    return _continuation_pd_po(br, ind_bif, lens2, options_cont;
+        alg, start_with_eigen, bdlinsolver, kwargs...)
 end
 
 """
@@ -263,30 +240,6 @@ function continuation_sh_ns(br::AbstractResult{Tkind, Tprob},
                     start_with_eigen = Val(false), # used to filter the option
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
-    bifpt = br.specialpoint[ind_bif]
-    biftype = bifpt.type
-    @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
-
-    par_ns = setparam(br, bifpt.param)
-    nspointguess = ns_point(br, ind_bif)
-    # wrap of collocation functional
-    pbwrap = deepcopy(getprob(br))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par_ns)
-    x0 = saved_solution(nspointguess.u)
-
-    # get the NS eigenvectors
-    λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    (;ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par_ns, imag(λₙₛ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
-
-    # perform continuation
-    continuation_ns(pbwrap, alg,
-        nspointguess, par_ns,
-        getlens(br), lens2,
-        ζ, ζad,
-        options_cont;
-        kwargs...,
-        bdlinsolver,
-        kind = NSPeriodicOrbitCont(),
-        )
+    return _continuation_ns_po(br, ind_bif, lens2, options_cont;
+        alg, start_with_eigen, bdlinsolver, kwargs...)
 end

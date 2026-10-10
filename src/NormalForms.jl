@@ -717,7 +717,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
                             lens = getlens(br),
                             tol_fold = 1e-3,
 
-                            ζs::Tevecs = nothing,
+                            ζs::Tevecs = nothing, #TODO : unused
                             ζs_ad::Tevecs_ad = nothing,
 
                             bls_block = MatrixBLS(),

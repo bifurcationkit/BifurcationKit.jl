@@ -73,7 +73,7 @@ for (op, at) in (
             "Update the problem every such step"
             update_minaug_every_step::Int
             "Compute the PO normal forms with Poincaré Return Map?"
-            prm::Bool
+            prm::Bool # TODO: Val{prm_type}
             "Newton options for normal form based on Poincaré Return Map"
             newton_options::Tnewton
         end
@@ -563,4 +563,70 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         # finalise_solution = _finsol
     )
     return Branch(branch, zh)
+end
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# shared implementation for the continuation of PD curves of periodic orbits
+function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
+        options_cont::ContinuationPar;
+        alg = getalg(br),
+        start_with_eigen = Val(false),
+        bdlinsolver = MatrixBLS(),
+        prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
+        kwargs...)
+    bifpt = br.specialpoint[ind_bif]
+    @assert bifpt.type == :pd "The provided index does not refer to a PD point"
+
+    par = setparam(br, bifpt.param)
+    pointguess = pd_point(br, ind_bif)
+
+    pbwrap = deepcopy(getprob(br))
+    restore_problem!(pbwrap, bifpt.x, par)
+    x0 = saved_solution(pointguess.u)
+
+    (; ζ, ζad) = _init_pd_vectors_minaug(
+        pbwrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
+
+    return continuation_pd(pbwrap, alg,
+        pointguess, par,
+        getlens(br), lens2,
+        ζ, ζad,
+        options_cont;
+        kwargs...,
+        prm,
+        bdlinsolver,
+        kind = PDPeriodicOrbitCont())
+end
+
+# shared implementation for the continuation of NS curves of periodic orbits
+function _continuation_ns_po(br, ind_bif::Int64, lens2::AllOpticTypes,
+        options_cont::ContinuationPar;
+        alg = getalg(br),
+        start_with_eigen = Val(false),
+        bdlinsolver = MatrixBLS(),
+        prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
+        kwargs...)
+    bifpt = br.specialpoint[ind_bif]
+    @assert bifpt.type == :ns "The provided index does not refer to a NS point"
+
+    par = setparam(br, bifpt.param)
+    pointguess = ns_point(br, ind_bif)
+
+    pbwrap = deepcopy(getprob(br))
+    restore_problem!(pbwrap, bifpt.x, par)
+    x0 = saved_solution(pointguess.u)
+
+    λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+    (; ζ, ζad) = _init_ns_vectors_minaug(
+        pbwrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
+
+    return continuation_ns(pbwrap, alg,
+        pointguess, par,
+        getlens(br), lens2,
+        ζ, ζad,
+        options_cont;
+        kwargs...,
+        prm,
+        bdlinsolver,
+        kind = NSPeriodicOrbitCont())
 end

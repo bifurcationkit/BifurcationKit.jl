@@ -1462,8 +1462,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # right / left eigenvectors
     if start_with_eigen_type
-        # right eigenvector
-        # TODO IMPROVE THIS
+        # right eigenvector # TODO IMPROVE THIS
         if true#haseigenvector(br) == false
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             verbose && @info "Recomputing eigenvector on the fly"

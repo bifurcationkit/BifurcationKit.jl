@@ -390,9 +390,9 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `alg = getalg(br)` continuation algorithm used for the bifurcated branch. It is inherited from the branch `br`.
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
+- `bif_prob = getprob(br)` bifurcation problem used both for the Hopf normal form and for building the periodic orbit problem. It must correspond to `br` (same equations, `lens` and parameters).
+- `kwargs_nf = ()` `NamedTuple` of keyword arguments passed to [`hopf_normal_form`](@ref). For example, use `kwargs_nf = (detailed = Val(false),)` or `kwargs_nf = (start_with_eigen = Val(false),)`.
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `nev` number of eigenvalues to be computed to get the right eigenvector
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
@@ -405,19 +405,11 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization ;
                       bif_prob = getprob(br),
-
-                      detailed::Val{detailed_type} = Val(true), # TODO: we need a kwargs_nf = ()
-                      start_with_eigen::Val{start_with_eigen_type} = Val(true),
-
-                      use_normal_form = true,
-                      nev = length(eigenvalsfrombif(br, ind_bif)),
-                      kwargs...) where {detailed_type, start_with_eigen_type}
-    # compute the normal form of the branch point
+                      kwargs_nf = (),
+                      kwargs...)
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-
-    detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
-    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, start_with_eigen)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev = length(eigenvalsfrombif(br, ind_bif)), verbose, kwargs_nf...)
     return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 

@@ -38,13 +38,13 @@ for (fname, cdt, err_msg) in (
                     (:pd_point, (:pd,), "This should be a PD point")
                     ) 
     @eval begin
-        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
+        function $fname(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl} #TODO: should be also Shooting
             bptype = br.specialpoint[index].type
             if ~(bptype in $cdt)
                 error($err_msg)
             end
             specialpoint = br.specialpoint[index]
-            pbwrap = deepcopy(getprob(br))
+            pbwrap = deepcopy(getprob(br)) #TODO this is done twice, see continuation_coll_pd
             pars = setparam(br, specialpoint.param)
             # we put the problem back to the state it was
             restore_problem!(pbwrap, specialpoint.x, pars)
@@ -157,32 +157,8 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     bdlinsolver = MatrixBLS(),
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
-    bifpt = br.specialpoint[ind_bif]
-    biftype = br.specialpoint[ind_bif].type
-    @assert biftype == :pd "Please open an issue on BifurcationKit website"
-
-    par_pd = setparam(br, bifpt.param)
-    pdpointguess = pd_point(br, ind_bif)
-    # wrap of collocation functional
-    pbwrap = deepcopy(getprob(br))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par_pd)
-    x0 = saved_solution(pdpointguess.u)
-
-    # get the PD eigenvectors
-    (;ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par_pd, bdlinsolver, bdlinsolver, nothing, nothing, norm)
-
-    # perform continuation
-    continuation_pd(pbwrap, alg,
-        pdpointguess, par_pd,
-        getlens(br), lens2,
-        ζ, ζad,
-        options_cont;
-        kwargs...,
-        prm,
-        bdlinsolver,
-        kind = PDPeriodicOrbitCont(),
-        )
+    return _continuation_pd_po(br, ind_bif, lens2, options_cont;
+        alg, start_with_eigen, bdlinsolver, prm, kwargs...)
 end
 
 """
@@ -205,33 +181,8 @@ function continuation_coll_ns(br::AbstractResult{Tkind, Tprob},
                     bdlinsolver = MatrixBLS(),
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
-    bifpt = br.specialpoint[ind_bif]
-    biftype = bifpt.type
-    @assert biftype == :ns "We continue only NS points of Periodic orbits for now"
-
-    par_ns = setparam(br, bifpt.param)
-    nspointguess = ns_point(br, ind_bif)
-    # wrap of collocation functional
-    pbwrap = deepcopy(getprob(br))
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par_ns)
-    x0 = saved_solution(nspointguess.u)
-
-    # get the NS eigenvectors
-    λₙₛ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    (;ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par_ns, imag(λₙₛ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
-
-    # perform continuation
-    continuation_ns(pbwrap, alg,
-        nspointguess, par_ns,
-        getlens(br), lens2,
-        ζ, ζad,
-        options_cont;
-        kwargs...,
-        prm,
-        bdlinsolver,
-        kind = NSPeriodicOrbitCont(),
-        )
+    return _continuation_ns_po(br, ind_bif, lens2, options_cont;
+        alg, start_with_eigen, bdlinsolver, prm, kwargs...)
 end
 
 # dispatch to compute Floquet exponent when the jacobian is a Matrix

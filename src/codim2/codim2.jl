@@ -185,7 +185,6 @@ get_frequency(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_H
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
-    # TODO!! is it a copy or else?
     x_ma = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p2)
     if 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation_Hopf_NS
         return MASolutionFreq(x_ma, p1, get_frequency(x, 𝐌𝐚))

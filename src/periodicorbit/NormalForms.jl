@@ -238,10 +238,8 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
-    end
-    # method based on Poincaré Return Map (PRM), newton parameter
+    end # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
-    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # TODO: remove
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 

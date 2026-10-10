@@ -408,7 +408,7 @@ let
                 br_po_gev = continuation(br, 1, _cont_po,
                     Collocation(20, 5; jacobian = jacPO);
                     δp = 0.1,
-                    use_normal_form = use_nf,
+                    kwargs_nf = (detailed = Val(use_nf),),
                     usedeflation = true,
                     eigsolver = useGEV ? BK.FloquetGEV(eig,(20*5+1)*2,2) : BK.FloquetColl(),
                 )
@@ -417,7 +417,7 @@ let
                 br_po = continuation(br, 1, _cont_po,
                     Collocation(20, 5; jacobian = jacPO);
                     δp = 0.1,
-                    use_normal_form = use_nf,
+                    kwargs_nf = (detailed = Val(use_nf),),
                     usedeflation = true,
                     eigsolver = BK.FloquetColl(),
                 )
@@ -444,7 +444,7 @@ let
             br_po_adapt = continuation(br, 1, _cont_po,
                 Collocation(20, 5; jacobian = jacPO, meshadapt = true);
                 δp = 0.1,
-                use_normal_form = use_nf,
+                kwargs_nf = (detailed = Val(use_nf),),
                 linear_algo = lspo,
                 usedeflation = true,
                 eigsolver = BK.FloquetColl(),
