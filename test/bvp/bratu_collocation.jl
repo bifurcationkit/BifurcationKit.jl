@@ -72,7 +72,7 @@ br = continuation(prob, PALC(), optc;
 @test isnothing( BifurcationKit.BVP.get_solution_bvp(br, 1) ) == false
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NORMAL FORM COMPUTATION
-get_normal_form(br, 1; autodiff=false)
+get_normal_form(br, 1)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # BRANCH SWITCHING
 br2 = continuation(br, 1, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = Val(true))

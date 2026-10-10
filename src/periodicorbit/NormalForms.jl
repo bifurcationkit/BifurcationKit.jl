@@ -58,11 +58,10 @@ function branch_normal_form(pbwrap,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, par)
     period = getperiod(disc, x0, par)
 
     # let us compute the kernel
@@ -81,19 +80,18 @@ function branch_normal_form(pbwrap,
 
     # normal form for the Poincaré return map
     nf = BranchPoint(x0, bifpt.τ, bifpt.param, par, lens, nothing, nothing, nothing, :none)
-
     ζ★ = nothing
     return BranchPointPO(x0, period, real.(ζs), ζ★, nf, disc, true)
 end
 
-function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
+@views function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                             br,
                             ind_bif::Int;
                             Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
-                            scaleζ = norminf,
+                            scaleζ = norm,
                             detailed::Val{detailed_type} = Val(true),
                             kwargs_nf...) where {𝒯eigvec, detailed_type}
     verbose && println("━"^53*"\n──▶ Branch point of periodic orbit normal form computation")
@@ -101,11 +99,10 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    
+    # we then put the problem back to the state it was
+    restore_problem!(pbwrap, x0, pars)
     period = getperiod(prob_sh, x0, pars)
 
     # we compute the kernel:
@@ -119,8 +116,8 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     spectrum = br.eig[bifpt.idx].eigenvals
     ind = sortperm(spectrum; by = abs)
     verbose && println("┌─ two smallest eigenvalues are ", real.(spectrum[ind[1:2]]))
-    verbose && println("├─ computing the non trivial null vector")
 
+    # computing the non trivial null vector
     # get the scalar products
     floquetsolver = br.contparams.newton_options.eigsolver
     ζ1 = real(geteigenvector(floquetsolver, br.eig[bifpt.idx].eigenvecs, ind[1]))
@@ -132,7 +129,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     _ζ₀ = prob_sh isa PoincareShooting ? R(prob_sh.section, ζ₀, 1) : ζ₀
     _dot_prods = (LA.dot(_ζ₀, ζ1), LA.dot(_ζ₀, ζ2))
     verbose && println("├─ scalar products with ζ₀ are  ", _dot_prods)
-    ind0 = argmax(abs.(abs.(_dot_prods) .- 1))
+    ind0 = argmax(x -> abs(abs(x) - 1), _dot_prods)
     ζ = ind0 == 1 ? ζ1 : ζ2
     verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(_ζ₀, ζ))
 
@@ -153,23 +150,18 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     branch_point_normal_form(pbwrap, bp0, (ζ, ζs, ζ₀), optn, bifpt.τ; verbose, nev, kwargs_nf...)
 end
 
-function _get_spectral_basis_prm_bp(dΠ, verbose)
+@views function _get_spectral_basis_prm_bp(dΠ::AbstractMatrix, verbose)
     # the spectrum of  M is {1,1,...} (M is the Monodromy matrix)
     # the spectrum of dΠ is {1,0,...}
     F  = LA.eigen(dΠ)
-    
     ind = argmin(abs.(F.values .- 1))
     λ₁ = F.values[ind] # λ₁ ≈ 1
     verbose && println("├─── [PRM] eigenvalue closest to 1 is ", λ₁)
-    verbose && println("└─── [PRM] computing the non trivial null vector")
-
     # get the scalar products
     ev = F.vectors[:, ind]
-
     Fp = LA.eigen(dΠ')
     indp = argmin(abs.(Fp.values .- λ₁)) # eigenvalue closest to λ₁
     ev★ = Fp.vectors[:, indp]
-
     # normalize eigenvectors
     ev ./= sqrt(LA.dot(ev, ev))
     ev★ ./= LA.dot(ev★, ev)
@@ -184,7 +176,6 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
                                     nev::Int = 3,
                                     verbose = false,
                                     lens = getlens(pbwrap),
-                                    autodiff = false,
                                     scaleζ = norminf,
                                     detailed::Val{detailed_type} = Val(true),
                                     kwargs_nf...) where {detailed_type}
@@ -209,12 +200,14 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
                     jvp = (x,p,dx) -> apply(jacobian(Π,x,p), dx),
                     d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
                     d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
-                    R01 = FiniteDifferences(),
+                    # R01 = FiniteDifferences(),
+                    R11 = (x,p,h1) -> BifurcationKit.R11(Π,x,p,h1).u,
+                    R01 = (x,p) -> BifurcationKit.R01(Π,x,p).u,
     )
 
     ζ★ = nothing
-    bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
     if detailed_type
+        bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
         bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, bp, sh, true)
     end
@@ -236,10 +229,10 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, par)
 
     bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type || ~detailed_type
@@ -336,8 +329,8 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                 lens = getlens(pbwrap),
                                 autodiff = false,
                                 scaleζ = norminf,
-                                detailed = true,
-                                kwargs_nf...)
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {detailed_type}
     @debug "PD normal form collocation, method PRM"
     coll = get_discretization(pbwrap)
     𝒯 = eltype(coll)
@@ -377,7 +370,7 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
 
     ζ★ = nothing
     bp1 = BranchPointMap(xₛ, nothing, bp0.p, pars, lens, ev, ev★, nothing, :none)
-    if detailed
+    if detailed_type
         bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         (;v₁, v₀, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
         return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp, coll, true)
@@ -454,10 +447,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, pars)
 
     # let us compute the kernel
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
@@ -574,10 +567,10 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, par)
 
     pd0 = PeriodDoubling(x0, nothing, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type
@@ -777,10 +770,10 @@ function period_doubling_normal_form_iooss(pbwrap,
     h₂ = J \ vcat(vec(r₂), 0)
     h₂ₛ = get_time_slices(coll, h₂)
     if abs(∫( ψ₁★ₛ, h₂ₛ)) > 1e-10
-        @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
+        @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))."
     end
     if abs(h₂[end]) > 1e-10
-        @warn "[PD-Iooss] The value h₂[end] should be zero. We found $(h₂[end])"
+        @warn "[PD-Iooss] h₂[end] should be zero. We found $(h₂[end])."
     end
 
     ###################
@@ -980,10 +973,10 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     bifpt = br.specialpoint[ind_bif]
 
     par = setparam(br, bifpt.param)
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, par)
 
     period = getperiod(coll, x0, par)
 
@@ -1028,7 +1021,7 @@ function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
     F = LA.eigen(dΠ)
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
-    _nrm > 1e-12 && @warn  "$_nrm"
+    _nrm > 1e-12 && @warn "$_nrm"
 
     ####
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
@@ -1243,10 +1236,10 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
     @debug "[NS-Iooss]" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
-        @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
+        @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))."
     end
     if abs(h₁₁[end]) > 1e-10
-        @warn "[NS-Iooss] The value h₁₁[end] should be zero. We found $(h₁₁[end])"
+        @warn "[NS-Iooss] h₁₁[end] should be zero. We found $(h₁₁[end])."
     end
     #########
     # compute d

@@ -68,18 +68,16 @@ function ns_point(br::AbstractResult{Tkind, Tprob}, index::Int) where {Tkind <: 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function continuation(br::AbstractResult{Tkind, Tprob},
-                    ind_bif::Int64,
-                    lens2::AllOpticTypes,
-                    options_cont::ContinuationPar = br.contparams ;
-                    detect_codim2_bifurcation::Int = 0,
-                    update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
+                      ind_bif::Int64,
+                      lens2::AllOpticTypes,
+                      options_cont::ContinuationPar = br.contparams ;
+                      detect_codim2_bifurcation::Int = 0,
+                      update_minaug_every_step = 1,
+                      kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     biftype = br.specialpoint[ind_bif].type
-
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
-    # arguments
     args = (br, ind_bif, lens2, _options_cont)
     kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)
     if biftype in (:bp, :fold) # TODO this is strongly type unstable
@@ -110,7 +108,7 @@ function continuation_coll_fold(br::AbstractResult{Tkind, Tprob},
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = Val(false),
+                    start_with_eigen = (false),
                     bdlinsolver = MatrixBLS(),
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
@@ -155,7 +153,7 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;
                     alg = getalg(br),
-                    start_with_eigen = Val(false), # allows to filter out option
+                    start_with_eigen = (false), # allows to filter out option
                     bdlinsolver = MatrixBLS(),
                     prm = false,
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}

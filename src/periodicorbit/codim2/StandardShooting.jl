@@ -144,26 +144,26 @@ end
 function jacobian_adjoint_neimark_sacker(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting }, x, par, ω)
     dx -> jacobian_adjoint_neimark_sacker_matrix_free(pbwrap, x, par, ω, dx)
 end
-
-function continuation(br::AbstractResult{Tkind, Tprob},
-                    ind_bif::Int64,
-                    lens2::AllOpticTypes,
-                    options_cont::ContinuationPar = br.contparams ;
-                    detect_codim2_bifurcation::Int = 0,
-                    update_minaug_every_step = 1,
-                    kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function continuation(br::AbstractResult{Tkind, Tprob}, #TODO same function in PeriodicOrbitCollocation
+                      ind_bif::Int64,
+                      lens2::AllOpticTypes,
+                      options_cont::ContinuationPar = br.contparams ;
+                      detect_codim2_bifurcation::Int = 0,
+                      update_minaug_every_step = 1,
+                      kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalSh}
     biftype = br.specialpoint[ind_bif].type
-
     # options to detect codim2 bifurcations
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     _options_cont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
-
-    if biftype == :bp || biftype == :fold
-        return continuation_sh_fold(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
+    args = (br, ind_bif, lens2, _options_cont)
+    kw = (; compute_eigen_elements, update_minaug_every_step, kwargs...)
+    if biftype == :bp || biftype == :fold # TODO this is strongly type unstable
+        return continuation_sh_fold(args...; kw... )
     elseif biftype == :pd
-        return  continuation_sh_pd(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
+        return  continuation_sh_pd(args...; kw... )
     elseif biftype == :ns
-        return  continuation_sh_ns(br, ind_bif, lens2, _options_cont; compute_eigen_elements, update_minaug_every_step, kwargs... )
+        return  continuation_sh_ns(args...; kw... )
     end
     error("You passed the bifurcation type = $biftype.\nWe continue only Branch Point /Fold / PD / NS points of periodic orbits for now.")
 end

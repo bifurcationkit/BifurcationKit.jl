@@ -17,13 +17,10 @@ $(TYPEDFIELDS)
 mutable struct BifDiagNode{Tγ, Tc}
     "current recursion level in the tree."
     level::Int64
-
     "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
     code::Int64
-
     "branch associated to the current node."
     γ::Tγ
-
     "children of current node. These are the different branches off the bifurcation point in γ."
     child::Tc
 end
@@ -143,7 +140,7 @@ function _letsbranch_for_bd(br::AbstractBranchResult, _id::Int, _pt, _level::Int
     optscont = options(_pt.x, _pt.param, _level + 1)
     @reset optscont.ds *= _dsfactor
     continuation(get_contresult(br), _id, optscont;
-                nev = optscont.nev,
+                normal_form_kwargs = (nev = optscont.nev,),
                 kwargs...,
                 ampfactor = _ampfactor,
     )

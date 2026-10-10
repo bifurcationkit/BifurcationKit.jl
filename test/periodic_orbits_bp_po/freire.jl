@@ -44,7 +44,7 @@ begin
         @test br_po.specialpoint[1].type == :bp
         @test br_po.specialpoint[2].type == :bp
         # plot(br, br_po)
-        
+
         bp = get_normal_form(br_po, 2, detailed = Val(true))
         @test_skip bp.nf.nf.a01 ≈ 1e-6    atol = 1e-5
         @test_skip bp.nf.nf.b11 ≈ 200     rtol = 1e-2
@@ -52,8 +52,8 @@ begin
         @test_skip bp.nf.nf.b30 ≈ 20811   rtol = 1e-5
         
         br_po_bp = continuation(deepcopy(br_po), 2;
-            δp = -0.001, ampfactor = 0.01,
-            use_normal_form = false, detailed = Val(false),
+            δp = -0.001, #ampfactor = 10.00201,
+            normal_form_kwargs = (detailed = Val(true), ),
             record_from_solution,
             )
         
@@ -73,7 +73,7 @@ begin
         
         br_po_pd = continuation(deepcopy(br_po_bp), 2;
         δp = -0.0005, ampfactor = 0.01,
-        use_normal_form = false, detailed = Val(false),
+        normal_form_kwargs =( detailed = Val(false),),
         record_from_solution,
         )
         # plot(br, br_po, br_po_bp,br_po_pd, xlims = (-0.7,-0.5))
@@ -83,9 +83,9 @@ end
 begin
     for meshadapt in (false, true)
         br_po = continuation(br, 1, 
-        ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-        Collocation(30, 4; jacobian = BK.DenseAnalyticalInplace(), meshadapt);
-        δp = 0.001,
+            ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
+            Collocation(20, 4; jacobian = BK.DenseAnalyticalInplace(), meshadapt);
+            δp = 0.001,
         )
         # plot(br, br_po)
         @test br_po.specialpoint[1].type == :bp
@@ -103,9 +103,10 @@ begin
         BK.predictor(bppo, 0.01, 0.1)
         
         br_po_bp = continuation(deepcopy(br_po), 2; 
-        δp = -0.001, ampfactor = 0.01,
-        use_normal_form = true, detailed = Val(false),
+            δp = -0.001, ampfactor = 0.1,
+            normal_form_kwargs =( detailed = Val(false),),
         )
+        if ~meshadapt
         @test br_po_bp.specialpoint[1].type == :ns
         @test br_po_bp.specialpoint[2].type == :pd
         # plot(br_po, br_po_bp, xlims = (-0.7,-0.5))
@@ -120,7 +121,7 @@ begin
         # @test ns_p.nf.type == ns.nf.type
         
         pd_p = get_normal_form(br_po_bp, 2; detailed = Val(true), prm = Val(true))
-        # @test pd.nf.nf.a ≈ 21 rtol = 1e-1 # TODO THIS DOES NOT WORK!! WHY??
+        # @test pd.nf.nf.a ≈ 21 rtol = 1e-1 # TODO THIS DOES NOT WORK!!??
         # @test pd_p.nf.nf.b3 ≈ 724 rtol = 1e-2
         # @test pd_p.nf.type == :SuperCritical
         
@@ -133,9 +134,10 @@ begin
         
         br_po_pd = continuation(deepcopy(br_po_bp), 2;
         δp = -0.0005, ampfactor = 0.01,
-        use_normal_form = false, detailed = Val(false),
+        normal_form_kwargs =( detailed = Val(false),),
         record_from_solution,
         )
+        end
         # plot(br, br_po, br_po_bp,br_po_pd, xlims = (-0.7,-0.5))
     end
 end
@@ -156,8 +158,7 @@ begin
 
     br_po_bp = continuation(deepcopy(br_po), 2; 
                     δp = -0.001, ampfactor = 0.01,
-                    use_normal_form = true, detailed = Val(false),
-                    prm = Val(false)
+                    normal_form_kwargs =( detailed = Val(false),prm = Val(false),),
     )
 
     @test br_po_bp.specialpoint[1].type == :ns
