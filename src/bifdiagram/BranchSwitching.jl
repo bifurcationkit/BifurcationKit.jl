@@ -79,7 +79,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                       usedeflation::Bool = false,
                       deflated_newton_kwargs = (
                             max_iter_deflation = min(50, 15options_cont.newton_options.max_iterations),
-                            perturb = identity,
+                            perturb_guess = identity,
                       ),
 
                       kwargs...) where {Tprob, 𝒯eigvec, Tkind <: AbstractOneParamContEquilibrium}
@@ -151,13 +151,21 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     if usedeflation
         verbose && println("\n────▶ Compute point on the current branch with nonlinear deflation...")
         optn = options_cont.newton_options
+        max_iter_deflation = get(deflated_newton_kwargs, :max_iter_deflation, min(50, 15options_cont.newton_options.max_iterations))
+        verbosedeflation = get(deflated_newton_kwargs, :verbosedeflation, false)
+        optnDf = setproperties(optn; max_iterations = max_iter_deflation, verbose = verbosedeflation)
+
+        perturb_guess = get(deflated_newton_kwargs, :perturb_guess, identity)
+        lsdefop = get(deflated_newton_kwargs, :linsolver, DeflatedProblemCustomLS())
+        x0def = convert(Teigvec, pred.x0)
         # find the bifurcated branch using nonlinear deflation
         solbif = newton(getprob(br), 
-                        convert(Teigvec, pred.x0), 
-                        pred.x1, 
+                        x0def, 
+                        perturb_guess(pred.x1), 
                         setparam(br, pred.p), 
-                        setproperties(optn; verbose = verbosedeflation); 
-                        deflated_newton_kwargs...)
+                        optnDf,
+                        DeflationOperator(2, one(VI.scalartype(x0def)), Vector{typeof(x0def)}(), _copy(x0def); autodiff = true),
+                        lsdefop)
         if ~converged(solbif[1])
             @warn "Deflated newton did not converge for the first guess on the bifurcated branch."
         end

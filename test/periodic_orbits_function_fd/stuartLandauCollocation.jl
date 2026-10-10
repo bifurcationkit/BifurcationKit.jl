@@ -447,6 +447,7 @@ let
                 normal_form_kwargs = (detailed = Val(use_nf),),
                 linear_algo = lspo,
                 usedeflation = true,
+                normC = norminf,
                 eigsolver = BK.FloquetColl(),
             )
             issorted(br_po_adapt.eig[1].eigenvals, by = real)
