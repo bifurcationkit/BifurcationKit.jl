@@ -161,20 +161,17 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
                     kwargs...) where {Tkind <: PeriodicOrbitCont, Tprob <: PeriodicOrbitFunctionalColl}
     bifpt = br.specialpoint[ind_bif]
     biftype = br.specialpoint[ind_bif].type
-
     @assert biftype == :pd "Please open an issue on BifurcationKit website"
 
-    par = setparam(br, bifpt.param)
+    par_pd = setparam(br, bifpt.param)
     pdpointguess = pd_point(br, ind_bif)
-
     # wrap of collocation functional
     pbwrap = deepcopy(getprob(br))
-
     # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
+    restore_problem!(pbwrap, bifpt.x, par_pd)
 
     # get the PD eigenvectors
-    J = jacobian_period_doubling_with_border(pbwrap, saved_solution(pdpointguess.u), par)
+    J = jacobian_period_doubling_with_border(pbwrap, saved_solution(pdpointguess.u), par_pd)
     nj = size(J, 1)
     J[end, :] .= rand(nj) # must be close to kernel
     J[:, end] .= rand(nj)
@@ -183,10 +180,10 @@ function continuation_coll_pd(br::AbstractResult{Tkind, Tprob},
     q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) # ≈ ker(J)
     p = J' \ rhs; p = p[begin:end-1]; p ./= norm(p)
 
-    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, saved_solution(pdpointguess.u), par)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
+    @debug "[collocation] PD eigenvectors" norminf(residual(pbwrap, saved_solution(pdpointguess.u), par_pd)) norminf(apply(J[1:end-1,1:end-1], q)) norminf(apply(J[1:end-1,1:end-1]', p)) norminf(q)
     # perform continuation
     continuation_pd(pbwrap, alg,
-        pdpointguess, par,
+        pdpointguess, par_pd,
         getlens(br), lens2,
         p, q,
         options_cont;

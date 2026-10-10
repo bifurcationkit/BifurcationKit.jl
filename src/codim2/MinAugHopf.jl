@@ -117,6 +117,7 @@ function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::Ide
     ~cv && @debug "Bordered linear solver for (J-iωI) did not converge."
 
     # we solve (J+iωI)'w + b σ2 = 0 with <a, w> = 1
+    # TODO: this generates a second F★ = factorize(SO★) whereas adjoint(F) would do!
     w, σ2, cv, itw = linbdsolver_adjoint(ShiftedOperator(J = J★, a₀ = Complex{𝒯}(0, ω) ), b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J+iωI)' did not converge."
     # we should have σ1 ≈ conj(σ2)

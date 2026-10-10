@@ -38,6 +38,14 @@ let
     @reset br.specialpoint[1].param = 0.
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζs = [1., 0], ζs_ad = [1., 1])
     bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζs = [1., 0], ζs_ad = [1., 1])
+
+    # direct call to get_normal_form1d with detailed = Val(false)
+    bp1d = BK.get_normal_form1d(prob, br, 1;
+                                verbose = false,
+                                detailed = Val(false),
+                                ζ = [1., 0],
+                                ζ_ad = [1., 1])
+    @test isnothing(bp1d.nf)
     # TODO this is not type stable because detailed isa Val that must be passed
     @test isconcretetype(return_type(BK.get_normal_form1d, typeof((prob, br, 1)))) == false
     # on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
@@ -264,6 +272,13 @@ let
                                     autodiff, 
                                     verbose = false)
 
+        # direct call to get_normal_formNd with detailed = Val(false)
+        bp2d_simple = BK.get_normal_formNd(prob2d, br, 1;
+                                            ζs = [[1, 0, 0.], [0, 1, 0.]],
+                                            ζs_ad = [[1, 0, 1], [0., 1, 0]],
+                                            detailed = Val(false),
+                                            verbose = false)
+        @test isnothing(bp2d_simple.nf)
         # test for type stable implementation
         @test isconcretetype(return_type(BK.get_normal_formNd, typeof((prob2d, br, 1))))
         @test isconcretetype(return_type(BK.multicontinuation, typeof((br, BK.get_normal_form(br, 1))) )) == false # not type stable yet TODO
@@ -518,6 +533,11 @@ let
     # same normal form but with the kernel basis computed with a bordered linear system
     cuspnf_bd = get_normal_form(sn_codim2, ind[1]; start_with_eigen = Val(false))
     @test cuspnf_bd.nf.c ≈ par.c atol = 1e-8
+
+    # detailed = Val(false): only the eigen-elements are computed
+    cuspnf_simple = BK.cusp_normal_form(BK.getprob(sn_codim2), sn_codim2, ind[1];
+                                        detailed = Val(false))
+    @test isnothing(cuspnf_simple.nf)
 end
 ####################################################################################################
 # test for the Bogdanov-Takens normal form

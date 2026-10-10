@@ -1,4 +1,4 @@
-@enum MoorePenroseLS direct=1 pInv=2 iterative=3
+@enum MoorePenroseLS direct=1 pInv=2 iterative=3 # TODO: use type instead
 
 """
 $(TYPEDEF)

@@ -189,7 +189,7 @@ Compute the reduced equation / normal form of the bifurcation point located at `
 - `lens::Lens` specify which parameter to take the partial derivative ∂pF
 - `scaleζ` function to normalize the kernel basis. Indeed, the kernel vectors are normalized using `norm`, the normal form coefficients can be super small and can imped its analysis. Using `scaleζ = norminf` can help sometimes.
 - `autodiff = true` whether to use ForwardDiff for the differentiations. Only used for the codim 2 normal forms (e.g. Bogdanov-Takens (BT), Zero-Hopf (ZH), Hopf-Hopf (HH) points).
-- `detailed = Val(true)` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is "long", for example for a Bogdanov-Takens point.
+- `detailed = Val(true)` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is "long", for example for a Bogdanov-Takens point. When `Val(false)`, a simplified normal form is returned and some coefficients may not be computed: depending on the bifurcation type, `nf` can be `nothing` or contain only the leading coefficients.
 - `bls = MatrixBLS()` specify bordered linear solver. Needed to compute the reduced equation Taylor expansion of Branch/BT points. Indeed, it is required to solve `L⋅u = rhs` where `L` is the jacobian at the bifurcation point, `L` is thus singular and we rely on a bordered linear solver to solve this system.
 - `bls_block = bls` specify bordered linear solver when the border has dimension > 1 (1 for `bls`). (see `bls` option above).
 - `start_with_eigen = Val(true)` whether to compute the basis of the kernel (the eigenvectors) using the eigensolver (`Val(true)`) or using a bordered linear system (`Val(false)`). The latter can be more robust for large scale problems where the eigensolver fails. It requires `bls`, `bls_adjoint` and possibly `bls_block` to be provided.
@@ -239,24 +239,24 @@ function get_normal_form(prob::AbstractBifurcationProblem,
     end
 
     # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, scaleζ)
+    kwargs_nf = (;nev, verbose, lens, scaleζ, start_with_eigen, detailed)
 
     if bifpt.type == :hopf
-        return hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, start_with_eigen, bls, bls_adjoint)
+        return hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
     elseif bifpt.type == :cusp
-        return cusp_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., start_with_eigen, bls, bls_adjoint)
+        return cusp_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
     elseif bifpt.type == :bt
-        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad, start_with_eigen)
+        return bogdanov_takens_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint, bls_block, ζs, ζs_ad)
     elseif bifpt.type == :gh
-        return bautin_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, start_with_eigen, bls, bls_adjoint)
+        return bautin_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., bls, bls_adjoint)
     elseif bifpt.type == :zh
-        return zero_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, start_with_eigen)
+        return zero_hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint)
     elseif bifpt.type == :hh
-        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec; kwargs_nf..., detailed, autodiff, bls, bls_adjoint, start_with_eigen)
+        return hopf_hopf_normal_form(prob, br, id_bif, Teigvec ; kwargs_nf..., autodiff, bls, bls_adjoint)
     elseif abs(bifpt.δ[1]) == 1 || bifpt.type == :fold # simple branch point
-        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint, start_with_eigen)
+        return get_normal_form1d(prob, br, id_bif, Teigvec ; kwargs_nf..., ζ = ζs, ζ_ad = ζs_ad, bls, bls_adjoint)
     end
-    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block, bls_block_adjoint, start_with_eigen)
+    return get_normal_formNd(prob, br, id_bif, Teigvec ; kwargs_nf..., ζs, ζs_ad, bls_block, bls_block_adjoint)
 end
 
 @inline E(x, ζ, ζ★) = VI.add(x, ζ, -VI.inner(x, ζ★), VI.One())
@@ -265,6 +265,12 @@ end
 $(TYPEDSIGNATURES)
 
 Compute the reduced equation based on [1] page 295 and [2].
+
+# Optional arguments
+- `detailed::Val{Bool} = Val(true)` whether to compute the reduced equation coefficients.
+  With `Val(false)`, only the kernel basis is computed, `nf = nothing` and `ζ★ = 0`.
+
+# References
 
 [1] Golubitsky, Martin, and David G Schaeffer. Singularities and Groups in Bifurcation Theory. Springer-Verlag, 1985, VI.1.d page 295.
 
@@ -283,12 +289,11 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
                     ζ::Tevecs = nothing,
                     ζ_ad::Tevecs_ad = nothing,
 
-                    detailed::Bool = true,
-
                     bls = MatrixBLS(),
                     bls_adjoint = bls,
+                    detailed::Val{detailed_type} = Val(true),
                     start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                    ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type}
+                    ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type, detailed_type}
     bifpt = br.specialpoint[ind_bif]
     τ = bifpt.τ 
     plens = get_lens_symbol(lens)
@@ -330,6 +335,17 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
         ζ, ζ★ = _get_kernel_basis_1d_from_bls(L, L★, bls, bls_adjoint, x0, 𝒯, scaleζ; verbose)
         ζ = convert(𝒯eigvec, ζ)
         λ★ = conj(λ)
+    end
+
+    if ~detailed_type
+        return BranchPoint(;x0, τ = bifpt.τ, p = bifpt.param,
+                  params = parbif, 
+                  lens,
+                  ζ,
+                  ζ★ = zero(ζ),
+                  nf = nothing,
+                  type = Symbol("?")
+        )
     end
 
     ζ★ = convert(𝒯eigvec, real(ζ★))
@@ -698,6 +714,20 @@ function E_nd(x, ζs, ζ★s)
     return out
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Compute the reduced equation / normal form for a bifurcation point whose jacobian has a kernel of dimension `N > 1`.
+
+# Arguments
+- `prob::AbstractBifurcationProblem`
+- `br` result from a call to [`continuation`](@ref)
+- `id_bif` index of the bifurcation point in `br.specialpoint`
+
+# Optional arguments
+- `detailed::Val{Bool} = Val(true)` whether to compute the normal form coefficients.
+  With `Val(false)`, only the biorthogonal kernel basis `ζs`, `ζ★s` is computed and `nf = nothing`.
+"""
 function get_normal_formNd(prob::AbstractBifurcationProblem,
                             br::AbstractBranchResult,
                             id_bif::Int,
@@ -712,10 +742,12 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
                             bls_block = MatrixBLS(),
                             bls_block_adjoint = bls_block,
+
                             start_with_eigen::Val{start_with_eigen_type} = Val(true),
+                            detailed::Val{detailed_type} = Val(true),
 
                             scaleζ = LA.norm
-                            ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type}
+                            ) where {𝒯eigvec, Tevecs, Tevecs_ad, start_with_eigen_type, detailed_type}
     bifpt = br.specialpoint[id_bif]
     τ = bifpt.τ
     prob_vf = prob
@@ -799,6 +831,18 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
     verbose && println("──▶ VP  = ", λs, "\n──▶ VP★ = ", λ★s)
 
     ζs, ζ★s = biorthogonalise(ζs, ζ★s, verbose)
+
+    if ~detailed_type
+        return NdBranchPoint(x0,
+                        τ,
+                        p,
+                        parbif,
+                        lens,
+                        ζs,
+                        ζ★s,
+                        nothing, 
+                        :none)
+    end
 
     # these differentials should as is work as we are using real valued vectors
     R2(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)

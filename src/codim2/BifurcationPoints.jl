@@ -2,7 +2,7 @@ type(::Cusp) = :Cusp
 type(::Bautin) = :Bautin
 type(::ZeroHopf) = :ZeroHopf
 type(::HopfHopf) = :HopfHopf
-type(bp::BogdanovTakens) = :BogdanovTakens
+type(::BogdanovTakens) = :BogdanovTakens
 
 function __get_lenses_and_params_codim2(bp)
     lens1, lens2 = bp.lens
@@ -19,8 +19,10 @@ function Base.show(io::IO, bp::Cusp)
     p1 = :β1 == get_lens_symbol(lens1) ? :p1 : :β1
     p2 = :β2 == get_lens_symbol(lens2) ? :p2 : :β2
     println(io, "Normal form: $p1 + $p2⋅A + c⋅A³")
-    c = bp.nf.c
-    println(io, "Normal form coefficient:\n c = $c")
+    if ~isnothing(bp.nf)
+        c = bp.nf.c
+        println(io, "Normal form coefficient:\n c = $c")
+    end
 end
 
 function Base.show(io::IO, bp::Bautin; prefix = "", detailed = false)

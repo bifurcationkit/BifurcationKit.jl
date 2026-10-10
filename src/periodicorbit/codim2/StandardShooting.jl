@@ -209,7 +209,7 @@ Continuation of curve of period-doubling bifurcations of periodic orbits compute
 - `lens2::AllOpticTypes` second parameter axis
 - `options_cont` parameters to be used by a regular [`continuation`](@ref)
 """
-function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
+@views function continuation_sh_pd(br::AbstractResult{Tkind, Tprob},
                     ind_bif::Int64,
                     lens2::AllOpticTypes,
                     options_cont::ContinuationPar = br.contparams ;

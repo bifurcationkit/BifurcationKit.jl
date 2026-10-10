@@ -11,6 +11,8 @@ Compute the Cusp normal form.
 # Optional arguments
 - `δ = getdelta(_prob)` used for finite differences
 - `verbose` bool to print information
+- `detailed::Val{Bool} = Val(true)` whether to compute the normal form coefficient `c`.
+  With `Val(false)`, only the eigen-elements are computed and `nf = nothing`.
 """
 function cusp_normal_form(𝐏𝐛,
                             br::AbstractBranchResult, ind_bif::Int,
@@ -23,8 +25,9 @@ function cusp_normal_form(𝐏𝐛,
                             scaleζ = norm,
                             bls = nothing,
                             bls_adjoint = nothing,
+                            detailed::Val{detailed_type} = Val(true),
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
-                            ) where {𝒯eigvec, start_with_eigen_type}
+                            ) where {𝒯eigvec, start_with_eigen_type, detailed_type}
     if br.specialpoint[ind_bif].type != :cusp 
         error("The provided index does not refer to a Cusp Point")
     end
@@ -86,10 +89,23 @@ function cusp_normal_form(𝐏𝐛,
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
 
-    @assert abs(VI.inner(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    if abs(VI.inner(ζ, ζ★)) < 1e-10 
+        error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+    end
     ζ★ ./= VI.inner(ζ, ζ★)
 
     # Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
+    if ~detailed_type
+        return Cusp(
+                    x0, nothing, nothing, 
+                    parbif,
+                    (getlens(𝐌𝐚), lens),
+                    ζ, ζ★,
+                    nothing,
+                    :none
+                )
+    end
+
     B(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
     C(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
     q = ζ
