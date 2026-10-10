@@ -840,7 +840,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     end
     rhsc11_g = zero(u₀g)
     @inbounds for p in axes(rhsc11_g, 2)
-        rhsc11_g[:, p] .= B(u₀g[:, p], par, v₁★g[:, p], h₀₁g[:, p]) .+ R11vf(u₀g[:, p], par, v₁★g[:, p])
+        rhsc11_g[:, p] .= B(u₀g[:, p], par, v₁g[:, p], h₀₁g[:, p]) .+ R11vf(u₀g[:, p], par, v₁g[:, p])
     end
     c₁₁ = ∫_gauss(v₁★g, rhsc11_g) - a₀₁ * IA
     c₁₁ *= 2

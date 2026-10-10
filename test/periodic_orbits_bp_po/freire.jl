@@ -106,7 +106,7 @@ begin
             δp = -0.001, ampfactor = 0.1,
             normal_form_kwargs =( detailed = Val(false),),
         )
-        if ~meshadapt
+        if true#~meshadapt
         @test br_po_bp.specialpoint[1].type == :ns
         @test br_po_bp.specialpoint[2].type == :pd
         # plot(br_po, br_po_bp, xlims = (-0.7,-0.5))
@@ -133,8 +133,8 @@ begin
         # @test pd.nf.nf.b3  ≈ -6.736             rtol = 1e-2
         
         br_po_pd = continuation(deepcopy(br_po_bp), 2;
-        δp = -0.0005, ampfactor = 0.01,
-        normal_form_kwargs =( detailed = Val(false),),
+        # δp = -0.0005, ampfactor = 0.01,
+        # normal_form_kwargs =( detailed = Val(false),),
         record_from_solution,
         )
         end
