@@ -370,7 +370,9 @@ module NonlinearSolveExt
         resend = bnorm(sol.resid)
         residuals = [res, resend]
         step = sol.stats.nsteps
-        flag = SciMLBase.successful_retcode(sol) & (resend < tol) &
+        # without bounds in `alg`, a corrector that ends outside [p_min, p_max] has failed
+        inside = p_min <= p <= p_max
+        flag = SciMLBase.successful_retcode(sol) & (resend < tol) & inside &
                callback((; x, res_f = palc_state(sol.resid), residual = resend, step, contparams, p, residuals, options); fromNewton = false, kwargs...)
         return NonLinearSolution(BorderedArray(x, p), prob, residuals, flag, step, sol.stats.nsolve)
     end

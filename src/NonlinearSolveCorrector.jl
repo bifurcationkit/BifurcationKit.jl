@@ -38,7 +38,7 @@ A dense linear solver (for example `LUFactorization()`) needs `jacobian(prob, x,
     - the state `x` must be an `AbstractArray`.
     - `NewtonPar` options `linsolver`, `linesearch`, `α`, `αmin`, `verbose` are not used by `alg`; use the options of `alg` instead. The bordered linear solver `bls` of `PALC` is not used; use the keyword `bls` of `NonlinearSolveCorrector` instead.
     - the `callback` of `continuation` (`callback_newton`) is called before the first iteration and at the end, not at every iteration.
-    - `p` is kept in `[p_min, p_max]` by the box constraints of `alg` when it allows bounds (`SciMLBase.allowsbounds(alg)`, for example the bounded trust region). Otherwise `p` is not clamped during the iterations, and a corrector that converges outside `[p_min, p_max]` is accepted there, which ends the branch.
+    - `p` is kept in `[p_min, p_max]` by the box constraints of `alg` when it allows bounds (`SciMLBase.allowsbounds(alg)`, for example the bounded trust region). Otherwise `p` is not clamped during the iterations, and a corrector that ends outside is not converged and `continuation` shortens the step.
 
 # Internal fields
 $(TYPEDFIELDS)
