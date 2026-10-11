@@ -275,7 +275,7 @@ newton_palc(iter::AbstractContinuationIterable,
 """
 $(TYPEDSIGNATURES)
 
-[`newton_palc`](@ref) which also returns the quality of the corrector (the lengths of its Newton steps, in the norm of the arc length constraint) when `control::CorrectorQuality` is passed. The corrector stops, not converged, as soon as `control` rejects a step.
+[`newton_palc`](@ref) which also returns the quality of the corrector (the lengths of its Newton steps, in the norm of the arc length constraint) when `control::CorrectorQuality` is passed. The corrector stops, not converged, as soon as `control` rejects a step or an iterate leaves `[p_min, p_max]`; `F` is not evaluated at that iterate.
 """
 function _newton_palc(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState,
@@ -371,6 +371,11 @@ function _newton_palc(iter::AbstractContinuationIterable,
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
+                # F may be undefined outside [p_min, p_max]: an iterate there stops the corrector, not converged
+                if ~(p_min <= p_pred <= p_max)
+                    rejected = true
+                    break
+                end
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
@@ -383,17 +388,24 @@ function _newton_palc(iter::AbstractContinuationIterable,
                     line_step = true
                     _copyto!(x, x_pred)
 
-                    # p = p_pred
-                    p  = clamp(p_pred, p_min, p_max)
+                    p = p_pred
                 else
                     α /= 2
                 end
             end
+            if rejected
+                break
+            end
             # we put back the initial value
             α = α0
         else
+            # F may be undefined outside [p_min, p_max]: an iterate there stops the corrector, not converged
+            if ~(p_min <= p - up <= p_max)
+                rejected = true
+                break
+            end
             x = minus!!(x, u)
-            p = clamp(p - up, p_min, p_max)
+            p = p - up
             _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end

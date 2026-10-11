@@ -99,6 +99,10 @@ let
     # without them ds follows the Newton iteration count, which grows it faster than max_growth
     legacy = continuation(make_problem(Float64), PALC(step_control = nothing, orientation_check = false), options(Float64))
     @test count(sp -> sp.type == :fold, legacy.specialpoint) == 2
+    # through both folds, not by a jump between the outer sheets: u parametrises the curve (λ = u^3 - u + 1) and the
+    # sheet between the folds is |u| < 1/√3. A clamped corrector jumped from u ≈ -0.92 to u ≈ 0.92 and reported folds on
+    # the upper sheet, where there is none
+    @test any(point -> abs(point.x[1]) < 1 / sqrt(3), legacy.sol)
     legacy_ds = abs.(legacy.branch.ds)
     @test any(legacy_ds[2:(end - 1)] .> 1.1 .* legacy_ds[begin:(end - 2)])
 
@@ -225,5 +229,32 @@ let
     for (max_distance, accepted) in ((1e-3, false), (1.0, true))
         alg = PALC(; tangent = Bordered(), step_control = CorrectorQuality(; max_distance))
         @test BK.converged(bounded_state(alg, on_branch)) == accepted
+    end
+
+    # a corrector whose solution lies past p_max: its iterate past p_max stops it, not converged, before F is
+    # evaluated there (F may be undefined past the bound), and the step is refused. Below the centre of the circle
+    # the corrector raises λ beyond a predictor that lies short of p_max
+    φ2 = -π / 6
+    along = 0.4
+    predicted = BorderedArray(point(φ2).u .- along * sin(φ2), point(φ2).p + along * cos(φ2))
+    past_options = ContinuationPar(options; p_max = -0.148)
+    @test predicted.p < past_options.p_max < sin(φ2 + atan(along))
+    function F_inside(u, p)
+        if p.λ > -0.148
+            error("F evaluated past p_max")
+        end
+        return F(u, p)
+    end
+    let alg = PALC(; tangent = Bordered())
+        iter = ContIterable(BifurcationProblem(F_inside, [sqrt(0.75)], (λ = -0.5,), (@optic _.λ)), alg, past_options)
+        state = iterate(iter)[1]
+        state.z = point(φ2)
+        state.τ = unit_tangent(φ2)
+        state.orientation = 1
+        state.z_pred = predicted
+        state.ds = dotθ(predicted.u .- state.z.u, state.τ.u, predicted.p - state.z.p, state.τ.p, 0.5)
+        BK.corrector!(state, iter, alg)
+        @test ~BK.converged(state)
+        @test state.z.p == point(φ2).p
     end
 end
