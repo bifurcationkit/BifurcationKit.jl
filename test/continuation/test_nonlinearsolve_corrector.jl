@@ -308,6 +308,29 @@ opts_bratu = ContinuationPar(
             maximum(point -> point.p, br_default.sol) atol = 0.02
     end
 
+    @testset "∂F/∂p of the bordered Jacobian is the R01 of the problem's jet" begin
+        ext = Base.get_extension(BK, :NonlinearSolveExt)
+        # a residual whose forward finite difference in `a` (step sqrt(eps)) is off by 1e-3 relative
+        ω = 1.0e5
+        F_fast(x, par) = x .- sin(ω * par.a)
+        par = (a = 0.3,)
+        x = zeros(3)
+        τ = BK.BorderedArray(ones(3), 1.0)
+        bordered_dFdp(prob) = ext.palc_jacobian(
+            ext.ArrayPartition(x, [par.a]),
+            ext.PALCCache(prob, par, (; τ), BK.DotTheta(), 0.5),
+        ).dFdp
+
+        # the default jet differentiates automatically
+        prob_auto = BifurcationProblem(F_fast, x, par, (@optic _.a))
+        @test bordered_dFdp(prob_auto) ≈ fill(-ω * cos(ω * par.a), 3) rtol = 1.0e-10
+        prob_fd = BifurcationProblem(F_fast, x, par, (@optic _.a); R01 = BK.FiniteDifferences())
+        @test !isapprox(bordered_dFdp(prob_fd), fill(-ω * cos(ω * par.a), 3); rtol = 1.0e-10)
+        # a derivative passed by the user is the one used
+        prob_user = BifurcationProblem(F_fast, x, par, (@optic _.a); R01 = (x, par) -> fill(7.0, length(x)))
+        @test bordered_dFdp(prob_user) == fill(7.0, 3)
+    end
+
     @testset "Fold and Hopf continuation" begin
         # the CO oxidation model of `test/fold_codim_2/codim2.jl`, with its Hopf point 2 and point 3, from which a fold curve is continued
         function COm(u, p)
