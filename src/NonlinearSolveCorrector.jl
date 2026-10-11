@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/stable/) used as the corrector of a continuation, or as the solver of [`solve`](@ref) for `F(x, p0) = 0`, in place of BifurcationKit's own Newton method. It requires `using NonlinearSolve, BorderedLinearSolve` (package extension `NonlinearSolveExt`).
+Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/stable/) used as the corrector of a continuation, or as the solver of [`solve`](@ref) for `F(x, p0) = 0`, in place of BifurcationKit's own Newton method. It requires `using NonlinearSolve` and `import BorderedLinearSolve` (package extension `NonlinearSolveExt`). BorderedLinearSolve exports its own `BorderingBLS`, so after `using BifurcationKit, BorderedLinearSolve` the name `BorderingBLS` is ambiguous and must be qualified (`BifurcationKit.BorderingBLS`, `BorderedLinearSolve.BorderingBLS`); `import BorderedLinearSolve` keeps it BifurcationKit's.
 
 # Constructor
 
@@ -14,7 +14,8 @@ Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/sta
 
 # Usage
 
-    using NonlinearSolve, BorderedLinearSolve
+    using NonlinearSolve
+    import BorderedLinearSolve  # keeps `BorderingBLS` BifurcationKit's
     corrector = NonlinearSolveCorrector(NewtonRaphson(; linsolve = LUFactorization()))
     # the corrector of the pseudo-arclength continuation
     continuation(prob, PALC(; corrector), opts)
@@ -60,7 +61,7 @@ end
 
 function NonlinearSolveCorrector(alg::Any; bls = nothing, reuse_jacobian::Bool = false, solve_kwargs...)
     if isnothing(Base.get_extension(@__MODULE__, :NonlinearSolveExt))
-        error("`NonlinearSolveCorrector` requires the packages NonlinearSolve.jl and BorderedLinearSolve.jl. Please run `using NonlinearSolve, BorderedLinearSolve` first.")
+        error("`NonlinearSolveCorrector` requires the packages NonlinearSolve.jl and BorderedLinearSolve.jl. Please run `using NonlinearSolve; import BorderedLinearSolve` first (`import`, because both BifurcationKit and BorderedLinearSolve export `BorderingBLS`).")
     end
     return NonlinearSolveCorrector(alg, _palc_algorithm(alg, bls), NamedTuple(solve_kwargs), reuse_jacobian, Ref{Any}(nothing), Ref{Any}(nothing))
 end
