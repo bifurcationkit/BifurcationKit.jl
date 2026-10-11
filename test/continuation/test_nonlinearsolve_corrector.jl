@@ -39,14 +39,21 @@ end
 
 J_bratu_free(x, p) = dx -> J_bratu(x, p) * dx
 
-# `precs` of `KrylovJL_GMRES`: the LU of the Jacobian at the state `A.u` and the parameters `A.p` of the operator `A`, counting its builds
+# `precs` of `KrylovJL_GMRES`: the LU of the dense Jacobian (bordered by PALC), counting its builds
 struct DenseLUPreconditioner
+    "the parameter of a solve at fixed parameter, whose unknown is the state alone"
+    λ::Float64
     builds::Base.RefValue{Int}
 end
 
+# the state and the parameter of the unknown `u` of the corrector: `ArrayPartition(x, [p])` for PALC, `x` at the fixed parameter `λ`
+dense_point(u::BK.RecursiveArrayTools.ArrayPartition, λ) = (u.x[1], only(u.x[2]))
+dense_point(u::AbstractVector, λ) = (u, λ)
+
 function (preconditioner::DenseLUPreconditioner)(A, ::Any)
+    x, λ = dense_point(A.u, preconditioner.λ)
     preconditioner.builds[] += 1
-    return (lu(Matrix(J_bratu(A.u, A.p))), I)
+    return (lu(BK.corrector_matrix(A.p, A.u, Matrix(J_bratu(x, (; λ))))), I)
 end
 
 prob_bratu = BifurcationProblem(F_bratu, zeros(20), (λ = 0.01,), (@optic _.λ))
@@ -234,7 +241,7 @@ opts_bratu = ContinuationPar(
         )
         builds = Ref(0)
         alg = NewtonRaphson(;
-            linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(builds)),
+            linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(1.0, builds)),
             jacobian_reuse = free_policy,
         )
         sol1 = BK.solve(prob, NonlinearSolveCorrector(alg), NewtonPar(tol = 1.0e-9))
@@ -261,7 +268,7 @@ opts_bratu = ContinuationPar(
             # GMRES at the default relative tolerance leaves residuals above `tol`, which BifurcationKit rejects as a failed step
             alg = NewtonRaphson(;
                 linsolve = KrylovJL_GMRES(;
-                    precs = DenseLUPreconditioner(builds),
+                    precs = DenseLUPreconditioner(NaN, builds),
                     atol = 1.0e-12,
                     rtol = 1.0e-12,
                 ),
