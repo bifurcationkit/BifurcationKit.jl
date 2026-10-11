@@ -8,6 +8,8 @@ using NonlinearSolve:
     LUFactorization,
     KrylovJL_GMRES
 import NonlinearSolve
+# loads the extension; its `BorderingBLS` is not BifurcationKit's
+import BorderedLinearSolve
 const BK = BifurcationKit
 ####################################################################################################
 # Bratu problem u'' + λ exp(u) = 0, which has a fold at λ ≈ 3.51
@@ -36,23 +38,14 @@ end
 
 J_bratu_free(x, p) = dx -> J_bratu(x, p) * dx
 
-# `precs` of `KrylovJL_GMRES`: the LU of the dense Jacobian (bordered by PALC), counting its builds
+# `precs` of `KrylovJL_GMRES`: the LU of the Jacobian at the state `A.u` and the parameters `A.p` of the operator `A`, counting its builds
 struct DenseLUPreconditioner
-    bordered::Bool
-    λ::Float64
     builds::Base.RefValue{Int}
 end
 
 function (preconditioner::DenseLUPreconditioner)(A, ::Any)
-    w = A.u
-    x = w
-    λ = preconditioner.λ
-    if preconditioner.bordered
-        x = w[begin:end - 1]
-        λ = w[end]
-    end
     preconditioner.builds[] += 1
-    return (lu(BK.corrector_matrix(A.p, w, Matrix(J_bratu(x, (; λ))))), I)
+    return (lu(Matrix(J_bratu(A.u, A.p))), I)
 end
 
 prob_bratu = BifurcationProblem(F_bratu, zeros(20), (λ = 0.01,), (@optic _.λ))
@@ -96,7 +89,12 @@ opts_bratu = ContinuationPar(
                     linsolve = LUFactorization(),
                     jacobian_reuse = JacobianReuse(),
                 ),
-                TrustRegion(; linsolve = LUFactorization(), jacobian_reuse = false),
+                # the dogleg trust region: the default Moré subproblem solves the least-squares system `[J; √λD]`, which is not bordered
+                TrustRegion(;
+                    linsolve = LUFactorization(),
+                    jacobian_reuse = false,
+                    subproblem = NonlinearSolve.NonlinearSolveBase.TrustRegionSubproblem.Dogleg,
+                ),
             )
             br = continuation(
                 prob_bratu,
@@ -235,7 +233,7 @@ opts_bratu = ContinuationPar(
         )
         builds = Ref(0)
         alg = NewtonRaphson(;
-            linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(false, 1.0, builds)),
+            linsolve = KrylovJL_GMRES(; precs = DenseLUPreconditioner(builds)),
             jacobian_reuse = free_policy,
         )
         sol1 = BK.solve(prob, NonlinearSolveCorrector(alg), NewtonPar(tol = 1.0e-9))
@@ -262,7 +260,7 @@ opts_bratu = ContinuationPar(
             # GMRES at the default relative tolerance leaves residuals above `tol`, which BifurcationKit rejects as a failed step
             alg = NewtonRaphson(;
                 linsolve = KrylovJL_GMRES(;
-                    precs = DenseLUPreconditioner(true, 0.0, builds),
+                    precs = DenseLUPreconditioner(builds),
                     atol = 1.0e-12,
                     rtol = 1.0e-12,
                 ),
