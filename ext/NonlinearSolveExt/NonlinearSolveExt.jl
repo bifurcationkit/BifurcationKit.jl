@@ -178,11 +178,15 @@ module NonlinearSolveExt
         return ArrayPartition(Fx, [Nx])
     end
 
+    # `∂ₚF` from the jet of the problem (`R01` of `BifurcationProblem`, automatic differentiation by default); problems without a jet (minimally augmented, periodic orbits) by finite differences
+    palc_dFdp(prob::BK.AbstractAllJetBifProblem, x, par) = BK.R01(prob, x, par)
+    palc_dFdp(prob, x, par) = BK.R01(BK.FiniteDifferences(), prob, x, par)
+
     function palc_jacobian(w::ArrayPartition, ctx::PALCCache)
         x, p = palc_state(w), palc_parameter(w)
         par = BK.set(ctx.par, BK.getlens(ctx.prob), p)
         J = jacobian_operator(BK.jacobian(ctx.prob, x, par), x, par)
-        return BorderedJacobian(J, BK.R01(BK.FiniteDifferences(), ctx.prob, x, par), ctx.row, ctx.c)
+        return BorderedJacobian(J, palc_dFdp(ctx.prob, x, par), ctx.row, ctx.c)
     end
 
     #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

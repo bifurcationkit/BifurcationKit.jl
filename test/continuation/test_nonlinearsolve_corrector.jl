@@ -16,7 +16,8 @@ const BK = BifurcationKit
 function F_bratu(x, p)
     n = length(x)
     h = 1 / (n + 1)
-    out = similar(x)
+    # in the type of `p.λ` too, for the automatic `∂ₚF` of the jet
+    out = similar(x, promote_type(eltype(x), typeof(p.λ)))
     for i in eachindex(x)
         left = i == 1 ? zero(eltype(x)) : x[i - 1]
         right = i == n ? zero(eltype(x)) : x[i + 1]
