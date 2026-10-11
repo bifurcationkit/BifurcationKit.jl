@@ -165,6 +165,13 @@ function corrector!(state::AbstractContinuationState,
                       normN = it.normC, 
                       callback = it.callback_newton, 
                       kwargs...)
+    # a corrector from an interior predictor that converges past a bound (one that leaves `p` free, such as `NonlinearSolveCorrector`)
+    # is corrected at that bound from where it ended, like a predictor past the bound
+    if converged(sol) && !(it.contparams.p_min <= sol.u.p <= it.contparams.p_max)
+        _copyto!(state.z_pred, sol.u)
+        state.z_pred.p = clamp_predp(sol.u.p, it)
+        return corrector!(state, it, Natural(false, alg.corrector); kwargs...)
+    end
 
     # update fields, in particular the `converged` one
     _update_field_but_not_solution!(state, sol)
