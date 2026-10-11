@@ -154,7 +154,7 @@ opts_bratu = ContinuationPar(
             1.0e-8
     end
 
-    @testset "a corrector ending outside [p_min, p_max] has not converged" begin
+    @testset "a step past p_max ends the branch on p_max" begin
         # the first step goes to p = 0.01 + 0.5 > p_max
         opts = ContinuationPar(
             opts_bratu;
@@ -169,6 +169,30 @@ opts_bratu = ContinuationPar(
             opts,
         )
         @test all(br.branch.param .<= 0.2)
+        @test br.branch.param[end] == 0.2
+        @test norm(F_bratu(br.sol[end].x, (λ = br.sol[end].p,)), Inf) < 1.0e-8
+    end
+
+    @testset "a corrector converging past p_max from an interior predictor is corrected at p_max" begin
+        # below the centre of the circle x² + a² = 1, the corrector raises `a` beyond its predictor: from a = -1/2, a predictor short of
+        # p_max = -0.148 converges past it (the tangent has norm 1 for the dot product with θ = 1/2, so the predictor moves `ds √2`)
+        F_circle(x, p) = [x[1]^2 + p.a^2 - 1]
+        prob_circle = BifurcationProblem(F_circle, [sqrt(0.75)], (a = -0.5,), (@optic _.a))
+        for along in (0.38, 0.4)
+            opts = ContinuationPar(
+                p_min = -1.0,
+                p_max = -0.148,
+                ds = along / sqrt(2),
+                dsmax = 0.5,
+                max_steps = 50,
+                detect_bifurcation = 0,
+                newton_options = NewtonPar(tol = 1.0e-10),
+            )
+            br = continuation(prob_circle, PALC(; corrector = NonlinearSolveCorrector(exact)), opts)
+            @test all(br.branch.param .<= opts.p_max)
+            @test br.branch.param[end] == opts.p_max
+            @test abs(F_circle(br.sol[end].x, (a = br.sol[end].p,))[1]) < 1.0e-8
+        end
     end
 
     @testset "an algorithm with box constraints ends the branch at p_max" begin
