@@ -307,4 +307,56 @@ opts_bratu = ContinuationPar(
         @test maximum(point -> point.p, br.sol) ≈
             maximum(point -> point.p, br_default.sol) atol = 0.02
     end
+
+    @testset "Fold and Hopf continuation" begin
+        # the CO oxidation model of `test/fold_codim_2/codim2.jl`, with its Hopf point 2 and point 3, from which a fold curve is continued
+        function COm(u, p)
+            (; q1, q2, q3, q4, q5, q6, k) = p
+            x, y, s = u
+            z = 1 - x - y - s
+            out = similar(u, promote_type(eltype(u), eltype(q2), eltype(k)))
+            out[1] = 2 * q1 * z^2 - 2 * q5 * x^2 - q3 * x * y
+            out[2] = q2 * z - q6 * y - q3 * x * y
+            out[3] = q4 * z - k * q4 * s
+            out
+        end
+        par_com = (q1 = 2.5, q2 = 2.0, q3 = 10.0, q4 = 0.0675, q5 = 1.0, q6 = 0.1, k = 0.4)
+        prob_com = BifurcationProblem(COm, [0.07, 0.2, 5.0], par_com, (@optic _.q2))
+        opts_com = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
+        br_com = continuation(prob_com, PALC(), opts_com; normC = norminf, bothside = true)
+        @test br_com.specialpoint[2].type == :hopf
+
+        alg = PALC(; corrector = NonlinearSolveCorrector(exact))
+        codim2 = (;
+            bdlinsolver = MatrixBLS(),
+            start_with_eigen = true,
+            update_minaug_every_step = 1,
+            detect_codim2_bifurcation = 2,
+            jacobian_ma = BK.AutoDiff(),
+        )
+        opts_codim2 = ContinuationPar(opts_com, p_max = 1.0, p_min = 0.0, detect_bifurcation = 1, max_steps = 50, save_sol_every_step = 1, detect_event = 2)
+
+        fold0 = continuation(br_com, 3, (@optic _.k), opts_codim2; codim2...)
+        fold1 = continuation(br_com, 3, (@optic _.k), opts_codim2; alg, codim2...)
+        # the same branch and the same Bogdanov-Takens point as the default corrector
+        @test fold1.kind isa BK.FoldCont
+        @test length(fold1.branch) == length(fold0.branch)
+        @test maximum(abs, fold1.branch.param .- fold0.branch.param) < 1.0e-8
+        @test [point.type for point in fold1.specialpoint] == [point.type for point in fold0.specialpoint]
+        @test fold1.specialpoint[1].type == :bt
+        @test fold1.specialpoint[1].param ≈ fold0.specialpoint[1].param rtol = 1.0e-5
+
+        opts_hopf = ContinuationPar(opts_codim2, ds = -0.001)
+        hopf0 = continuation(br_com, 2, (@optic _.k), opts_hopf; codim2...)
+        hopf1 = continuation(br_com, 2, (@optic _.k), opts_hopf; alg, codim2...)
+        # the same branch and the same generalized Hopf points as the default corrector
+        @test hopf1.kind isa BK.HopfCont
+        @test length(hopf1.branch) == length(hopf0.branch)
+        @test maximum(abs, hopf1.branch.param .- hopf0.branch.param) < 1.0e-8
+        @test [point.type for point in hopf1.specialpoint] == [point.type for point in hopf0.specialpoint]
+        @test count(point -> point.type == :gh, hopf1.specialpoint) == 2
+        for (point1, point0) in zip(hopf1.specialpoint, hopf0.specialpoint)
+            @test point1.param ≈ point0.param rtol = 1.0e-5
+        end
+    end
 end
