@@ -279,4 +279,32 @@ opts_bratu = ContinuationPar(
         end
         @test builds_reused[] < builds_fresh[]
     end
+
+    @testset "the state can be any AbstractArray" begin
+        # the Bratu problem with its 20 unknowns as a 4×5 matrix
+        F_mat(x, p) = reshape(F_bratu(vec(x), p), size(x))
+        J_mat(x, p) = dx -> reshape(J_bratu(vec(x), p) * vec(dx), size(dx))
+        prob_mat = BifurcationProblem(F_mat, zeros(4, 5), (λ = 0.01,), (@optic _.λ); J = J_mat)
+        linsolver = GMRESKrylovKit(dim = 20, rtol = 1.0e-12, atol = 1.0e-12)
+        opts = ContinuationPar(
+            p_min = 0.0,
+            p_max = 4.0,
+            ds = 0.05,
+            dsmax = 0.2,
+            max_steps = 60,
+            detect_bifurcation = 0,
+            newton_options = NewtonPar(; tol = 1.0e-9, linsolver),
+        )
+        alg = NewtonRaphson(; linsolve = KrylovJL_GMRES(; atol = 1.0e-12, rtol = 1.0e-12))
+        br = continuation(
+            prob_mat,
+            PALC(; corrector = NonlinearSolveCorrector(alg), bls = MatrixFreeBLS(linsolver)),
+            opts,
+        )
+        @test all(point -> point.x isa Matrix && size(point.x) == (4, 5), br.sol)
+        @test all(point -> norm(F_bratu(vec(point.x), (λ = point.p,)), Inf) < 1.0e-8, br.sol)
+        @test any(diff(br.branch.param) .< 0)
+        @test maximum(point -> point.p, br.sol) ≈
+            maximum(point -> point.p, br_default.sol) atol = 0.02
+    end
 end
