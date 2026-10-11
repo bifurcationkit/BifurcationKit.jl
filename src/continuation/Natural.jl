@@ -8,10 +8,12 @@ The predictor is the constant predictor and the parameter is incremented by `Con
 !!! tip "Different predictor"
     If you want a different predictor with regular newton corrector, use `AutoSwitch(tol_param = 0)`
 """
-struct Natural <: AbstractContinuationAlgorithm
+struct Natural{Tcor} <: AbstractContinuationAlgorithm
     bothside::Bool
+    "Corrector, `nothing` for BifurcationKit's Newton method or a [`NonlinearSolveCorrector`](@ref)."
+    corrector::Tcor
 end
-Natural() = Natural(false)
+Natural(bothside::Bool = false; corrector = nothing) = Natural(bothside, corrector)
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(::Natural, ::Bool) = nothing
 
@@ -35,9 +37,10 @@ end
 
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
-                    ::Natural; 
+                    alg::Natural; 
                     kwargs...)
-    sol = _newton(it.prob,
+    sol = _corrector_newton(alg.corrector,
+                it.prob,
                 state.z_pred.u,
                 setparam(it, clamp_predp(state.z_pred.p, it)), 
                 it.contparams.newton_options; 
