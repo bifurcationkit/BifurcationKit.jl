@@ -98,6 +98,12 @@ BK.update(PALC(), ContinuationPar(), MatrixBLS())
 BK.update(PALC(bls=MatrixBLS(nothing)), ContinuationPar(), nothing).bls.solver == ContinuationPar().newton_options.linsolver
 end
 ####################################################################################################
+# the default dsmin is the smallest normal number of the float type of ds, independent of the units of the problem
+let
+    @test ContinuationPar().dsmin == floatmin(Float64)
+    @test ContinuationPar(ds = 0.01f0).dsmin === floatmin(Float32)
+end
+####################################################################################################
 # test the PALC linear solver interface
 let
     opts = ContinuationPar(p_min = -3.)
