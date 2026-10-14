@@ -185,15 +185,12 @@ mesh_size(d::Shooting) = d.M
 mesh_size(d::Trapeze) = d.M
 mesh_size(d::Collocation) = d.Ntst * d.m + 1
 
-"""Dimension of the discretized solution vector (excluding period)."""
+"""Dimension of the discretized solution vector."""
 function solution_dim end
 
 solution_dim(d::Shooting, n::Int) = n * d.M
 solution_dim(d::Trapeze, n::Int) = n * d.M
 solution_dim(d::Collocation, n::Int) = n * (d.Ntst * d.m + 1)
-
-"""Total dimension including period/parameter."""
-total_dim(d::AbstractDiscretizer, n::Int) = solution_dim(d, n) + 1
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Display
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

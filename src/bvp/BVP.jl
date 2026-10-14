@@ -59,7 +59,6 @@ include("discretize.jl")
 
 # Residual/Jacobian implementations for each discretizer
 include("shooting/residual.jl")
-include("shooting/jacobian.jl")  # Shooting has specialized analytical jacobian
 include("trapeze/residual.jl")
 include("trapeze/jacobian.jl")
 include("collocation/residual.jl")
@@ -82,8 +81,5 @@ export state_dimension, getperiod
 # Exports - BVP Bifurcation Problem
 export BVPBifProblem
 export get_periodic_orbit, get_bvp
-
-# Internal exports for extensions
-export integrate_shooting, integrate_with_sensitivity
 
 end # module BVP

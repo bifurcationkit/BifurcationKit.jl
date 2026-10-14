@@ -150,8 +150,8 @@ function generate_solution(model::BVPModel, disc::Shooting, cache, orbit)
     M = disc.M
     t0, tf = get_time_interval(model)
     T = tf - t0
-    # Sample at M shooting points
-    X = zeros(n * M + 1)
+    # Sample at M shooting points; the time span is fixed by the model
+    X = zeros(n * M)
     for i in 1:M
         t = (i - 1) / M * T
         X[(i-1)*n+1 : i*n] .= orbit(t)
@@ -164,8 +164,8 @@ function generate_solution(model::BVPModel, disc::Trapeze, cache, orbit)
     M = disc.M
     t0, tf = get_time_interval(model)
     T = tf - t0
-    # Sample at M time slices
-    X = zeros(n * M + 1)
+    # Sample at M time slices; the time span is fixed by the model
+    X = zeros(n * M)
     for i in 1:M
         t = (i - 1) / (M - 1) * T
         X[(i-1)*n+1 : i*n] .= orbit(t)
