@@ -211,16 +211,23 @@ function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
                     kwargs...)
+    # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there.
+    # One call per case keeps `control` concretely typed, so the corrector's keywords dispatch statically.
+    if stepsizecontrol(state)
+        return _corrector!(state, it, alg, alg.step_control, alg.orientation_check; kwargs...)
+    end
+    return _corrector!(state, it, alg, nothing, false; kwargs...)
+end
+
+function _corrector!(state::AbstractContinuationState,
+                     it::AbstractContinuationIterable,
+                     alg::PALC,
+                     control,
+                     orientation_check::Bool;
+                     kwargs...)
     # a growth decided by an earlier step must not outlive it
     state.step_factor = nothing
     state.next_tangent = nothing
-    # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there
-    control = alg.step_control
-    orientation_check = alg.orientation_check
-    if ~stepsizecontrol(state)
-        control = nothing
-        orientation_check = false
-    end
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
         sol, quality = _newton_at_bound(it, state, getdot(alg), control; kwargs...)
