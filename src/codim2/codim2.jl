@@ -593,6 +593,7 @@ $(TYPEDSIGNATURES)
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
 _correct_event_labels(contres::ContResult) = contres
+_correct_event_labels(br::DCResult) = error("`_correct_event_labels` is not implemented for a deflated continuation result (::DCResult).")
 
 function _correct_event_labels(contres::ContResult{Tkind}) where {Tkind <: Union{FoldCont, HopfCont}}
     if Tkind == FoldCont

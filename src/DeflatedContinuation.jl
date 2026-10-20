@@ -362,6 +362,6 @@ function deflatedContinuation(dc_iter::DefContIterable,
         end
         nstep += 1
     end
-    plot && plotAllDCBranch(branches)
+    plot && plotAllDCBranch(get_plot_backend(), branches)
     return DCResult(cont_iter.prob, branches, cont_iter, [getx(c.state) for c in dcstates if isactive(c)], dc_iter.alg)
 end

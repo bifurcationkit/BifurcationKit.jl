@@ -536,25 +536,26 @@ for (op, at, kd) in (
                          plot_solution = plot_default,
                          delta = _getprecision(u0),
                          save_solution = save_solution_default,
-                         inplace = false,
+                         inplace::Union{Nothing, Bool} = nothing,
                          update! = update_default,
                          R01 = AutoDiff(),
                          R02 = AutoDiff(),
                          R11 = FiniteDifferences(),
                          kwargs_jet...)
                 @assert lens isa Int || lens isa AllOpticTypes
+                inplace = something(inplace, _isinplace(_F))
                 new_lens = lens isa Int ? (@optic _[lens]) : lens
                 if _get(parms, new_lens) isa Int
                     @warn "You passed the parameter value $(_get(parms, new_lens)) for the optic `$new_lens` which is an integer. This may error. Please use a float."
                 end
-                Foop = if inplace || _isinplace(_F)
+                Foop = if inplace
                     # promote_type useful for R01 and R11
                     (x, p) -> _F(similar(x, promote_type(VI.scalartype(x), typeof(_get(p, new_lens)))), x, p)
                 else
                     _F
                 end
 
-                Finp = if inplace || _isinplace(_F)
+                Finp = if inplace
                     _F
                 else
                     (o, x, p) -> _copyto!(o, _F(x, p))

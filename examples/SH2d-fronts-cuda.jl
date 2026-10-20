@@ -47,7 +47,8 @@ function SHLinearOp(Nx, lx::T, Ny, ly; AF = AbstractArray{T}) where T
     # AF is a type, it could be CuArray{TY} to run the following on GPU
     k1 = vcat(collect(0:div(Nx,2)), collect(div(Nx,2)+1:Nx-1) .- Nx)
     k2 = vcat(collect(0:div(Ny,2)), collect(div(Ny,2)+1:Ny-1) .- Ny)
-    d2 = [(1-(pi * (kx/lx))^2 - (pi * (ky/ly))^2)^2 + 1 for kx in k1, ky in k2]
+    lxF64 = Float64(lx); lyF64 = Float64(ly)
+    d2 = [(1-(pi * (kx/lxF64))^2 - (pi * (ky/lyF64))^2)^2 + 1 for kx in k1, ky in k2]
     tmpc = Complex.(AF(zeros(T, Nx, Ny)))
     return SHLinearOp(AF(zeros(T, Nx, Ny)), tmpc, AF(d2), plan_fft!(tmpc), plan_ifft!(tmpc))
 end
@@ -74,7 +75,7 @@ Y = -ly .+ 2ly/Ny * collect(0:Ny-1)
 sol0 = [(cos(x) .+ cos(x/2) * cos(sqrt(3) * y/2) ) for x in X, y in Y] .* 0.5
 # heatmap(sol0, color=:viridis)
 
-function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = convert(T, 1e-8)) where {T}
+function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = sqrt(eps(T)), atol = 100rtol) where {T}
     u, l, ν = J
     udiag = @. l + 1 + (2ν) * u - 3 * u^2 - shift
     tmp = copy(udiag); dudiag = copy(udiag)
@@ -84,8 +85,9 @@ function (sh::SHLinearOp)(J, rhs::AbstractArray{T}; shift = zero(T), rtol = conv
         apply!(tmp, sh, dudiag, sh.l1, /)
         return (-1) .* du .+ tmp
     end
-    res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 12, issymmetric = true, krylovdim = 50, atol = convert(T, 1e-12))
-    return res, true, info.numops
+    res, info = KrylovKit.linsolve(h, sh \ rhs; rtol, maxiter = 12, issymmetric = false, krylovdim = 50, atol)
+    info.converged == 0 && @warn "Linear solver did not converge after $(info.numiter) iterations"
+    return res, info.converged > 0, info.numops
 end
 
 function (sheig::SHEigOp)(J, nev::Int; kwargs...)
@@ -95,7 +97,7 @@ function (sheig::SHEigOp)(J, nev::Int; kwargs...)
     A = du -> sh(J, du; shift = σ)[1]
 
     # we adapt the krylov dimension as function of the requested eigenvalue number
-    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = TY(1e-8), maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(50, nev + 10))
+    vals, vec, info = KrylovKit.eigsolve(A, sh \ AF(rand(eltype(u), size(u))), nev, :LM, tol = sqrt(eps(eltype(u))), maxiter = 20, verbosity = 2, issymmetric = true, krylovdim = max(50, nev + 10))
     @show 1 ./vals .+ σ
     return 1 ./vals .+ σ, vec, true, info.numops
 end
@@ -122,7 +124,7 @@ prob = BK.BifurcationProblem(F_shfft!, AF(sol0), par, (@optic _.l) ;
     plot_solution = (x, p;kwargs...) -> plotsol!(x; color=:viridis, kwargs...),
     record_from_solution = (x, p; k...) -> norm(x))
 
-opt_new = NewtonPar(verbose = true, tol = TY(1e-6), linsolver = L, eigsolver = Leig, max_iterations = 10)
+opt_new = NewtonPar(verbose = true, tol = max(TY(1e-6), 100eps(TY)), linsolver = L, eigsolver = Leig, max_iterations = 10)
 sol_hexa = @time BK.solve(prob, Newton(), opt_new, normN = norminf);
 println("--> norm(sol) = ", norminf(sol_hexa.u))
 

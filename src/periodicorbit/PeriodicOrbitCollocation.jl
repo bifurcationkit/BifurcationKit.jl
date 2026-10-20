@@ -250,10 +250,10 @@ Note that mesh adaptation modifies `getmesh(coll)` in place. The mesh is stored 
     jacobian::Tjac = DenseAnalytical()
 
     "Cache for collocation. See docs of `MeshCollocationCache`."
-    mesh_cache::MeshCollocationCache{𝒯} = nothing
+    mesh_cache::MeshCollocationCache{𝒯}
 
     "Cache for allocation free computations. See docs of `POCollCache`."
-    cache::POCollCache{𝒯} = nothing
+    cache::POCollCache{𝒯}
 
     #################
     "Whether to use mesh adaptation."

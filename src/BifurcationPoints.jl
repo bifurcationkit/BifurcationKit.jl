@@ -59,10 +59,10 @@ $(TYPEDFIELDS)
     printsol::Tp = 0.
 
     "Solution at the special point."
-    x::Tv = Vector{T}(undef, 0)
+    x::Tv
 
     "Tangent along the branch at the special point."
-    τ::BorderedArray{Tvτ, T} = BorderedArray(x, zero(T))
+    τ::BorderedArray{Tvτ, T}
 
     "Eigenvalue index responsible for detecting the special point (if applicable)."
     ind_ev::Int64 = 0
