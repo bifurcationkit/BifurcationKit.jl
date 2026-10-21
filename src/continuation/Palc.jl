@@ -216,7 +216,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     p = z_pred.p
     x_pred = _copy(x)
 
-    res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
+    res_f, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p));  res_n = N(x, p)
     dFdp = R01(FiniteDifferences(), prob, x, set(par, paramlens, p))
 
     res       = normAC(res_f, res_n)
@@ -231,7 +231,10 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
-        J = jacobian(prob, x, set(par, paramlens, p))
+        J = J_next
+        if isnothing(J)
+            J = jacobian(prob, x, set(par, paramlens, p))
+        end
         
         # solve linear system
         # ┌            ┐┌  ┐   ┌     ┐
@@ -243,6 +246,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         itlineartot += sum(itlinear)
 
         if linesearch
+            J_next = nothing
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
@@ -276,7 +280,8 @@ function newton_palc(iter::AbstractContinuationIterable,
         else
             x = minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
-            _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            F, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p))
+            _copyto!(res_f, F)
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 
@@ -297,4 +302,16 @@ function newton_palc(iter::AbstractContinuationIterable,
                             flag,
                             step,
                             itlineartot)
+end
+
+"""
+$(SIGNATURES)
+
+`(F(x, p), J(x, p))` when the problem evaluates both in one call (`has_FJ(prob)`), else `(F(x, p), nothing)`.
+"""
+function _residual_maybe_jacobian(prob::AbstractBifurcationProblem, x, p)
+    if has_FJ(prob)
+        return residual_and_jacobian(prob, x, p)
+    end
+    return residual(prob, x, p), nothing
 end

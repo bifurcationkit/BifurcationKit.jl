@@ -87,7 +87,7 @@ $(TYPEDFIELDS)
 - `R21(pb::BifFunction, x, p, dx1, dx2, dp1)` calls `pb.jet.R21(x, p, dx1, dx2, dp1)`. Same for the other jet functions.
 - etc
 """
-struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tδ, Tjet} <: AbstractBifurcationFunction
+struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td3fc, Tδ, Tjet, Tfj} <: AbstractBifurcationFunction
     "Vector field. Function of type out-of-place `result = f(x, p)` or inplace `f(result, x, p)`. For type stability, the types of `x` and `result` should match"
     F::Tf
     "Same as F but inplace with signature F!(result, x, p)"
@@ -121,6 +121,8 @@ struct BifFunction{Tf, TFinp, Tdf, Tdfad, Tj, Tjad, TJinp, Td2f, Td2fc, Td3f, Td
     inplace::Bool
     "jet of the vector field."
     jet::Tjet
+    "Residual and jacobian at `(x, p)` from one call, `FJ(x, p) = (F(x, p), J(x, p))`, for a vector field whose two share most of their work. `nothing` when not given."
+    FJ::Tfj
 end
 
 # getters
@@ -142,6 +144,20 @@ jacobian(pb::BifFunction, x, p) = pb.J(x, p)
 function jacobian(pb::BifFunction{Tf, TFinp, Tdf, Tdfad, Nothing}, x, p) where {Tf, TFinp, Tdf, Tdfad}
     ForwardDiff.jacobian(z -> pb.F(z, p), x)
 end
+#####
+"""
+$(SIGNATURES)
+
+`(F(x, p), J(x, p))`: from the one call `FJ(x, p)` when the problem was given an `FJ`, else from `residual` and `jacobian`.
+"""
+function residual_and_jacobian(pb::BifFunction, x, p)
+    if has_FJ(pb)
+        return pb.FJ(x, p)
+    end
+    return residual(pb, x, p), jacobian(pb, x, p)
+end
+has_FJ(pb::BifFunction) = ~isnothing(pb.FJ)
+has_FJ(::AbstractBifurcationProblem) = false
 #####
 jacobian!(pb::BifFunction, J, x, p) = pb.J!(J, x, p)
 
@@ -520,6 +536,7 @@ for (op, at, kd) in (
             
             ## Optional argument
             - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x,par,p)`
+            - `FJ` function `FJ(x, p)` returning `(F(x, p), J(x, p))` from one evaluation. Newton's method in `PALC` calls it in place of `F` and `J`.
             """
             function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
@@ -527,6 +544,7 @@ for (op, at, kd) in (
                          J = nothing,
                          J! = nothing,
                          Jᵗ = nothing,
+                         FJ = nothing,
                          d2F = nothing,
                          d2Fc = nothing,
                          d3F = nothing,
@@ -583,7 +601,8 @@ for (op, at, kd) in (
                                 issymmetric,
                                 delta,
                                 inplace,
-                                jet)
+                                jet,
+                                FJ)
                 return $op(vf,
                             u0,
                             parms,
@@ -626,6 +645,8 @@ residual(pb::AbstractAllJetBifProblem, x, p) = residual(pb.VF, x, p)
 residual!(pb::AbstractAllJetBifProblem, o, x, p) = residual!(pb.VF, o, x, p)
 jacobian(pb::AbstractAllJetBifProblem, x, p) = jacobian(pb.VF, x, p)
 jacobian!(pb::AbstractAllJetBifProblem, J, x, p) = jacobian!(pb.VF, J, x, p)
+residual_and_jacobian(pb::AbstractAllJetBifProblem, x, p) = residual_and_jacobian(pb.VF, x, p)
+has_FJ(pb::AbstractAllJetBifProblem) = has_FJ(pb.VF)
 jacobian_adjoint(pb::AbstractAllJetBifProblem, x, p) = jacobian_adjoint(pb.VF, x, p)
 dF(pb::AbstractAllJetBifProblem, x, p, dx) = dF(pb.VF, x, p, dx)
 d2F(pb::AbstractAllJetBifProblem, x, p, dx1, dx2) = d2F(pb.VF, x, p, dx1, dx2)
