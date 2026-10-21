@@ -153,6 +153,13 @@ update_predictor!(state::AbstractContinuationState,
                   ::PALC,
                   nrm = false) = addtangent!(state, nrm)
 
+"""
+$(TYPEDSIGNATURES)
+
+Whether the corrected point `new` equals the current point `current` in every coordinate: a step that moved nothing.
+"""
+stalled_step(new::BorderedArray, current::BorderedArray) = new.p == current.p && new.u == current.u
+
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
@@ -166,6 +173,15 @@ function corrector!(state::AbstractContinuationState,
                       normN = it.normC, 
                       callback = it.callback_newton, 
                       kwargs...)
+
+    # a converged point equal to the current one is a step under the state's floating-point resolution:
+    # a secant through the two has no direction, so a secant continuation stops at the current point
+    if converged(sol) && alg.tangent isa Secant && stalled_step(sol.u, state.z)
+        state.converged = false
+        state.stopcontinuation = true
+        it.verbosity > 0 && printstyled("Step of length $(state.ds) moved nothing: continuation stopped\n", color = :red)
+        return true
+    end
 
     # update fields, in particular the `converged` one
     _update_field_but_not_solution!(state, sol)
