@@ -33,7 +33,7 @@ $(TYPEDFIELDS)
 
 More information is available on the [website](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/iterator/)
 """
-Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
+Base.@kwdef struct ContIterable{Tkind <: AbstractContinuationKind, Tprob, Talg <: AbstractContinuationAlgorithm, T, S, E, TnormC, Tfinalisesolution, TcallbackN, Tevent} <: AbstractContinuationIterable{Tkind}
     "type of solution computed during continuation, e.g. `EquilibriumCont` or `PeriodicOrbitCont`"
     kind::Tkind
     "bifurcation problem to be continued, see [`BifurcationProblem`](@ref)"
@@ -627,8 +627,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
     plot_branch_cont(contRes, state, it)
 
-    # return current solution in case the corrector did not converge
-    push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, :converged, (getp(state), getp(state))))
+    # the endpoint converged only if the branch reached p_min or p_max; a run stopped inside the domain gets :guess
+    status = isindomain(it, getp(state)) ? :guess : :converged
+    push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, status, (getp(state), getp(state))))
     return contRes
 end
 
@@ -640,7 +641,7 @@ function continuation(it::ContIterable)
     # this is also true for states (record function, eigenvectors, events, ...)
     ## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    # we compute the cache for the continuation, i.e. state::ContState
+    # We compute the cache for the continuation, i.e. state::ContState
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent
     state, = iterate(it)
     isnothing(state) && return nothing
@@ -660,7 +661,7 @@ Compute the continuation curve associated to the functional `F` which is stored 
 
 # Arguments:
 - `prob::AbstractBifurcationProblem` a `::AbstractBifurcationProblem`, typically a  [`BifurcationProblem`](@ref) which holds the vector field and its jacobian. We also refer to  [`BifFunction`](@ref) for more details.
-- `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(),...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
+- `alg` continuation algorithm, for example `Natural(), PALC(), Multiple(), ...`. See [algos](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/Predictors/)
 - `contparams::ContinuationPar` parameters for continuation. See [`ContinuationPar`](@ref)
 
 # Optional Arguments:
@@ -669,10 +670,10 @@ Compute the continuation curve associated to the functional `F` which is stored 
 - `normC = norm` norm used in the nonlinear solves
 - `filename` to save the computed branch during continuation. The identifier .jld2 will be appended to this filename. This requires `using JLD2`.
 - `callback_newton` callback for newton iterations. See docs of [`solve`](@ref). For example, it can be used to change the preconditioners. It can also be used to limit residuals and parameter steps, see [`cbMaxNorm`](@ref) and [`cbMaxNormAndΔp`](@ref)
-- `finalise_solution = (z, tau, step, contResult; kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch but before saving the current `state` to it! For advanced use:
-    - the state `state::ContState` of the continuation iterator is passed in `kwargs`. This can be used for testing whether this is called from bisection for locating bifurcation points / events: `in_bisection(state)` for example. This allows to escape some personal code in this case.
-    Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
-    - the iterator `iter::ContIterable` of the continuation is passed in `kwargs`.
+- `finalise_solution = (z, tau, step, contResult; state, iter, kwargs...) -> true` Function called at the end of each continuation step. Can be used to alter the continuation procedure (stop it by returning `false`), save personal data, plot... The notations are `z = BorderedArray(x, p)` where `x` (resp. `p`) is the current solution (resp. parameter value), `tau::BorderedArray` is the tangent at `z`, `step::Int` is the index of the current continuation step and `contResult` is the current branch but before saving the current `state` to it! For advanced use:
+
+      - the state `state::ContState` of the continuation iterator is passed in `kwargs`. This can be used for testing whether this is called from bisection for locating bifurcation points / events: `in_bisection(state)` for example. This allows to escape some personal code in this case.
+      - the iterator `iter::ContIterable` of the continuation is passed in `kwargs`.
 - `verbosity::Int = 0` controls the amount of information printed during the continuation process. Must belong to `{0,1,2,3}`. In case `contparams.newton_options.verbose = false`, the following is valid (otherwise the newton iterations are shown). Each case prints more information than the previous one:
     - case 0: print nothing
     - case 1: print basic information about the continuation: used predictor, step size and parameter values
@@ -689,14 +690,15 @@ Compute the continuation curve associated to the functional `F` which is stored 
 
 !!! tip "Debug mode"
     Use debug mode to access more information about the progression of the continuation run, like iterative solvers convergence, problem update, ...
+
+!!! tip "More control"
+    Note that you can have a better control over the continuation procedure by using an iterator, see [Iterator Interface](@ref).
 """
 function continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
-                      linear_algo = nothing,
-                      bothside::Bool = false,
                       kwargs...)
-    _continuation(prob, alg, contparams; linear_algo, bothside, kwargs...)
+    _continuation(prob, alg, contparams;kwargs...)
 end
 
 function _continuation(prob::AbstractBifurcationProblem,
@@ -709,24 +711,25 @@ function _continuation(prob::AbstractBifurcationProblem,
     # They could have been placed in ContinuationPar but it would have been less convenient.
     # Init the continuation parameters
     contparams = init(contparams, prob, alg)
+    contparams_fwd = contparams
+    contparams_bwd = @set contparams.ds = -contparams.ds
 
     # update the parameters of alg
     # in the case of PALC, it creates a bordered linear solver based on the newton linear solver provided by the user
-    alg = update(alg, contparams, linear_algo)
+    alg = update(alg, contparams_fwd, linear_algo)
 
     # perform continuation
-    itfwd = ContIterable(prob, alg, contparams; kwargs...)
+    itfwd = ContIterable(prob, alg, contparams_fwd; kwargs...)
     if bothside
-        # we deepcopy the iterator here because some problems
-        # are changed inplace like in Min. Aug. problems or 
-        # periodic orbits computation
-        itbwd = deepcopy(itfwd)
-        @reset itbwd.contparams.ds = -contparams.ds
-
+        # forward case
+        initial_state, = iterate(itfwd)
         resfwd = continuation(itfwd)
+        # backward
+        itbwd = ContIterable(prob, alg, contparams_bwd; kwargs...)
+        update_problem!(itbwd, initial_state)
         resbwd = continuation(itbwd)
+        # merge results
         contresult = _merge(resfwd, resbwd) # TYPE-UNSTABLE?
-
         # we have to update the branch if saved on a file
         itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
         return contresult
@@ -734,7 +737,7 @@ function _continuation(prob::AbstractBifurcationProblem,
         contresult = continuation(itfwd)
         # we have to update the branch if saved on a file,
         # basically this removes "branchfw" or "branchbw" in file and append "branch"
-        itfwd.contparams.save_to_file && save_to_file(itfwd, contresult)
+        getcontparams(itfwd).save_to_file && save_to_file(itfwd, contresult)
         return contresult
     end
 end

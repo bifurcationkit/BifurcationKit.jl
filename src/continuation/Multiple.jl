@@ -15,29 +15,22 @@ $(TYPEDFIELDS)
 @with_kw mutable struct Multiple{T <: Real, Tvec, Tpred <: PALC} <: AbstractContinuationAlgorithm
     "Tangent predictor used."
     alg::Tpred = PALC()
-
     "Save the current tangent."
     τ::Tvec
-
     "Damping in Newton iterations, 0 < α < 1."
     α::T
-
     "Number of predictors"
     nb::Int64
-
     "Index of the largest converged predictor."
     currentind::Int64 = 0
-
     "Index for lookup in residual history."
     pmimax::Int64 = 1
-
     "Maximum index for lookup in residual history."
     imax::Int64 = 4
-
     "Factor to increase ds upon successful step."
     dsfact::T = 1.5
 end
-Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, T(0)), α, nb)
+Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, zero(T)), α, nb)
 Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
 Base.empty!(alg::Multiple) = (alg.currentind = 1; alg.pmimax = 1)
 get_bordered_linsolver(alg::Multiple) = get_bordered_linsolver(alg.alg)
@@ -45,6 +38,10 @@ getdot(alg::Multiple) = getdot(alg.alg)
 # important for bisection algorithm
 internal_adaptation!(alg::Multiple, onoroff::Bool) = internal_adaptation!(alg.alg, onoroff)
 @inline getθ(alg::Multiple) = getθ(alg.alg)
+
+function update(alg_m::Multiple, contParams::ContinuationPar, linear_algo)
+    return @set alg_m.alg = update(alg_m.alg, contParams, linear_algo)
+end
 
 # callback for newton
 function (algcont::Multiple)(state; kwargs...)
@@ -77,6 +74,13 @@ function getpredictor!(state::AbstractContinuationState,
     return nothing
 end
 
+# ii-th predictor z + ii * ds * τ, built from the base predictor z_pred0 = z + ds * τ
+@inline function _multiple_predictor(z_pred0, τ, ii, ds)
+    zpred = _copy(z_pred0)
+    VI.add!(zpred, τ, (ii - 1) * ds)
+    return zpred
+end
+
 function corrector!(_state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     algo::Multiple,
@@ -88,15 +92,20 @@ function corrector!(_state::AbstractContinuationState,
     (;ds) = state
     (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─ Multiple tangent predictor\n")
     # we combine the callbacks for the newton iterations
-    # note that z_pred already contains ds * τ, hence ii=0 corresponds to this case
     cb = (args; k...) -> callback(it)(args; k...) && algo(args; k...)
+    # base predictor: z + ds * τ (τ = current tangent), hence ii = 1 corresponds to the usual case
+    z_pred0 = _copy(state.z_pred)
     for ii in algo.nb:-1:1
         algo.currentind = ii # record the current index
-        zpred = _copy(state.z_pred)
-        VI.add!(zpred, algo.τ, ii * ds)
-        _copyto!(state.z_pred, zpred)
-        # we restore the original callback if it reaches the usual case ii == 0
+        # we always build the ii-th predictor z + ii * ds * τ from the base predictor
+        _copyto!(state.z_pred, _multiple_predictor(z_pred0, state.τ, ii, ds))
+        # the ii-th corrector targets the arclength ii * ds (like `nloopext` in pde2path)
+        state.ds = ii * ds
+        # the damping callback algo(state) is only active when currentind > 1;
+        # for ii == 1 (usual predictor) the full Newton correction is performed
         corrector!(state, it, algo.alg; callback = cb, kwargs...)
+        # restore the step size for the step size control
+        state.ds = ds
         if verbose > 1
             firstchar = (converged(state) || ii == 1) ? "└" : "├"
             printstyled(color=:magenta, "   "*firstchar*"─ i = $ii, s(i) = $(ii*ds), converged = [")
@@ -143,6 +152,7 @@ function _step_size_control_multiple!(state, contparams::ContinuationPar, verbos
             (verbosity > 0) && printstyled("Halving continuation step, ds = $(dsnew)\n", color=:red)
         end
     else # the newton correction has converged
+        alg.pmimax = 1
         if alg.currentind == alg.nb && abs(ds) * alg.dsfact <= contparams.dsmax
             # println("--> Increase ds")
             dsnew = ds *  alg.dsfact

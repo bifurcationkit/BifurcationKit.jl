@@ -137,6 +137,17 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
     bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram, kwargs...)
 end
 
+# convenient function for branching
+function _letsbranch_for_bd(br::AbstractBranchResult, _id::Int, _pt, _level::Int, options; _dsfactor = 1, _ampfactor = 1, kwargs...)
+    optscont = options(_pt.x, _pt.param, _level + 1)
+    @reset optscont.ds *= _dsfactor
+    continuation(get_contresult(br), _id, optscont;
+                nev = optscont.nev,
+                kwargs...,
+                ampfactor = _ampfactor,
+    )
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -170,17 +181,6 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     # current level of recursion
     level = node.level
 
-    # convenient function for branching
-    function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        optscont = options(_pt.x, _pt.param, _level + 1)
-        @reset optscont.ds *= _dsfactor
-        continuation(get_contresult(node.γ), _id, optscont;
-                    nev = optscont.nev, 
-                    kwargs...,
-                    ampfactor = _ampfactor,  
-        )
-    end
-
     for (id, pt) in pairs(node.γ.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
@@ -193,7 +193,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
-                γ = letsbranch(id, pt, level)
+                γ = _letsbranch_for_bd(node.γ, id, pt, level, options; kwargs...)
                 add!(node, γ, level+1, id)
                 if ~isnothing(γ) && verbose 
                     printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
@@ -203,11 +203,11 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 # in the case of a Transcritical bifurcation, we compute the other branch
                 if ~isnothing(γ) && ~(γ isa Vector)
                     if ~halfbranch && from(γ) isa Transcritical
-                        γ = letsbranch(id, pt, level; _dsfactor = -1)
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _dsfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                     if ~halfbranch && from(γ) isa Pitchfork
-                        γ = letsbranch(id, pt, level; _ampfactor = -1)
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _ampfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                 end

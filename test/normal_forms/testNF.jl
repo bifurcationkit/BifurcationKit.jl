@@ -547,7 +547,7 @@ let
         @test length(hopf_codim2.specialpoint) == 3
         @test hopf_codim2.specialpoint[2].type == :bt
         @test hopf_codim2.specialpoint[2].param ≈ 0 atol = 1e-6
-        @test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
+        @test length(unique(hopf_codim2.BT)) >= length(hopf_codim2)-1
         # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
         btpt = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)

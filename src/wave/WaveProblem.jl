@@ -49,7 +49,7 @@ $(TYPEDFIELDS)
     "generator ⋅ u₀"
     ∂u₀::TDu0 = (∂ * u₀,)
     "Vector of flags, one per symmetry. When `true`, the corresponding phase condition is `⟨u - u₀, ∂⋅u₀⟩ = 0` (phase fixed relative to the reference solution `u₀`); when `false`, it reduces to `⟨u, ∂⋅u₀⟩ = 0`."
-    DAE::Vector{Bool} = fill(true, nc)
+    DAE::Vector{Bool} = fill(true, length(∂))
     "[Internal] number of constraints."
     nc::Int = 1
     "Type of jacobian for the frozen problem, one of `AutoDiff()`, `FiniteDifferences()`, `FullLU()`, `MatrixFree()` or `AutoDiffMF()`."
@@ -227,7 +227,8 @@ function (pb::TWModel)(::Val{:JacFullSparse}, ufreez::AbstractVector, par; δ = 
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
-isinplace(tw::TWModel) = false
+isinplace(::TWModel) = false
+has_hessian(::WrapTW) = true # for Fold/hopf continuation
 @inline save_solution(::WrapTW, x, p) = x
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false

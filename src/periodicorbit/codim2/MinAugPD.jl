@@ -233,7 +233,7 @@ function newton_pd(prob::AbstractBifurcationProblem,
                 kwargs...)
 
     𝐏𝐝 = PeriodDoublingMinimallyAugmentedFormulation(
-        prob,
+        re_make(prob; params = par),
         _copy(eigenvec),
         _copy(eigenvec_ad),
         options.linsolver,
@@ -242,10 +242,10 @@ function newton_pd(prob::AbstractBifurcationProblem,
         usehessian)
 
     pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-    prob_ma = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, nothing, plot_solution(prob), record_from_solution(prob))
+    prob_ma = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, nothing, plot_solution(prob), record_from_solution(prob))
     # options for the Newton Solver
     opt_pd = deepcopy(options)
-    return newton(prob_ma, opt_pd; normN, kwargs...)
+    return solve(prob_ma, Newton(), opt_pd; normN, kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update!(𝐏𝐛::PDMAProblem, iter, state::ContState)

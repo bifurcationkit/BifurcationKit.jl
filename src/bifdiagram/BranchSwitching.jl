@@ -398,6 +398,9 @@ Automatic branch switching at branch points based on a computation of the normal
 - `bpnf` normal form
 - `defOpm::DeflationOperator, defOpp::DeflationOperator` to specify converged points on non-trivial branches before/after the bifurcation points. The points are located in `defOpm.roots` and `defOpp.roots`. Note that we only continue from the second points in the roots vectors, the first one is meant to be the trivial branch.
 
+# Return
+- a `Branch` holding a vector of branches, one for each non-trivial branch found before/after the bifurcation point. Use [`getbranches`](@ref) to access the vector of branches, `br[k]` to get the k-th branch as a `Branch`, and [`from`](@ref) to get the bifurcation point.
+
 The rest is as the regular `multicontinuation` function.
 """
 function multicontinuation(br::Tbr0,

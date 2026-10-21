@@ -33,7 +33,7 @@ corrector!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable; kwargs...) = corrector!(state, iter, getalg(iter); kwargs...)
 
 step_size_control!(state::AbstractContinuationState,
-            iter::AbstractContinuationIterable; kwargs...) = step_size_control!(state, iter, getalg(iter); kwargs...)
+            iter::AbstractContinuationIterable) = step_size_control!(state, iter, getalg(iter))
 
 # used to reset the predictor when locating bifurcations
 Base.empty!(alg::AbstractContinuationAlgorithm) = alg

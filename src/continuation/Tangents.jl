@@ -103,15 +103,12 @@ function bordered_tangent(state::AbstractContinuationState,
                           dotθ;
                           by_determinant::Bool = false)
     (iter.verbosity > 0) && println("Predictor: Bordered")
-    ϵ = getdelta(iter.prob)
     τ = state.τ
     θ = getθ(iter)
     T = eltype(iter)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(iter.prob, z.u, setparam(iter, z.p + ϵ))
-    dFdl = minus!!(dFdl, residual(iter.prob, z.u, setparam(iter, z.p)))
-    dFdl = VI.scale!!(dFdl, 1/ϵ)
+    dFdl = R01(FiniteDifferences(), iter.prob, z.u, setparam(iter, z.p))
 
     # compute jacobian at the point
     J = jacobian(iter.prob, z.u, setparam(iter, z.p))

@@ -59,10 +59,10 @@ $(TYPEDFIELDS)
     printsol::Tp = 0.
 
     "Solution at the special point."
-    x::Tv = Vector{T}(undef, 0)
+    x::Tv
 
     "Tangent along the branch at the special point."
-    τ::BorderedArray{Tvτ, T} = BorderedArray(x, zero(T))
+    τ::BorderedArray{Tvτ, T}
 
     "Eigenvalue index responsible for detecting the special point (if applicable)."
     ind_ev::Int64 = 0
@@ -133,7 +133,6 @@ function SpecialPoint(it::ContIterable,
                         interval)
 end
 
-
 function _show(io::IO, bp::SpecialPoint, ii::Int, p::String = "p")
     if type(bp) == :none ; return; end
     @printf(io, "- #%3i, ", ii)
@@ -192,28 +191,20 @@ for (op, opt) in ((:BranchPoint, AbstractSimpleBranchPoint),
         @with_kw_noshow mutable struct $op{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Tnf} <: $opt
             "Bifurcation point."
             x0::Tv
-
             "Tangent of the curve at the bifurcation point."
             τ::Tτ = missing
-
             "Parameter value at the bifurcation point."
             p::T = missing
-
             "Parameters used by the vector field."
             params::Tpar = missing
-
             "Parameter axis used to compute the branch on which this bifurcation point was detected."
             lens::Tlens
-
             "Right eigenvector(s)."
             ζ::Tevr
-
             "Left eigenvector(s)."
             ζ★::Tevl
-
             "Normal form coefficients."
             nf::Tnf
-
             "Type of bifurcation point"
             type::Symbol = :NA
         end
@@ -237,6 +228,7 @@ type(::PeriodDoubling) = :PeriodDoubling
 type(::Nothing) = nothing
 
 function printnf1d(io, nf; prefix = "")
+    isnothing(nf) && return
     println(io, prefix * "┌─ a01 = ", nf.a01)
     println(io, prefix * "├─ a02 = ", nf.a02)
     println(io, prefix * "├─ b11 = ", nf.b11)
@@ -335,31 +327,22 @@ for (op, opt) in ((:Hopf, AbstractSimpleBranchPoint),
         mutable struct $op{Tv, Tτ, T, Tω, Tpar, Tlens <: AllOpticTypes, Tevr, Tevl, Tnf} <: $opt
             "Bifurcation point"
             x0::Tv
-
             "Tangent of the curve at the bifurcation point."
             τ::Tτ
-
             "Parameter value at the bifurcation point"
             p::T
-
             "Frequency at the bifurcation point"
             ω::Tω
-
             "Parameters used by the vector field."
             params::Tpar
-
             "Parameter axis used to compute the branch on which this bifurcation point was detected."
             lens::Tlens
-
             "Right eigenvector"
             ζ::Tevr
-
             "Left eigenvector"
             ζ★::Tevl
-
             "Normal form coefficient ex: (a = 0., b = 1 + 1im)"
             nf::Tnf
-
             "Type bifurcation"
             type::Symbol
         end

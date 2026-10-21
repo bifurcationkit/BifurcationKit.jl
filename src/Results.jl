@@ -48,6 +48,7 @@ $(TYPEDFIELDS)
 - `type(br, ind)` returns the type of the ind-th bifurcation point.
 - `br[k+1]` gives information about the k-th step. A typical run yields the following.
 - `get_solution(br, ind)` returns the ind-th solution.
+- `getcontparams(br)` return the continuation parameters.
 ```
 julia> br[1]
 (x = 0.0, param = 0.1, itnewton = 0, itlinear = 0, ds = -0.01, n_unstable = 2, n_imag = 2, stable = false, step = 0, eigenvals = ComplexF64[0.1 - 1.0im, 0.1 + 1.0im], eigenvecs = ComplexF64[0.7071067811865475 - 0.0im 0.7071067811865475 + 0.0im; 0.0 + 0.7071067811865475im 0.0 - 0.7071067811865475im])
@@ -115,10 +116,10 @@ end
 
 # returns the number of steps in a branch
 Base.length(br::AbstractBranchResult) = length(br.branch)
-getalg(br::AbstractBranchResult) = br.alg
-get_solution(br::ContResult, i) = br.sol[i]
-@inline getcontparams(br::ContResult) = br.contparams
-getkind(br::ContResult) = br.kind
+getalg(br::AbstractBranchResult) = getfield(br, :alg)
+get_solution(br::ContResult, i) = getfield(br, :sol)[i]
+@inline getcontparams(br::ContResult) = getfield(br, :contparams)
+getkind(br::ContResult) = getfield(br, :kind)
 getkind(br::AbstractVector{ <: ContResult}) = getkind(first(br))
 
 """
@@ -136,7 +137,7 @@ Return the parameters corresponding to the ind-th step in the branch.
 getparams(br::AbstractBranchResult, ind::Int) = setparam(br, get_solp(br, ind))
 
 getlens(br::AbstractBranchResult) = getlens(getprob(br))
-@inline getprob(br::AbstractBranchResult) = br.prob
+@inline getprob(br::AbstractBranchResult) = getfield(br, :prob)
 @inline type(br::AbstractBranchResult, ind) = type(br.specialpoint[ind])
 
 # check whether the eigenvalues are saved in the branch
@@ -247,9 +248,9 @@ function eigenvals(br::AbstractBranchResult, ind::Int, verbose::Bool = false)
         error("Error in indexing eigenvalues. Please open an issue on the website.")
     end
     if verbose
-        println("──> For ", get_lens_symbol(br), " = ", br.branch[ind].param)
-        println("──> There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
-        println("──> Eigenvalues for continuation step ", br.eig[ind+1].step)
+        println("──▶ For ", get_lens_symbol(br), " = ", br.branch[ind].param)
+        println("──▶ There are ", br.branch[ind].n_unstable, " unstable eigenvalues")
+        println("──▶ Eigenvalues for continuation step ", br.eig[ind+1].step)
     end
     ~br.eig[ind+1].converged && @error "Eigen solver did not converged on the step!!"
     br.eig[ind+1].eigenvals
@@ -291,11 +292,149 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     print(io, prefix * "├─ Algo: ")
     printstyled(io, _shortname(getalg(br)), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
-        println(io, prefix * "└─ Special points:\n")
-        for ii in eachindex(br.specialpoint)
-            _show(io, br.specialpoint[ii], ii, String(get_lens_symbol(br)))
+        println(io, prefix * "└─ Special points:")
+        print_specialpoints(io, br)
+    end
+end
+
+function print_specialpoints(io::IO, br)
+    p = String(get_lens_symbol(br))
+    rows = NamedTuple[]
+    for ii in eachindex(br.specialpoint)
+        bp = br.specialpoint[ii]
+        type(bp) == :none && continue
+        if type(bp) == :endpoint
+            push!(rows, (
+                ii        = string(ii),
+                type      = string(type(bp)),
+                param     = @sprintf("%+.8f", bp.param),
+                interval  = "",
+                precision = "",
+                status    = "",
+                δ         = "",
+                step      = string(bp.step),
+            ))
+        else
+            push!(rows, (
+                ii        = string(ii),
+                type      = string(type(bp)),
+                param     = @sprintf("%+.8f", bp.param),
+                interval  = @sprintf("(%+.8f, %+.8f)", bp.interval...),
+                precision = @sprintf("%1.0e", bp.precision),
+                status    = string(bp.status),
+                δ         = @sprintf("(%2d, %2d)", bp.δ...),
+                step      = string(bp.step),
+            ))
         end
     end
+    isempty(rows) && return
+
+    headers = (
+        ii        = "Nb",
+        type      = "type",
+        param     = p,
+        interval  = "interval",
+        precision = "precision",
+        status    = "status",
+        δ         = "δ",
+        step      = "step",
+    )
+
+    widths = (
+        ii        = max(textwidth(headers.ii), maximum(textwidth(r.ii) for r in rows), 2),
+        type      = max(textwidth(headers.type), maximum(textwidth(r.type) for r in rows), 10),
+        param     = max(textwidth(headers.param), maximum(textwidth(r.param) for r in rows), 10),
+        interval  = max(textwidth(headers.interval), maximum(textwidth(r.interval) for r in rows), 26),
+        precision = max(textwidth(headers.precision), maximum(textwidth(r.precision) for r in rows), 9),
+        status    = max(textwidth(headers.status), maximum(textwidth(r.status) for r in rows), 11),
+        δ         = max(textwidth(headers.δ), maximum(textwidth(r.δ) for r in rows), 8),
+        step      = max(textwidth(headers.step), maximum(textwidth(r.step) for r in rows), 4),
+    )
+
+    center(s, w) = begin
+        s = string(s)
+        n = textwidth(s)
+
+        if n >= w
+            s
+        else
+            left  = fld(w - n, 2)
+            right = w - n - left
+            " "^left * s * " "^right
+        end
+    end
+
+    border(left, middle, right) = begin
+        println(
+            io,
+            left,
+            "─"^(widths.ii + 2),        middle,
+            "─"^(widths.type + 2),      middle,
+            "─"^(widths.param + 2),     middle,
+            "─"^(widths.interval + 2),  middle,
+            "─"^(widths.precision + 2), middle,
+            "─"^(widths.status + 2),    middle,
+            "─"^(widths.δ + 2),         middle,
+            "─"^(widths.step + 2),
+            right,
+        )
+    end
+    println(io)
+    border("┌", "┬", "┐")
+    println(
+        io,
+        "│ ", center(headers.ii,        widths.ii),
+        " │ ", center(headers.type,      widths.type),
+        " │ ", center(headers.param,     widths.param),
+        " │ ", center(headers.interval,  widths.interval),
+        " │ ", center(headers.precision, widths.precision),
+        " │ ", center(headers.status,    widths.status),
+        " │ ", center(headers.δ,         widths.δ),
+        " │ ", center(headers.step,      widths.step),
+        " │",
+    )
+    border("├", "┼", "┤")
+
+    for r in rows
+        print(io, "│ ", lpad(r.ii, widths.ii), " │ ")
+        if r.type == "endpoint"
+            printstyled(
+                io,
+                lpad(r.type, widths.type);
+                bold = true,
+            )
+        else
+            printstyled(
+                io,
+                lpad(r.type, widths.type);
+                bold = true,
+                color = :blue,
+            )
+        end
+        print(io, " │ ")
+        print(io, lpad(r.param, widths.param), " │ ")
+        print(io, lpad(r.interval, widths.interval), " │ ")
+        print(io, lpad(r.precision, widths.precision), " │ ")
+        if isempty(r.status)
+            print(io, " "^widths.status)
+        else
+            printstyled(
+                io,
+                lpad(r.status, widths.status);
+                bold = true,
+                color = (r.status == "converged") ? :green : :red,
+            )
+        end
+        print(io, " │ ")
+        print(io, lpad(r.δ, widths.δ), " │ ")
+        print(io, lpad(r.step, widths.step), " │")
+        println(io)
+    end
+
+    # ------------------------------------------------------------------
+    # Bottom
+    # ------------------------------------------------------------------
+    border("└", "┴", "┘")
 end
 
 # This function is important because it provides the eigenelements corresponding to bp stored in br. 
@@ -354,45 +493,58 @@ A Branch is a structure which encapsulates the result of the computation of a br
 $(TYPEDFIELDS)
 """
 struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ <: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
-    "Set of branches branching off the bifurcation point `bp`."
+    "Set of branche(s) branching off the bifurcation point `bp`."
     γ::T
-    "Bifurcation point. It is thought as the root of the branches in γ."
+    "Bifurcation point. It is thought as the root of the branche(s) in γ."
     bp::Tbp
     function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ <: AbstractResult{Tkind, Tprob}} }}
         return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
     end
 end
 
-Base.length(br::Branch) = length(br.γ)
-@inline kernel_dimension(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = kernel_dimension(br.γ, ind)
-get_solution(br::Branch{Tk, Tp, T}, ind) where {Tk, Tp, T <: ContResult} = get_solution(br.γ, ind)
-getprob(br::Branch{Tk, Tp, T}) where {Tk, Tp, T <: ContResult} = getprob(br.γ)
-getkind(br::Branch) = getkind(br.γ)
-getcontparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getcontparams(br.γ)
+"""
+$(TYPEDSIGNATURES)
+
+Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@ref) or a vector of branches when the `Branch` was obtained by branching from an Nd bifurcation point using [`continuation`](@ref) / `multicontinuation`.
+"""
+@inline getbranches(br::Branch) = getfield(br, :γ)
+Base.length(br::Branch) = length(getbranches(br))
+@inline kernel_dimension(br::Branch, ind) = kernel_dimension(getbranches(br), ind)
+get_solution(br::Branch, ind) = get_solution(getbranches(br), ind)
+getprob(br::Branch) = getprob(getbranches(br))
+getalg(br::Branch) = getalg(getbranches(br))
+getkind(br::Branch) = getkind(getbranches(br))
+getcontparams(br::Branch) = getcontparams(getbranches(br))
+
+kernel_dimension(br::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
+get_solution(br::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getprob(br::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getalg(br::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getcontparams(br::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
 
 """
 $(TYPEDSIGNATURES)
 
 Return the bifurcation point of a `::Branch`.
 """
-from(br::Branch) = br.bp
+from(br::Branch) = getfield(br, :bp)
 from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
-_getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(br.γ)
-Base.firstindex(br::Branch) = firstindex(br.γ)
-Base.lastindex(br::Branch) = lastindex(br.γ)
-@inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(br.γ)
+_getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(getbranches(br))
+Base.firstindex(br::Branch) = firstindex(getbranches(br))
+Base.lastindex(br::Branch) = lastindex(getbranches(br))
+@inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(getbranches(br))
 
 # extend the getproperty for easy manipulation of a Branch
 # for example, it allows to use the plot recipe for ContResult as is
-Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(br.γ, s)
-Base.getindex(br::Branch, k::Int) = getindex(br.γ, k)
-Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(br.γ, k))
+Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(getbranches(br), s)
+Base.getindex(br::Branch, k::Int) = getindex(getbranches(br), k)
+Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(getbranches(br), k))
 
-Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, br.γ; comment = " from $(type(br.bp)) bifurcation point.", k...)
+Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, getbranches(br); comment = " from $(type(br.bp)) bifurcation point.", k...)
 
 function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: AbstractVector}
-    for contresult in br.γ
+    for contresult in getbranches(br)
         show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
     end
 end

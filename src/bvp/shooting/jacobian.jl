@@ -33,7 +33,7 @@ function bvp_jacobian(bvp::DiscretizedBVP{<:BVPModel, <:Shooting}, jac::Nothing,
     
     # Allocate Jacobian
     J = zeros(eltype(X), N, N)
-    In = Matrix{eltype(X)}(LinearAlgebra.I, n, n)
+    In = Matrix{eltype(X)}(BK.LA.I, n, n)
     
     for i in 1:M
         uᵢ = U[:, i]

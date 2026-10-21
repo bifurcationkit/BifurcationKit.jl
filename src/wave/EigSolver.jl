@@ -31,7 +31,7 @@ function compute_eigenvalues(eigw::EigenWave, iter::ContIterable, state, u0, par
     wrap = getprob(iter)
     twprob = get_discretization(wrap)
     J = if eigw.matrix_free
-        # using dx -> twprob(u0, par, dx)[1:end-1] woul be wrong because it contains the term ds⋅∂
+        # using dx -> twprob(u0, par, dx)[1:end-nc] woul be wrong because it contains the term ds⋅∂
         dx -> _jvp_for_eigenwave(twprob, u0, par, dx)
     else
         jacobian(wrap, u0, par)
@@ -39,14 +39,14 @@ function compute_eigenvalues(eigw::EigenWave, iter::ContIterable, state, u0, par
     return eigw(J, nev; iter, state, k...)
 end
 
-@views function compute_eigenvalues(eigw::EigenWave{<: EigenDAE}, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kw...)
+@views function compute_eigenvalues(eigw::EigenWave{ <: EigenDAE}, iter::ContIterable, state, u0, par, nev = iter.contparams.nev; kw...)
     wrap = getprob(iter)
     twprob = get_discretization(wrap)
     prob = twprob.prob_vf
     Mass = getmassmatrix(prob, getx(state), setparam(iter, getp(state)))
     J = jacobian(wrap, u0, par)
     eig = eigw.eigensolver
-    return eig(J[1:end-1, 1:end-1], Mass, nev; kw...)
+    return eig(J[1:end-twprob.nc, 1:end-twprob.nc], Mass, nev; kw...)
 end
 
 """

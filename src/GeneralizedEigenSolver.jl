@@ -48,10 +48,9 @@ function gev(eig::EigArnoldiMethod, A, B, nev; kwargs...)
         𝒯 = eltype(A)
         σ = isnothing(eig.sigma) ? zero(𝒯) : eig.sigma
         𝒯𝒯 = promote_type(𝒯, typeof(σ))
-        P = LA.lu(A - σ * B)
+        P = LA.factorize(A - σ * B)
         L = LinearMaps.LinearMap{𝒯𝒯}((y, x) -> LA.ldiv!(y, P, B * x), size(A, 1), ismutating = true)
-        decomp, history = ArnoldiMethod.partialschur(L; nev, which = eig.which,
-                                                         eig.kwargs...)
+        decomp, history = ArnoldiMethod.partialschur(L; nev, which = eig.which, eig.kwargs...)
         vals, ϕ = ArnoldiMethod.partialeigen(decomp)
         values = @. 1/vals + σ
         Ind = sortperm(values; by = eig.by, rev = true)

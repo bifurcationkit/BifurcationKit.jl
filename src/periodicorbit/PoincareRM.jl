@@ -32,6 +32,9 @@ end
     return reshape(x[begin:end-1], N, M)
 end
 
+get_time_slices(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x::BorderedArray) =
+    error("`get_time_slices` is not implemented for a `BorderedArray` argument for the Poincaré return map of a shooting problem. Use an `AbstractVector`.")
+
 function (Π::PoincaréMap)(xₛ, par)
     solΠ = _solve(Π, xₛ, par)
     _extend(Π, solΠ, par, xₛ)

@@ -21,9 +21,7 @@ z0 = [0.238616, 0.982747, 0.367876 ]
 
 prob = ODEBifProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
 opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, max_steps = 100)
-
-br = @time continuation(prob, PALC(), opts_br; normC = norminf)
-
+br = @time continuation(prob, PALC(tangent = Bordered()), opts_br; normC = norminf)
 plot(br, plotfold = false)
 ####################################################################################################
 br_hopf = @time BK.continuation(br, 2, (@optic _.α),
@@ -36,7 +34,7 @@ plot(br_hopf)
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
-function recordPO(x, p; state, iter, k...)
+@views function recordPO(x, p; state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
@@ -44,7 +42,7 @@ function recordPO(x, p; state, iter, k...)
 end
 
 # arguments for periodic orbits
-function plotSolution(x, p; state, iter, k...)
+@views function plotSolution(x, p; state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "E", k...)
     plot!(xtt.t, xtt[2,:]; label = "x", k...)
