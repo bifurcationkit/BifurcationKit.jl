@@ -99,7 +99,7 @@ $(TYPEDFIELDS)
     dotθ::Tdot = DotTheta()
     "Step control by the quality of the corrector, a [`CorrectorQuality`](@ref) or `nothing` (the default). With `nothing`, `ds` is controlled by the number of Newton iterations, see the parameter `a` of [`ContinuationPar`](@ref)."
     step_control::Tctl = nothing
-    "Orientation test of Gambit's path tracer (`PathTracer::TracePath`, src/solvers/path/path.cc): reject a step whose new tangent has a negative dot product with the previous one (they point more than `π / 2` apart). A `Bordered` tangent is then oriented like Gambit's, by the sign of the determinant of the bordered matrix (the orientation of the curve: `det([J dFdl; τ'])` is positive), fixed to the direction of travel at the start, instead of by alignment with the previous tangent, which cannot flip. It needs a `MatrixBLS` solver. A `Secant` tangent is the chord, which is compared with the previous tangent. Off by default."
+    "Orientation test: reject a step whose new tangent has a negative dot product with the previous one (they point more than `π / 2` apart), as when the corrector converged onto a nearby part of the curve that runs the other way. A `Secant` tangent is the chord to the new point, so the test costs one dot product. A `Bordered` tangent is oriented as the curve is, by the sign of the determinant of the bordered matrix `[J dFdl; τ']` (Allgower and Georg, *Introduction to Numerical Continuation Methods*, definition (2.1.7)), with the sign fixed to the direction of travel at the start. That determinant needs a `MatrixBLS` solver and a dense LU factorisation of size `n + 1` per step, `O(n^3)`. Off by default."
     orientation_check::Bool = false
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
@@ -111,7 +111,7 @@ getdot(alg::PALC) = alg.dotθ
 getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
 getdot(it::ContIterable) = getdot(it.alg)
-getθ(it::ContIterable) = convert(eltype(it), getθ(it.alg))
+getθ(it::ContIterable) = oftype(it.contparams.ds, getθ(it.alg))
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)
@@ -143,7 +143,7 @@ function initialize!(state::AbstractContinuationState,
     # we want to start at (u0, p0), not at (u1, p1)
     _copyto!(state.z, state.z_old)
     if alg.orientation_check
-        initial_orientation!(state, iter, alg)
+        init_orientation_check!(state, iter, alg)
     end
     # then update the predictor state.z_pred
     update_predictor!(state, iter, alg, nrm)
@@ -183,84 +183,202 @@ update_predictor!(state::AbstractContinuationState,
                   nrm = false) = addtangent!(state, nrm)
 
 """
-$(TYPEDSIGNATURES)
+$(TYPEDEF)
 
-The corrector of a step whose predictor lies beyond `p_min` or `p_max`: the predictor is put on the bound and Newton's method solves `F(x, p) = 0` there (the `Natural` corrector), with the tests of `control` on the lengths of its steps, taken in the norm of the arc length constraint with no parameter component. Returns the solution and its quality like `_newton_palc`.
+Data of [`PALC`](@ref) carried across continuation steps in `ContState.cache`, used by `step_control` and `orientation_check`.
+
+$(TYPEDFIELDS)
 """
-function _newton_at_bound(iter::AbstractContinuationIterable,
-                          state::AbstractContinuationState,
-                          dotθ,
-                          control;
-                          kwargs...)
-    𝒯 = eltype(iter)
-    θ = getθ(iter)
-    p = clamp_predp(state.z_pred.p, iter)
-    sol, quality = _newton_quality(iter.prob,
-                                   state.z_pred.u,
-                                   setparam(iter, p),
-                                   iter.contparams.newton_options;
-                                   normN = iter.normC,
-                                   callback = iter.callback_newton,
-                                   control,
-                                   step_length = u -> sqrt(dotθ(u, u, zero(𝒯), zero(𝒯), θ)),
-                                   kwargs...)
-    return NonLinearSolution(BorderedArray(sol.u, p), sol.prob, sol.residuals, sol.converged, sol.itnewton, sol.itlineartot), quality
+struct PALCCache{T, Tq, Tv}
+    "factor by which step size control multiplies `ds` after the current step, or `nothing` to use the Newton iteration count."
+    step_factor::Union{Nothing, T}
+    "sign (±1) relating the determinant orientation of a `Bordered` tangent to the direction of travel, set at the start."
+    orientation::Int
+    "quality of the current corrector, `nothing` without `step_control`."
+    quality::Tq
+    "whether `step_control` rejected the current corrector."
+    rejected::Bool
+    "whether the Newton callback has seen the first iterate of the current corrector."
+    started::Bool
+    "last Newton iterate of the current corrector, `nothing` without `step_control`."
+    previous::Tv
+end
+
+function _update(cache::PALCCache;
+                 step_factor = cache.step_factor,
+                 orientation::Int = cache.orientation,
+                 quality = cache.quality,
+                 rejected::Bool = cache.rejected,
+                 started::Bool = cache.started)
+    return typeof(cache)(step_factor, orientation, quality, rejected, started, cache.previous)
+end
+
+_continuation_cache(::AbstractContinuationAlgorithm, z, ::Type) = nothing
+
+function _continuation_cache(alg::PALC, z::BorderedArray, ::Type{T}) where {T}
+    if isnothing(alg.step_control)
+        return PALCCache{T, Nothing, Nothing}(nothing, 1, nothing, false, false, nothing)
+    end
+    quality = StepQuality(CorrectorQuality{T}(alg.step_control))
+    return PALCCache{T, typeof(quality), typeof(z)}(nothing, 1, quality, false, false, _copy(z))
+end
+
+_step_factor(::Nothing) = nothing
+_step_factor(cache::PALCCache) = cache.step_factor
+
+function step_size_control!(state::AbstractContinuationState,
+                            iter::AbstractContinuationIterable,
+                            alg::PALC)
+    factor = _step_factor(state.cache)
+    if isnothing(factor) || ~converged(state) || state.stopcontinuation || ~stepsizecontrol(state)
+        return @invoke step_size_control!(state::AbstractContinuationState, iter::AbstractContinuationIterable, alg::AbstractContinuationAlgorithm)
+    end
+    state.ds = clamp_ds(state.ds * factor, getcontparams(iter))
+    return
+end
+
+"""
+$(TYPEDEF)
+
+Newton callback of [`PALC`](@ref) with `step_control` or `orientation_check`, wrapping the Newton callback `callback`.
+After each Newton step it applies the tests of `control` to the distance between consecutive iterates, in the norm of the arc length constraint.
+After the last step it applies the orientation test to the converged point. A rejection returns `false`, otherwise the value of `callback`.
+"""
+struct PALCStepCheck{Tstate, Titer, Talg, Tc, T, Tcb}
+    state::Tstate
+    iter::Titer
+    alg::Talg
+    control::Tc
+    tol::T
+    callback::Tcb
+end
+
+_control(::Nothing, ::Type) = nothing
+_control(control::CorrectorQuality, ::Type{T}) where {T} = CorrectorQuality{T}(control)
+_quality(::Nothing) = nothing
+_quality(control::CorrectorQuality) = StepQuality(control)
+
+_record_iterate!(::Nothing, x, p) = nothing
+function _record_iterate!(previous::BorderedArray, x, p)
+    _copyto!(previous.u, x)
+    previous.p = p
+    return nothing
+end
+
+function (check::PALCStepCheck)(newton_state; kwargs...)
+    state = check.state
+    cache = state.cache
+    p = get(newton_state, :p, state.z_pred.p)
+    if ~cache.started
+        # the call before the first Newton step
+        _record_iterate!(cache.previous, newton_state.x, p)
+        state.cache = _update(cache; started = true)
+        return check.callback(newton_state; kwargs...)
+    end
+    if haskey(newton_state, :itlinear)
+        # the call after a Newton step
+        if _rejects_newton_step!(check, check.control, newton_state.x, p)
+            return false
+        end
+        return check.callback(newton_state; kwargs...)
+    end
+    # the call after the last Newton step
+    if cache.rejected
+        return false
+    end
+    verdict = check.callback(newton_state; kwargs...)
+    if verdict === false || (verdict === true && newton_state.residual >= check.tol)
+        return verdict
+    end
+    if ~_turns_forward!(check, BorderedArray(newton_state.x, p))
+        return false
+    end
+    return verdict
+end
+
+_rejects_newton_step!(::PALCStepCheck, ::Nothing, x, p) = false
+
+function _rejects_newton_step!(check::PALCStepCheck, control::CorrectorQuality, x, p)
+    state = check.state
+    cache = state.cache
+    previous = cache.previous
+    𝒯 = eltype(check.iter)
+    # previous.u becomes the Newton step x - previous.u, then the iterate x
+    previous.u = VI.add!!(previous.u, x, one(𝒯), -one(𝒯))
+    Δp = p - previous.p
+    distance = convert(𝒯, sqrt(getdot(check.alg)(previous.u, previous.u, Δp, Δp, getθ(check.iter))))
+    _record_iterate!(previous, x, p)
+    if rejects_step(control, cache.quality, distance, check.tol)
+        state.cache = _update(cache; rejected = true)
+        if check.iter.contparams.newton_options.verbose
+            printstyled("Step rejected by the corrector quality tests at Newton step $(cache.quality.steps + 1)\n", color = :red)
+        end
+        return true
+    end
+    state.cache = _update(cache; quality = observe(control, cache.quality, distance, check.tol))
+    return false
+end
+
+function _turns_forward!(check::PALCStepCheck, znew::BorderedArray)
+    if ~check.alg.orientation_check
+        return true
+    end
+    state = check.state
+    cosine, next_tangent = turn_cosine(check.alg.tangent, state, check.iter, znew, getdot(check.alg))
+    if cosine < 0
+        if check.iter.verbosity > 0
+            printstyled("Step rejected: the new tangent points away from the previous one (dot product $cosine)\n", color = :red)
+        end
+        return false
+    end
+    state.next_tangent = next_tangent
+    return true
 end
 
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     alg::PALC;
                     kwargs...)
-    # the bisection that locates special points prescribes `ds` (`state.stepsizecontrol == false`): no step is refused there.
-    # One call per case keeps `control` concretely typed, so the corrector's keywords dispatch statically.
-    if stepsizecontrol(state)
-        return _corrector!(state, it, alg, alg.step_control, alg.orientation_check; kwargs...)
+    state.next_tangent = nothing
+    callback = get(kwargs, :callback, it.callback_newton)
+    # the bisection that locates special points prescribes `ds` (`stepsizecontrol(state) == false`) and accepts every converged step
+    if stepsizecontrol(state) && (~isnothing(alg.step_control) || alg.orientation_check)
+        if ~(state.cache isa PALCCache)
+            throw(ArgumentError("step_control and orientation_check of PALC need PALC as the continuation algorithm of the iterator"))
+        end
+        control = _control(alg.step_control, eltype(it))
+        state.cache = _update(state.cache; step_factor = nothing, quality = _quality(control), rejected = false, started = false)
+        _corrector!(state, it, alg, PALCStepCheck(state, it, alg, control, it.contparams.newton_options.tol, callback); kwargs...)
+        if converged(state) && ~isnothing(control)
+            state.cache = _update(state.cache; step_factor = growth_factor(control, state.cache.quality))
+            @debug "step growth" _group = :step_control step_factor = state.cache.step_factor capped = ~isnothing(control.max_growth) && growth_capped(control, state.cache.quality)
+        end
+        return true
     end
-    return _corrector!(state, it, alg, nothing, false; kwargs...)
+    return _corrector!(state, it, alg, callback; kwargs...)
 end
 
 function _corrector!(state::AbstractContinuationState,
                      it::AbstractContinuationIterable,
                      alg::PALC,
-                     control,
-                     orientation_check::Bool;
+                     callback;
                      kwargs...)
-    # a growth decided by an earlier step must not outlive it
-    state.step_factor = nothing
-    state.next_tangent = nothing
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
-        sol, quality = _newton_at_bound(it, state, getdot(alg), control; kwargs...)
-    else
-        sol, quality = _newton_palc(it, state, getdot(alg);
-                                    linearbdalgo = alg.bls,
-                                    normN = it.normC,
-                                    callback = it.callback_newton,
-                                    control,
-                                    kwargs...)
+        return corrector!(state, it, Natural(); kwargs..., callback)
     end
-
-    accepted = converged(sol)
-    next_tangent = nothing
-    if accepted && orientation_check
-        cosine, next_tangent = turn_cosine(alg.tangent, state, it, sol.u, getdot(alg))
-        accepted = cosine >= 0
-        if ~accepted && it.verbosity > 0
-            printstyled("Step rejected: the new tangent points away from the previous one (dot product $cosine)\n", color = :red)
-        end
-    end
+    sol = newton_palc(it, state, getdot(alg);
+                      linearbdalgo = alg.bls,
+                      normN = it.normC,
+                      kwargs...,
+                      callback)
 
     # update fields, in particular the `converged` one
-    _update_field_but_not_solution!(state, sol; accepted)
+    _update_field_but_not_solution!(state, sol)
 
     # update solution
-    if accepted
+    if converged(sol)
         _copyto!(state.z, sol.u)
-        state.next_tangent = next_tangent
-        if ~isnothing(control)
-            state.step_factor = growth_factor(control, quality)
-            @debug "step growth" _group = :step_control step_factor = state.step_factor capped = ~isnothing(control.max_growth) && growth_capped(control, quality)
-        end
     end
     return true
 end
@@ -272,24 +390,13 @@ $(TYPEDSIGNATURES)
 This is the classical Newton-Krylov solver for `F(x, p) = 0` together
 with the scalar condition `n(x, p) ≡ θ ⋅ <x - x0, τx> + (1 - θ) ⋅ (p - p0) * τp - n0 = 0`. This makes a problem of dimension N + 1.
 
-The initial guess for the newton method is located in `state.z_pred`
+The initial guess for the newton method is located in `state.z_pred`. An iterate outside `[p_min, p_max]` stops the corrector, not converged, before `F` is evaluated there.
 """
-newton_palc(iter::AbstractContinuationIterable,
-            state::AbstractContinuationState,
-            dotθ = getdot(iter);
-            kwargs...) = first(_newton_palc(iter, state, dotθ; kwargs...))
-
-"""
-$(TYPEDSIGNATURES)
-
-[`newton_palc`](@ref) which also returns the quality of the corrector (the lengths of its Newton steps, in the norm of the arc length constraint) when `control::CorrectorQuality` is passed. The corrector stops, not converged, as soon as `control` rejects a step or an iterate leaves `[p_min, p_max]`; `F` is not evaluated at that iterate.
-"""
-function _newton_palc(iter::AbstractContinuationIterable,
+function newton_palc(iter::AbstractContinuationIterable,
                     state::AbstractContinuationState,
                     dotθ = getdot(iter);
                     normN = norm,
                     callback = cb_default,
-                    control = nothing,
                     kwargs...)
     prob = iter.prob
     par = getparams(prob)
@@ -329,13 +436,6 @@ function _newton_palc(iter::AbstractContinuationIterable,
     residuals = [res]
     step = 0
     itlineartot = 0
-    # what the corrector has shown of its quality, only followed when the step is tested
-    if isnothing(control)
-        quality = nothing
-    else
-        control = CorrectorQuality{𝒯}(control)
-        quality = StepQuality(control)
-    end
     rejected = false
 
     verbose && print_nonlinear_step(step, res)
@@ -359,17 +459,6 @@ function _newton_palc(iter::AbstractContinuationIterable,
         u, up, flag, itlinear = solve_bls_palc(linsolver, iter, state, J, dFdp, res_f, res_n)
         ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
-
-        # step control: the Newton step is the distance to the curve
-        if ~isnothing(quality)
-            distance = convert(𝒯, sqrt(dotθ(u, u, up, up, θ)))
-            if rejects_step(control, quality, distance, tol)
-                rejected = true
-                verbose && printstyled("Step rejected by the corrector quality tests at Newton step $(quality.steps + 1)\n", color = :red)
-                break
-            end
-            quality = observe(control, quality, distance, tol)
-        end
 
         if linesearch
             line_step = false
@@ -433,5 +522,5 @@ function _newton_palc(iter::AbstractContinuationIterable,
                             residuals,
                             flag,
                             step,
-                            itlineartot), quality
+                            itlineartot)
 end

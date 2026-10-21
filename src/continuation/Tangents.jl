@@ -77,7 +77,7 @@ orients_by_determinant(iter::AbstractContinuationIterable) = iter.alg isa PALC &
 """
 $(TYPEDSIGNATURES)
 
-The sign of the determinant of the bordered matrix of the tangent, `[J dFdl; θ τ.u' (1 - θ) τ.p]` with `τ = state.τ`, built as `MatrixBLS` builds it. Another bordered linear solver does not give it.
+The sign of the determinant of the bordered matrix of the tangent, `[J dFdl; θ τ.u' (1 - θ) τ.p]` with `τ = state.τ`, built as `MatrixBLS` builds it. It needs a `MatrixBLS` solver and costs a dense LU factorisation, `O(n^3)` for `n` unknowns.
 """
 function bordered_determinant_sign(::MatrixBLS, iter::AbstractContinuationIterable, state::AbstractContinuationState, J, dFdl)
     θ = getθ(iter)
@@ -95,7 +95,7 @@ bordered_determinant_sign(lbs::AbstractBorderedLinearSolver, ::AbstractContinuat
 """
 $(TYPEDSIGNATURES)
 
-The `Bordered` tangent at the point `z`, a new `BorderedArray` with ``\\|τ\\|_θ = 1``. The border row is the tangent `state.τ` of the previous point. With `by_determinant = false` the new tangent takes its direction (`<τ, τ_old> > 0`); with `by_determinant = true` it is oriented as the curve is, by the sign of the determinant of the bordered matrix (`det([J dFdl; τ']) > 0`, Gambit's orientation) times `state.orientation`, and can point against the previous tangent.
+The `Bordered` tangent at the point `z`, a new `BorderedArray` with ``\\|τ\\|_θ = 1``. The border row is the tangent `state.τ` of the previous point. With `by_determinant = false` the new tangent takes its direction (`<τ, τ_old> > 0`); with `by_determinant = true` it is oriented as the curve is, by the sign of the determinant of the bordered matrix (`det([J dFdl; τ']) > 0`, Allgower and Georg (2.1.7)) times `state.cache.orientation`, and can point against the previous tangent.
 """
 function bordered_tangent(state::AbstractContinuationState,
                           iter::AbstractContinuationIterable,
@@ -127,7 +127,7 @@ function bordered_tangent(state::AbstractContinuationState,
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
     if by_determinant
-        α *= bordered_determinant_sign(get_bordered_linsolver(iter), iter, state, J, dFdl) * state.orientation
+        α *= bordered_determinant_sign(get_bordered_linsolver(iter), iter, state, J, dFdl) * state.cache.orientation
     else
         α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
     end
@@ -151,20 +151,19 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Set `state.orientation` so that the determinant orientation of a `Bordered` tangent at the start points along the secant tangent `state.τ`, the direction of travel. A `Secant` tangent has no determinant orientation.
+Set the orientation sign of the `PALCCache` so that the determinant orientation of a `Bordered` tangent at the start points along the secant tangent `state.τ`, the direction of travel. Called at the start of a continuation with `orientation_check`; the method for other tangents returns `state`.
 """
-function initial_orientation!(state::AbstractContinuationState, iter::AbstractContinuationIterable, alg::PALC{<:Bordered})
-    state.orientation = 1
+function init_orientation_check!(state::AbstractContinuationState, iter::AbstractContinuationIterable, alg::PALC{<:Bordered})
+    state.cache = _update(state.cache; orientation = 1)
     τ = bordered_tangent(state, iter, state.z, getdot(alg); by_determinant = true)
     alignment = getdot(alg)(state.τ.u, τ.u, state.τ.p, τ.p, getθ(iter))
-    state.orientation = 1
     if alignment < 0
-        state.orientation = -1
+        state.cache = _update(state.cache; orientation = -1)
     end
     return state
 end
 
-initial_orientation!(state::AbstractContinuationState, ::AbstractContinuationIterable, ::PALC) = state
+init_orientation_check!(state::AbstractContinuationState, ::AbstractContinuationIterable, ::PALC) = state
 
 """
 $(TYPEDSIGNATURES)

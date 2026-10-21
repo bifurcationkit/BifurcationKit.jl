@@ -4,7 +4,7 @@ const BK = BifurcationKit
 # the pure rules of CorrectorQuality
 let
     tol = 1e-8
-    control = CorrectorQuality(max_distance = 0.4)   # Gambit's values: 0.4, 0.6, 1.1, η = 0.1
+    control = CorrectorQuality(max_distance = 0.4)   # Program 1 of Allgower and Georg: dmax = 0.4, ctmax = 0.6, eta = 0.1
     @test (control.max_distance, control.max_contraction, control.max_growth, control.η) == (0.4, 0.6, 1.1, 0.1)
     # the distance test is off unless a threshold is given, the contraction test is on
     @test CorrectorQuality().max_distance === nothing
@@ -128,6 +128,12 @@ let
         @test all(point -> point.p isa T, br.sol)
         @test count(sp -> sp.type == :fold, br.specialpoint) == 2
     end
+
+    # the step control wraps the Newton callback of continuation, whose refusals still stop the corrector
+    wall(state; fromNewton = true, kwargs...) = fromNewton || state.p <= 1
+    walled = continuation(make_problem(Float64), PALC(step_control = CorrectorQuality(), orientation_check = true), options(Float64); callback_newton = wall)
+    @test all(point -> point.p <= 1, walled.sol)
+    @test maximum(point -> point.p, walled.sol) > 0.9
 end
 ####################################################################################################
 # orientation_check: determinant orientation of a Bordered tangent, rejection on a negative dot product
@@ -146,7 +152,7 @@ let
     state.z = point(φ0)
     state.τ = unit_tangent(φ0)
     state.ds = 0.3
-    state.orientation = 1
+    state.cache = BK._update(state.cache; orientation = 1)
     # the determinant orientation is that of the curve, the same on both sides of a quarter turn, where alignment with the previous tangent
     # would reverse it
     for φ in (φ0 + 0.4, φ0 + 2.0, φ0 - 2.0)
@@ -160,10 +166,10 @@ let
         @test next.u ≈ oriented.u
     end
     # the orientation sign flips the whole field
-    state.orientation = -1
+    state.cache = BK._update(state.cache; orientation = -1)
     @test BK.bordered_tangent(state, iter, point(φ0 + 0.4), dotθ; by_determinant = true).p ≈ -unit_tangent(φ0 + 0.4).p rtol = 1e-6
     # a Secant tangent is the chord: its cosine is that of consecutive chords, and the sign of ds is the direction
-    state.orientation = 1
+    state.cache = BK._update(state.cache; orientation = 1)
     for ds in (0.3, -0.3)
         state.ds = ds
         cosine, next = BK.turn_cosine(Secant(), state, iter, point(φ0 + sign(ds) * 0.4), dotθ)
@@ -189,7 +195,7 @@ let
             state = iterate(iter)[1]
             state.z = point(φ0)
             state.τ = unit_tangent(φ0)
-            state.orientation = 1
+            state.cache = BK._update(state.cache; orientation = 1)
             state.z_pred = far
             state.ds = dotθ(far.u .- state.z.u, state.τ.u, far.p - state.z.p, state.τ.p, 0.5)
             BK.corrector!(state, iter, alg)
@@ -205,7 +211,7 @@ let
         state = iterate(iter)[1]
         state.z = point(φ1)
         state.τ = unit_tangent(φ1)
-        state.orientation = 1
+        state.cache = BK._update(state.cache; orientation = 1)
         state.z_pred = z_pred
         state.ds = 0.3
         BK.corrector!(state, iter, alg)
@@ -250,7 +256,7 @@ let
         state = iterate(iter)[1]
         state.z = point(φ2)
         state.τ = unit_tangent(φ2)
-        state.orientation = 1
+        state.cache = BK._update(state.cache; orientation = 1)
         state.z_pred = predicted
         state.ds = dotθ(predicted.u .- state.z.u, state.τ.u, predicted.p - state.z.p, state.τ.p, 0.5)
         BK.corrector!(state, iter, alg)

@@ -1,16 +1,16 @@
 """
 $(TYPEDEF)
 
-Step control of [`PALC`](@ref) by the quality of its corrector, after Allgower and Georg (*Numerical Continuation Methods*, 1990) and Gambit's logit tracer (`PathTracer::TracePath`, `src/solvers/path/path.cc`). It is off by default and passed as `PALC(step_control = CorrectorQuality(...))`; `step_control = nothing` returns to the control of `ds` by the number of Newton iterations (see the parameter `a` of [`ContinuationPar`](@ref)). The quality of the corrector is measured by the lengths ``d_1, d_2, \\dots`` of its Newton steps, in the norm of the arc length constraint.
+Step control of [`PALC`](@ref) by the quality of its corrector: the length of its first Newton step, which estimates the distance from the predictor to the curve, and the contraction rate of its later Newton steps. It is the steplength adaptation (6.1.10) of Allgower and Georg, *Introduction to Numerical Continuation Methods* (1990), chapter 6 "Steplength Adaptations for the Predictor", section 6.1, with the tests of their appendix Program 1 "A Simple PC Continuation Method". It is off by default and passed as `PALC(step_control = CorrectorQuality(...))`; with `step_control = nothing`, `ds` follows the number of Newton iterations (see the parameter `a` of [`ContinuationPar`](@ref)). The quality of the corrector is measured by the lengths ``d_1, d_2, \\dots`` of its Newton steps, the distances between consecutive Newton iterates in the norm of the arc length constraint.
 
 # Tests
 
 The step is rejected, as if the corrector had not converged (`ds` is halved and the step is retried), when
-- the first Newton step has length ``d_1 \\geq`` `max_distance`. The corrector is stopped at once. This is the distance from the predictor to the curve, on the scale of `ds` and in the units of the state, which is why the test is off (`max_distance = nothing`) unless a threshold is given (the constructor default),
-- a later Newton step contracts too slowly: ``d_k / (d_{k-1} + \\text{tol}\\,\\eta) >`` `max_contraction`. The corrector is stopped at once. `tol` is `newton_options.tol`. The rate has no units, so its default `0.6` needs no tuning.
+- the first Newton step has length ``d_1 \\geq`` `max_distance`. The corrector is stopped at once. This is the distance from the predictor to the curve, on the scale of `ds` and in the units of the state, so the test is switched on only when a threshold is given (the constructor default is `max_distance = nothing`),
+- a later Newton step contracts too slowly: ``d_k / (d_{k-1} + \\text{tol}\\,\\eta) >`` `max_contraction`. The corrector is stopped at once. `tol` is `newton_options.tol`. The rate is dimensionless, so its default `0.6` holds across problems.
 
-A test is switched off with `nothing`, in which case it neither rejects a step nor slows `ds`.
-With `max_growth = nothing` the tests only reject steps and `ds` follows the Newton iteration count after every accepted step, as without step control.
+A test set to `nothing` is switched off: it accepts every step and asks for no deceleration.
+With `max_growth = nothing` the tests only reject steps and `ds` follows the Newton iteration count after every accepted step, as with `step_control = nothing`.
 
 # Step size
 
@@ -21,7 +21,9 @@ After an accepted step (and unless `max_growth = nothing`), `ds` is multiplied b
 where `c_k = d_k / (d_{k-1} + tol η)`. So `ds` grows by at most the factor `max_growth` per step and shrinks as the distance or the contraction approach their limits. A step after which the predictor was already a solution (no Newton step) grows by `max_growth`. The result is clamped to `[dsmin, dsmax]`.
 
 !!! note "Where it applies"
-    The tests and the step size rule apply to the steps of the `PALC` corrector, also to a step whose predictor lies beyond `p_min` or `p_max` and is corrected at the bound by Newton's method at fixed parameter (the `Natural` corrector; the lengths of its Newton steps have no parameter component). They do not apply to a step of the bisection that locates special points, whose `ds` is prescribed.
+    The tests and the step size rule apply to the steps of the `PALC` corrector, also to a step whose predictor lies beyond `p_min` or `p_max` and is corrected at the bound by Newton's method at fixed parameter (the `Natural` corrector; the lengths of its Newton steps have a zero parameter component). The bisection that locates special points prescribes `ds` and accepts every converged step.
+
+The tests run in a Newton callback, `PALCStepCheck`, that wraps the `callback_newton` of [`continuation`](@ref).
 
 # Fields
 
@@ -31,7 +33,7 @@ $(TYPEDFIELDS)
 
     CorrectorQuality(; max_distance = nothing, max_contraction = 0.6, max_growth = 1.1, η = 0.1)
 
-`max_growth = nothing` leaves the step size to the Newton iteration count. Gambit's values are `max_distance = 0.4` (in log probabilities), `max_contraction = 0.6`, `max_growth = 1.1` and `η = 0.1`.
+`max_growth = nothing` leaves the step size to the Newton iteration count. Program 1 uses `max_distance = 0.4` (`dmax`), `max_contraction = 0.6` (`ctmax`), `η = 0.1` (`eta`) and `max_growth = 2` (`fmax`); the default `max_growth = 1.1` grows `ds` more slowly.
 """
 struct CorrectorQuality{T <: Real}
     "Largest allowed length of the first Newton step, or `nothing` for no test."
@@ -94,7 +96,7 @@ function contraction_rate(control::CorrectorQuality{T}, quality::StepQuality{T},
     return distance / (quality.previous + convert(T, tol) * control.η)
 end
 
-# a test that is off rejects nothing and asks for no deceleration
+# a test switched off (`nothing`) accepts every step and asks for no deceleration
 _reaches(::Nothing, value::Real) = false
 _reaches(limit::Real, value::Real) = value >= limit
 _exceeds(::Nothing, value::Real) = false
@@ -144,6 +146,6 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Whether the growth of `ds` after the step is limited by `max_growth`: no test asked for a deceleration beyond the lowest one, `1 / max_growth`.
+Whether the growth of `ds` after the step is limited by `max_growth`: every test asked for at most the lowest deceleration, `1 / max_growth`.
 """
 growth_capped(control::CorrectorQuality, quality::StepQuality) = quality.deceleration <= _initial_deceleration(control.max_growth)
