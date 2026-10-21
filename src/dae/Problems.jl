@@ -147,6 +147,7 @@ save_solution(dae::DAEMassBifProblem, u, pars) = save_solution(dae.prob_vf, u, p
 update!(dae::DAEMassBifProblem, iter, state) = update!(dae.prob_vf, iter, state)
 
 R01(dae::DAEMassBifProblem, u, pars) = R01(dae.prob_vf, u, pars)
+_dFdp!(dae::DAEMassBifProblem, dFdp, x, par, p, res_f = nothing) = _dFdp!(dae.prob_vf, dFdp, x, par, p, res_f)
 R02(dae::DAEMassBifProblem, u, pars) = R02(dae.prob_vf, u, pars)
 R11(dae::DAEMassBifProblem, u, pars, du) = R11(dae.prob_vf, u, pars, du)
 dF(dae::DAEMassBifProblem,  u, pars, du) = dF(dae.prob_vf, u, pars, du)

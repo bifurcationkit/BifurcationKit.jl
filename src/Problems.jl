@@ -321,6 +321,31 @@ function R01(::FiniteDifferences,
     return dFdp
 end
 
+"""
+$(SIGNATURES)
+
+`∂_p F(x, p)` written into `dFdp` for the correctors and tangents of continuation: the problem's own `R01(x, par)` when the user passed one, else forward finite differences (`R01!(FiniteDifferences(), …)`).
+"""
+_dFdp!(prob::AbstractBifurcationProblem, dFdp, x, par, p, res_f = nothing) = R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
+
+function _dFdp!(prob::AbstractAllJetBifProblem, dFdp, x, par, p, res_f = nothing)
+    if has_R01_trait(prob) isa TraitUserPassed
+        return _copyto!(dFdp, R01(TraitUserPassed(), prob, x, set(par, getlens(prob), p)))
+    end
+    return R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
+end
+
+"""
+$(SIGNATURES)
+
+Out-of-place [`_dFdp!`](@ref) at the parameters `par`.
+"""
+function _dFdp(prob::AbstractBifurcationProblem, x, par)
+    dFdp = VI.zerovector(x)
+    _dFdp!(prob, dFdp, x, par, _get(par, getlens(prob)))
+    return dFdp
+end
+
 function R02(::FiniteDifferences,
                 prob::AbstractBifurcationProblem,
                 x0,
@@ -519,7 +544,7 @@ for (op, at, kd) in (
             Constructor for a bifurcation problem.
             
             ## Optional argument
-            - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x,par,p)`
+            - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x, par)`. The correctors and tangents of continuation (`PALC`, `MoorePenrose`, `Bordered`) use a passed function and finite differences otherwise.
             """
             function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
