@@ -232,7 +232,7 @@ module NonlinearSolveExt
 
     # A matrix-free `J` (a function `dx -> J dx`) gives NonlinearSolve the product with `[J ∂ₚF; row' c]` at the iterate `w`, which NonlinearSolve binds to the iterate at every step:
     # each step is a Newton step, and `jacobian_reuse` keeps only the preconditioner, built by the `precs` of the iterative linear solver for the whole bordered system.
-    # BorderedLinearSolve is not used there: it cannot change the operator of its inner solver and keep that solver's cache, so each iterate would rebuild the preconditioner.
+    # The iterative linear solver solves the whole bordered system: BorderedLinearSolve keeps its inner solver's cache for one operator, so each iterate would rebuild the preconditioner.
     function palc_jvp(v::ArrayPartition, w::ArrayPartition, ctx::PALCCache)
         (; J, dFdp) = iterate_jacobian!(ctx, w)
         vx, vp = palc_state(v), palc_parameter(v)

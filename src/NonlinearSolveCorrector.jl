@@ -9,8 +9,8 @@ Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/sta
 
 - `alg` is any `NonlinearSolve` algorithm that accepts a user Jacobian, for example `NewtonRaphson(; linsolve = LUFactorization())` or `TrustRegion()`. For PALC with a Jacobian which is a matrix, its step must be a Newton step (the `NewtonDescent` or `Dogleg` descent of a first-order algorithm, such as `NewtonRaphson` and `TrustRegion`), whose linear solver becomes `bls`. The Jacobian reuse (`jacobian_reuse = JacobianReuse(...)`) and the linear solver (`linsolve`, with its preconditioners) are options of `alg`.
 - `bls` is the algorithm of [BorderedLinearSolve.jl](https://github.com/SciML/BorderedLinearSolve.jl) for the bordered linear systems of PALC when the Jacobian is a matrix. The default `nothing` is `BorderedLinearSolve.BorderingBLS(; inner = linsolve, k = 1)`, block elimination with one correction sweep, which solves with `J` by the `linsolve` of `alg`.
-- `reuse_jacobian = true` carries the Jacobian, its age and its factorization from one corrector to the next (`reinit!(cache, u0; p, reuse_jacobian = true)`), so the reuse policy of `alg` decides when to rebuild it across continuation steps, not only within one. It needs a NonlinearSolve.jl whose `reinit!` accepts `reuse_jacobian`. With the default `false`, every corrector starts from a fresh Jacobian.
-- `solve_kwargs` are passed to `NonlinearSolve.init`. The tolerance `tol` and the number of iterations `max_iterations` always come from `NewtonPar`, not from here.
+- `reuse_jacobian = true` carries the Jacobian, its age and its factorization from one corrector to the next (`reinit!(cache, u0; p, reuse_jacobian = true)`), so the reuse policy of `alg` decides when to rebuild it across continuation steps as well as within one. It needs a NonlinearSolve.jl whose `reinit!` accepts `reuse_jacobian`. With the default `false`, every corrector starts from a fresh Jacobian.
+- `solve_kwargs` are passed to `NonlinearSolve.init`. The tolerance `tol` and the number of iterations `max_iterations` come from `NewtonPar`.
 
 # Usage
 
@@ -24,22 +24,22 @@ Nonlinear solver of [NonlinearSolve.jl](https://docs.sciml.ai/NonlinearSolve/sta
     # a Newton solve
     solve(prob, corrector, NewtonPar())
 
-The bordered system `[F(x, p); N(x, p)] = 0` of PALC (`N` is the arclength constraint) is solved in the unknown `ArrayPartition(x, [p])`. Its Jacobian `[J ∂ₚF; ∇N]` is built from `jacobian(prob, x, p)`, `∂ₚF` from the jet of the problem (`R01`) and the exact `∇N`. When `J` is a matrix, its linear systems are solved by `bls`, which solves with `J` only. It is rebuilt only when `alg` asks for it, which is what makes `jacobian_reuse` effective, whereas BifurcationKit's Newton rebuilds it at every iteration.
+The bordered system `[F(x, p); N(x, p)] = 0` of PALC (`N` is the arclength constraint) is solved in the unknown `ArrayPartition(x, [p])`. Its Jacobian `[J ∂ₚF; ∇N]` is built from `jacobian(prob, x, p)`, `∂ₚF` from the jet of the problem (`R01`) and the exact `∇N`. When `J` is a matrix, its linear systems are solved by `bls`, which solves with `J` only. It is rebuilt when `alg` asks for it, which is what makes `jacobian_reuse` effective.
 
 One NonlinearSolve cache is built at the first corrector and `reinit!` at the next ones, which keeps its allocations; whether the Jacobian survives from one step to the next is `reuse_jacobian`. Use a new `NonlinearSolveCorrector` for a new problem.
 
 # Matrix-free Jacobians
 
-A dense linear solver (for example `LUFactorization()`) needs `jacobian(prob, x, p)` to be an `AbstractMatrix`. With an iterative one, for example `KrylovJL_GMRES(; precs)`, it may also be a function `dx -> J dx`, and the products of the corrector's linear system are formed from it: for PALC, the products with the whole bordered Jacobian `[J ∂ₚF; ∇N]`, solved by the linear solver of `alg` (`bls` is not used). NonlinearSolve rebinds this operator to each iterate, so every step is an exact Newton step, while an explicit `JacobianReuse` policy keeps the preconditioner built by `precs` for an earlier iterate until the policy refreshes it. `precs(A, p)` receives in `A` that operator, with `A.u` the unknown (`x`, or `ArrayPartition(x, [p])` for PALC) and `A.p` a context to hand to
+A dense linear solver (for example `LUFactorization()`) needs `jacobian(prob, x, p)` to be an `AbstractMatrix`. With an iterative one, for example `KrylovJL_GMRES(; precs)`, it may also be a function `dx -> J dx`, and the products of the corrector's linear system are formed from it: for PALC, the products with the whole bordered Jacobian `[J ∂ₚF; ∇N]`, solved by the linear solver of `alg`. NonlinearSolve rebinds this operator to each iterate, so every step is an exact Newton step, while an explicit `JacobianReuse` policy keeps the preconditioner built by `precs` for an earlier iterate until the policy refreshes it. `precs(A, p)` receives in `A` that operator, with `A.u` the unknown (`x`, or `ArrayPartition(x, [p])` for PALC) and `A.p` a context to hand to
 
 - [`corrector_jacobian`](@ref)`(A.p, A.u)`, the `jacobian(prob, x, p)` of the iterate (built once per iterate, whatever the number of products);
 - [`corrector_matrix`](@ref)`(A.p, A.u, M)`, the dense matrix of the corrector's linear system when `M` stands in for that Jacobian (PALC borders it with `∂ₚF` and the arclength row), to factor as the preconditioner.
 
 !!! warning "Differences with the default corrector"
     - the state `x` must be an `AbstractArray`.
-    - `NewtonPar` options `linsolver`, `linesearch`, `α`, `αmin`, `verbose` are not used by `alg`; use the options of `alg` instead. The bordered linear solver `bls` of `PALC` is not used; use the keyword `bls` of `NonlinearSolveCorrector` instead.
-    - the `callback` of `continuation` (`callback_newton`) is called before the first iteration and at the end, not at every iteration.
-    - `p` is kept in `[p_min, p_max]` by the box constraints of `alg` when it allows bounds (`SciMLBase.allowsbounds(alg)`, for example the bounded trust region). Otherwise `p` is not clamped during the iterations, and PALC corrects a corrector that converges outside `[p_min, p_max]` again at the bound, from where it ended.
+    - the linear solver, line search and verbosity come from the options of `alg`; `NewtonPar` gives `tol` and `max_iterations`. The bordered linear solver is the keyword `bls` of `NonlinearSolveCorrector`, in place of the `bls` of `PALC`.
+    - the `callback` of `continuation` (`callback_newton`) is called before the first iteration and at the end.
+    - `p` is kept in `[p_min, p_max]` by the box constraints of `alg` when it allows bounds (`SciMLBase.allowsbounds(alg)`, for example the bounded trust region). Otherwise `p` moves freely during the iterations, and PALC corrects a corrector that converges outside `[p_min, p_max]` again at the bound, from where it ended.
 
 # Internal fields
 $(TYPEDFIELDS)

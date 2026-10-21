@@ -96,6 +96,6 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 [targets]
 test = ["Test", "ForwardDiff", "NonlinearSolve", "BorderedLinearSolve", "OrdinaryDiffEq", "OrdinaryDiffEqRosenbrock", "OrdinaryDiffEqSDIRK", "OrdinaryDiffEqVerner", "Random", "AbstractDifferentiation", "Zygote", "SciMLSensitivity", "ComponentArrays", "Plots", "CairoMakie", "FFTW"]
 
-# BorderedLinearSolve.jl is not registered yet
+# BorderedLinearSolve.jl loads from its repository until it is registered
 [sources]
 BorderedLinearSolve = {url = "https://github.com/SciML/BorderedLinearSolve.jl"}

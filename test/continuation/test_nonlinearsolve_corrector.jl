@@ -8,7 +8,7 @@ using NonlinearSolve:
     LUFactorization,
     KrylovJL_GMRES
 import NonlinearSolve
-# loads the extension; its `BorderingBLS` is not BifurcationKit's
+# loads the extension; `BorderedLinearSolve.BorderingBLS` and `BifurcationKit.BorderingBLS` are distinct types
 import BorderedLinearSolve
 const BK = BifurcationKit
 ####################################################################################################
@@ -97,7 +97,7 @@ opts_bratu = ContinuationPar(
                     linsolve = LUFactorization(),
                     jacobian_reuse = JacobianReuse(),
                 ),
-                # the dogleg trust region: the default Moré subproblem solves the least-squares system `[J; √λD]`, which is not bordered
+                # the dogleg trust region: the default Moré subproblem solves the stacked least-squares system `[J; √λD]`
                 TrustRegion(;
                     linsolve = LUFactorization(),
                     jacobian_reuse = false,
@@ -117,7 +117,7 @@ opts_bratu = ContinuationPar(
     end
 
     @testset "a Jacobian carried across steps stays on the branch" begin
-        # `reuse_jacobian = true`: the policy of `alg`, not each new step, decides when the Jacobian is rebuilt
+        # `reuse_jacobian = true`: the policy of `alg` decides when the Jacobian is rebuilt
         alg = NewtonRaphson(;
             linsolve = LUFactorization(),
             jacobian_reuse = JacobianReuse(max_age = 50),
@@ -271,7 +271,7 @@ opts_bratu = ContinuationPar(
         sol1 = BK.solve(prob, NonlinearSolveCorrector(alg), NewtonPar(tol = 1.0e-9))
         @test BK.converged(sol1)
         @test norm(sol0.u - sol1.u, Inf) < 1.0e-7
-        # the preconditioner is built when the policy refreshes it, not at every iterate
+        # the preconditioner is built when the policy refreshes the Jacobian
         @test builds[] < sol1.itnewton
     end
 
