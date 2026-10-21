@@ -90,7 +90,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
     # invoke callback before algo really starts
     compute = callback((; x, fx, J = nothing, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
 
-    while (step < max_iterations) && (res > tol) && compute
+    while (step < max_iterations) && (res > tol) && _continues(compute)
         J = jacobian(prob, x, params0)
         u, cv, itlinear = options.linsolver(J, fx)
         ~cv && @debug "Linear solver for J did not converge."
@@ -110,8 +110,8 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
 
         compute = callback((;x, fx, J, residual = res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
-    (!(residuals[end] < tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
-    flag = (residuals[end] < tol) & callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...)
+    flag = _converged(residuals[end] < tol, callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...))
+    (~flag && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
     verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
     return NonLinearSolution(x, prob, residuals, flag, step, itlineartot)
 end
@@ -139,6 +139,8 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
     - `kwargs` kwargs arguments, contain your initial guess `x0`
     
     They can be used as `callback = (state;k...) -> state.residual<1` for example.
+
+    The callback returns `true` to go on, `false` to stop, not converged, or [`NewtonConverged()`](@ref NewtonConverged) to stop, converged, whatever `options.tol`. The value of the call after the last iteration decides convergence: `true` leaves it to `residual < options.tol`, `false` refuses it and `NewtonConverged()` accepts the last iterate.
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
 # Output:
@@ -151,6 +153,25 @@ solve(prob::AbstractBifurcationProblem, ::Newton, options::NewtonPar; kwargs...)
 
 # default callback
 cb_default(state; k...) = true
+
+"""
+    NewtonConverged()
+
+A Newton callback's verdict that the current iterate is a solution: the iterations stop, and the call after the last one returning it marks the solution converged whatever its residual. It hosts convergence tests other than `residual < tol`, such as a tolerance that depends on the iterate. See [`newton`](@ref).
+"""
+struct NewtonConverged end
+
+# whether the Newton iterations go on after the callback's verdict
+_continues(verdict::Bool) = verdict
+_continues(::NewtonConverged) = false
+
+# whether a solve whose last residual is under `tol` (`below_tol`) converged, given the last call of the callback
+_converged(below_tol::Bool, verdict::Bool) = below_tol & verdict
+_converged(::Bool, ::NewtonConverged) = true
+
+# the verdict of a callback whose verdict `verdict` must also pass the check `check`
+_verdict_and(verdict::Bool, check::Bool) = verdict & check
+_verdict_and(verdict::NewtonConverged, check::Bool) = ifelse(check, verdict, false)
 
 """
     cb = cbMaxNorm(maxres)
