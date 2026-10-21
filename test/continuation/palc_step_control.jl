@@ -99,9 +99,8 @@ let
     # without them ds follows the Newton iteration count, which grows it faster than max_growth
     legacy = continuation(make_problem(Float64), PALC(step_control = nothing, orientation_check = false), options(Float64))
     @test count(sp -> sp.type == :fold, legacy.specialpoint) == 2
-    # through both folds, not by a jump between the outer sheets: u parametrises the curve (λ = u^3 - u + 1) and the
-    # sheet between the folds is |u| < 1/√3. A clamped corrector jumped from u ≈ -0.92 to u ≈ 0.92 and reported folds on
-    # the upper sheet, where there is none
+    # the branch passes the sheet between the folds, |u| < 1/√3 (λ = u^3 - u + 1): the long corrector that would jump from
+    # u ≈ -0.92 to the upper sheet has an iterate outside [p_min, p_max], which refuses the step, and a shorter step follows the curve
     @test any(point -> abs(point.x[1]) < 1 / sqrt(3), legacy.sol)
     legacy_ds = abs.(legacy.branch.ds)
     @test any(legacy_ds[2:(end - 1)] .> 1.1 .* legacy_ds[begin:(end - 2)])
