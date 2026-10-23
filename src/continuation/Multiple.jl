@@ -29,6 +29,8 @@ $(TYPEDFIELDS)
     imax::Int64 = 4
     "Factor to increase ds upon successful step."
     dsfact::T = 1.5
+    "A failed step raises `pmimax` instead of dividing `ds` once `|ds| < (1 + nb) * max(dsmin, contparams.dsmin)`."
+    dsmin::T = 1e-4
 end
 Multiple(alg, x0, α::T, nb; k...) where T = Multiple(;k..., alg, τ = BorderedArray(x0, zero(T)), α, nb)
 Multiple(x0, α, nb; k...) = Multiple(PALC(), x0, α, nb; k...)
@@ -136,7 +138,7 @@ function _step_size_control_multiple!(state, contparams::ContinuationPar, verbos
     ds = state.ds
     if converged(state) == false
         dsnew = ds
-        if abs(ds) < (1 + alg.nb) * contparams.dsmin
+        if abs(ds) < (1 + alg.nb) * max(alg.dsmin, contparams.dsmin)
             if alg.pmimax < alg.imax
                 (verbosity > 0) && printstyled("--> Increase pmimax\n", color=:red)
                 alg.pmimax += 1
