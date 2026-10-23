@@ -102,6 +102,12 @@ const BK = BifurcationKit
         state = BK.ContState(; z_pred = v, τ = v, z = v, z_old = v, ds = 0.1, converged = true)
         BK._step_size_control_multiple!(state, cp, 0, alg)
         @test state.ds ≈ 0.1
+        # the default threshold of Multiple is (nb+1) * 1e-4, whatever the (smaller) default dsmin of ContinuationPar
+        alg = Multiple(copy([1.0, 2.0]), 0.1, 3)
+        state = BK.ContState(; z_pred = v, τ = v, z = v, z_old = v, ds = 3e-4, converged = false)
+        BK._step_size_control_multiple!(state, ContinuationPar(ds = 0.1), 0, alg)
+        @test alg.pmimax == 2
+        @test state.ds ≈ 3e-4
     end
     ################################################################################################
     # tangent update: the tangent must be recomputed at each accepted point (secant of the two
