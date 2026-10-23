@@ -82,20 +82,20 @@ Plot the branch of solutions.
 - `branchcolor` assign color to a branch without affecting the color of the special points.
 """
 function plot!(ax1, contres::AbstractResult{Tkind, Tprob}; 
+                applytoY = identity, 
+                applytoX = identity,
+                branchlabel = nothing,
+                branchcolor = nothing,
+                dash_unstable_style = false,
+                filterspecialpoints = false,
+                linewidthunstable = 1,
+                linewidthstable = 3linewidthunstable,
+                plotcirclesbif = true,
                 plotfold = false,
                 plotstability = true,
                 plotspecialpoints = true,
                 putspecialptlegend = true,
-                filterspecialpoints = false,
                 vars = nothing,
-                linewidthunstable = 1,
-                linewidthstable = 3linewidthunstable,
-                dash_unstable_style = false,
-                plotcirclesbif = true,
-                branchlabel = nothing,
-                branchcolor = nothing,
-                applytoY = identity, 
-                applytoX = identity,
                 kw...) where {Tkind, Tprob}
 
     # names for axis labels
@@ -335,7 +335,7 @@ function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, app
     end
 end
 ####################################################################################################
-plotAllDCBranch(branches) = plot(branches...)
+plotAllDCBranch(::BK_Makie, branches) = plot(branches...)
 
 function plot_DCont_branch(::BK_Makie, 
                             branches, 

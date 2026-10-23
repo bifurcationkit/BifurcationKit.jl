@@ -30,6 +30,8 @@ parSH = (λ = -0.1, ν = 2., L1 = L1)
 sol0 = @. 1.1cos(X) * exp(-0X^2/(2*5^2))
 
 prob = BifurcationProblem(R_SH, sol0, parSH, (@optic _.λ); J = Jac_sp,
+    R01 = BK.FiniteDifferences(),
+    R02 = BK.FiniteDifferences(),
     record_from_solution = (x, p; k...) -> (n2 = norm(x), nw = normweighted(x), s = sum(x), s2 = x[end ÷ 2], s4 = x[end ÷ 4], s5 = x[end ÷ 5]),
     plot_solution = (x, p;kwargs...)->(plot!(X, x; ylabel="solution", label="", kwargs...))
     )
@@ -86,18 +88,18 @@ diagram = @time bifurcationdiagram(
 
 code = ()
 vars = (:param, :n2)
-plot(diagram; code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars)
+plot(diagram; code, plotfold = false,  markersize = 2, putspecialptlegend = false, vars, legend = false)
 title!("# branches = $(size(diagram, code))")
 
 diagram2 = bifurcationdiagram!(diagram.γ.prob, BK.get_branch(diagram, (1,)), 3, optrec; kwargsC..., halfbranch = true)
 
 ####################################################################################################
 deflationOp = DeflationOperator(2, 1.0, [sol1.u])
-algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 50, perturb_solution = (sol, p, id) -> sol .+ 0.02 .* rand(length(sol)),#= alg = PALC(tangent=Secant())=#)
+algdc = BK.DefCont(deflation_operator = deflationOp, max_branches = 50, perturb_solution = (sol, p, id) -> sol .+ 0.02 .* randn(length(sol)),#= alg = PALC(tangent=Secant())=#)
 
 br = @time continuation(
-    re_make(prob, params = @set parSH.λ = -0.1), algdc,
-    setproperties(opts; ds = 0.001, max_steps = 20000, p_max = 0.25, p_min = -1., newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), save_sol_every_step = 0, detect_bifurcation = 0);
+    re_make(prob, params = @set parSH.λ = 1.), algdc,
+    setproperties(opts; ds = -0.001, max_steps = 20000, p_max = 1.25, p_min = -1., newton_options = setproperties(optnew; tol = 1e-9, max_iterations = 15, verbose = false), save_sol_every_step = 0, detect_bifurcation = 0, plot_every_step = 100);
     verbosity = 1,
     normC = norminf,
     # callback_newton = (x, f, J, res, iteration, itlinear, options; kwargs...) ->(true)

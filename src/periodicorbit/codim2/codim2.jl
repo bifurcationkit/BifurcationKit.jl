@@ -150,6 +150,15 @@ __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args..
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 
+jacobian_period_doubling(pbwrap::PeriodicOrbitFunctionalTrap, x, par) =
+    error("Period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_neimark_sacker(pbwrap::PeriodicOrbitFunctionalTrap, x, par, ω) =
+    error("Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_period_doubling(pbwrap::PeriodicOrbitFunctionalTrap, x, par) =
+    error("Adjoint period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_neimark_sacker(pbwrap::PeriodicOrbitFunctionalTrap, x, par, ω) =
+    error("Adjoint Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+
 function is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int)
     real(br.CH[ind]) < 0
 end
@@ -455,6 +464,8 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         Jᵗ = nothing,
                         eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+                        record_from_solution = nothing,
+                        plot_solution = nothing,
                         kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem, FoldMAProblem}}
     ~(whichns in (1,2)) && error("This parameter must belong to {1,2}.")
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
@@ -502,19 +513,11 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
     # change the user provided functions by passing discPO in its parameters
-    _recordsol = modify_po_record(discPO, kwargs, getparams(discPO), getlens(discPO))
-    _plotsol = modify_po_plot(discPO, kwargs)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
+    _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
 
-    jac = generate_jacobian(discPO, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, _recordsol)
-
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
-    options = _contParams.newton_options
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
-
-    contParams = (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
+    jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
+    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, record_po)
 
     # create fold point guess
     ωₙₛ = pred.k
@@ -524,14 +527,14 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa PeriodicOrbitFunctionalColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(_get_matrix(jac)))
+        J = Complex.(copy(jac))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)
         J[end, end] = 0
         # enforce NS boundary condition
         N, m, Ntst = size(discPO)
-        J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
+        J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
@@ -559,7 +562,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         kind = NSPeriodicOrbitCont(),
         kwargs...,
         plot_solution = _plotsol,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         # finalise_solution = _finsol
     )
     return Branch(branch, zh)

@@ -83,6 +83,20 @@ let
     end
 end
 ####################################################################################################
+# the endpoint is converged only when the branch reaches p_max; a stop inside the domain is a guess
+let
+    endpoint(br) = only(filter(sp -> sp.type == :endpoint, br.specialpoint))
+    opts = ContinuationPar(ds = 0.05, dsmin = 1e-3, dsmax = 0.1, p_min = 0., p_max = 2., max_steps = 400, detect_bifurcation = 0)
+    smooth = BK.BifurcationProblem((u, p) -> u .- p.λ, [0.], (λ = 0.,), (@optic _.λ))
+    @test endpoint(continuation(smooth, PALC(), opts)).status == :converged
+    @test endpoint(continuation(smooth, PALC(), ContinuationPar(opts; max_steps = 3))).status == :guess
+    # F jumps at λ = 1, so every step past it fails until ds reaches dsmin
+    jump = BK.BifurcationProblem((u, p) -> u .- p.λ .+ 10 * (p.λ >= 1), [0.], (λ = 0.,), (@optic _.λ))
+    br = continuation(jump, PALC(), opts)
+    @test br.param[end] < 1
+    @test endpoint(br).status == :guess
+end
+####################################################################################################
 # test continuation algorithm
 let
 BK.empty(Natural())
