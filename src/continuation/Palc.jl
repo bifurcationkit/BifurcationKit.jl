@@ -242,6 +242,8 @@ function newton_palc(iter::AbstractContinuationIterable,
         ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
 
+        # F may be undefined outside [p_min, p_max]: an iterate there stops the corrector, not converged
+        outside = false
         if linesearch
             line_step = false
             while !line_step && (α > αmin)
@@ -249,6 +251,10 @@ function newton_palc(iter::AbstractContinuationIterable,
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
+                if !(p_min <= p_pred <= p_max)
+                    outside = true
+                    break
+                end
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
@@ -260,12 +266,13 @@ function newton_palc(iter::AbstractContinuationIterable,
                     end
                     line_step = true
                     _copyto!(x, x_pred)
-
-                    # p = p_pred
-                    p  = clamp(p_pred, p_min, p_max)
+                    p = p_pred
                 else
                     α /= 2
                 end
+            end
+            if outside
+                break
             end
             # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
             # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
@@ -274,8 +281,11 @@ function newton_palc(iter::AbstractContinuationIterable,
                 res_n  = N(x, p); res = normAC(res_f, res_n)
             end
         else
+            if !(p_min <= p - up <= p_max)
+                break
+            end
             x = minus!!(x, u)
-            p = clamp(p - up, p_min, p_max)
+            p = p - up
             _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end

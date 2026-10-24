@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file (hopefully).
 ### Fixed
 - check the constant mass-matrix restriction in `hopf_normal_form` only when the mass matrix is actually used
 - pass `J = nothing` as a keyword in the `callback` invoked by `_newton`
+- `newton_palc` no longer clamps `p` into `[p_min, p_max]`: an iterate outside the interval stops the corrector, not converged, before `F` is evaluated there. The clamp moved `p` while keeping `x`, so the corrector could report a point that is not a solution, or jump to another branch
 
 ## [0.8.5]
 
