@@ -53,6 +53,8 @@ let
     # thresholds follow the float type of the continuation
     @test BK.CorrectorQuality{Float32}(control) isa CorrectorQuality{Float32}
     @test BK.CorrectorQuality{Float32}(no_distance).max_distance === nothing
+    # without max_turn the thresholds are those of the four-argument constructor and the turn test is off
+    @test BK.CorrectorQuality{Float32}(0.4, 0.6, 1.1, 0.1).max_turn === nothing
     @test CorrectorQuality(max_distance = 0.4f0, max_contraction = 0.6f0, max_growth = 1.1f0, η = 0.1f0) isa CorrectorQuality{Float32}
     @test CorrectorQuality(max_contraction = 0.6f0, max_growth = 1.1f0, η = 0.1f0) isa CorrectorQuality{Float32}
     @test_throws AssertionError CorrectorQuality(max_growth = 1.0)

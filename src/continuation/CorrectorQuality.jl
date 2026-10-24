@@ -56,6 +56,8 @@ struct CorrectorQuality{T <: Real}
         @assert _is_positive(max_turn) "max_turn must be positive or nothing"
         return new{T}(_as(T, max_distance), _as(T, max_contraction), _as(T, max_growth), convert(T, η), _as(T, max_turn))
     end
+
+    CorrectorQuality{T}(max_distance::Union{Nothing, Real}, max_contraction::Union{Nothing, Real}, max_growth::Union{Nothing, Real}, η::Real) where {T <: Real} = CorrectorQuality{T}(max_distance, max_contraction, max_growth, η, nothing)
 end
 
 _is_positive(::Nothing) = true
