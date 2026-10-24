@@ -203,6 +203,29 @@ let
         end
     end
 
+    # max_turn: the tangent's turn in one step is a rejection test and, with max_growth, a linear deceleration
+    turning = CorrectorQuality(; max_turn = 0.5, max_contraction = nothing)
+    @test ~BK.rejects_turn(turning, 0.49)
+    @test BK.rejects_turn(turning, 0.5)
+    @test ~BK.rejects_turn(CorrectorQuality(), 3.0)
+    @test BK.growth_factor(turning, BK.observe_turn(turning, BK.StepQuality(turning), 0.45)) ≈ inv(1.1 * 0.45 / 0.5) rtol = 1e-12
+    @test BK.growth_factor(turning, BK.observe_turn(turning, BK.StepQuality(turning), 0.05)) ≈ 1.1
+    @test_throws AssertionError CorrectorQuality(max_turn = 0.0)
+    # the corrector lands at φ0 + φ on the circle, where the tangent has turned by φ: refused from max_turn on, with no orientation_check
+    for (φ, max_turn, accepted) in ((0.4, 0.5, true), (0.6, 0.5, false), (2.0, 1.0, false), (2.0, 2.5, true))
+        alg = PALC(; tangent = Bordered(), step_control = CorrectorQuality(; max_turn, max_contraction = nothing, max_growth = nothing))
+        iter = ContIterable(prob, alg, options)
+        state = iterate(iter)[1]
+        landing = point(φ0 + φ)
+        state.z = point(φ0)
+        state.τ = unit_tangent(φ0)
+        state.cache = BK._update(state.cache; orientation = 1)
+        state.z_pred = landing
+        state.ds = dotθ(landing.u .- state.z.u, state.τ.u, landing.p - state.z.p, state.τ.p, 0.5)
+        BK.corrector!(state, iter, alg)
+        @test BK.converged(state) == accepted
+    end
+
     # a predictor beyond p_max is corrected at the bound by Newton's method at fixed parameter: the tests apply to that step too
     φ1 = 0.4
     bound_options = ContinuationPar(options; p_max = 0.7)

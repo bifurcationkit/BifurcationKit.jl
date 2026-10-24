@@ -104,7 +104,7 @@ $(TYPEDFIELDS)
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
-    @assert ~orientation_check || tangent isa Union{Secant, Bordered} "orientation_check needs a Secant or Bordered tangent"
+    @assert ~(orientation_check || ~isnothing(_turn_limit(step_control))) || tangent isa Union{Secant, Bordered} "orientation_check and max_turn need a Secant or Bordered tangent"
 end
 get_bordered_linsolver(alg::PALC) = alg.bls
 getdot(alg::PALC) = alg.dotθ
@@ -142,7 +142,7 @@ function initialize!(state::AbstractContinuationState,
     gettangent!(state, iter, Secant(), getdot(alg))
     # we want to start at (u0, p0), not at (u1, p1)
     _copyto!(state.z, state.z_old)
-    if alg.orientation_check
+    if tracks_turn(alg)
         init_orientation_check!(state, iter, alg)
     end
     # then update the predictor state.z_pred
@@ -319,18 +319,36 @@ function _rejects_newton_step!(check::PALCStepCheck, control::CorrectorQuality, 
     return false
 end
 
+_turn_limit(::Nothing) = nothing
+_turn_limit(control::CorrectorQuality) = control.max_turn
+
+"Whether the new tangent of each step is computed: for `orientation_check` or a `max_turn` of `step_control`."
+tracks_turn(alg::PALC) = alg.orientation_check || ~isnothing(_turn_limit(alg.step_control))
+_rejects_turn(::Nothing, turn) = false
+_rejects_turn(control::CorrectorQuality, turn) = rejects_turn(control, turn)
+_observe_turn(::Nothing, quality, turn) = quality
+_observe_turn(control::CorrectorQuality, quality, turn) = observe_turn(control, quality, turn)
+
 function _turns_forward!(check::PALCStepCheck, znew::BorderedArray)
-    if ~check.alg.orientation_check
+    if ~tracks_turn(check.alg)
         return true
     end
     state = check.state
     cosine, next_tangent = turn_cosine(check.alg.tangent, state, check.iter, znew, getdot(check.alg))
-    if cosine < 0
+    if check.alg.orientation_check && cosine < 0
         if check.iter.verbosity > 0
             printstyled("Step rejected: the new tangent points away from the previous one (dot product $cosine)\n", color = :red)
         end
         return false
     end
+    turn = acos(clamp(cosine, -one(cosine), one(cosine)))
+    if _rejects_turn(check.control, turn)
+        if check.iter.verbosity > 0
+            printstyled("Step rejected: the tangent turned by $turn radians\n", color = :red)
+        end
+        return false
+    end
+    state.cache = _update(state.cache; quality = _observe_turn(check.control, state.cache.quality, turn))
     state.next_tangent = next_tangent
     return true
 end

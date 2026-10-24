@@ -70,9 +70,9 @@ _shortname(::PALC{Bordered}) = "PALC [Bordered]"
 """
 $(TYPEDSIGNATURES)
 
-Whether the `Bordered` tangents of `iter` are oriented by the determinant of the bordered matrix (`PALC` with `orientation_check`).
+Whether the `Bordered` tangents of `iter` are oriented by the determinant of the bordered matrix (`PALC` with `orientation_check` or a `max_turn`).
 """
-orients_by_determinant(iter::AbstractContinuationIterable) = iter.alg isa PALC && iter.alg.orientation_check
+orients_by_determinant(iter::AbstractContinuationIterable) = iter.alg isa PALC && tracks_turn(iter.alg)
 
 """
 $(TYPEDSIGNATURES)
