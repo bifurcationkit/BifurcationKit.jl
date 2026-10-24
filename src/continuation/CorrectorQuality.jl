@@ -1,0 +1,177 @@
+"""
+$(TYPEDEF)
+
+Step control of [`PALC`](@ref) by the quality of its corrector: the length of its first Newton step, which estimates the distance from the predictor to the curve, and the contraction rate of its later Newton steps. It is the steplength adaptation (6.1.10) of Allgower and Georg, *Introduction to Numerical Continuation Methods* (1990), chapter 6 "Steplength Adaptations for the Predictor", section 6.1, with the tests of their appendix Program 1 "A Simple PC Continuation Method". It is off by default and passed as `PALC(step_control = CorrectorQuality(...))`; with `step_control = nothing`, `ds` follows the number of Newton iterations (see the parameter `a` of [`ContinuationPar`](@ref)). The quality of the corrector is measured by the lengths ``d_1, d_2, \\dots`` of its Newton steps, the distances between consecutive Newton iterates in the norm of the arc length constraint.
+
+# Tests
+
+The step is rejected, as if the corrector had not converged (`ds` is halved and the step is retried), when
+- the first Newton step has length ``d_1 \\geq`` `max_distance`. The corrector is stopped at once. This is the distance from the predictor to the curve, on the scale of `ds` and in the units of the state, so the test is switched on only when a threshold is given (the constructor default is `max_distance = nothing`),
+- a later Newton step contracts too slowly: ``d_k / (d_{k-1} + \\text{tol}\\,\\eta) >`` `max_contraction`. The corrector is stopped at once. `tol` is `newton_options.tol`. The rate is dimensionless, so its default `0.6` holds across problems,
+- the corrected point's tangent turned by an angle ``\\alpha \\geq`` `max_turn` (radians) from the previous tangent, in the norm of the arc length constraint (the third criterion of (6.1.10): a step that cuts across a fold, or jumps to a nearby part of the curve that runs another way, turns the tangent). The test needs the new tangent, so it costs what `orientation_check` costs (a `Secant` tangent: one dot product; a `Bordered` tangent: the determinant orientation), and it is switched on only when a threshold is given (the constructor default is `max_turn = nothing`).
+
+A test set to `nothing` is switched off: it accepts every step and asks for no deceleration.
+With `max_growth = nothing` the tests only reject steps and `ds` follows the Newton iteration count after every accepted step, as with `step_control = nothing`.
+
+# Step size
+
+After an accepted step (and unless `max_growth = nothing`), `ds` is multiplied by `1 / deceleration` with
+
+`deceleration = max(1 / max_growth, max_growth * sqrt(d₁ / max_distance), max_growth * sqrt(c_k / max_contraction) for k ≥ 2, max_growth * α / max_turn)`
+
+where `c_k = d_k / (d_{k-1} + tol η)`. So `ds` grows by at most the factor `max_growth` per step and shrinks as the distance or the contraction approach their limits. A step after which the predictor was already a solution (no Newton step) grows by `max_growth`. The result is clamped to `[dsmin, dsmax]`.
+
+!!! note "Where it applies"
+    The tests and the step size rule apply to the steps of the `PALC` corrector, also to a step whose predictor lies beyond `p_min` or `p_max` and is corrected at the bound by Newton's method at fixed parameter (the `Natural` corrector; the lengths of its Newton steps have a zero parameter component). The bisection that locates special points prescribes `ds` and accepts every converged step.
+
+The tests run in a Newton callback, `PALCStepCheck`, that wraps the `callback_newton` of [`continuation`](@ref).
+
+# Fields
+
+$(TYPEDFIELDS)
+
+# Constructor
+
+    CorrectorQuality(; max_distance = nothing, max_contraction = 0.6, max_growth = 1.1, η = 0.1, max_turn = nothing)
+
+`max_growth = nothing` leaves the step size to the Newton iteration count. Program 1 uses `max_distance = 0.4` (`dmax`), `max_contraction = 0.6` (`ctmax`), `η = 0.1` (`eta`) and `max_growth = 2` (`fmax`); the default `max_growth = 1.1` grows `ds` more slowly.
+"""
+struct CorrectorQuality{T <: Real}
+    "Largest allowed length of the first Newton step, or `nothing` for no test."
+    max_distance::Union{Nothing, T}
+    "Largest allowed contraction rate of the Newton steps after the first, or `nothing` for no test."
+    max_contraction::Union{Nothing, T}
+    "Largest factor by which `ds` grows in one step, also the factor in the deceleration, or `nothing` to leave the step size to the Newton iteration count. Must exceed 1."
+    max_growth::Union{Nothing, T}
+    "Offset `tol * η` in the contraction rate, which avoids dividing by a vanishing Newton step."
+    η::T
+    "Largest allowed turn of the tangent in one step, in radians, or `nothing` for no test."
+    max_turn::Union{Nothing, T}
+
+    function CorrectorQuality{T}(max_distance::Union{Nothing, Real}, max_contraction::Union{Nothing, Real}, max_growth::Union{Nothing, Real}, η::Real, max_turn::Union{Nothing, Real}) where {T <: Real}
+        @assert _is_positive(max_distance) "max_distance must be positive or nothing"
+        @assert _is_positive(max_contraction) "max_contraction must be positive or nothing"
+        @assert isnothing(max_growth) || max_growth > 1 "max_growth must exceed 1 or be nothing"
+        @assert η >= 0 "η must be non-negative"
+        @assert _is_positive(max_turn) "max_turn must be positive or nothing"
+        return new{T}(_as(T, max_distance), _as(T, max_contraction), _as(T, max_growth), convert(T, η), _as(T, max_turn))
+    end
+
+    CorrectorQuality{T}(max_distance::Union{Nothing, Real}, max_contraction::Union{Nothing, Real}, max_growth::Union{Nothing, Real}, η::Real) where {T <: Real} = CorrectorQuality{T}(max_distance, max_contraction, max_growth, η, nothing)
+end
+
+_is_positive(::Nothing) = true
+_is_positive(x::Real) = x > 0
+_as(::Type{T}, ::Nothing) where {T <: Real} = nothing
+_as(::Type{T}, x::Real) where {T <: Real} = convert(T, x)
+
+function CorrectorQuality(; max_distance::Union{Nothing, Real} = nothing, max_contraction::Union{Nothing, Real} = 0.6, max_growth::Union{Nothing, Real} = 1.1, η::Real = 0.1, max_turn::Union{Nothing, Real} = nothing)
+    given = filter(!isnothing, (max_distance, max_contraction, max_growth, η, max_turn))
+    T = float(promote_type(map(typeof, given)...))
+    return CorrectorQuality{T}(max_distance, max_contraction, max_growth, η, max_turn)
+end
+
+"""`control` with its thresholds in the float type `T`, so that the step size stays in the state's type."""
+function CorrectorQuality{T}(control::CorrectorQuality)::CorrectorQuality{T} where {T <: Real}
+    return CorrectorQuality{T}(control.max_distance, control.max_contraction, control.max_growth, control.η, control.max_turn)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+What a corrector has shown of its quality so far, for [`CorrectorQuality`](@ref): the length of its last Newton step, the largest deceleration asked for by the steps up to it, and their number. Immutable, [`observe`](@ref) returns the next one.
+"""
+struct StepQuality{T <: Real}
+    previous::T
+    deceleration::T
+    steps::Int
+end
+
+"""The quality of a corrector that has not taken a Newton step: it asks for the largest growth, `1 / deceleration = max_growth`."""
+StepQuality(control::CorrectorQuality{T}) where {T <: Real} = StepQuality{T}(zero(T), _initial_deceleration(control.max_growth), 0)
+
+_initial_deceleration(max_growth::Real) = inv(max_growth)
+_initial_deceleration(::Nothing) = 0
+_deceleration(max_growth::Real, ratio::Real) = max_growth * sqrt(ratio)
+_deceleration(::Nothing, ratio::Real) = 0
+
+"""
+$(TYPEDSIGNATURES)
+
+Contraction rate of a Newton step of length `distance` that follows one of length `quality.previous`. It is only defined after the first step.
+"""
+function contraction_rate(control::CorrectorQuality{T}, quality::StepQuality{T}, distance::T, tol::Real)::T where {T <: Real}
+    return distance / (quality.previous + convert(T, tol) * control.η)
+end
+
+# a test switched off (`nothing`) accepts every step and asks for no deceleration
+_reaches(::Nothing, value::Real) = false
+_reaches(limit::Real, value::Real) = value >= limit
+_exceeds(::Nothing, value::Real) = false
+_exceeds(limit::Real, value::Real) = value > limit
+_load(::Nothing, value::T) where {T <: Real} = zero(T)
+_load(limit::Real, value::Real) = value / limit
+
+"""
+$(TYPEDSIGNATURES)
+
+Whether the step must be rejected, and the corrector stopped, because of the Newton step of length `distance` that follows the ones in `quality`: the first must be shorter than `max_distance`, the following ones must contract by less than `max_contraction`.
+"""
+function rejects_step(control::CorrectorQuality{T}, quality::StepQuality{T}, distance::T, tol::Real)::Bool where {T <: Real}
+    if quality.steps == 0
+        return _reaches(control.max_distance, distance)
+    end
+    return _exceeds(control.max_contraction, contraction_rate(control, quality, distance, tol))
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+The quality after the Newton step of length `distance`, which `rejects_step` accepted.
+"""
+function observe(control::CorrectorQuality{T}, quality::StepQuality{T}, distance::T, tol::Real)::StepQuality{T} where {T <: Real}
+    if quality.steps == 0
+        ratio = _load(control.max_distance, distance)
+    else
+        ratio = _load(control.max_contraction, contraction_rate(control, quality, distance, tol))
+    end
+    deceleration = max(quality.deceleration, _deceleration(control.max_growth, ratio))
+    return StepQuality{T}(distance, deceleration, quality.steps + 1)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Whether the step must be rejected because the tangent at its corrected point turned by the angle `turn` (radians) from the previous one: `turn >= max_turn`.
+"""
+rejects_turn(control::CorrectorQuality, turn::Real)::Bool = _reaches(control.max_turn, turn)
+
+"""
+$(TYPEDSIGNATURES)
+
+The quality after the tangent turned by `turn`, which `rejects_turn` accepted. A turn grows like the step, so it asks for a deceleration linear in `turn / max_turn`.
+"""
+function observe_turn(control::CorrectorQuality{T}, quality::StepQuality{T}, turn::Real)::StepQuality{T} where {T <: Real}
+    deceleration = max(quality.deceleration, _turn_deceleration(control.max_growth, _load(control.max_turn, convert(T, turn))))
+    return StepQuality{T}(quality.previous, deceleration, quality.steps)
+end
+
+_turn_deceleration(max_growth::Real, ratio::Real) = max_growth * ratio
+_turn_deceleration(::Nothing, ratio::Real) = 0
+
+"""
+$(TYPEDSIGNATURES)
+
+Factor by which an accepted step multiplies `ds`, or `nothing` when `control` leaves the step size to the Newton iteration count.
+"""
+function growth_factor(control::CorrectorQuality, quality::StepQuality{T})::Union{Nothing, T} where {T <: Real}
+    if isnothing(control.max_growth)
+        return nothing
+    end
+    return inv(quality.deceleration)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Whether the growth of `ds` after the step is limited by `max_growth`: every test asked for at most the lowest deceleration, `1 / max_growth`.
+"""
+growth_capped(control::CorrectorQuality, quality::StepQuality) = quality.deceleration <= _initial_deceleration(control.max_growth)

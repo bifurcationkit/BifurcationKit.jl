@@ -37,7 +37,7 @@ function test_newton_palc(x0::Vector{T}, p0::T) where T
     optc  = ContinuationPar{T, DefaultLS, DefaultEig}(newton_options = optn, ds = T(0.01), η = 10)
 
     prob  = BifurcationProblem(F, x0, p0, (@optic _); J = Jac, delta = (T(0.01)))
-    iter  = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta}(θ = θ), optc)
+    iter  = ContIterable(prob, PALC{Secant, MatrixBLS{Nothing}, T, BK.DotTheta, Nothing}(θ = θ), optc)
     state = iterate(iter)[1]
     BK.newton_palc(iter, state)
 end
