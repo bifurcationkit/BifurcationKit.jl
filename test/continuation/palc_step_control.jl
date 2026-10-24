@@ -1,4 +1,4 @@
-using Test, BifurcationKit, LinearAlgebra
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Random
 const BK = BifurcationKit
 ####################################################################################################
 # the pure rules of CorrectorQuality
@@ -151,6 +151,19 @@ let
     walled = continuation(make_problem(Float64), PALC(step_control = CorrectorQuality(), orientation_check = true), options(Float64); callback_newton = wall)
     @test all(point -> point.p <= 1, walled.sol)
     @test maximum(point -> point.p, walled.sol) > 0.9
+end
+####################################################################################################
+# determinant_sign: the sign of the determinant of a bordered matrix, read from the LU factorisation that solves it
+let
+    rng = Xoshiro(1)
+    for T in (Float64, Float32), _ in 1:20
+        n = 6
+        A = BK.bordered_matrix(randn(rng, T, n, n), randn(rng, T, n), randn(rng, T, n), randn(rng, T), T(0.5), T(0.5), nothing)
+        @test size(A) == (n + 1, n + 1)
+        @test BK.determinant_sign(lu(A)) == last(logabsdet(A))
+        # UMFPACK factorises a sparse matrix
+        @test BK.determinant_sign(lu(sparse(A))) == last(logabsdet(A))
+    end
 end
 ####################################################################################################
 # orientation_check: determinant orientation of a Bordered tangent, rejection on a negative dot product

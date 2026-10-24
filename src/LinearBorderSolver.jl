@@ -213,6 +213,20 @@ end
 # dummy constructor to simplify user passing options to continuation
 MatrixBLS() = MatrixBLS(nothing)
 
+"""
+$(TYPEDSIGNATURES)
+
+The bordered matrix `[getmatrix(J) dR; (dzu .* ξu)' dzp * ξp]` of [`MatrixBLS`](@ref). The function `applyξu!`, if given, is applied in place to the first `n` entries of the last row.
+"""
+function bordered_matrix(J, dR, dzu, dzp, ξu, ξp, applyξu!)
+    A = vcat(hcat(getmatrix(J), dR), hcat(LA.adjoint(dzu .* ξu), dzp * ξp))
+    # apply a linear operator to ξu
+    if isnothing(applyξu!) == false
+        applyξu!(@view(A[end, begin:end-1]))
+    end
+    return A
+end
+
 # case of a scalar additional linear equation
 # solve in dX, dl
 # ┌                           ┐┌  ┐   ┌   ┐
@@ -228,22 +242,7 @@ function (lbs::MatrixBLS)(J, dR,
                           ξp::𝒯 = one(𝒯);
                           dotp = nothing,
                           applyξu! = nothing)  where {𝒯 <: Number}
-
-    A = getmatrix(J)
-    # USE BLOCK ARRAYS LAZY?
-    # A = hcat(A, dR)
-    # A = vcat(A, hcat(adjoint(dzu .* ξu), dzp * ξp))
-
-    # TEST SPEED
-    # USE Hvcat
-    # n = size(A, 1)
-    # A = hvcat((n+1, n+1), A, dR, adjoint(dzu .* ξu), dzp * ξp) # much slower than the following
-    A = vcat(hcat(A, dR), hcat(LA.adjoint(dzu .* ξu), dzp * ξp))
-
-    # apply a linear operator to ξu
-    if isnothing(applyξu!) == false
-        applyξu!(@view(A[end, begin:end-1]))
-    end
+    A = bordered_matrix(J, dR, dzu, dzp, ξu, ξp, applyξu!)
 
     # solve the equations and return the result
     rhs = vcat(R, n)

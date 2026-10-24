@@ -77,20 +77,31 @@ orients_by_determinant(iter::AbstractContinuationIterable) = iter.alg isa PALC &
 """
 $(TYPEDSIGNATURES)
 
-The sign of the determinant of the bordered matrix of the tangent, `[J dFdl; θ τ.u' (1 - θ) τ.p]` with `τ = state.τ`, built as `MatrixBLS` builds it. It needs a `MatrixBLS` solver and costs a dense LU factorisation, `O(n^3)` for `n` unknowns.
+Solve the bordered system of the tangent with the bordered matrix built as [`MatrixBLS`](@ref) builds it, and return `(τu, τp, s)` with `s` the sign of the determinant of that matrix. One LU factorisation gives both.
 """
-function bordered_determinant_sign(::MatrixBLS, iter::AbstractContinuationIterable, state::AbstractContinuationState, J, dFdl)
+function bordered_tangent_and_sign(::MatrixBLS, iter::AbstractContinuationIterable, state::AbstractContinuationState, J, dFdl, rhsu, rhsp::𝒯) where {𝒯}
     θ = getθ(iter)
-    τ = state.τ
-    A = vcat(hcat(getmatrix(J), dFdl), hcat(LA.adjoint(τ.u .* θ), τ.p * (one(θ) - θ)))
-    apply = _get_apply_dot(getdot(iter))
-    if ~isnothing(apply)
-        apply(@view(A[end, begin:end-1]))
-    end
-    return last(LA.logabsdet(A))
+    A = bordered_matrix(J, dFdl, state.τ.u, state.τ.p, θ, one(𝒯) - θ, _get_apply_dot(getdot(iter)))
+    F = LA.lu(A)
+    res = F \ vcat(rhsu, rhsp)
+    return (@view res[begin:end-1]), res[end], determinant_sign(F)
 end
 
-bordered_determinant_sign(lbs::AbstractBorderedLinearSolver, ::AbstractContinuationIterable, ::AbstractContinuationState, J, dFdl) = error("orientation_check orients a Bordered tangent by a determinant, which only MatrixBLS gives, not $(typeof(lbs))")
+bordered_tangent_and_sign(lbs::AbstractBorderedLinearSolver, ::AbstractContinuationIterable, ::AbstractContinuationState, J, dFdl, rhsu, rhsp) = error("orientation_check orients a Bordered tangent by a determinant, which only MatrixBLS gives, not $(typeof(lbs))")
+
+"""
+$(TYPEDSIGNATURES)
+
+The sign of the determinant of the factorised matrix: the product of the signs of the pivots times the parity of the row permutation.
+"""
+function determinant_sign(F::LA.LU)
+    s = prod(sign, @view F.factors[LA.diagind(F.factors)])
+    swaps = count(row != i for (i, row) in pairs(F.ipiv))
+    return isodd(swaps) ? -s : s
+end
+
+# a sparse matrix is factorised by UMFPACK, which gives the determinant from its factors
+determinant_sign(F::LA.Factorization) = last(LA.logabsdet(F))
 
 """
 $(TYPEDSIGNATURES)
@@ -114,17 +125,19 @@ function bordered_tangent(state::AbstractContinuationState,
     J = jacobian(iter.prob, z.u, setparam(iter, z.p))
 
     # extract tangent as solution of the above bordered linear system
-    τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),
-                                        iter, state,
-                                        J, dFdl,
-                                        VI.zerovector(z.u), 
-                                        one(T)) # Right-hand side
-    ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
+    lbs = get_bordered_linsolver(iter)
+    rhsu = VI.zerovector(z.u) # Right-hand side
+    if by_determinant
+        τu, τp, determinant = bordered_tangent_and_sign(lbs, iter, state, J, dFdl, rhsu, one(T))
+    else
+        τu, τp, flag, iterl = solve_bls_palc(lbs, iter, state, J, dFdl, rhsu, one(T))
+        ~flag && @warn "Linear solver failed to converge in tangent computation with type ::Bordered"
+    end
 
     # we scale τ in order to have ||τ||_θ = 1 and sign <τ, τold> = 1
     α = one(T) / sqrt(dotθ(τu, τu, τp, τp, θ))
     if by_determinant
-        α *= bordered_determinant_sign(get_bordered_linsolver(iter), iter, state, J, dFdl) * state.cache.orientation
+        α *= determinant * state.cache.orientation
     else
         α *= sign(dotθ(τ.u, τu, τ.p, τp, θ))
     end
