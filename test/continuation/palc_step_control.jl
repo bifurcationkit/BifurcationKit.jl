@@ -334,3 +334,14 @@ let
         @test state.z.p == point(φ2).p
     end
 end
+####################################################################################################
+# a residual that turns NaN past λ = 0.5 refuses the step there: the orientation test computes no tangent at a NaN
+# iterate, whose Jacobian LAPACK would reject
+let
+    F(x, p) = @. ifelse(p.λ > 0.5, NaN, x - p.λ)
+    prob = BifurcationProblem(F, [0.0], (λ = 0.0,), (@optic _.λ))
+    options = ContinuationPar(ds = 0.05, dsmax = 0.1, p_min = 0.0, p_max = 1.0, max_steps = 100, detect_fold = false, detect_bifurcation = 0)
+    br = continuation(prob, PALC(; tangent = Bordered(), orientation_check = true), options)
+    @test 0.4 < br.branch.param[end] <= 0.5
+    @test all(isfinite, br.branch.param)
+end

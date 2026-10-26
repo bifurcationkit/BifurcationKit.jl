@@ -287,7 +287,8 @@ function (check::PALCStepCheck)(newton_state; kwargs...)
         return false
     end
     verdict = check.callback(newton_state; kwargs...)
-    if verdict === false || (verdict === true && newton_state.residual >= check.tol)
+    # a NaN residual has not converged, so its tangent is never computed
+    if verdict === false || (verdict === true && !(newton_state.residual < check.tol))
         return verdict
     end
     if ~_turns_forward!(check, BorderedArray(newton_state.x, p))
