@@ -227,7 +227,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     verbose && print_nonlinear_step(step, res)
     line_step = true
 
-    compute = callback((;x, res_f, residual = res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    compute = callback((;x, res_f, residual = res, step, contparams, z0, z_pred, ds, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
     while (step < max_iterations) && (res > tol) && line_step && compute
         R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
@@ -286,10 +286,10 @@ function newton_palc(iter::AbstractContinuationIterable,
         verbose && print_nonlinear_step(step, res, itlinear)
 
         # shall we break the loop?
-        compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+        compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, z_pred, ds, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
-    flag = (residuals[end] < tol) & callback((;x, res_f, residual = res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    flag = (residuals[end] < tol) & callback((;x, res_f, residual = res, step, contparams, z_pred, ds, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
     return NonLinearSolution(BorderedArray(x, p),
                             prob,
