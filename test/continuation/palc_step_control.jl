@@ -67,6 +67,16 @@ let
     @test_throws AssertionError CorrectorQuality(max_growth = 1.0)
     @test_throws AssertionError CorrectorQuality(max_distance = 0.0)
     @test_throws AssertionError CorrectorQuality(max_contraction = -1.0)
+
+    # a NaN Newton step, contraction or turn fails every test that is on, and passes a test that is off
+    @test BK.rejects_step(control, quality, NaN, tol)
+    @test BK.rejects_step(control, after_first, NaN, tol)
+    @test BK.rejects_turn(CorrectorQuality(max_turn = 0.5), NaN)
+    @test ~BK.rejects_step(off, BK.StepQuality(off), NaN, tol)
+    @test ~BK.rejects_turn(CorrectorQuality(), NaN)
+    # a NaN tangent cosine points back, as a negative one does
+    @test BK.points_back(NaN) && BK.points_back(-0.1)
+    @test ~BK.points_back(0.0) && ~BK.points_back(0.3)
 end
 ####################################################################################################
 # the cosine of the angle between the tangent and the chord of a step, in the norm of the arc length constraint

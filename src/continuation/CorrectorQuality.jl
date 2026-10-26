@@ -104,11 +104,11 @@ function contraction_rate(control::CorrectorQuality{T}, quality::StepQuality{T},
     return distance / (quality.previous + convert(T, tol) * control.η)
 end
 
-# a test switched off (`nothing`) accepts every step and asks for no deceleration
+# a test switched off (`nothing`) accepts every step and asks for no deceleration; a NaN value fails every test that is on
 _reaches(::Nothing, value::Real) = false
-_reaches(limit::Real, value::Real) = value >= limit
+_reaches(limit::Real, value::Real) = !(value < limit)
 _exceeds(::Nothing, value::Real) = false
-_exceeds(limit::Real, value::Real) = value > limit
+_exceeds(limit::Real, value::Real) = !(value <= limit)
 _load(::Nothing, value::T) where {T <: Real} = zero(T)
 _load(limit::Real, value::Real) = value / limit
 

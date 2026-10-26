@@ -329,13 +329,16 @@ _rejects_turn(control::CorrectorQuality, turn) = rejects_turn(control, turn)
 _observe_turn(::Nothing, quality, turn) = quality
 _observe_turn(control::CorrectorQuality, quality, turn) = observe_turn(control, quality, turn)
 
+"Whether a tangent whose cosine with the previous one is `cosine` points back along the branch; a NaN cosine does."
+points_back(cosine::Real) = !(cosine >= 0)
+
 function _turns_forward!(check::PALCStepCheck, znew::BorderedArray)
     if ~tracks_turn(check.alg)
         return true
     end
     state = check.state
     cosine, next_tangent = turn_cosine(check.alg.tangent, state, check.iter, znew, getdot(check.alg))
-    if check.alg.orientation_check && cosine < 0
+    if check.alg.orientation_check && points_back(cosine)
         if check.iter.verbosity > 0
             printstyled("Step rejected: the new tangent points away from the previous one (dot product $cosine)\n", color = :red)
         end
