@@ -32,6 +32,13 @@ let
     @test after_second.deceleration ≈ max(1.1 * sqrt(0.3 / 0.4), 1.1 * sqrt(contraction / 0.6))
     @test after_second.steps == 2
 
+    # rejects_contraction = false keeps the distance test and the contraction's deceleration, but no contraction rejects
+    lenient = CorrectorQuality(max_distance = 0.4, rejects_contraction = false)
+    @test BK.rejects_step(lenient, quality, 0.4, tol)
+    @test ~BK.rejects_step(lenient, after_first, 0.3, tol)
+    @test BK.observe(lenient, after_first, 0.1, tol).deceleration ≈ after_second.deceleration
+    @test CorrectorQuality{Float32}(lenient).rejects_contraction == false
+
     # a test that is off neither rejects a step nor slows the next one
     off = CorrectorQuality(max_distance = nothing, max_contraction = nothing)
     @test ~BK.rejects_step(off, BK.StepQuality(off), 1e6, tol)
