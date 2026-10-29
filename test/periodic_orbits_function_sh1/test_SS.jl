@@ -203,12 +203,18 @@ let
     # test the analytical version of the functional
     _out0 = BK.po_jvp(probPSh, ci, par, dci)
     δ = 1e-6
-    _out2 = (BK.po_residual(probPSh, ci .+ δ .* dci, par) .- BK.po_residual(probPSh, ci, par)) ./ δ
-    _out1 = ForwardDiff.derivative(z -> BK.po_residual(probPSh, ci .+ z .* dci, par), 0)
+    residual_along(z) = BK.po_residual(probPSh, ci .+ z .* dci, par)
+    _out2 = (residual_along(δ) .- residual_along(0)) ./ δ
+    _out1 = ForwardDiff.derivative(residual_along, 0)
     display(_out0)
     display(_out1)
     display(_out2)
-    @test _out2 ≈ _out1 atol = 1e-5
+    # the forward difference is off by δ f''/2 + δ² f'''/6 + O(δ³), plus rounding of order eps |f| / δ;
+    # f'' and f''' depend on the random ci and dci, so the bound is computed from them
+    second = ForwardDiff.derivative(t -> ForwardDiff.derivative(residual_along, t), 0)
+    third = ForwardDiff.derivative(s -> ForwardDiff.derivative(t -> ForwardDiff.derivative(residual_along, t), s), 0)
+    bound = δ .* abs.(second) ./ 2 .+ δ^2 .* abs.(third) .+ 4eps() .* abs.(residual_along(0)) ./ δ
+    @test all(abs.(_out2 .- _out1) .<= 2 .* bound)
 end
 ####################################################################################################
 # test minus for POSavedSolutionAndState
