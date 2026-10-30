@@ -124,10 +124,26 @@ let
     # the continuation keeps the float type of the problem
     for T in (Float32, Float64)
         control = CorrectorQuality(; max_distance = T(0.4), max_contraction = T(0.6), max_growth = T(1.1), η = T(0.1))
+        for tangent in (Secant(), Bordered())
+            checked = continuation(make_problem(T), PALC(θ = T(0.5); tangent, step_control = control, orientation_check = true), options(T))
+            @test eltype(checked.branch.ds) == T
+            @test count(sp -> sp.type == :fold, checked.specialpoint) == 2
+        end
         br = continuation(make_problem(T), PALC(θ = T(0.5), step_control = control), options(T))
         @test eltype(br.branch.ds) == T
         @test all(point -> point.p isa T, br.sol)
         @test count(sp -> sp.type == :fold, br.specialpoint) == 2
+    end
+
+    # algorithms that delegate their correction to an inner PALC carry its cache
+    for tangent in (Secant(), Bordered())
+        inner = PALC(; tangent, step_control = CorrectorQuality(), orientation_check = true)
+        for wrapper in (Multiple(inner, [-1.3247179], 0.5, 2), AutoSwitch(; alg = inner))
+            br = continuation(make_problem(Float64), wrapper, options(Float64))
+            @test length(br) > 5
+            # (AutoSwitch's Natural steps may end on an unconverged guess past p_max)
+            @test all(point -> norm(F(point.x, (λ = point.p,)), Inf) < 1e-7, filter(point -> point.p <= 2, br.sol)[begin:begin+5])
+        end
     end
 
     # the step control wraps the Newton callback of continuation, whose refusals still stop the corrector

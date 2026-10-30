@@ -473,10 +473,10 @@ function newton_palc(iter::AbstractContinuationIterable,
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
-                # F may be undefined outside [p_min, p_max]: an iterate there stops the corrector, not converged
+                # F may be undefined outside [p_min, p_max]: a trial there is refused unevaluated and the step halves
                 if ~(p_min <= p_pred <= p_max)
-                    rejected = true
-                    break
+                    α /= 2
+                    continue
                 end
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
@@ -494,9 +494,6 @@ function newton_palc(iter::AbstractContinuationIterable,
                 else
                     α /= 2
                 end
-            end
-            if rejected
-                break
             end
             # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
             # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
