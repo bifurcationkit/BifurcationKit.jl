@@ -253,7 +253,8 @@ function newton_palc(iter::AbstractContinuationIterable,
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
-                _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                res_trial, J_trial = _residual_maybe_jacobian(prob, x_pred, set(par, paramlens, p_pred))
+                _copyto!(res_f, res_trial)
 
                 res_n  = N(x_pred, p_pred)
                 res = normAC(res_f, res_n)
@@ -267,6 +268,8 @@ function newton_palc(iter::AbstractContinuationIterable,
 
                     # p = p_pred
                     p  = clamp(p_pred, p_min, p_max)
+                    # a clamped parameter is not where J_trial was evaluated
+                    J_next = p == p_pred ? J_trial : nothing
                 else
                     α /= 2
                 end
@@ -274,7 +277,8 @@ function newton_palc(iter::AbstractContinuationIterable,
             # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
             # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
             if !line_step
-                _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+                res_accepted, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p))
+                _copyto!(res_f, res_accepted)
                 res_n  = N(x, p); res = normAC(res_f, res_n)
             end
         else

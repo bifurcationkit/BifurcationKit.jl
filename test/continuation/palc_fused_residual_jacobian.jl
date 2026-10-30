@@ -22,10 +22,14 @@ let
     @test all(BK.residual_and_jacobian(separate, x, par) .== (F(x, par), J(x, par)))
     @test all(BK.residual_and_jacobian(fused, x, par) .== (F(x, par), J(x, par)))
 
-    # the corrector's jacobians of the fused run come from FJ, the true one
-    br_separate = continuation(separate, PALC(tangent = Secant()), opts)
-    br_fused = continuation(fused, PALC(tangent = Secant()), opts)
-    @test length(br_fused) == length(br_separate)
-    @test br_fused.param ≈ br_separate.param
-    @test all(norm(a.x - b.x) < 1e-10 for (a, b) in zip(br_fused.sol, br_separate.sol))
+    # the corrector's jacobians of the fused run come from FJ, the true one, with and without line search
+    for linesearch in (false, true)
+        newton_options = NewtonPar(tol = 1e-10; linesearch)
+        line_opts = ContinuationPar(opts; newton_options)
+        br_separate = continuation(separate, PALC(tangent = Secant()), line_opts)
+        br_fused = continuation(fused, PALC(tangent = Secant()), line_opts)
+        @test length(br_fused) == length(br_separate)
+        @test br_fused.param ≈ br_separate.param
+        @test all(norm(a.x - b.x) < 1e-10 for (a, b) in zip(br_fused.sol, br_separate.sol))
+    end
 end
