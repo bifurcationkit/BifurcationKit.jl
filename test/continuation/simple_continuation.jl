@@ -242,6 +242,23 @@ let
     br0 = continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = (state; kwargs...)->(true));
     BK.get_solution(br0, 1)
 
+    # every call from the PALC corrector carries the step's predictor and length; a call without them stops the branch
+    carries_predictor(state; fromNewton = true, kwargs...) = fromNewton || (state.ds isa Real && state.z_pred isa BorderedArray && (state.step > 0 || (state.x == state.z_pred.u && state.p == state.z_pred.p)))
+    @test length(continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = carries_predictor)) == length(br0)
+
+    # the step length is within its bounds, the predictor moves off the previous point, and each phase of the corrector is reached
+    corrector_calls = NamedTuple[]
+    record(state; fromNewton = true, kwargs...) = (fromNewton || push!(corrector_calls, (; state.step, state.ds, state.z_pred, z0 = get(state, :z0, nothing), has_jacobian = haskey(state, :J))); true)
+    continuation(prob, PALC(), (@set opts.max_steps = 3), callback_newton = record)
+    @test any(call -> call.step == 0, corrector_calls)
+    @test any(call -> call.step > 0 && call.has_jacobian, corrector_calls)
+    @test any(call -> call.step > 0 && ~call.has_jacobian, corrector_calls)
+    for call in corrector_calls
+        @test abs(call.ds) <= opts.dsmax
+        @test abs(call.ds) >= opts.dsmin
+        isnothing(call.z0) || @test call.z_pred.p != call.z0.p
+    end
+
     ###### Used to check type stability of the methods
     @test isconcretetype(return_type(ContIterable, typeof((prob, PALC(), opts))))
     iter = ContIterable(prob, PALC(), opts) # type stable
