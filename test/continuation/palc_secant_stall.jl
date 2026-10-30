@@ -22,3 +22,12 @@ const BK = BifurcationKit
     @test all(isfinite, state.τ.u) && isfinite(state.τ.p)
     @test all(isfinite, state.z_pred.u) && isfinite(state.z_pred.p)
 end
+
+# the stall check sees through a nested `BorderedArray` state
+@testset "stalled_step compares nested states by coordinates" begin
+    state(u, p, q) = BorderedArray(BorderedArray(u, p), q)
+    @test BK.stalled_step(state([1f0, 2f0], 3f0, 4f0), state([1f0, 2f0], 3f0, 4f0))
+    @test ~BK.stalled_step(state([1f0, 2f0], 3f0, 4f0), state([1f0, 2f0], 3f0, 5f0))
+    @test ~BK.stalled_step(state([1f0, 2f0], 3f0, 4f0), state([1f0, 2f0], 0f0, 4f0))
+    @test ~BK.stalled_step(state([1f0, 2f0], 3f0, 4f0), state([1f0, 9f0], 3f0, 4f0))
+end

@@ -158,7 +158,9 @@ $(TYPEDSIGNATURES)
 
 Whether the corrected point `new` equals the current point `current` in every coordinate: a step that moved nothing.
 """
-stalled_step(new::BorderedArray, current::BorderedArray) = new.p == current.p && new.u == current.u
+stalled_step(new::BorderedArray, current::BorderedArray) = new.p == current.p && stalled_step(new.u, current.u)
+# plain arrays compare structurally; a nested `BorderedArray` has no `==`, so it recurses above
+stalled_step(new, current) = new == current
 
 function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
