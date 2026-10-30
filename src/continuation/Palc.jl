@@ -161,7 +161,7 @@ function corrector!(state::AbstractContinuationState,
         bound = clamp_predp(state.z_pred.p, it)
         # The predictor stops where its line meets the bound. Clamping p alone leaves u a full step out, from which
         # the fixed-parameter corrector can converge onto another branch.
-        if isindomain(it, state.z.p)
+        if it.contparams.p_min <= state.z.p <= it.contparams.p_max
             fraction = (bound - state.z.p) / (state.z_pred.p - state.z.p)
             VI.add!(state.z_pred, state.z, 1 - fraction, fraction)
         end
@@ -249,8 +249,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
 
-        # F may be undefined outside [p_min, p_max]: an iterate there stops the corrector, not converged
-        outside = false
+        # F may be undefined outside [p_min, p_max]: the line search rejects a trial there, a full step there stops the corrector
         if linesearch
             line_step = false
             while !line_step && (α > αmin)
@@ -259,8 +258,8 @@ function newton_palc(iter::AbstractContinuationIterable,
 
                 p_pred = p - α * up
                 if !(p_min <= p_pred <= p_max)
-                    outside = true
-                    break
+                    α /= 2
+                    continue
                 end
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
@@ -277,9 +276,6 @@ function newton_palc(iter::AbstractContinuationIterable,
                 else
                     α /= 2
                 end
-            end
-            if outside
-                break
             end
             # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
             # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m

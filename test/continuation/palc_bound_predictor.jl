@@ -13,3 +13,15 @@ let
         @test br.branch.x[end] ≈ 1.0
     end
 end
+
+# a run that starts on a bound shortens its first predictor too
+let
+    F(x, p) = (x .- p.λ) .* (x .- p.λ .- 3)
+    prob = BifurcationProblem(F, [0.0], (λ = 0.0,), (@optic _.λ))
+    options = ContinuationPar(ds = 4.0, dsmax = 4.0, p_min = 0.0, p_max = 1.0, detect_fold = false, detect_bifurcation = 0)
+    for tangent in (Secant(), Bordered())
+        br = continuation(prob, PALC(; tangent), options)
+        @test br.branch.param[end] == 1.0
+        @test br.branch.x[end] ≈ 1.0
+    end
+end

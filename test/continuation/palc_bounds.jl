@@ -22,3 +22,20 @@ let
         @test count(sp -> sp.type == :fold, br.specialpoint) == 2
     end
 end
+
+# the line search halves a trial past a bound and goes on: a full step out of the box does not abort a corrector
+# that a shorter step brings in. Evaluating F outside the box throws.
+let
+    function F(u, p)
+        if p.λ < 0 || p.λ > 1
+            error("F evaluated outside [p_min, p_max] at λ = $(p.λ)")
+        end
+        return @. u^3 - u - (p.λ - 1)
+    end
+    prob = BifurcationProblem(F, [-1.3247179], (λ = 0.0,), (@optic _.λ))
+    opts = ContinuationPar(ds = 0.05, dsmin = 1e-6, dsmax = 0.5, p_min = 0.0, p_max = 1.0, max_steps = 200,
+                           detect_fold = false, detect_bifurcation = 0,
+                           newton_options = NewtonPar(tol = 1e-8, linesearch = true))
+    br = continuation(prob, PALC(), opts)
+    @test br.branch.param[end] ≈ 1.0 atol = 1e-6
+end
