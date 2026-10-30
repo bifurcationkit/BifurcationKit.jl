@@ -26,7 +26,10 @@ let
         @test length(br_coarse) == length(br_reference)
         @test br_coarse.param ≈ br_reference.param rtol = 1e-6
     end
-    br_reference = continuation(reference, MoorePenrose(), opts)
-    br_coarse = continuation(coarse, MoorePenrose(), opts)
-    @test br_coarse.param ≈ br_reference.param rtol = 1e-6
+    for method in (BK.direct, BK.iterative)
+        br_reference = continuation(reference, MoorePenrose(; method), opts)
+        br_coarse = continuation(coarse, MoorePenrose(; method), opts)
+        @test length(br_coarse) == length(br_reference)
+        @test br_coarse.param ≈ br_reference.param rtol = 1e-6
+    end
 end
