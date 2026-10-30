@@ -133,6 +133,35 @@ opts_bratu = ContinuationPar(
             maximum(point -> point.p, br_default.sol) atol = 0.02
     end
 
+    @testset "a dot product without a linear operator is refused" begin
+        # the row of the arclength constraint is `θ A τu`, which needs the operator `A` of the dot product
+        weighted(x, y) = 2 * dot(x, y)
+        opts = ContinuationPar(opts_bratu; max_steps = 3)
+        @test_throws ArgumentError continuation(
+            prob_bratu,
+            PALC(; corrector = NonlinearSolveCorrector(exact), dotθ = BK.DotTheta(weighted)),
+            opts,
+        )
+        # with its operator the corrector follows the branch of BifurcationKit's own
+        dotθ = BK.DotTheta(weighted, y -> (y .*= 2))
+        br0 = continuation(prob_bratu, PALC(; dotθ), opts)
+        br1 = continuation(prob_bratu, PALC(; dotθ, corrector = NonlinearSolveCorrector(exact)), opts)
+        @test length(br1.sol) == length(br0.sol)
+        @test maximum(abs, br1.branch.param .- br0.branch.param) < 1.0e-8
+    end
+
+    @testset "the bordered Jacobian multiplies a matrix-shaped state" begin
+        ext = Base.get_extension(BK, :NonlinearSolveExt)
+        n = 20
+        J = Matrix(J_bratu(zeros(n), (; λ = 0.3)))
+        dFdp, row = rand(4, 5), rand(4, 5)
+        A = ext.BorderedJacobian(J, dFdp, row, 0.7)
+        v = ext.ArrayPartition(rand(4, 5), [0.4])
+        y = A * v
+        expected = [J * vec(v.x[1]) .+ vec(dFdp) .* 0.4; dot(row, v.x[1]) + 0.7 * 0.4]
+        @test [vec(y.x[1]); y.x[2]] ≈ expected
+    end
+
     @testset "Newton solve" begin
         prob = re_make(prob_bratu; params = (λ = 1.0,), u0 = fill(0.1, 20))
         sol0 = BK.solve(prob, Newton(), NewtonPar(tol = 1.0e-12))

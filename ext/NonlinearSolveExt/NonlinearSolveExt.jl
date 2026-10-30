@@ -110,7 +110,8 @@ module NonlinearSolveExt
 
     function LA.mul!(y::ArrayPartition, A::BorderedJacobian, v::ArrayPartition)
         vx, vp = palc_state(v), palc_parameter(v)
-        palc_state(y) .= A.J * vx .+ A.dFdp .* vp
+        # `J` acts on the vectorized state, which may be any `AbstractArray`
+        palc_state(y) .= reshape(A.J * vec(vx), size(vx)) .+ A.dFdp .* vp
         y.x[2] .= LA.dot(A.row, vx) + A.c * vp
         return y
     end
@@ -193,11 +194,12 @@ module NonlinearSolveExt
 
     function PALCCache(prob, par, state, dotθ, θ)
         τ0 = state.τ
-        row = BK._copy(τ0.u) .* θ
         applyξu! = BK._get_apply_dot(dotθ)
-        if !isnothing(applyξu!)
-            applyξu!(row)
+        if isnothing(applyξu!)
+            throw(ArgumentError("`NonlinearSolveCorrector` builds the row of the arclength constraint from the operator of the dot product: give `DotTheta` its `apply!` (`DotTheta(dot, identity)` for the plain dot product)."))
         end
+        row = BK._copy(τ0.u) .* θ
+        applyξu!(row)
         return PALCCache(prob, par, state, dotθ, θ, row, (one(θ) - θ) * τ0.p, Ref{Any}(nothing))
     end
 

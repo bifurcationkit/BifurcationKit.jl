@@ -37,6 +37,7 @@ A dense linear solver (for example `LUFactorization()`) needs `jacobian(prob, x,
 
 !!! warning "Differences with the default corrector"
     - the state `x` must be an `AbstractArray`.
+    - the dot product `DotTheta` of PALC must have its `apply!` (the operator of the dot product), which gives the row of the arclength constraint.
     - the linear solver, line search and verbosity come from the options of `alg`; `NewtonPar` gives `tol` and `max_iterations`. The bordered linear solver is the keyword `bls` of `NonlinearSolveCorrector`, in place of the `bls` of `PALC`.
     - the `callback` of `continuation` (`callback_newton`) is called before the first iteration and at the end.
     - `p` is kept in `[p_min, p_max]` by the box constraints of `alg` when it allows bounds (`SciMLBase.allowsbounds(alg)`, for example the bounded trust region). Otherwise `p` moves freely during the iterations, and PALC corrects a corrector that converges outside `[p_min, p_max]` again at the bound, from where it ended.
