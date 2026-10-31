@@ -1,6 +1,12 @@
 # using Revise
 # cd(@__DIR__)
 using Test
+import Pkg
+
+# BorderedLinearSolve.jl is not registered yet and `[sources]` needs Julia 1.11: add it to the test environment
+if isnothing(Base.find_package("BorderedLinearSolve"))
+    Pkg.add(url = "https://github.com/SciML/BorderedLinearSolve.jl")
+end
 
 using Base.Threads; println("--> There are ", Threads.nthreads(), " threads")
 
