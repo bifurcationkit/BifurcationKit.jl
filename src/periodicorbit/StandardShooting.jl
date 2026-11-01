@@ -336,7 +336,11 @@ function get_po_solution(sh::Shooting, x::AbstractVector, pars; kode...)
     N = div(length(x) - 1, M)
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
+    return _get_shooting_solution(sh, xc, T, pars; kode...)
+end
 
+function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars; kode...)
+    M = get_mesh_size(sh)
     if ~isparallel(sh)
         sol_ode = [evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M]
     else # threaded version

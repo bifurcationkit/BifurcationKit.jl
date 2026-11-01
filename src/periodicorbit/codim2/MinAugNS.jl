@@ -80,13 +80,10 @@ end
 function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
     # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
     POWrap = 𝐍𝐒.prob_vf
-
     # parameter axis
     lens = getlens(𝐍𝐒)
-
     # update parameter
     par0 = set(par, lens, p)
-
     # Avoid doing 3 times the (possibly) costly building of J(x, p)
     JNS = jacobian_neimark_sacker(POWrap, x, par0, ω) # jacobian with period NS boundary condition
     # Avoid computing the jacobian twice in case 𝐍𝐒.Jadjoint is not provided
@@ -104,9 +101,8 @@ function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulatio
                   apply(jacobian_neimark_sacker(POWrap, x, set(par, lens, p - ϵ3), ω), v));
     LA.rmul!(dJvdp, 𝒯(1/(2ϵ3)))
     σₚ = -LA.dot(w, dJvdp)
-
     # case of ∂σ_ω
-    σω = -(LA.dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω+ϵ2), v)) - 
+    σω = -(LA.dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω + ϵ2), v)) - 
            LA.dot(w, apply(jacobian_neimark_sacker(POWrap, x, par, ω), v)) )/ϵ2
 
     return (;JNS, JNS★, dₚF, σₚ, δ, ϵ2, ϵ3, v, w, par0, dJvdp, itv, itw, σω)
@@ -234,8 +230,7 @@ get_wrap_po(pb::NSMAProblem) = get_wrap_po(get_formulation(pb))
 jacobian(nspb::NSMAProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, nspb = nspb.prob, hopfpb = nspb.prob)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update!(𝐏𝐛::NSMAProblem, iter, state::ContState)
-    # it is called to update the Minimally Augmented problem
-    # by updating the vectors a, b
+    # Update the Minimally Augmented problem by updating the vectors a, b
     # we first check that the continuation step was successful
     # if not, we do not update the problem with bad information!
     𝐍𝐒 = get_formulation(𝐏𝐛)

@@ -206,8 +206,21 @@ const DocStringJacobianPOSh = """
 jacobian(prob::AbstractWrapperPeriodicOrbitProblem, x, p) = _jacobian_po(prob, prob.jacobian, x, p)
 
 ########
-# useful getters for FloquetColl
-get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter))
+"""
+$(TYPEDSIGNATURES)
+
+Return the wrapped periodic orbit problem associated with `pb`.
+
+For an `AbstractWrapperPeriodicOrbitProblem`, return `pb` itself. For a
+`ContIterable`, unwrap `getprob(pb)`. For minimally augmented problems and
+formulations, climb through `get_formulation` / `prob_vf`; for `FoldMAProblem`,
+climb through `.prob`.
+
+The result is the periodic orbit wrapper (`PeriodicOrbitFunctionalColl`,
+`Shooting`, `Trapeze`, ...), not the underlying discretization. Use
+`get_discretization` to obtain the latter.
+"""
+get_wrap_po(iter::ContIterable) = get_wrap_po(getprob(iter)) # useful getters for FloquetColl
 get_wrap_po(pb::AbstractWrapperPeriodicOrbitProblem) = pb
 
 _generate_jacobian(::AbstractBoundaryValueDiscretization, J::Union{AutoDiffDense,

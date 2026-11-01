@@ -27,11 +27,9 @@ function get_normal_form(wrap::AbstractWrapperPeriodicOrbitProblem,
                         id_bif::Int;
                         k...)
     bifpt = br.specialpoint[id_bif]
-
     if bifpt.type == :endpoint
         error("Don't select an end point!")
     end
-
     if bifpt.type == :pd
         return period_doubling_normal_form(wrap, br, id_bif; k...)
     elseif bifpt.type == :bp
@@ -72,16 +70,14 @@ function branch_normal_form(pbwrap,
     ζ ./= scaleζ(ζ)
     verbose && println("Done!")
 
-    # compute the eigenvector for shooting problem, 
-    # it is of dimension larger than the Poincaré return map.
+    # compute the eigenvector for shooting problem, it is of dimension larger than the Poincaré return map.
     floquetsolver = br.contparams.newton_options.eigsolver
     ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, x0, setparam(br, bifpt.param), real.(ζ))
     ζs = reduce(vcat, ζ_a)
 
     # normal form for the Poincaré return map
     nf = BranchPoint(x0, bifpt.τ, bifpt.param, par, lens, nothing, nothing, nothing, :none)
-    ζ★ = nothing
-    return BranchPointPO(x0, period, real.(ζs), ζ★, nf, disc, true)
+    return BranchPointPO(x0, period, real.(ζs), nothing, nf, disc, true)
 end
 
 @views function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,

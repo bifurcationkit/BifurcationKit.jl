@@ -14,8 +14,7 @@ module BifurcationKit
     using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF, TYPEDFIELDS, TYPEDSIGNATURES
 
     import EnumX
-    # used in Problems.jl
-    import SciMLBase
+    import SciMLBase # used in Problems.jl
 
     import Reexport
     Reexport.@reexport using Accessors: setproperties, @set, @reset, PropertyLens, getall, set, @optic, IndexLens, ComposedOptic

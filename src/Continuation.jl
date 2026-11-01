@@ -1,6 +1,5 @@
 import Base: iterate
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Iterator interface
 """
 $(TYPEDEF)
 
@@ -451,9 +450,10 @@ function Base.iterate(it::ContIterable; _verbosity = it.verbosity)
         printstyled("OK\n\n", color = :green)
         println("──▶ parameter = ", p₀ + ds / η, ", initial step (bis)")
     end
-    return iterate_from_two_points(it, sol₀.u, p₀, 
+    state = iterate_from_two_points(it, sol₀.u, p₀, 
                                        sol₁.u, p₀ + ds / η; 
                                        _verbosity)
+    return state, state
 end
 
 # same as previous function but when two (initial guesses) points are provided
@@ -505,7 +505,7 @@ function iterate_from_two_points(it::ContIterable,
 
     # we update the event function result
     update_event!(it, state)
-    return state, state
+    return state
 end
 
 function Base.iterate(it::ContIterable,

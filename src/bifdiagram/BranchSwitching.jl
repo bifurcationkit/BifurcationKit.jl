@@ -25,7 +25,7 @@ function continuation(prob::AbstractBifurcationProblem,
         return continuation(itfw, x0, p0, x1, p1)
     else
         # initial state shared by both sides
-        initial_cont_state, _ = iterate_from_two_points(itfw, x0, p0, x1, p1)
+        initial_cont_state = iterate_from_two_points(itfw, x0, p0, x1, p1)
         # save the problem state before the forward continuation
         initial_parameters = setparam(getprob(itfw), getp(initial_cont_state))
         initial_solution = save_solution(getprob(itfw), _copy(getx(initial_cont_state)), initial_parameters)
@@ -45,7 +45,7 @@ end
 function continuation(it::ContIterable, x0, p0::Real, x1, p1::Real)
     # We compute the cache for the continuation, i.e. state::ContState.
     # In this call, we also compute the initial point on the branch (and its stability) and the initial tangent.
-    state, _ = iterate_from_two_points(it, x0, p0, x1, p1)
+    state = iterate_from_two_points(it, x0, p0, x1, p1)
     contres = ContResult(it, state)
     return continuation!(it, state, contres)
 end

@@ -140,25 +140,25 @@ for (op, at) in (
         end
     end
 end
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+get_periodic_orbit(ns::NSMAProblem,u, p) = get_periodic_orbit(get_wrap_po(ns), u, p)
+get_periodic_orbit(pd::PDMAProblem,u, p) = get_periodic_orbit(get_wrap_po(pd), u, p)
+get_periodic_orbit(lpc::FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}}, u, p) where {Tprob <: AbstractPeriodicOrbitProblem} = get_periodic_orbit(get_wrap_po(lpc), u, p)
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 get_wrap_po(𝐏𝐛::FoldMAProblem) = get_wrap_po(𝐏𝐛.prob)
 get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 get_wrap_po(𝐌𝐚::PeriodDoublingMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
 get_wrap_po(𝐌𝐚::NeimarkSackerMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args...)
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
-
-jacobian_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
-    error("Period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
-    error("Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_adjoint_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
-    error("Adjoint period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-jacobian_adjoint_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
-    error("Adjoint Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
-
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+jacobian_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) = error("Period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) = error("Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) = error("Adjoint period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) = error("Adjoint Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int) = real(br.CH[ind]) < 0
 is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int) = real(br.GPD[ind]) < 0
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -204,8 +204,6 @@ function __user_record_solution_periodic_orbit(pbwrap::AbstractWrapperPOFiniteDi
     return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = p); iter, state)
 end
 
-# shooting functional
-# we pass the full parameters updated at the bifurcation point
 function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, iter::ContIterable{ <: AbstractTwoParamPeriodicOrbitCont}, state)
     probma = getprob(iter)
     𝐌𝐚 = get_formulation(probma)
@@ -217,8 +215,7 @@ function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, ite
     par = getparams(probma)
     newpar = set(par, lens1, p1)
     newpar = set(newpar, lens2, p2)
-
-    po = getvec(u, 𝐌𝐚)
+    po = getvec(u, 𝐌𝐚) # periodic orbit
     return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = newpar); iter, state)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

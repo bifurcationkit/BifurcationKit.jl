@@ -16,14 +16,14 @@ $(TYPEDFIELDS)
 - `get_branch(diagram, code)` descends the tree along the `Int`-valued tuple `code` and returns the resulting node; `get_branch(diagram, ())` returns `diagram` itself.
 - `from(diagram)` returns the bifurcation point from which the branch stored in the node emanates.
 - `get_branches_from_BP(diagram, indbif)` returns the children of the root node emanating from the `indbif`-th bifurcation point on the root branch.
-- `diagram[code...]` is equivalent to `get_branch(diagram, code)`, e.g. `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. This is essentially the Ulam-Harris-Neveu labeling: the `i`-th entry of `code` indexes the bifurcation point on the parent branch from which the child branch was computed.
+- `diagram[code...]` is equivalent to `get_branch(diagram, code)`, e.g. `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. Each entry of `code` selects a child by its position in the `child` list, in the order the branches were computed. This is independent of the `code` field of the node (the index of the bifurcation point from which the branch emanates).
 - `level(diagram)` returns the recursion level of the node in the tree.
 - `size(diagram)` (or `size(diagram, code)`) returns the number of nodes in the (sub-)tree.
 """
 mutable struct BifDiagNode{Tγ, Tc}
     "current recursion level in the tree."
     level::Int64
-    "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
+    "index of the bifurcation point, in the `specialpoint` list of the parent branch, from which `γ` branches off. It is set by [`bifurcationdiagram!`](@ref) and used for display; navigation in the tree uses `get_branch(diagram, code)` which indexes children by position, not by this field."
     code::Int64
     "branch associated to the current node."
     γ::Tγ
