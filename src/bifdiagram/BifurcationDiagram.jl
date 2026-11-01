@@ -198,8 +198,8 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     for (id, pt) in pairs(γ0.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
-            try
-        if pt.step > 1 && (pt.type in (:bp, :nd, :pd)) && filter_bif_points(prob, γ0, pt)
+        try
+            if pt.step > 1 && (pt.type in (:bp, :nd, :pd)) && filter_bif_points(prob, γ0, pt)
                 if verbose
                     println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", 
                                     kernel_dimension(pt), 
@@ -213,7 +213,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                     printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
                 end
                 verbose && _show(stdout, γ0.specialpoint[id], id)
-
+                
                 # in the case of a Transcritical / Pitchfork bifurcation, we compute the other branch
                 if ~isnothing(γ) && ~halfbranch && ~(γ isa Branch{<: Any, <: Any, <: Vector{ <: ContResult}})
                     bp = from(γ)
@@ -225,10 +225,10 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                         add!(node, γ, level+1, id)
                     end
                 end
-
-            catch ex
-                @error "Failed to compute new branch at p = $(pt.param)" exception = ex
             end
+            
+        catch ex
+            @error "Failed to compute new branch at p = $(pt.param)" exception = ex
         end
     end
     for (ii, nd) in pairs(node.child)
