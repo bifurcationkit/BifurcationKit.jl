@@ -451,10 +451,8 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
     # let us compute the kernel
-    λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
     verbose && print("├─ computing nullspace of Periodic orbit problem...")
     ζ₋₁ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev) .|> real
-    # we normalize it by the sup norm because it could be too small/big in L2 norm
     ζ₋₁ ./= scaleζ(ζ₋₁)
     verbose && println("Done!")
 
