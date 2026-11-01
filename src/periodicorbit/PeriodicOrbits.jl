@@ -614,7 +614,7 @@ Branch switching at a bifurcation point of periodic orbits (PO) specified by a `
 """
 function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       ind_bif::Int,
-                      _contParams::ContinuationPar;
+                      _contParams::ContinuationPar = getcontparams(br);
                       alg = getalg(br),
                       δp = _contParams.ds, 
                       ampfactor = 1,
@@ -628,7 +628,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         error("Branching from $(bptype) not possible yet.")
     end
     if abs(bifpt.δ[1]) != 1
-        error("Only simple bifurcation points are handled properly")
+        error("Only simple bifurcation points are handled properly.")
     end
     nf = get_normal_form(br, ind_bif; 
                             detailed = Val(true),
@@ -637,7 +637,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                             )
     pred = predictor(nf, δp, ampfactor)
     if isnothing(pred)
-        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"
+        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $nf"
         return nothing
     end
     orbitguess = pred.orbitguess
@@ -685,13 +685,11 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         orbitguess .= solbif.u
     end
 
-    # this should not be
-    po_residual(new_disc, orbitguess, setparam(br, newp))[end] |> abs > 1 && @warn "PO constraint not satisfied"
-    _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
+    # _linear_algo = isnothing(linear_algo) ? BorderingBLS(_contParams.newton_options.linsolver) : linear_algo
 
     branch = continuation( new_disc, orbitguess, alg, _contParams;
+        linear_algo = linear_algo,
         kwargs..., # put this first to be overwritten by the following
-        linear_algo = _linear_algo,
         kind = br.kind,
         record_from_solution = record_from_solution(getprob(br)),
     )

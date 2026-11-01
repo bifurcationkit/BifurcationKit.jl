@@ -792,6 +792,11 @@ function period_doubling_normal_form_iooss(pbwrap,
     v₁  = @view vr[begin:end-1]
     v₁ ./= sqrt(∫(vr, vr)) # this modifies v₁ by reference
 
+    # if we just want the eigenvectors
+    if ~detailed_type
+        return PeriodDoublingPO(pd.x0, T, v₁, nothing, (@set pd.nf = (a = 0, b3 = 0)), coll, false)
+    end
+
     #########
     # compute v1★
     J★ = po_analytical_jacobian(coll, saved_solution(pd.x0), par; _transpose = Val(true), ρF = -1)
@@ -817,11 +822,6 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     @assert ∫(v₁★ₛ, v₁ₛ) ≈ 1/2
     @assert ∫(v₁ₛ, v₁ₛ)  ≈ 1
-
-    # if we just want the eigenvectors
-    if ~detailed_type
-        return PeriodDoublingPO(pd.x0, T, v₁, v₁★, (@set pd.nf = (a = 0, b3 = 0)), coll, false)
-    end
 
     u₀ₛ = get_time_slices(coll, pd.x0) # periodic solution at bifurcation
 
@@ -1917,6 +1917,9 @@ function predictor(nf::BranchPointPO{ <: Shooting },
                     override = false)
     if ~isnothing(nf.nf.nf) && ~override
         pred = predictor(nf.nf, δp)
+        if isnothing(pred) # fold case
+            return nothing
+        end
         ampfactor = pred.amp * ampfactor
         δp = pred.δp
     end
