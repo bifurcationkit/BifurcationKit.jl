@@ -719,6 +719,20 @@ let
     @test _test_sorted(outkk[1])
     @test all(isfinite, outkk[1])
 
+    # a rotated singular B: rounding makes its infinite eigenvalue finite, and gev must drop it.
+    # The finite eigenvalues of (Q'J0Q, diag(1,…,1,0)) are those of the Schur complement of the last entry.
+    for _ in 1:20
+        Q = Matrix(qr(randn(n, n)).Q)
+        Bq = Q * B * Q'
+        λs = BK.gev(DefaultEig(), J0, Bq, n)[1]
+        Jq = Q' * Matrix(J0) * Q
+        reference = eigvals(Jq[1:n-1, 1:n-1] - Jq[1:n-1, n:n] * Jq[n:n, 1:n-1] / Jq[n, n])
+        @test length(λs) == n - 1
+        scale = maximum(abs, reference)
+        @test all(λ -> minimum(abs.(reference .- λ)) <= 1e-8 * scale, λs)
+        @test all(μ -> minimum(abs.(λs .- μ)) <= 1e-8 * scale, reference)
+    end
+
     eil = BK.EigKrylovKit(tol = 1e-9, x₀ = rand(n))
     geil = BK.convert_to_GEV(eil, Symmetric(@set B[end,end]=1e-6))
     outkk = geil(Symmetric(J0), 10)

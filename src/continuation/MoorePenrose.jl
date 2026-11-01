@@ -181,7 +181,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             nothing
     end
 
-    while (step < max_iterations) && (res > tol) && line_step && compute
+    while (step < max_iterations) && (res > tol) && line_step && _continues(compute)
         step += 1
         R01!(FiniteDifferences(), prob, dFdp, x, par, p)
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -239,7 +239,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, p, residuals, z0); fromNewton = false, kwargs...)
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
-    flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
+    flag = _converged(residuals[end] < tol, callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...))
 
     return NonLinearSolution(BorderedArray(x, p),
                             prob,

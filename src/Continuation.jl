@@ -618,8 +618,9 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
 
     plot_branch_cont(contRes, state, it)
 
-    # return current solution in case the corrector did not converge
-    push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, :converged, (getp(state), getp(state))))
+    # the endpoint converged only if the branch reached p_min or p_max; a run stopped inside the domain gets :guess
+    status = isindomain(it, getp(state)) ? :guess : :converged
+    push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, status, (getp(state), getp(state))))
     return contRes
 end
 
