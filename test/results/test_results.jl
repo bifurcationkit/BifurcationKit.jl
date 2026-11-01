@@ -97,6 +97,14 @@ end
     @test !BK.not_done(it, s3)
     @test BK.return_code(s3) == BK.ReturnCode.DsLessThanMin
 
+    # not_done(..., false) must not modify the return code
+    s4 = BK.ContState(z_pred = mk(), τ = mk(), z = mk(), z_old = mk(),
+                      stopcontinuation = true, retcode = BK.ReturnCode.EmptyReturnCode)
+    @test !BK.not_done(it, s4, false)
+    @test s4.retcode == BK.ReturnCode.EmptyReturnCode
+    @test !BK.not_done(it, s4)
+    @test s4.retcode == BK.ReturnCode.Finalized
+
     # the accessor is defined on states, not on continuation kinds
     @test_throws MethodError BK.return_code(BK.EquilibriumCont())
 end

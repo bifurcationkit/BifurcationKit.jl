@@ -370,7 +370,7 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = hh.lens
     _params = whichns == 1 ? pred.params1 : pred.params2
-    newparams = _set(hh.params, (lens1, lens2), _params)
+    newparams = _set(hh.params, (lens1, lens2), (_params[1], _params[2]))
 
     prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)

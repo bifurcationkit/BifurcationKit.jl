@@ -24,9 +24,20 @@ function continuation(prob::AbstractBifurcationProblem,
     if ~bs
         return continuation(itfw, x0, p0, x1, p1)
     else
-        itbw = deepcopy(itfw)
-        resfw = continuation(itfw, x0, p0, x1, p1)
-        resbw = continuation(itbw, x1, p1, x0, p0)
+        # initial state shared by both sides
+        initial_cont_state, _ = iterate_from_two_points(itfw, x0, p0, x1, p1)
+        # save the problem state before the forward continuation
+        initial_parameters = setparam(getprob(itfw), getp(initial_cont_state))
+        initial_solution = save_solution(getprob(itfw), _copy(getx(initial_cont_state)), initial_parameters)
+        # forward side
+        resfw = continuation(itfw, copy(initial_cont_state))
+        # backward side: reverse ds, use a fresh iterator and restore the problem
+        # (important for stateful problems)
+        initial_cont_state.ds *= -1
+        itbw = ContIterable(prob2, alg, _contParams; kwargs...)
+        restore_problem!(getprob(itbw), initial_solution, initial_parameters)
+        update_predictor!(initial_cont_state, itbw)
+        resbw = continuation(itbw, initial_cont_state)
         return _merge(resfw, resbw)
     end
 end
