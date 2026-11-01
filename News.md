@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file (hopefully).
 ## [0.8.9]
 
 ### Breaking changes
+- `predictor` now returns an `EquilibriumPredictor` (equilibria), a `PeriodicOrbitPredictor` (periodic orbits) or an `EmptyPredictor` (no bifurcated branch, e.g. Fold) instead of method-dependent `NamedTuple`s / `nothing`. The core fields are `x0, x1, pnew, amp` (equilibria) and `orbitguess, pnew, prob, ampfactor, po` (periodic orbits); the method-specific fields are stored in `extras` (a `NamedTuple`, or `nothing`) and accessed as `pred.extras.<name>`. The former `pred.p` alias and the direct `pred.dsfactor` / `pred.δp` / `pred.ζc` accesses are removed: use `pred.pnew` and `pred.extras.<name>`. Code testing `isnothing(pred)` must use `pred isa EmptyPredictor`. The always-one `time_factor` field of the Collocation period-doubling predictor was removed
 - `DAEMassBifProblem` no longer exposes a `Mᵗ` field: the mass matrix, its adjoint and the optional mass derivatives are grouped in a `MassFunction` stored in the field `M`. They are passed through `DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), type = ConstantMass)` or `re_make`
 - the low-level methods `newton_fold` / `newton_hopf` now take the bordered vectors `(ζ, ζ★)` and the keyword `jacobian_ma` (default `AutoDiff()`); as a consequence `newton(br, ind)` on a Fold / Hopf point uses the matrix-based jacobian by default
 - `get_mass_matrix(::Trapeze)` is renamed `_get_mass_matrix`
@@ -16,6 +17,7 @@ All notable changes to this project will be documented in this file (hopefully).
 - `BifurcationProblem` / `ODEBifProblem` / `PDEBifProblem` have a new field `restore_problem!`; this adds a type parameter, so archives saved with a previous version cannot be reloaded
 
 ### Added
+- add `AbstractNormalFormPredictor`, `EquilibriumPredictor`, `PeriodicOrbitPredictor` and `EmptyPredictor` as the return types of `predictor`; the `extras` field is a `NamedTuple`, or `nothing` when there are no method-specific fields; add the `get_predicted_param` accessor for the predicted parameter
 - add the mass-adjoint interface `getmassmatrix_adjoint` / `has_massmatrix_adjoint`, and the `MassFunction` structure holding the mass matrix, its adjoint and the optional derivatives `R01` (`∂ₚ⟨w, M(x,p) v⟩`) and `∇x` (`∇ₓ⟨w, M(x,p) v⟩`), exposed through `R01_mass_matrix` / `∇_x_mass_matrix`
 - add the `applyM` field to `MassFunction` (`(x, p, dx) -> M(x,p) * dx`, defaulting to `apply(M(x,p), dx)`) and the `apply_mass_matrix(pb, x, p, dx)` interface; it can be passed through `DAEMassBifProblem(prob, M; applyM = …)` or `re_make`
 - `Trapeze` now resolves its mass matrix from the underlying vector field through `getmassmatrix(prob_vf, x, p)` when the `massmatrix` field is not set, so that a `DAEMassBifProblem` (constant, parameter or state dependent mass) can be discretized; a `massmatrix` provided in the field still takes precedence. For a state dependent `M(x,p)`, the residual evaluates `M` at each time slice while the analytic jacobian treats it as frozen (no `∇ₓM` terms)

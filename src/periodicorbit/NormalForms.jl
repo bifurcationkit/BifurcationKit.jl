@@ -1534,7 +1534,7 @@ doubled period.
 - `override = false`: accepted for interface consistency, currently unused by this method.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem on the doubled mesh.
@@ -1572,7 +1572,7 @@ function predictor(nf::PeriodDoublingPO{ <: Trapeze},
     # we need to duplicate the po as well in case deflation is used
     po0 = get_time_slices(pb, nf.po)
     po = vcat(vec(hcat(po0, po0)), nf.T) 
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po, ζc)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, pbnew, ampfactor, po, (; ζc))
 end
 
 """
@@ -1593,7 +1593,7 @@ and the phase condition of the periodic orbit problem is updated accordingly.
 - `override = false`: accepted for interface consistency, currently unused by this method.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem with the updated phase condition.
@@ -1613,7 +1613,7 @@ function predictor(nf::BranchPointPO{ <: Trapeze},
     pbnew = deepcopy(prob)
     pars = set(getparams(prob), getlens(prob), nf.nf.p)
     updatesection!(pbnew, nf.po, pars)
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po = nf.po, ζc = reshape(nf.ζ, N, M))
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, pbnew, ampfactor, nf.po, (; ζc = reshape(nf.ζ, N, M)))
 end
 
 function predictor(nf::NeimarkSackerPO,
@@ -1621,7 +1621,7 @@ function predictor(nf::NeimarkSackerPO,
                     ampfactor;
                     override = false)
     orbitguess = copy(nf.po)
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, nf.prob, ampfactor, nf.po, nothing)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -1643,13 +1643,12 @@ amplitude `ampfactor` so that the guess lies on the bifurcated branch.
 - `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem on the doubled mesh.
 - `ampfactor`: amplitude multiplier used to build the guess.
 - `δp`: parameter increment used to build the guess (possibly corrected).
-- `time_factor`: factor used to rescale time when building the guess.
 - `po`: periodic orbit used as reference, doubled over the new period.
 """
 function predictor(nf::PeriodDoublingPO{ <: Collocation }, 
@@ -1666,9 +1665,6 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
     new_mesh = vcat(old_mesh[begin:end-1] / 2, old_mesh ./2 .+ 1/2)
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
     update_mesh!(pbnew, new_mesh)
-
-    # parameter to scale time
-    time_factor = 1
 
     if ~override # we use the predictor from the normal form
         if nf.prm == true && ~isnothing(nf.nf.nf)
@@ -1698,13 +1694,10 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
     updatesection!(pbnew, ϕ, nothing)
 
     # we append the doubled period
-    orbitguess = vcat(orbitguess, 2nf.T * time_factor)
-
+    orbitguess = vcat(orbitguess, 2nf.T)
     # we double po in case of use of deflated newton
     po = vcat(orbitguess0[begin:end-N], orbitguess0, nf.T)
-
-    # no need to change pbnew.cache
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, δp, time_factor, po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, pbnew, ampfactor, po, (; δp))
 end
 
 """
@@ -1728,7 +1721,7 @@ correct the parameter increment `δp` and the amplitude `ampfactor`.
 - `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem `nf.prob`.
@@ -1758,7 +1751,7 @@ function predictor(nf::BranchPointPO{ <: Collocation},
             # normal form based on Poincaré return map
             pred = predictor(nf.nf, δp)
             ampfactor *= pred.amp
-            δp = pred.δp
+            δp = pred.extras.δp
         end
         # For the Iooss normal form (nf.prm == false), the coefficients
         # a01, a11, a20, c3 can be used for a refined predictor. We keep
@@ -1767,7 +1760,7 @@ function predictor(nf::BranchPointPO{ <: Collocation},
 
     orbitguess = copy(nf.po)
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ[2]
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, nf.prob, ampfactor, nf.po, nothing)
 end
 
 function _predictor_po_iooss(nf, amp, pnew)
@@ -1783,14 +1776,14 @@ function _predictor_po_iooss(nf, amp, pnew)
                        real(n.a20) * amp^2)
         orbitguess[end] = Tnew
     end
-    return (; orbitguess, pnew, prob = nf.prob, ampfactor = amp, po = nf.po)
+    return PeriodicOrbitPredictor(orbitguess, pnew, nf.prob, amp, nf.po, nothing)
 end
 
 function predictor(bp::PitchforkPO{ <: Collocation},
                     δp,
                     ampfactor;
                     override = false)
-    bp.nf isa BranchPoint || return nothing
+    bp.nf isa BranchPoint || return EmptyPredictor()
     if override
         amp = ampfactor
         pnew = bp.nf.p + δp
@@ -1813,7 +1806,7 @@ function predictor(nf::TranscriticalPO{ <: Collocation},
                     δp,
                     ampfactor;
                     override = false)
-    nf.nf isa BranchPoint || return nothing
+    nf.nf isa BranchPoint || return EmptyPredictor()
     n = nf.nf.nf
     if override
         amp = ampfactor
@@ -1828,7 +1821,7 @@ function predictor(nf::FoldPO{ <: Collocation},
                     δp,
                     ampfactor;
                     override = false)
-    return nothing
+    return EmptyPredictor()
 end
 
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1852,7 +1845,7 @@ the doubled period. Unless `override = true`, the normal form is used to correct
 - `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem on the doubled time interval.
@@ -1882,7 +1875,7 @@ function predictor(nf::PeriodDoublingPO{ <: Shooting },
 
     po0 = copy(nf.po)[begin:end-1]
     po = vcat(po0, po0, nf.po[end])
-    return (;orbitguess, pnew, prob = pbnew, ampfactor, δp, po)
+    return PeriodicOrbitPredictor(orbitguess, pnew, pbnew, ampfactor, po, (; δp))
 end
 
 """
@@ -1904,7 +1897,7 @@ Unless `override = true`, the normal form is used to correct `δp` and
 - `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem `nf.prob`.
@@ -1917,17 +1910,17 @@ function predictor(nf::BranchPointPO{ <: Shooting },
                     override = false)
     if ~isnothing(nf.nf.nf) && ~override
         pred = predictor(nf.nf, δp)
-        if isnothing(pred) # fold case
-            return nothing
+        if pred isa EmptyPredictor # fold case
+            return EmptyPredictor()
         end
         ampfactor = pred.amp * ampfactor
-        δp = pred.δp
+        δp = pred.extras.δp
     end
 
     ζs = nf.ζ .* ampfactor
     orbitguess = copy(nf.po)
     orbitguess[eachindex(ζs)] .+= ζs
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, nf.prob, ampfactor, nf.po, nothing)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -1949,7 +1942,7 @@ normal-form correction is applied by this method.
 - `override = false`: accepted for interface consistency, currently unused by this method.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch, over two periods.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem with the duplicated section.
@@ -1968,7 +1961,7 @@ function predictor(nf::PeriodDoublingPO{ <: PoincareShooting },
     orbitguess = copy(nf.po) .+ ampfactor .* ζs
     orbitguess = vcat(orbitguess, orbitguess .- ampfactor .* ζs)
     po = vcat(nf.po, nf.po)
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = pbnew, ampfactor, po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, pbnew, ampfactor, po, nothing)
 end
 
 """
@@ -1990,7 +1983,7 @@ normal-form correction is applied by this method.
 - `override = false`: accepted for interface consistency, currently unused by this method.
 
 # Returned values
-A `NamedTuple` with fields:
+A [`PeriodicOrbitPredictor`](@ref) with fields:
 - `orbitguess`: guess for the periodic orbit on the bifurcated branch.
 - `pnew`: new parameter value `nf.nf.p + δp`.
 - `prob`: periodic orbit problem `nf.prob`.
@@ -2003,5 +1996,5 @@ function predictor(nf::BranchPointPO{ <: PoincareShooting},
                     override = false)
     ζs = nf.ζ
     orbitguess = nf.po .+ ampfactor .* ζs
-    return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
+    return PeriodicOrbitPredictor(orbitguess, nf.nf.p + δp, nf.prob, ampfactor, nf.po, nothing)
 end

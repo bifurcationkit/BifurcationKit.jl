@@ -404,10 +404,11 @@ get_normal_form1d(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}, ind_bif::
 get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif; kwargs...)
 
 function _trivial_predictor(bp, ds; verbose = false, ampfactor::𝒯 = 1) where {𝒯 <: Number}
-    return (;x0 = bp.x0, 
-            x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
-            p =  bp.p + ds, 
-            amp = ampfactor)
+    return EquilibriumPredictor(bp.x0,
+                                bp.x0 .+ ampfactor .* real.(bp.ζ),
+                                bp.p + ds,
+                                ampfactor,
+                                nothing)
 end
 
 """
@@ -427,12 +428,14 @@ bifurcation based on the normal form coefficients.
 - `ampfactor = 1`: Multiplicative factor for the amplitude prediction.
 
 # Returns
-A named tuple with the following fields:
+An [`EquilibriumPredictor`](@ref) with the following fields:
 - `x0`: predicted point on the trivial solution branch
 - `x1`: predicted point on the bifurcated branch (forward direction)
 - `xm1`: predicted point on the bifurcated branch (backward direction)
-- `p`: new parameter value `bp.p + ds`
+- `pnew`: new parameter value `bp.p + ds`
 - `pm1`: backward parameter value `bp.p - ds`
+- `dsfactor`: factor applied to `ds`
+- `δp`: parameter increment (`pnew - bp.p`)
 - `amp`: amplitude of the bifurcated solution (from normal form, uncorrected)
 - `p0`: original bifurcation parameter value
 
@@ -479,14 +482,11 @@ function predictor(bp::Union{Transcritical, TranscriticalMap},
     end
 
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
-    return (;x0 = convert(Tx0, x0),
-             x1 = convert(Tx0, x1),
-             xm1 = convert(Tx0, xm1),
-             p = pnew,
-             pm1 = bp.p - ds,
-             dsfactor,
-             amp,
-             p0 = bp.p)
+    return EquilibriumPredictor(convert(Tx0, x0),
+                                convert(Tx0, x1),
+                                pnew,
+                                amp,
+                                (; xm1 = convert(Tx0, xm1), pm1 = bp.p - ds, dsfactor, δp = pnew - bp.p, p0 = bp.p))
 end
 
 """
@@ -503,9 +503,10 @@ This function provides prediction for the zeros of the Pitchfork bifurcation poi
 - `ampfactor = 1` factor multiplying prediction.
 
 # Returned values
+An [`EquilibriumPredictor`](@ref) with the following fields:
 - `x0` trivial solution (which bifurcates)
 - `x1` non trivial guess
-- `p` new parameter value
+- `pnew` new parameter value
 - `dsfactor` factor which has been multiplied to `abs(ds)` in order to select the correct side of the bifurcation point where the bifurcated branch exists.
 - `amp` non trivial zero of the normal form
 """
@@ -533,17 +534,12 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
     end
     verbose && println("──▶ Prediction from Normal form, δp = $(pnew - bp.p), amp = $amp")
     x1 = bp.x0 .+ amp .* real.(bp.ζ)
-    return (;x0 = bp.x0, 
-             x1 = x1, 
-             p = pnew, 
-             dsfactor, 
-             amp, 
-             δp = pnew - bp.p)
+    return EquilibriumPredictor(bp.x0, x1, pnew, amp, (; dsfactor, δp = pnew - bp.p))
 end
 
 function predictor(bp::Fold, ::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
     @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is a01⋅δμ + b11⋅x⋅δμ + b20⋅x² + b30⋅x³\n with coefficients \n a01 = $(bp.nf.a01), b11 = $(bp.nf.b11), b20 = $(bp.nf.b20), b30 = $(bp.nf.b30)."
-    return nothing
+    return EmptyPredictor()
 end
 
 predictor(br::BranchPoint, args...; k...) = _predictor(br::BranchPoint, args...; k...)
@@ -578,11 +574,7 @@ function _predictor(bp::AbstractSimpleBranchPoint,
     pnew = bp.p + solutions[I][2]
     x1 = bp.x0 .+ solutions[I][1] .* real.(bp.ζ)
 
-    return (;x0 = bp.x0, 
-            x1, 
-            p = pnew, dsfactor, 
-            amp = one(𝒯), 
-            δp = pnew - bp.p)
+    return EquilibriumPredictor(bp.x0, x1, pnew, one(𝒯), (; dsfactor, δp = pnew - bp.p))
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Base.@kwdef struct NdBPNormalForm{T}

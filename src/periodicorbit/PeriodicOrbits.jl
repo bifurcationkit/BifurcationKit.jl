@@ -636,12 +636,12 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                             normal_form_kwargs...
                             )
     pred = predictor(nf, δp, ampfactor)
-    if isnothing(pred)
-        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $nf"
-        return nothing
+    if pred isa EmptyPredictor
+        @debug "[aBS] The predictor is empty. Probably a Fold point. See\n $nf"
+        return nothing #TODO: EmptyBranch
     end
     orbitguess = pred.orbitguess
-    newp = pred.pnew  # new parameter value
+    newp = get_predicted_param(pred)  # new parameter value
     new_disc = get_discretization(pred.prob) # modified discretization
 
     verbose = get(kwargs, :verbosity, 0) > 0

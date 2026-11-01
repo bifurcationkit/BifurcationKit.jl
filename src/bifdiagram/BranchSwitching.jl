@@ -136,14 +136,14 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     # compute predictor for a point on new branch
     pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
 
-    if isnothing(pred)
-        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"
+    if pred isa EmptyPredictor
+        @debug "[aBS] The predictor is empty. Probably a Fold point. See\n $bp"
         return nothing
     end
 
     verbose && printstyled(color = :green,  "\n──▶ Start branch switching. 
                                              \n──▶ Bifurcation type = ", type(bp), 
-                                            "\n────▶ newp      = ", pred.p, ", δp = ", pred.p - br.specialpoint[ind_bif].param, 
+                                            "\n────▶ newp      = ", get_predicted_param(pred), ", δp = ", get_predicted_param(pred) - br.specialpoint[ind_bif].param, 
                                             "\n────▶ amplitude = ", pred.amp,
                                             "\n")
 
@@ -165,7 +165,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
         solbif = newton(getprob(br), 
                         x0def, 
                         perturb_guess(pred.x1), 
-                        setparam(br, pred.p), 
+                        setparam(br, get_predicted_param(pred)), 
                         optnDf,
                         DeflationOperator(2, one(VI.scalartype(x0def)), Vector{typeof(x0def)}(), _copy(x0def); autodiff = true),
                         lsdefop)
@@ -179,7 +179,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
     kwargs_cont = _keep_continuation_options(values(kwargs))
     branch = continuation(getprob(br),
                             bp.x0, bp.params, # first point on the branch
-                            pred.x1, pred.p,  # second point on the branch
+                            pred.x1, get_predicted_param(pred),  # second point on the branch
                             alg, getlens(br),
                             options_cont; 
                             kind = getkind(br),

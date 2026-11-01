@@ -74,6 +74,8 @@ module BifurcationKit
 
     include("BifurcationPoints.jl")
 
+    include("PredictorStructs.jl")
+
     include("bifdiagram/BranchSwitching.jl")
     normal_form(args...; kwargs...) = get_normal_form(args...; kwargs...)
     include("NormalForms.jl")
