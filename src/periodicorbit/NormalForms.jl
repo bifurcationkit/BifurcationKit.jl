@@ -11,7 +11,7 @@ Compute the normal form (NF) of bifurcations of periodic orbits. We detail the a
 - `Teigvec = _getvectortype(br)` type of the eigenvectors (can be useful for GPU)
 - `scaleζ = norm`, scale the eigenvector
 - `autodiff = false` use autodiff or finite differences in some part of the normal form computation
-- `detailed = true` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is long.
+- `detailed = true` whether to compute only a simplified normal form when only basic information is required. This can be useful is cases the computation is long. For a branch point of a periodic orbit, `detailed = Val(false)` only computes the eigenvectors and returns a `BranchPointPO`; the pitchfork/transcritical/fold type cannot be determined without the normal form coefficients.
 - `δ = getdelta(wrap)` delta used for derivatives based on finite differences.
 
 # Notes
@@ -132,19 +132,15 @@ end
     ind0 = argmax(x -> abs(abs(x) - 1), _dot_prods)
     ζ = ind0 == 1 ? ζ1 : ζ2
     verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(_ζ₀, ζ))
-
     # compute the full eigenvector
     ζ_a = floquetsolver(Val(:ExtractEigenVector), pbwrap, saved_solution(bifpt.x), setparam(br, bifpt.param), ζ)
     ζs = reduce(vcat, ζ_a)
-
     # normal form for Poincaré map
     bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, pars, getlens(br), nothing, nothing, nothing, :none)
-
     if ~detailed_type
         ζ★ = nothing
         return BranchPointPO(x0, period, real.(ζs), ζ★, bp0, prob_sh, true)
     end
-
     # newton parameter
     optn = br.contparams.newton_options
     branch_point_normal_form(pbwrap, bp0, (ζ, ζs, ζ₀), optn, bifpt.τ; verbose, nev, kwargs_nf...)
@@ -238,22 +234,19 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
-    end # method based on Poincaré Return Map (PRM), newton parameter
+    end 
+    # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 
-function _get_spectral_basis_iooss_bp(pbwrap::PeriodicOrbitFunctionalColl,
-                                      bp0::BranchPoint;
-                                        )
+@views function _get_spectral_basis_iooss_bp(pbwrap::PeriodicOrbitFunctionalColl, bp0::BranchPoint)
     coll = get_discretization(pbwrap)
     𝒯 = eltype(coll)
-    N, m, Ntst = size(coll)
     pars = bp0.params
     period = getperiod(coll, bp0.x0, pars)
     _rand(n, r = 2) = 𝒯(r) .* (rand(𝒯, n) .- 1//2)
-
-    # we get the nontrivial floquet eigenvectors μ = 1
+    # we get the nontrivial floquet eigenvector μ = 1
     # We could use Witte, Virginie De. “Computational Analysis of Bifurcations of Periodic Orbits,” n.d.
     # formula (6.9) on page 201
     # but I am not sure that the formula is correct, ie having a Jordan block [0 1; 0 0].
@@ -267,7 +260,7 @@ function _get_spectral_basis_iooss_bp(pbwrap::PeriodicOrbitFunctionalColl,
     end
 
     jac = jacobian(pbwrap, bp0.x0, pars)
-    J = copy((jac))
+    J = copy(jac)
     nj = size(J, 1)
     J[end, begin:end-1] .= Fu₀
     J[:, end] .= _rand(nj)
@@ -315,7 +308,7 @@ function _get_spectral_basis_iooss_bp(pbwrap::PeriodicOrbitFunctionalColl,
     v₁ = q₁ ./ norminf(q₁)
     v₀ = q₀ ./ norminf(q₀)
     @debug "" ind _ps J0 * v₁|>norminf J0*v₀|>norminf
-    return (;v₁, v₀, coll, period, p₀, p₁, u₀ₛ, Fu₀ₛ, Fu₀)
+    return (;v₁, v₀, coll, period, p₀, p₁, u₀ₛ, Fu₀ₛ, Fu₀, J0)
 end
 
 function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
@@ -376,16 +369,52 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
     return BranchPointPO(bp0.x0, period, nothing, ζ★, nothing, coll, true)
 end
 
+@views function _iooss_interp_gauss(coll, h)
+    N, m, Ntst = size(coll)
+    hg = zeros(eltype(h), N, m*Ntst)
+    hs = reshape(h, N, m*Ntst + 1)
+    Lg, _ = get_Ls(coll.mesh_cache)
+    rg = UnitRange(1, m+1)
+    rg_l = UnitRange(1, m)
+    @inbounds for _ in 1:Ntst
+        hg[:, rg_l] .= hs[:, rg] * Lg
+        rg = rg .+ m
+        rg_l = rg_l .+ m
+    end
+    return hg
+end
+
+@views function _iooss_rows(coll, hg)
+    N, m, Ntst = size(coll)
+    out = zeros(eltype(hg), length(coll))
+    out[begin:begin + N*m*Ntst - 1] .= vec(hg)
+    return out
+end
+
+@views function _iooss_solve_bvp(J0, T, v, u0dot, p0, p1, rhs)
+    n = size(J0, 1)
+    𝒯 = eltype(J0)
+    M = zeros(𝒯, n + 2, n + 2)
+    M[1:n, 1:n] .= J0
+    M[1:n, n+1] .= v
+    M[1:n, n+2] .= u0dot
+    M[n+1, 1:n] .= p0
+    M[n+2, 1:n] .= p1
+    b = vcat(T .* rhs, zero(𝒯), zero(𝒯))
+    sol = M \ b
+    return sol[1:n]
+end
+
 function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                                     bp0::BranchPoint;
                                     nev::Int = 3,
                                     δ = getdelta(pbwrap),
                                     verbose = false,
                                     lens = getlens(pbwrap),
-                                    kwargs_nf...)
+                                    tol_fold::Real = 1e-3,
+                                    detailed::Val{detailed_type} = Val(true),
+                                    kwargs_nf...) where {detailed_type}
     @debug "BP normal form collocation, method Iooss"
-    (;v₁, v₀, coll, period, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
-    
     # plot(layout = @layout [a;b;c;d])
     # vsol = get_periodic_orbit(coll, bp0.x0,1)
     # plot!(vsol, ylabel = "po", subplot = 1, legend = :topright)
@@ -396,7 +425,132 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     # vsol = get_periodic_orbit(coll, vcat(v₁,period), 1)
     # plot!(vsol, linewidth=2, ylabel = "v₁", subplot=4, labels = collect(1:4)') |> display
     # @assert false
-    return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, true)
+    verbose && println("━"^53*"\n──▶ Branch point normal form computation")
+
+    (;v₁, v₀, coll, period, p₀, p₁, u₀ₛ, Fu₀, J0) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
+
+    if ~detailed_type
+        return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
+    end
+
+    N, m, Ntst = size(coll)
+    𝒯 = eltype(coll)
+    par = bp0.params
+    T = period
+
+    VF = coll.prob_vf
+    F(u, p) = residual(VF, u, p)
+    A(u, p, du) = dF(VF, u, p, du)
+    B(u, p, du1, du2) = d2F(VF, u, p, du1, du2)
+    r01(u, p) = R01(VF, u, p)
+    r11(u, p, du) = R11(VF, u, p, du)
+
+    u0g = _iooss_interp_gauss(coll, vec(u₀ₛ))
+    vg = _iooss_interp_gauss(coll, v₁)
+
+    Fu0g = zeros(𝒯, N, m*Ntst)
+    F01g = zeros(𝒯, N, m*Ntst)
+    F11vg = zeros(𝒯, N, m*Ntst)
+    Av = zeros(𝒯, N, m*Ntst)
+    Bvv = zeros(𝒯, N, m*Ntst)
+    @inbounds for p in axes(u0g, 2)
+        up = @view u0g[:, p]
+        vp = @view vg[:, p]
+        Fu0g[:, p] .= F(up, par)
+        F01g[:, p] .= r01(up, par)
+        F11vg[:, p] .= r11(up, par, vp)
+        Av[:, p] .= A(up, par, vp)
+        Bvv[:, p] .= B(up, par, vp, vp)
+    end
+
+    # physical time null vector u0dot and nontrivial null vector v
+    u0dot = Fu₀
+    v = v₁
+
+    # matrix of solvability conditions
+    Mcoef = [LA.dot(p₀, v) LA.dot(p₀, u0dot);
+             LA.dot(p₁, v) LA.dot(p₁, u0dot)]
+
+    # alpha is defined by J0 v = -alpha T F(u0)
+    J0v = J0 * v
+    den = [LA.dot(p₀, u0dot), LA.dot(p₁, u0dot)]
+    num = [LA.dot(p₀, J0v), LA.dot(p₁, J0v)]
+    α = -LA.dot(den, num) / (T * LA.dot(den, den))
+
+    vdotg = Av .- α .* Fu0g
+    rows(g) = _iooss_rows(coll, g)
+    coeff(g) = Mcoef \ [LA.dot(p₀, rows(g)), LA.dot(p₁, rows(g))]
+
+    # equation (5): c01, a01 and h01
+    c01, a01 = coeff(F01g)
+    rhs5g = F01g .- c01 .* vg .- a01 .* Fu0g
+    h01 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs5g))
+    h01g = _iooss_interp_gauss(coll, h01)
+    Ah01 = zeros(𝒯, N, m*Ntst)
+    for p in axes(Ah01, 2)
+        Ah01[:, p] .= A(u0g[:, p], par, h01g[:, p])
+    end
+    h01dotg = Ah01 .+ F01g .- c01 .* vg .- a01 .* Fu0g
+
+    # equation (7): c2, a20 and h20
+    rhs20raw = Bvv .- 2 .* α .* vdotg
+    c2, a20 = 0.5 .* coeff(rhs20raw)
+    rhs20g = Bvv .- 2c2 .* vg .- 2a20 .* Fu0g .- 2 .* α .* vdotg
+    h20 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs20g))
+    h20g = _iooss_interp_gauss(coll, h20)
+    Ah20 = zeros(𝒯, N, m*Ntst)
+    for p in axes(Ah20, 2)
+        Ah20[:, p] .= A(u0g[:, p], par, h20g[:, p])
+    end
+    h20dotg = @. Ah20 + Bvv - 2c2 * vg - 2a20 * Fu0g - 2 * α * vdotg
+
+    # equation (6): c11, a11 and h11
+    Bh01v = zeros(𝒯, N, m*Ntst)
+    for p in axes(Bh01v, 2)
+        Bh01v[:, p] .= B(u0g[:, p], par, h01g[:, p], vg[:, p])
+    end
+    rhs6raw = @. Bh01v + F11vg - c01 * h20g - a01 * vdotg - α * h01dotg
+    c11, a11 = coeff(rhs6raw)
+    rhs6g = @. rhs6raw - c11 * vg - a11 * Fu0g
+    h11 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs6g))
+    h11g = _iooss_interp_gauss(coll, h11)
+
+    # equation (8): c3 (a30) and h30
+    Bv20 = zeros(𝒯, N, m*Ntst)
+    for p in axes(Bv20, 2)
+        Bv20[:, p] .= B(u0g[:, p], par, vg[:, p], h20g[:, p])
+    end
+    rhs8raw = @. 3 * Bv20 - 6c2 * h20g - 6a20 * vdotg - 3 * α * h20dotg
+    dv = [LA.dot(p₀, v), LA.dot(p₁, v)]
+    a30 = LA.dot(dv, [LA.dot(p₀, rows(rhs8raw)), LA.dot(p₁, rows(rhs8raw))]) /
+          (6 * LA.dot(dv, dv))
+    rhs8g = rhs8raw .- 6a30 .* vg
+    h30 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs8g))
+    h30g = _iooss_interp_gauss(coll, h30)
+
+    verbose && println("├─ a01 = ", a01)
+    verbose && println("├─ a11 = ", a11)
+    verbose && println("├─ a20 = ", a20)
+    verbose && println("└─ a30 = ", a30)
+
+    nf = (; a01, a11, a20, a30, α, c01, c11, c2, c3 = a30,
+            h01, h11, h20, h30, h01g, h11g, h20g, h30g,
+            v1 = v₁, v0 = v₀, vdot = vdotg, p0 = p₀, p1 = p₁)
+
+    bp0 = @set bp0.nf = nf
+    if max(abs(c01), abs(c11)) > 1e-10
+        if abs(c01) < tol_fold
+            if 100abs(c2) < abs(a30)
+                type_pf = real(c11) * real(a30) < 0 ? :SuperCritical : :SubCritical
+                bp0 = @set bp0.type = type_pf
+                return PitchforkPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
+            end
+            return TranscriticalPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
+        else
+            return FoldPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
+        end
+    end
+    return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function period_doubling_normal_form(pbwrap,
@@ -576,7 +730,7 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     # method based on Poincaré Return Map (PRM)
     # newton parameter
     optn = br.contparams.newton_options
-    return period_doubling_normal_form_prm(pbwrap, pd0, optn; verbose, nev, kwargs_nf...)
+    return period_doubling_normal_form_prm(pbwrap, pd0, optn; detailed, verbose, nev, kwargs_nf...)
 end
 
 function period_doubling_normal_form_iooss(pbwrap,
@@ -1603,15 +1757,72 @@ function predictor(nf::BranchPointPO{ <: Collocation},
             pred = predictor(nf.nf, δp)
             ampfactor *= pred.amp
             δp = pred.δp
-        elseif nf.prm == false 
-            error("Not available yet!! WIP !!")
         end
+        # For the Iooss normal form (nf.prm == false), the coefficients
+        # a01, a11, a20, a30 can be used for a refined predictor. We keep
+        # the requested δp and ampfactor for now.
     end
 
     orbitguess = copy(nf.po)
     orbitguess[begin:end-1] .+= ampfactor .* nf.ζ[2]
     return (;orbitguess, pnew = nf.nf.p + δp, prob = nf.prob, ampfactor, po = nf.po)
 end
+
+function _predictor_po_iooss(nf, amp, pnew)
+    orbitguess = copy(nf.po)
+    orbitguess[begin:end-1] .+= amp .* nf.ζ[2]
+    # first-order correction of the period from the Iooss normal form
+    if nf.nf isa BranchPoint && nf.nf.nf isa NamedTuple &&
+       haskey(nf.nf.nf, :α) && haskey(nf.nf.nf, :a01)
+        n = nf.nf.nf
+        μ = pnew - nf.nf.p
+        Tnew = nf.T * (1 - real(n.α) * amp -
+                       (real(n.a11) * amp + real(n.a01)) * μ -
+                       real(n.a20) * amp^2)
+        orbitguess[end] = Tnew
+    end
+    return (; orbitguess, pnew, prob = nf.prob, ampfactor = amp, po = nf.po)
+end
+
+function predictor(nf::PitchforkPO{ <: Collocation},
+                    δp,
+                    ampfactor;
+                    override = false)
+    nf.nf isa BranchPoint || return nothing
+    n = nf.nf.nf
+    if override
+        amp = ampfactor
+        pnew = nf.nf.p + δp
+    else
+        dsfactor = real(n.c11) * real(n.a30) < 0 ? one(ampfactor) : -one(ampfactor)
+        amp = ampfactor * sqrt(-abs(δp) * dsfactor * real(n.c11) / real(n.a30))
+        pnew = nf.nf.p + δp
+    end
+    return _predictor_po_iooss(nf, amp, pnew)
+end
+
+function predictor(nf::TranscriticalPO{ <: Collocation},
+                    δp,
+                    ampfactor;
+                    override = false)
+    nf.nf isa BranchPoint || return nothing
+    n = nf.nf.nf
+    if override
+        amp = ampfactor
+    else
+        amp = -δp * real(n.c11) / real(n.c2) * ampfactor
+        abs(amp) < eps(real(zero(eltype(nf.po)))) && (amp = ampfactor * abs(δp))
+    end
+    return _predictor_po_iooss(nf, amp, nf.nf.p + δp)
+end
+
+function predictor(nf::FoldPO{ <: Collocation},
+                    δp,
+                    ampfactor;
+                    override = false)
+    return nothing
+end
+
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)

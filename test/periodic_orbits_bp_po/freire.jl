@@ -100,8 +100,15 @@ begin
         @test_skip bp.nf.nf.b30 ≈ 1657  rtol = 1e-2
         
         bppo = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(false))
-        BK.predictor(bppo, 0.01, 0.1)
-        
+        @test bppo isa BK.PitchforkPO
+        @test bppo.nf.type == :SubCritical
+        pred = BK.predictor(bppo, 0.01, 0.1)
+        @test !isnothing(pred)
+
+        # detailed = Val(false) skips all the normal form coefficients
+        bppo_lite = get_normal_form(br_po, 2; detailed = Val(false))
+        @test bppo_lite isa BK.BranchPointPO
+
         br_po_bp = continuation(deepcopy(br_po), 2; 
             δp = -0.001, ampfactor = 0.1,
             normal_form_kwargs =( detailed = Val(false),),

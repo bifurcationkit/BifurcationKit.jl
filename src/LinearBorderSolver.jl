@@ -366,7 +366,7 @@ This struct is used to provide a bordered linear solver based on a matrix free o
 
 # Constructor
 
-    MatrixFreeBLS(solver, ::Bool)
+    MatrixFreeBLS(solver, use_bordered_array::Bool)
 
 # Internal fields
 

@@ -41,7 +41,6 @@ Base.getindex(tree::BifDiagNode, code...) = get_branch(tree, code)
 get_solution(tree::BifDiagNode, ind) = get_solution(tree.γ, ind)
 get_normal_form(tree::BifDiagNode, args...; kwargs...) = get_normal_form(tree.γ, args...; kwargs...)
 
-
 function Base.show(io::IO, tree::BifDiagNode)
     println(io, "[Bifurcation diagram]")
     println(io, " ┌─ From $(tree.code)-th bifurcation point.")
@@ -136,7 +135,14 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
 end
 
 # convenient function for branching
-function _letsbranch_for_bd(br::AbstractBranchResult, _id::Int, _pt, _level::Int, options; _dsfactor = 1, _ampfactor = 1, kwargs...)
+function _lets_branch_from_bif_point(br::AbstractBranchResult,
+                                    _id::Int,
+                                    _pt,
+                                    _level::Int,
+                                    options; 
+                                    _dsfactor = 1,
+                                    _ampfactor = 1,
+                                    kwargs...)
     optscont = options(_pt.x, _pt.param, _level + 1)
     @reset optscont.ds *= _dsfactor
     continuation(get_contresult(br), _id, optscont;
@@ -154,7 +160,7 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 # Arguments
 - `node::BifDiagNode` a node in the bifurcation diagram
 - `maxlevel` required maximal level of recursion.
-- `options = (x, p, level; k...) -> contparams` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
+- `options = (x, p, level; k...) -> ::ContinuationPar` this function allows to change the [`continuation`](@ref) options depending on the branching `level`. The argument `x, p` denotes the current solution to `F(x, p)=0`.
 
 # Optional arguments
 - `code = "0"` code used to display iterations
@@ -178,8 +184,9 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
 
     # current level of recursion
     level = node.level
+    γ0 = get_branch(node)
 
-    for (id, pt) in pairs(node.γ.specialpoint)
+    for (id, pt) in pairs(γ0.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
         if pt.step > 1 && (pt.type in (:bp, :nd))
@@ -191,21 +198,21 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
-                γ = _letsbranch_for_bd(node.γ, id, pt, level, options; kwargs...)
+                γ = _lets_branch_from_bif_point(γ0, id, pt, level, options; kwargs...)
                 add!(node, γ, level+1, id)
                 if ~isnothing(γ) && verbose 
                     printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
                 end
-                verbose && _show(stdout, node.γ.specialpoint[id], id)
+                verbose && _show(stdout, γ0.specialpoint[id], id)
 
                 # in the case of a Transcritical / Pitchfork bifurcation, we compute the other branch
                 if ~isnothing(γ) && ~halfbranch && ~(γ isa Branch{<: Any, <: Any, <: Vector{ <: ContResult}})
                     bp = from(γ)
                     if bp isa Transcritical
-                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _dsfactor = -1, kwargs...)
+                        γ = _lets_branch_from_bif_point(γ0, id, pt, level, options; _dsfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     elseif bp isa Pitchfork
-                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _ampfactor = -1, kwargs...)
+                        γ = _lets_branch_from_bif_point(γ0, id, pt, level, options; _ampfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                 end

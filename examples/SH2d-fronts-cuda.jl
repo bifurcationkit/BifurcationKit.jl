@@ -184,7 +184,7 @@ end
 @reset br.prob.VF.d2F = d2F_shfft
 @reset br.prob.VF.d3F = d3F_shfft
 
-bpnf = get_normal_form(br, 2; nev = 30, autodiff = false, verbose = true)
+bpnf = get_normal_form(br, 2; nev = 30, verbose = true)
 ####################################################################################################
 # automatic branch switching
 br2 = @time continuation(br, 2, 

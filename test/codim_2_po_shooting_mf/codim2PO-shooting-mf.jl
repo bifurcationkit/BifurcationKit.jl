@@ -40,9 +40,6 @@ argspo = (record_from_solution = (x, p; k...) -> begin
                 period = getperiod(p.prob, x, p.p))
     end,)
 ################################################################################
-# import DifferentiationInterface as DI
-# using Zygote, SciMLSensitivity
-
 probsh, cish = generate_ci_problem( Shooting(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 
     alg = Rodas5(),
     jacobian = BK.AutoDiffMF(),
@@ -55,14 +52,8 @@ function flow(x0, prob0, tm, p = prob0.p)
     return sol[end]
 end
 
-function my_R01(x, pars, tΣ, lens, p₀)
-    zero(x)
-end
-
-flowmap(z, p, tm) = ODE.solve(
-    ODE.remake(prob_de; u0 = z, tspan = (0, tm), p = p), alg
-)[end]
-
+my_R01(x, pars, tΣ, lens, p₀) = zero(x)
+flowmap(z, p, tm) = ODE.solve(ODE.remake(prob_de; u0 = z, tspan = (0, tm), p = p), alg)[end]
 
 function vjp_flow_forwarddiff(fl, x, pars, dx, tm; kwargs...)
     Jf = ForwardDiff.jacobian(z -> BK.evolve(fl, z, pars, tm; kwargs...).u, x)

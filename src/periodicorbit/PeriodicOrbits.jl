@@ -124,6 +124,9 @@ for PSType in (:POSavedSolutionAndState,
 
         # Internal fields
         $(TYPEDFIELDS)
+
+        # Methods
+        - `saved_solution`
         """ struct $PSType{T1, T2, T3, T4}
             "Initial mesh."
             mesh::T1
@@ -630,6 +633,10 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                             normal_form_kwargs...
                             )
     pred = predictor(nf, δp, ampfactor)
+    if isnothing(pred)
+        @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"
+        return nothing
+    end
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     new_disc = get_discretization(pred.prob) # modified discretization

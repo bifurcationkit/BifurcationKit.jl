@@ -349,7 +349,7 @@ function R11(::FiniteDifferences,
     lens = getlens(prob)
     p = _get(par, getlens(prob))
     (apply(jacobian(prob, x0, set(par, lens, p + δ)), dx) .- 
-               apply(jacobian(prob, x0, set(par, lens, p - δ)), dx)) ./ (2δ)
+     apply(jacobian(prob, x0, set(par, lens, p - δ)), dx)) ./ (2δ)
 end
 
 function R11(::AutoDiff,
