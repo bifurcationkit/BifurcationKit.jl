@@ -368,6 +368,12 @@ $(TYPEDSIGNATURES)
 Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@ref) or a vector of branches when the `Branch` was obtained by branching from an Nd bifurcation point using [`continuation`](@ref) / `multicontinuation`.
 """
 @inline getbranches(br::Branch) = getfield(br, :γ)
+
+# iterate the branches held in a Branch. Returns the vector of branches for a Branch holding
+# a vector, and an iterator with a single element otherwise
+@inline _branches_iter(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getbranches(br)
+@inline _branches_iter(br) = (br,)
+
 Base.length(br::Branch) = length(getbranches(br))
 @inline kernel_dimension(br::Branch, ind) = kernel_dimension(getbranches(br), ind)
 get_solution(br::Branch, ind) = get_solution(getbranches(br), ind)
