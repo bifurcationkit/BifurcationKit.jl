@@ -51,7 +51,7 @@ type(::PeriodDoublingPO) = :PeriodDoubling
 type(::BranchPointPO) = :BranchPoint
 type(::PitchforkPO) = :Pitchfork
 type(::TranscriticalPO) = :Transcritical
-type(::FoldPO) = :fold
+type(::FoldPO) = :Fold
 
 function Base.show(io::IO, pd::PeriodDoublingPO)
     printstyled(io, "Period-Doubling", color=:cyan, bold = true)

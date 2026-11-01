@@ -307,41 +307,28 @@ function po_residual!(pb::Shooting, out, x, p)
     out
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+@inline __get_index_for_record_shooting(sol::Vector, i::Int) = sol[i]
+@inline __get_index_for_record_shooting(sol::RecursiveArrayTools.VectorOfArray, i::Int) = sol.u[i]
+@inline __get_index_for_record_shooting(sol::SciMLBase.EnsembleSolution, i::Int) = sol.u[i]
+
 """
 $(TYPEDSIGNATURES)
 
 Compute the full periodic orbit associated to `x`. Mainly for plotting purposes.
 """
 function get_periodic_orbit(sh::Shooting, x::AbstractVector, pars; kode...)
-    T = getperiod(sh, x)
-    M = get_mesh_size(sh)
-    N = div(length(x) - 1, M)
-    xv = @view x[begin:end-1]
-    xc = reshape(xv, N, M)
-    _get_shooting_solution(sh, xc, T, pars; kode...)
-end
-get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
-
-@inline __get_index_for_record_shooting(sol::Vector, i::Int) = sol[i]
-@inline __get_index_for_record_shooting(sol::RecursiveArrayTools.VectorOfArray, i::Int) = sol.u[i]
-@inline __get_index_for_record_shooting(sol::SciMLBase.EnsembleSolution, i::Int) = sol.u[i]
-
-function _get_shooting_solution(sh::Shooting, xc::AbstractMatrix, T, pars; kode...)
-    M = get_mesh_size(sh)
-    if ~isparallel(sh)
-        sol_ode = [evolve(sh.flow, Val(:Full), xc[:, ii], pars, sh.ds[ii] * T; kode...) for ii in 1:M]
-    else # threaded version
-        sol_ode = evolve(sh.flow, Val(:Full), xc, pars, sh.ds .* T; kode...)
-    end
+    interp = get_po_solution(sh, x, pars; kode...)
+    sol_ode = getx(interp).sol
     times = __get_index_for_record_shooting(sol_ode, 1).t
-
     us = RecursiveArrayTools.VectorOfArray(__get_index_for_record_shooting(sol_ode, 1).u)
+    M = get_mesh_size(sh)
     for ii in 2:M
         append!(times, __get_index_for_record_shooting(sol_ode, ii).t .+ times[end])
         append!(us.u, __get_index_for_record_shooting(sol_ode, ii).u)
     end
     return BVPSolution(t = times, u = us)
 end
+get_periodic_orbit(sh::Shooting, x::AbstractVector, p::Real; kode...) = get_periodic_orbit(sh, x, setparam(sh, p); kode...)
 
 function get_po_solution(sh::Shooting, x::AbstractVector, pars; kode...)
     T = getperiod(sh, x)
@@ -359,15 +346,15 @@ function get_po_solution(sh::Shooting, x::AbstractVector, pars; kode...)
     return POInterpolation(sh, sol, pars)
 end
 
-function (sol::POInterpolation{ <: Shooting})(t)
-    T = sol.x.period
+function (interp::POInterpolation{ <: Shooting})(t)
+    T = getx(interp).period
     t = mod(t, T)
     t0 = zero(t)
-    M = get_mesh_size(sol.pb)
+    M = get_mesh_size(getprob(interp))
+    sol_ode = getx(interp).sol
     ii = 1
     while ii <= M
-        # TODO: it breaks for VoA! use getindex?
-        tspan = sol.x.sol[ii].prob.tspan
+        tspan = __get_index_for_record_shooting(sol_ode, ii).prob.tspan
         if t0 + tspan[1] <= t <= t0 + tspan[2]
             break
         else
@@ -375,7 +362,7 @@ function (sol::POInterpolation{ <: Shooting})(t)
             ii += 1
         end
     end
-    sol.x.sol[ii](t - t0)
+    __get_index_for_record_shooting(sol_ode, ii)(t - t0)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # functions needed for Branch switching from Hopf bifurcation point

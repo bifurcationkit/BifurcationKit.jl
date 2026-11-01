@@ -168,9 +168,7 @@ julia> br.param
     "Return code. See [`ReturnCode`](@ref)"
     retcode::ReturnCode.T = ReturnCode.EmptyReturnCode
 
-    if !(contparams isa ContinuationPar)
-        error("Only `::ContinuationPar` parameters are allowed")
-    end
+    @assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
 # returns the number of steps in a branch
