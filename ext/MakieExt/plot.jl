@@ -309,10 +309,20 @@ function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     fig = Figure()
     ax = fig[1, 1] = Axis(fig)
 
-    _plot_bifdiag_makie!(ax, bd; code, level, k...)
+    plot!(ax, bd; code, level, k...)
 
     display(fig)
     fig, ax
+end
+
+function plot!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
+    _plot_bifdiag_makie!(ax, bd; code, level, k...)
+    return ax
+end
+
+function plot!(ax, bd::Vector{<:BifDiagNode}; code = (), level = (-Inf, Inf), k...)
+    _plot_bifdiag_makie!(ax, bd; code, level, k...)
+    return ax
 end
 
 function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
@@ -329,7 +339,7 @@ function _plot_bifdiag_makie!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf
     end
 end
 
-function _plot_bifdiag_makie!(ax, bd::Vector{BifDiagNode}; code = (), level = (-Inf, Inf), k...)
+function _plot_bifdiag_makie!(ax, bd::Vector{<:BifDiagNode}; code = (), level = (-Inf, Inf), k...)
     for b in bd
         _plot_bifdiag_makie!(ax, b; code, level, k...)
     end
