@@ -195,7 +195,9 @@ has_trivial_mass_mastrix(::DAEMassBifProblem) = false
 
 # generic constructors, the kind of mass matrix `type` defaults to `ConstantMass`
 function DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), applyM = nothing, dMv = AutoDiff(), type = ConstantMass)
-    @assert type <: AbstractDAEMassType "The provided `type` for the mass matrix must be a subtype of `AbstractDAEMassType`, e.g. `ConstantMass`."
+    if !(type <: AbstractDAEMassType)
+        error("The provided `type` for the mass matrix must be a subtype of `AbstractDAEMassType`, e.g. `ConstantMass`.")
+    end
     return DAEMassBifProblem{type}(prob, M; Mᵗ, R01, ∇xM, applyM, dMv)
 end
 function DAEMassBifProblem{Tkind}(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), applyM = nothing, dMv = AutoDiff()) where {Tkind <: AbstractDAEMassType}

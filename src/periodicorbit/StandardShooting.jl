@@ -191,7 +191,7 @@ function po_residual(sh::Shooting, x::BorderedArray, pars)
             _copyto!(_getindex(out.u, ii), evolve(sh.flow, _getindex(x.u, ii), pars, sh.ds[ii] * T).u .- _getindex(x.u, ip1))
         end
     else
-        @assert false "Not implemented yet. Try to use an AbstractVector instead"
+        error("Not implemented yet. Try to use an AbstractVector instead")
     end
 
     # add constraint

@@ -257,7 +257,7 @@ function po_jvp(psh::PoincareShooting, x_bar::AbstractVector, par, dx_bar::Abstr
             @views outc[:, ii] .= dxc[:, ii] .- diff_poincare_map(psh, xc[:, im1], par, dxc[:, im1], im1)
         end
     else
-        @assert false "Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences."
+        error("Analytical Jacobian for parallel Poincare Shooting not implemented yet. Please use the option δ > 0 to use Matrix-Free jacobian or chose `:FiniteDifferencesDense` to compute jacobian based on finite differences.")
     end
 
     # build the array to be returned
@@ -335,7 +335,9 @@ function re_make(psh::PoincareShooting, prob_vf, hopfpt, ζr, centers, period; k
         centers = psh.section.centers
     end
 
-    @assert ~(psh.flow isa AbstractFlow) "Somehow, this method was not called as it should. `psh.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field."
+    if psh.flow isa AbstractFlow
+        error("Somehow, this method was not called as it should. `psh.flow` should be a Named Tuple, prob should be constructed with the simple constructor, not yielding a Flow for its flow field.")
+    end
 
     # update the problem, hacky way to pass parameters
     if length(psh.flow) == 4

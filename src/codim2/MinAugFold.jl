@@ -342,7 +342,7 @@ $(TYPEDSIGNATURES)
 
 Codim 2 continuation of Fold points. This function turns an initial guess for a Fold point into a curve of Fold points based on a Minimally Augmented formulation. The arguments are as follows
 - `prob::AbstractBifurcationProblem`
-- `foldpointguess` initial guess `(x_0, p1_0)` for the Fold point. It should be a `BorderedArray` as returned by the function `foldpoint`
+- `foldpointguess` initial guess `(x_0, p1_0)` for the Fold point. It should be a `BorderedArray` as returned by the function `fold_point`
 - `par` set of parameters
 - `lens1` parameter axis for parameter 1
 - `lens2` parameter axis for parameter 2

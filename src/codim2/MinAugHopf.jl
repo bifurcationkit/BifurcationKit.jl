@@ -409,8 +409,12 @@ function newton_hopf(br::AbstractBranchResult, ind_hopf::Int;
     guessₕ = hopf_point(br, ind_hopf)
     bifpt = br.specialpoint[ind_hopf]
     options.verbose && println("--> Newton Hopf, the eigenvalue considered here is ", br.eig[bifpt.idx].eigenvals[bifpt.ind_ev])
-    @assert bifpt.idx == bifpt.step + 1 "Error, the bifurcation index does not refer to the correct step."
-    @assert ~isempty(br.eig[bifpt.idx].eigenvecs) "You must save the eigenvectors for this to work."
+    if !(bifpt.idx == bifpt.step + 1)
+        error("Error, the bifurcation index does not refer to the correct step.")
+    end
+    if isempty(br.eig[bifpt.idx].eigenvecs)
+        error("You must save the eigenvectors for this to work.")
+    end
     ζ = geteigenvector(options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev)
     return newton_hopf(prob, guessₕ, getparams(br), options; nev = br.contparams.nev, ζ, kw...)
 end
@@ -612,7 +616,9 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 finalise_solution = get(kwargs, :finalise_solution, finalise_default),
                 event
             )
-    @assert ~isnothing(br) "Empty branch!"
+    if isnothing(br)
+        error("Empty branch!")
+    end
     return _correct_event_labels(br)
 end
 

@@ -523,7 +523,9 @@ node slices and interpolates to the Gauss points internally.
                         period = one(VI.scalartype(ug)))
     𝒯y = promote_type(VI.scalartype(ug), VI.scalartype(vg))
     n, m, Ntst = size(coll)
-    @assert (size(ug) == (n, m*Ntst) && size(vg) == (n, m*Ntst)) "∫_gauss expects n x (m*Ntst) arrays of Gauss-point values"
+    if !((size(ug) == (n, m*Ntst) && size(vg) == (n, m*Ntst)))
+        error("∫_gauss expects n x (m*Ntst) arrays of Gauss-point values")
+    end
     ω = get_gauss_weight(coll)
     mesh = getmesh(coll)
     result = zero(𝒯y)
@@ -1253,7 +1255,9 @@ end
     elseif index_t > Ntst
         return xm[:, end]
     end
-    @assert mesh[index_t] <= t <= mesh[index_t+1] "Please open an issue on the website of BifurcationKit.jl"
+    if !(mesh[index_t] <= t <= mesh[index_t+1])
+        error("Please open an issue on the website of BifurcationKit.jl")
+    end
     σ = σj(t, mesh, index_t)
     σs = get_mesh_coll(coll)
     out = zeros(typeof(t), n)
@@ -1381,10 +1385,14 @@ function _compute_error!(coll::Collocation, sol, ::AbstractVector{𝒯}, period;
         θeq = i * c
         # we have that θeq ∈ (θs[ind-1], θs[ind])
         ind = searchsortedfirst(θs, θeq)
-        @assert 2 <= ind <= Ntst+1 "Error with 1 < $ind <= $(Ntst+1). Please open an issue on the website of BifurcationKit.jl"
+        if !(2 <= ind <= Ntst+1)
+            error("Error with 1 < $ind <= $(Ntst+1). Please open an issue on the website of BifurcationKit.jl")
+        end
         α = (θs[ind] - θs[ind-1]) / (τsT[ind] - τsT[ind-1])
         newτsT[i+1] = τsT[ind-1] + (θeq - θs[ind-1]) / α
-        @assert newτsT[i+1] > newτsT[i] "Error. Please open an issue on the website of BifurcationKit.jl"
+        if !(newτsT[i+1] > newτsT[i])
+            error("Error. Please open an issue on the website of BifurcationKit.jl")
+        end
     end
     newmesh = newτsT ./ period
     newmesh[end] = 1

@@ -74,7 +74,9 @@ Govaerts, W. “Stable Solvers and Block Elimination for Bordered Systems.” SI
     "Norm used by the solver."
     norm::Tnorm = VI.norm
 
-    @assert k > 0 "Number of recursions must be positive"
+    if !(k > 0)
+        error("Number of recursions must be positive")
+    end
 end
 
 BorderingBLS(ls::AbstractLinearSolver) = BorderingBLS(solver = ls)

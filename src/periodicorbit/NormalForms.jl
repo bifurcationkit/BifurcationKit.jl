@@ -1440,7 +1440,9 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
 
     # first, get the bifurcation point parameters
     sh = get_discretization(pbwrap)
-    @assert sh isa Shooting "Something is wrong. Please open an issue on the website"
+    if !(sh isa Shooting)
+        error("Something is wrong. Please open an issue on the website")
+    end
     verbose && println("━"^53*"\n──▶ Neimark-Sacker normal form computation")
 
     # bifurcation point

@@ -394,7 +394,9 @@ function newton(prob::AbstractBifurcationProblem,
                 kwargs...) where {T, vectype, L, E}
     prob0 = re_make(prob, u0 = x0, params = p0)
     sol0 = solve(prob0, Newton(), options; kwargs...)
-    @assert converged(sol0) "Newton did not converge to the trivial solution x0."
+    if !(converged(sol0))
+        error("Newton did not converge to the trivial solution x0.")
+    end
     push!(defOp, sol0.u)
     prob1 = re_make(prob0, u0 = x1)
     sol1 = solve(prob1, defOp, (@set options.max_iterations = 10options.max_iterations), linsolver; kwargs...)
@@ -403,6 +405,8 @@ function newton(prob::AbstractBifurcationProblem,
     # we test if the two solutions are different. We first get the norm
     normN = get(kwargs, :normN, norm)
     flag = normN(minus(sol0.u, sol0.u)) < options.tol
-    @assert flag "Did not find a non trivial solution using deflated newton"
+    if flag == false
+        error("Did not find a non trivial solution using deflated newton")
+    end
     return sol1, sol0, flag
 end

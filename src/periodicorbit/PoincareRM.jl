@@ -124,7 +124,9 @@ $(TYPEDSIGNATURES)
 Solve the Poincaré return map for a shooting-based periodic orbit. Given a point `xₛ` on the section Σ, find the return point after flow integration by solving `poincaré_functional` with Newton's method.
 """
 function _solve(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, xₛ, par)
-    @assert (Π.po isa AbstractVector) "The case of a general AbstractArray for the state space is not handled yet."
+    if !((Π.po isa AbstractVector))
+        error("The case of a general AbstractArray for the state space is not handled yet.")
+    end
     # xₛ is close to / belongs to the hyperplane Σ
     # for x near po, this computes the poincare return map
     # get the size of the state space

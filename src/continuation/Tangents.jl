@@ -156,7 +156,9 @@ internal_adaptation!(alg::Polynomial, swch::Bool) = alg.update = swch
 _shortname(::PALC{Polynomial}) = "PALC [Polynomial]"
 
 function Polynomial(pred::AbstractTangentComputation, n::Int64, k::Int64, v0)
-    @assert n<k "k must be larger than the degree of the polynomial"
+    if !(n<k)
+        error("k must be larger than the degree of the polynomial")
+    end
     𝒯 = VI.scalartype(v0)
     Polynomial(n, k, zeros(𝒯, k, n+1), pred,
         DataStructures.CircularBuffer{typeof(v0)}(k),  # solutions

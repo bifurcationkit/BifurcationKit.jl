@@ -581,7 +581,9 @@ function bogdanov_takens_normal_form(𝐏𝐛,
                                     autodiff = true,
                                     start_with_eigen::Val{start_with_eigen_type} = Val(true)
                                     ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
-    @assert br.specialpoint[ind_bif].type == :bt "The provided index does not refer to a Bogdanov-Takens Point"
+    if !(br.specialpoint[ind_bif].type == :bt)
+        error("The provided index does not refer to a Bogdanov-Takens Point")
+    end
 
     # functional
     # get the MA problem
@@ -719,7 +721,9 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
                             detailed::Val{detailed_type} = Val(true),
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
                             ) where {𝒯eigvec, start_with_eigen_type, detailed_type}
-    @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
+    if !(br.specialpoint[ind_bif].type == :gh)
+        error("The provided index does not refer to a Bautin Point")
+    end
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
     # get the MA problem
@@ -739,7 +743,9 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     ϵ = convert(𝒯, δ)
 
     # functional
-    @assert 𝐌𝐚 isa HopfMinimallyAugmentedFormulation "You need to provide a curve of Hopf points."
+    if !(𝐌𝐚 isa HopfMinimallyAugmentedFormulation)
+        error("You need to provide a curve of Hopf points.")
+    end
     ls = 𝐌𝐚.linsolver
     bls = 𝐌𝐚.linbdsolver
 
@@ -1103,7 +1109,9 @@ function zero_hopf_normal_form(𝐏𝐛,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
                                 detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
-    @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
+    if !(br.specialpoint[ind_bif].type == :zh)
+        error("The provided index does not refer to a Zero-Hopf Point")
+    end
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
 
     # scalar type
@@ -1540,7 +1548,9 @@ function hopf_hopf_normal_form(𝐏𝐛,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
                                 detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
-    @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
+    if !(br.specialpoint[ind_bif].type == :hh)
+        error("The provided index does not refer to a Hopf-Hopf Point")
+    end
 
     verbose && println("━"^53*"\n──▶ Hopf-Hopf Normal form computation")
 
@@ -1606,7 +1616,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
             verbose && @info "The second eigenvalue is $(λ2)"
             q2 = geteigenvector(optionsN.eigsolver, _ev, _indIm)
         else
-            @assert false "Case not handled yet. Please open an issue on the website of BifurcationKit.jl"
+            error("Case not handled yet. Please open an issue on the website of BifurcationKit.jl")
         end
 
         # for easier debugging, we normalise the case to ω1 > ω2 > 0

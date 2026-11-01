@@ -58,7 +58,9 @@ For an initial guess from the index of a BT bifurcation point located in ContRes
 """
 function bt_point(br::AbstractResult{<: AbstractTwoParamCont, Tprob}, index::Int) where {Tprob}
     bptype = br.specialpoint[index].type
-    @assert bptype == :bt "This should be a BT point"
+    if !(bptype == :bt)
+        error("This should be a BT point")
+    end
     specialpoint = br.specialpoint[index]
     # specialpoint.x should be an AbstractMASolution
     return BorderedArray(_copy(get_solution(specialpoint.x)), [specialpoint.x.p1, specialpoint.param])
@@ -414,7 +416,9 @@ function newton_bt(br::AbstractResult{Tkind, Tprob}, ind_bt::Int;
         VI.scale!(ζad, 1/normN(ζad))
     else
         # we use a minimally augmented formulation to set the initial vectors
-        @assert ζ isa AbstractVector "We only handle Vectors for now."
+        if !(ζ isa AbstractVector)
+            error("We only handle Vectors for now.")
+        end
         a = ζ
         a = rand(length(ζ))
         b = ζad

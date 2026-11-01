@@ -68,7 +68,7 @@ end
             end
         end
     else
-        @assert false "WIP! No parallel matrix-free shooting for curve of PD/NS"
+        error("WIP! No parallel matrix-free shooting for curve of PD/NS")
         # call jacobian of the flow, jacobian-vector product
         solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
         for ii in 1:M
@@ -110,7 +110,7 @@ end
             end
         end
     else
-        @assert false "WIP! No parallel adjoint matrix-free shooting for curve of PD/NS"
+        error("WIP! No parallel adjoint matrix-free shooting for curve of PD/NS")
         # call jacobian of the flow, jacobian-vector product
         solOde = jvp(sh.flow, xc, par, dxc, sh.ds .* T)
         for ii in 1:M

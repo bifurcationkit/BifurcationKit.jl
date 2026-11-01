@@ -134,7 +134,9 @@ function biorthogonalise(ζs, ζ★s, verbose::Bool; _dot = VI.inner)
     # change only the ζ★s to have bi-orthogonal left/right eigenvectors
     # we could use the projector P=A(AᵀA)⁻¹Aᵀ
     # we use Gram-Schmidt algorithm instead
-    @assert length(ζs) == length(ζ★s) "The Gram matrix is not square!"
+    if length(ζs) != length(ζ★s)
+        error("The Gram matrix is not square!")
+    end
     G = [ _dot(ζ, ζ★) for ζ in ζs, ζ★ in ζ★s]
     @debug "[biorthogonalise] Initial Gram matrix" G
     if abs(LA.det(G)) <= 1e-14

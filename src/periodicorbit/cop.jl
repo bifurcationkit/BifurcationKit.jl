@@ -146,7 +146,9 @@ Solve the linear system associated with the collocation problem for computing pe
                           cop_cache::COPCACHE{dim}; 
                           _DEBUG::Val{debug} = Val(false), 
                           _USELU::Val{uselu} = Val(false)) where {dim, debug, uselu}
-    @assert size(J, 1) == size(J, 2) == length(rhs0) "The right hand side does not have the right dimension or the jacobian is not square. \nsize(J) = $(size(J)) and \nlength(rhs0) = $(length(rhs0))\n"
+    if !(size(J, 1) == size(J, 2) == length(rhs0))
+        error("The right hand side does not have the right dimension or the jacobian is not square. \nsize(J) = $(size(J)) and \nlength(rhs0) = $(length(rhs0))\n")
+    end
     N, m, Ntst = size(coll)
     nbcoll = N * m
     # size of the periodic orbit problem counting the phase condition.
@@ -154,11 +156,15 @@ Solve the linear system associated with the collocation problem for computing pe
     nⱼ = size(J, 1)
     δn =  nⱼ - Npo # this allows to compute the border side
     @assert δn >= 0
-    @assert δn == dim "δn = $δn and dim = $dim should be equal!\nPass a proper COPCACHE."
+    if !(δn == dim)
+        error("δn = $δn and dim = $dim should be equal!\nPass a proper COPCACHE.")
+    end
 
     # matrix to contain the linear system for the external variables
     Jext = cop_cache.Jext
-    @assert size(Jext, 1) == size(Jext, 2) == (Ntst+1)*N+1+δn "Error with matrix of external variables. Please report this issue on the website of BifurcationKit.\nδn = $δn\nsize(Jext) = $(size(Jext))\n(Ntst+1)*N+1+δn = $((Ntst+1)*N+1+δn)\n\n"
+    if !(size(Jext, 1) == size(Jext, 2) == (Ntst+1)*N+1+δn)
+        error("Error with matrix of external variables. Please report this issue on the website of BifurcationKit.\nδn = $δn\nsize(Jext) = $(size(Jext))\n(Ntst+1)*N+1+δn = $((Ntst+1)*N+1+δn)\n\n")
+    end
     𝒯 = eltype(coll)
     Iₙ = coll.cache.In
 

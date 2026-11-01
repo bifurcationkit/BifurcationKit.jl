@@ -574,7 +574,9 @@ function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
         prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
         kwargs...)
     bifpt = br.specialpoint[ind_bif]
-    @assert bifpt.type == :pd "The provided index does not refer to a PD point"
+    if !(bifpt.type == :pd)
+        error("The provided index does not refer to a PD point")
+    end
 
     par = setparam(br, bifpt.param)
     pointguess = pd_point(br, ind_bif)
@@ -605,7 +607,9 @@ function _continuation_ns_po(br, ind_bif::Int64, lens2::AllOpticTypes,
         prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
         kwargs...)
     bifpt = br.specialpoint[ind_bif]
-    @assert bifpt.type == :ns "The provided index does not refer to a NS point"
+    if !(bifpt.type == :ns)
+        error("The provided index does not refer to a NS point")
+    end
 
     par = setparam(br, bifpt.param)
     pointguess = ns_point(br, ind_bif)

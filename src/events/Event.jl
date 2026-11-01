@@ -104,7 +104,9 @@ struct ContinuousEvent{Tcb, Tl <: Union{Nothing, Tuple{Vararg{String}}}, T, Tf, 
                             tol::T = 0; 
                             finaliser::TF = default_finalise_event!, 
                             data::Td = nothing) where {T,TF,Td}
-        @assert nb > 0 "You need to return at least one callback"
+        if !(nb > 0)
+            error("You need to return at least one callback")
+        end
         condition = convert_to_tuple_eve ∘ fct
         new{typeof(condition), typeof(labels), T, TF, Td}(nb, condition, cev, labels, tol, finaliser, data)
     end
@@ -151,7 +153,9 @@ struct DiscreteEvent{Tcb, Tl <: Union{Nothing, Tuple{Vararg{String}}}, Tf, Td} <
                             labels = nothing; 
                             finaliser::TF = default_finalise_event!, 
                             data::Td = nothing) where {TF, Td}
-        @assert nb > 0 "You need to return at least one callback"
+        if !(nb > 0)
+            error("You need to return at least one callback")
+        end
         condition = convert_to_tuple_eve ∘ fct
         new{typeof(condition), typeof(labels), TF, Td}(nb, condition, cev, labels, finaliser, data)
     end

@@ -140,8 +140,12 @@ Update the hyperplanes saved in `hyp`.
 """
 function update!(hyp::SectionPS, normals, centers)
     M = hyp.M
-    @assert length(normals) == M "Wrong number of normals!"
-    @assert length(centers) == M "Wrong number of centers!"
+    if !(length(normals) == M)
+        error("Wrong number of normals!")
+    end
+    if !(length(centers) == M)
+        error("Wrong number of centers!")
+    end
     for ii in 1:M
         hyp.normals[ii] .= normals[ii]
         hyp.centers[ii] .= centers[ii]
@@ -170,7 +174,9 @@ dR(hyp::SectionPS, dx::AbstractVector, k::Int) = R(hyp, dx, k)
 
 # Operateur Ek from the papers 10.1016/j.jcp.2004.04.018 and 10.1016/j.jcp.2012.12.034
 function E!(hyp::SectionPS, out, xbar::AbstractVector, ii::Int)
-    @assert length(xbar) == length(hyp.normals[1]) - 1 "Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))"
+    if !(length(xbar) == length(hyp.normals[1]) - 1)
+        error("Wrong size for the projector / expansion operators, length(xbar) = $(length(xbar)) and length(normal) = $(length(hyp.normals[1]))")
+    end
     k = hyp.indices[ii]
     nbar  = hyp.normals_bar[ii]
     xcbar = hyp.centers_bar[ii]
