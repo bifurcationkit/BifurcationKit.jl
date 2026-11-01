@@ -647,8 +647,8 @@ Inplace version of `po_jacobian_sparse`: the jacobian ``dG(u_0)`` is stored in t
 
     tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢
-    # (frozen in the jacobian); for the wrap block this is still x_1
+    # the mass matrix multiplies (x_𝐢 - x_{𝐢-1}) and is evaluated at the left slice x_𝐢;
+    # for the wrap block this is still x_1
     I₁ = _get_mass_matrix(trap, u0m[:, 1], par, V)
 
     h = T * get_time_step(trap, 1)
@@ -726,8 +726,8 @@ end
 
     tmpJ = jacobian(trap.prob_vf, u0m[:, 1], par)
 
-    # the mass matrix multiplies (x_ii - x_{ii-1}) and is evaluated at the left slice x_ii
-    # (frozen in the jacobian); for the wrap block this is still x_1
+    # the mass matrix multiplies (x_ii - x_{ii-1}) and is evaluated at the left slice x_ii;
+    # for the wrap block this is still x_1
     I₁ = _get_mass_matrix(trap, u0m[:, 1], par)
 
     h = period * get_time_step(trap, 1)
@@ -937,7 +937,7 @@ end
     return _combine_solution_Aγ_linearsolver(rhs, xbar, N), flag, numiter
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
+# The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_po
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator, Tϕ}
     "derivative of the PO functional G w.r.t. T."
     ∂TGpo::T∂ = nothing

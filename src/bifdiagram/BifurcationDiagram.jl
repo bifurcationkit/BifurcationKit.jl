@@ -76,7 +76,7 @@ Return the part of the diagram corresponding to the indbif-th bifurcation point 
 """
 function get_branches_from_BP(diagram::BifDiagNode, indbif::Int)
     # parameter value at the bp
-    p = diagram.γ.specialpoint[indbif].param
+    p = get_branch(diagram).specialpoint[indbif].param
     return BifDiagNode[br for br in diagram.child if from(br).p == p]
 end
 

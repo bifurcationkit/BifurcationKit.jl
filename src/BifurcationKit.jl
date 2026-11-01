@@ -147,7 +147,7 @@ module BifurcationKit
     export DefaultEig, EigArpack, EigKrylovKit, EigArnoldiMethod, geteigenvector, AbstractEigenSolver
 
     # Problems
-    export BifurcationProblem, BifFunction, getlens, getparams, re_make, ODEBifProblem
+    export BifurcationProblem, BifFunction, getlens, getparams, getparam, getu0, re_make, ODEBifProblem, setparam
 
     # bordered nonlinear problems
     # export BorderedProblem, JacobianBorderedProblem, LinearSolverBorderedProblem, newtonBordered, continuationBordered

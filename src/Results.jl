@@ -298,7 +298,7 @@ Return the parameter for the ind-th point stored in br.sol
 end
 
 function Base.getproperty(br::ContResult, s::Symbol)
-    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg, :retcode)
+    if s in (:specialpoint, :contparams, :sol, :kind, :branch, :eig, :prob, :alg, :retcode)
         getfield(br, s)
     else
         getproperty(br.branch, s)
