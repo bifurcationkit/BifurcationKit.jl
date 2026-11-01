@@ -365,7 +365,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # Jacobian for the NS problem
     record_ns = RecordForNS(record_from_solution, BifurcationKit.record_from_solution(prob))
-    # plot_ns = PlotForFold(plot_solution, BifurcationKit.plot_solution(prob)) # TODO: fix this
     plot_ns = plot_solution
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)

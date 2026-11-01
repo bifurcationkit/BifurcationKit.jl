@@ -346,7 +346,7 @@ function ContResult(iter::AbstractContinuationIterable,
     return _contresult(iter, state,
                         pt,
                         get_state_summary(iter, state), 
-                        save_solution(iter.prob, _copy(getx(state)), setparam(iter, getp(state))), 
+                        save_solution(getprob(iter), _copy(getx(state)), setparam(iter, getp(state))), 
                         getcontparams(iter))
 end
 

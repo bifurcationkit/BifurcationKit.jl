@@ -311,10 +311,10 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
                 jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
+                kind = PDCont(),
+                usehessian = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm::Bool = prob isa PeriodicOrbitFunctionalSh,
-                usehessian = false,
-                kind = PDCont(),
                 kwargs...) where {𝒯, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
     lens1 != getlens(prob) && error("lens1 must be the continuation parameter. You only passed $lens1")

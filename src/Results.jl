@@ -375,19 +375,12 @@ Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@
 @inline _branches_iter(br) = (br,)
 
 Base.length(br::Branch) = length(getbranches(br))
-@inline kernel_dimension(br::Branch, ind) = kernel_dimension(getbranches(br), ind)
-get_solution(br::Branch, ind) = get_solution(getbranches(br), ind)
-getprob(br::Branch) = getprob(getbranches(br))
-getalg(br::Branch) = getalg(getbranches(br))
+@inline kernel_dimension(br::Branch, ind) = kernel_dimension(_firstbranch(getbranches(br)), ind)
+get_solution(br::Branch, ind) = get_solution(_firstbranch(getbranches(br)), ind)
+getprob(br::Branch) = getprob(_firstbranch(getbranches(br)))
+getalg(br::Branch) = getalg(_firstbranch(getbranches(br)))
 getkind(br::Branch) = getkind(getbranches(br))
-getcontparams(br::Branch) = getcontparams(getbranches(br))
-
-# for a Branch holding a vector of branches, delegate to the first branch
-@inline kernel_dimension(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, ind) where {Tk, Tp} = kernel_dimension(first(getbranches(br)), ind)
-get_solution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, ind) where {Tk, Tp} = get_solution(first(getbranches(br)), ind)
-getprob(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getprob(first(getbranches(br)))
-getalg(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getalg(first(getbranches(br)))
-getcontparams(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getcontparams(first(getbranches(br)))
+getcontparams(br::Branch) = getcontparams(_firstbranch(getbranches(br)))
 
 haseigenvalues(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvalues, getbranches(br))
 hassolution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(hassolution, getbranches(br))
@@ -409,7 +402,7 @@ from(br::Branch) = getfield(br, :bp)
 from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
 from(::ContResult) = nothing
 _getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(getbranches(br))
-_getfirstusertype(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}; k...) where {Tk, Tp} = _getfirstusertype(first(getbranches(br)); k...)
+_getfirstusertype(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}; k...) where {Tk, Tp} = _getfirstusertype(first(getbranches(br)))
 Base.firstindex(br::Branch) = firstindex(getbranches(br))
 Base.lastindex(br::Branch) = lastindex(getbranches(br))
 @inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(getbranches(br))

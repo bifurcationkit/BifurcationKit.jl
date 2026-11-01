@@ -72,7 +72,6 @@ function continuation(br::AbstractResult{Tkind, Tprob},
 
                       δp = nothing, 
                       ampfactor::Real = 1,
-                      use_normal_form = true,
                       Teigvec::𝒯eigvec = _getvectortype(br), # used in deflation, not just for normal form
                       normal_form_kwargs = (),
 
@@ -124,14 +123,7 @@ function continuation(br::AbstractResult{Tkind, Tprob},
                             )
 
     # compute predictor for a point on new branch
-    pred = if ~use_normal_form # TODO: merge with detailed = false
-              (;x0 = bp.x0, 
-                x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
-                p =  bp.p + ds, 
-                amp = ampfactor)
-    else
-        predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
-    end
+    pred = predictor(bp, ds; verbose, ampfactor = Ty(ampfactor))
 
     if isnothing(pred)
         @debug "[aBS] The predictor is nothing. Probably a Fold point. See\n $bp"

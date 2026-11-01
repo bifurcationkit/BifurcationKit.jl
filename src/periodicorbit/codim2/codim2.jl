@@ -260,13 +260,9 @@ function _continuation(gh::Bautin,
                         _contParams::ContinuationPar,
                         discPO::AbstractBoundaryValueDiscretization;
                         alg = getalg(br),
-                        linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev::Int = _contParams.nev,
-                        detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         normC = norm,
-                        Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         record_from_solution = nothing,
                         plot_solution = nothing,
@@ -347,13 +343,8 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             discPO::AbstractBoundaryValueDiscretization;
             whichns::Int = 1,
             alg = getalg(br),
-            linear_algo = nothing,
             δp = nothing, ampfactor::Real = 1,
-            nev::Int = _contParams.nev,
-            detect_codim2_bifurcation::Int = 0,
             Teigvec = _getvectortype(br),
-            scaleζ = norm,
-            Jᵗ = nothing,
             eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
             bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
             record_from_solution = nothing,
@@ -377,11 +368,9 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
-    # TODO improve the following
     lens1, lens2 = hh.lens
     _params = whichns == 1 ? pred.params1 : pred.params2
-    newparams = set(hh.params, lens1, _params[1])
-    newparams = set(newparams, lens2, _params[2])
+    newparams = _set(hh.params, (lens1, lens2), _params)
 
     prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
@@ -468,13 +457,8 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         discPO::AbstractBoundaryValueDiscretization;
                         whichns::Int = 1,
                         alg = getalg(br),
-                        linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev::Int = _contParams.nev,
-                        detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
-                        scaleζ = norm,
-                        Jᵗ = nothing,
                         eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         record_from_solution = nothing,
@@ -500,8 +484,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = zh.lens
-    newparams = set(zh.params, lens1, _params[1])
-    newparams = set(newparams, lens2, _params[2])
+    newparams = _set(zh.params, (lens1, lens2), _params)
 
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)

@@ -394,8 +394,15 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
     return nothing
 end
 
-get_normal_form1d(br::Branch{Tkind, Tprob, <: ContResult}, ind_bif::Int, Teigvec; kwargs...) where {Tkind, Tprob} = get_normal_form1d(getprob(br), get_contresult(br), ind_bif, Teigvec; kwargs...)
-get_normal_form1d(br::ContResult, ind_bif::Int, Teigvec; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif, Teigvec; kwargs...)
+get_normal_form1d(br::Branch{Tkind, Tprob, <: ContResult}, ind_bif::Int; kwargs...) where {Tkind, Tprob} = get_normal_form1d(getprob(br), get_contresult(br), ind_bif; kwargs...)
+get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif; kwargs...)
+
+function _trivial_predictor(bp, ds; verbose = false, ampfactor::𝒯 = 1) where {𝒯 <: Number}
+    return (;x0 = bp.x0, 
+      x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
+       p =  bp.p + ds, 
+     amp = ampfactor)
+end
 
 """
 $(TYPEDSIGNATURES)
@@ -528,12 +535,13 @@ function predictor(bp::Union{Pitchfork, PitchforkMap},
              δp = pnew - bp.p)
 end
 
-function predictor(bp::Fold, ds::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
+function predictor(bp::Fold, ::𝒯; verbose = false, ampfactor = one(𝒯)) where 𝒯
     @debug "It seems the point is a Saddle-Node bifurcation.\nThe normal form is a01⋅δμ + b11⋅x⋅δμ + b20⋅x² + b30⋅x³\n with coefficients \n a01 = $(bp.nf.a01), b11 = $(bp.nf.b11), b20 = $(bp.nf.b20), b30 = $(bp.nf.b30)."
     return nothing
 end
 
-predictor(br::BranchPoint, args...; k...) = _predictor(br::BranchPoint, args...; k...) 
+predictor(br::BranchPoint, args...; k...) = _predictor(br::BranchPoint, args...; k...)
+predictor(br::BranchPoint{Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr, Nothing}, args...; k...) where {Tv, Tτ, T, Tpar, Tlens, Tevl, Tevr} = _trivial_predictor(br, args...; k...)
 
 function _predictor(bp::AbstractSimpleBranchPoint, 
                     ds::𝒯; 

@@ -1364,7 +1364,29 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Trapeze` method.
+
+The mesh size and the period are doubled. The orbit guess is built from the
+periodic orbit `nf.po` perturbed by `±ampfactor * nf.ζ` on the two halves of the
+doubled period.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Trapeze}`: period-doubling bifurcation point.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled mesh.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference, doubled over the new period.
+- `ζc`: critical eigenvector reshaped on the original mesh.
 """
 function predictor(nf::PeriodDoublingPO{ <: Trapeze},
                     δp,
@@ -1402,7 +1424,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Trapeze` method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`
+and the phase condition of the periodic orbit problem is updated accordingly.
+
+# Arguments
+- `nf::BranchPointPO{<:Trapeze}`: simple branch point of periodic orbits.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem with the updated phase condition.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
+- `ζc`: critical eigenvector reshaped on the mesh.
 """
 function predictor(nf::BranchPointPO{ <: Trapeze},
                     δp,
@@ -1430,7 +1473,30 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Collocation` method.
+
+The number of time slices and the period are doubled. Unless `override = true`,
+the normal form is used to correct the parameter increment `δp` and the
+amplitude `ampfactor` so that the guess lies on the bifurcated branch.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Collocation}`: period-doubling bifurcation point.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled mesh.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `δp`: parameter increment used to build the guess (possibly corrected).
+- `time_factor`: factor used to rescale time when building the guess.
+- `po`: periodic orbit used as reference, doubled over the new period.
 """
 function predictor(nf::PeriodDoublingPO{ <: Collocation }, 
                     δp, 
@@ -1490,7 +1556,34 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Collocation`
+method.
+
+The number of time slices is doubled and the periodic orbit `nf.po` is perturbed
+along the second component `nf.ζ[2]` of the critical eigenvector. Unless
+`override = true`, the normal form based on the Poincaré return map is used to
+correct the parameter increment `δp` and the amplitude `ampfactor`.
+
+# Arguments
+- `nf::BranchPointPO{<:Collocation}`: simple branch point of periodic orbits.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
+
+# Note
+Only the normal form based on the Poincaré return map (`nf.prm == true`) is
+implemented. Using `nf.prm == false` with `override = false` raises an error.
 """
 function predictor(nf::BranchPointPO{ <: Collocation},
                     δp,
@@ -1525,7 +1618,30 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Shooting` method.
+
+The number of time steps and the period are doubled. The orbit guess is built by
+perturbing the periodic orbit `nf.po` by `±ampfactor * nf.ζ` on the two halves of
+the doubled period. Unless `override = true`, the normal form is used to correct
+`δp` and `ampfactor`.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Shooting}`: period-doubling bifurcation point.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled time interval.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `δp`: parameter increment used to build the guess (possibly corrected).
+- `po`: periodic orbit used as reference, doubled over the new period.
 """
 function predictor(nf::PeriodDoublingPO{ <: Shooting },
                     δp,
@@ -1555,7 +1671,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Shooting` method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`.
+Unless `override = true`, the normal form is used to correct `δp` and
+`ampfactor`.
+
+# Arguments
+- `nf::BranchPointPO{<:Shooting}`: simple branch point of periodic orbits.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
 """
 function predictor(nf::BranchPointPO{ <: Shooting },
                     δp,
@@ -1576,7 +1713,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `PoincareShooting` method.
+
+The section and the number of time steps are duplicated. The periodic orbit
+guess is built over two periods from `nf.po` perturbed by `ampfactor * nf.ζ`. No
+normal-form correction is applied by this method.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:PoincareShooting}`: period-doubling bifurcation point.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch, over two periods.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem with the duplicated section.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference, duplicated over two periods.
 """
 function predictor(nf::PeriodDoublingPO{ <: PoincareShooting }, 
                     δp, 
@@ -1596,7 +1754,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `PoincareShooting`
+method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`. No
+normal-form correction is applied by this method.
+
+# Arguments
+- `nf::BranchPointPO{<:PoincareShooting}`: simple branch point of periodic orbits.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
 """
 function predictor(nf::BranchPointPO{ <: PoincareShooting},
                     δp,

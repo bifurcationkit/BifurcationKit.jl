@@ -109,7 +109,7 @@ for (op, at) in (
                     _norm = norm,
                     update_minaug_every_step = 1)
         a = b = 0.0
-        𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+        𝒯 = typeof(norm(a))
         if ~(𝒯  <: Number)
             error("This norm must return a `Number`, returned $𝒯")
         end

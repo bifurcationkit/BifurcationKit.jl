@@ -293,7 +293,6 @@ function update!(probma::FoldMAProblem, iter, state::ContState)
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
     𝐅 = get_formulation(probma)
-    𝒯 = eltype(𝐅)
     step = state.step
     if (~mod_counter(step, 𝐅.update_minaug_every_step) || converged(state) == false) || in_bisection(state)
         return update!(𝐅, iter, state)
