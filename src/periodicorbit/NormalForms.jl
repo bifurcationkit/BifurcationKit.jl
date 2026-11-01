@@ -495,7 +495,7 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     # equation (7): c2, a20 and h20
     rhs20raw = Bvv .- 2 .* α .* vdotg
     c2, a20 = 0.5 .* coeff(rhs20raw)
-    rhs20g = Bvv .- 2c2 .* vg .- 2a20 .* Fu0g .- 2 .* α .* vdotg
+    rhs20g = @. Bvv - 2c2 * vg - 2a20 * Fu0g - 2 * α * vdotg
     h20 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs20g))
     h20g = _iooss_interp_gauss(coll, h20)
     Ah20 = zeros(𝒯, N, m*Ntst)
@@ -515,33 +515,33 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     h11 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs6g))
     h11g = _iooss_interp_gauss(coll, h11)
 
-    # equation (8): c3 (a30) and h30
+    # equation (8): c3 and h30
     Bv20 = zeros(𝒯, N, m*Ntst)
     for p in axes(Bv20, 2)
         Bv20[:, p] .= B(u0g[:, p], par, vg[:, p], h20g[:, p])
     end
     rhs8raw = @. 3 * Bv20 - 6c2 * h20g - 6a20 * vdotg - 3 * α * h20dotg
     dv = [LA.dot(p₀, v), LA.dot(p₁, v)]
-    a30 = LA.dot(dv, [LA.dot(p₀, rows(rhs8raw)), LA.dot(p₁, rows(rhs8raw))]) /
+    c3 = LA.dot(dv, [LA.dot(p₀, rows(rhs8raw)), LA.dot(p₁, rows(rhs8raw))]) /
           (6 * LA.dot(dv, dv))
-    rhs8g = rhs8raw .- 6a30 .* vg
+    rhs8g = @. rhs8raw - 6c3 * vg
     h30 = _iooss_solve_bvp(J0, T, v, u0dot, p₀, p₁, rows(rhs8g))
     h30g = _iooss_interp_gauss(coll, h30)
 
     verbose && println("├─ a01 = ", a01)
     verbose && println("├─ a11 = ", a11)
     verbose && println("├─ a20 = ", a20)
-    verbose && println("└─ a30 = ", a30)
+    verbose && println("└─ c3 = ", c3)
 
-    nf = (; a01, a11, a20, a30, α, c01, c11, c2, c3 = a30,
+    nf = (; a01, a11, a20, α, c01, c11, c2, c3,
             h01, h11, h20, h30, h01g, h11g, h20g, h30g,
             v1 = v₁, v0 = v₀, vdot = vdotg, p0 = p₀, p1 = p₁)
 
     bp0 = @set bp0.nf = nf
     if max(abs(c01), abs(c11)) > 1e-10
         if abs(c01) < tol_fold
-            if 100abs(c2) < abs(a30)
-                type_pf = real(c11) * real(a30) < 0 ? :SuperCritical : :SubCritical
+            if 100abs(c2) < abs(c3)
+                type_pf = real(c11) * real(c3) < 0 ? :SuperCritical : :SubCritical
                 bp0 = @set bp0.type = type_pf
                 return PitchforkPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp0, coll, false)
             end
@@ -1761,7 +1761,7 @@ function predictor(nf::BranchPointPO{ <: Collocation},
             δp = pred.δp
         end
         # For the Iooss normal form (nf.prm == false), the coefficients
-        # a01, a11, a20, a30 can be used for a refined predictor. We keep
+        # a01, a11, a20, c3 can be used for a refined predictor. We keep
         # the requested δp and ampfactor for now.
     end
 
@@ -1786,21 +1786,27 @@ function _predictor_po_iooss(nf, amp, pnew)
     return (; orbitguess, pnew, prob = nf.prob, ampfactor = amp, po = nf.po)
 end
 
-function predictor(nf::PitchforkPO{ <: Collocation},
+function predictor(bp::PitchforkPO{ <: Collocation},
                     δp,
                     ampfactor;
                     override = false)
-    nf.nf isa BranchPoint || return nothing
-    n = nf.nf.nf
+    bp.nf isa BranchPoint || return nothing
     if override
         amp = ampfactor
-        pnew = nf.nf.p + δp
+        pnew = bp.nf.p + δp
     else
-        dsfactor = real(n.c11) * real(n.a30) < 0 ? one(ampfactor) : -one(ampfactor)
-        amp = ampfactor * sqrt(-abs(δp) * dsfactor * real(n.c11) / real(n.a30))
-        pnew = nf.nf.p + δp
+        nf = bp.nf.nf
+        (; c11, c3) = nf
+        dsfactor = real(c11) * real(c3) < 0 ? one(ampfactor) : -one(ampfactor)
+        amp = ampfactor * sqrt(-abs(δp) * dsfactor * real(c11) / real(c3))
+        ∂p = c11 * δp
+        if c3 * ∂p > 0
+            ∂p *= -1
+            δp *= -1
+        end
+        pnew = bp.nf.p + δp
     end
-    return _predictor_po_iooss(nf, amp, pnew)
+    return _predictor_po_iooss(bp, amp, pnew)
 end
 
 function predictor(nf::TranscriticalPO{ <: Collocation},

@@ -32,18 +32,6 @@ for op in (:BranchPointPO, :PeriodDoublingPO, :PitchforkPO, :TranscriticalPO, :F
             "Is normal form computed using Poincaré return map?"
             prm::Bool
         end
-
-        function Base.show(io::IO, bp::$op)
-            if !bp.prm && bp.nf isa BranchPoint &&
-                bp.nf.nf isa NamedTuple && haskey(bp.nf.nf, :c01)
-                return _show_po_iooss(io, bp, type(bp))
-            end
-            printstyled(io, type(bp), color=:cyan, bold = true)
-            println(io, " bifurcation point of periodic orbit")
-            println(io, "├─ Period = ", abs(bp.T))
-            print(io, "├─ Problem: ")
-            printstyled(io, typeof(bp.prob).name.name, "\n", bold = true)
-        end
     end
 end
 
@@ -52,6 +40,18 @@ type(::BranchPointPO) = :BranchPoint
 type(::PitchforkPO) = :Pitchfork
 type(::TranscriticalPO) = :Transcritical
 type(::FoldPO) = :Fold
+
+function Base.show(io::IO, bp::PitchforkPO)
+    if !bp.prm && bp.nf isa BranchPoint &&
+        bp.nf.nf isa NamedTuple && haskey(bp.nf.nf, :c01)
+        return _show_po_iooss(io, bp, type(bp))
+    end
+    printstyled(io, type(bp), color=:cyan, bold = true)
+    println(io, " bifurcation point of periodic orbit")
+    println(io, "├─ Period = ", abs(bp.T))
+    print(io, "├─ Problem: ")
+    printstyled(io, typeof(bp.prob).name.name, "\n", bold = true)
+end
 
 function Base.show(io::IO, pd::PeriodDoublingPO)
     printstyled(io, "Period-Doubling", color=:cyan, bold = true)
@@ -94,7 +94,7 @@ function Base.show(io::IO, bp::FoldPO)
     end
 end
 
-function _show_po_iooss(io::IO, bp, title::String)
+function _show_po_iooss(io::IO, bp, title)
     nf = bp.nf.nf
     printstyled(io, title, color=:cyan, bold = true)
     println(io, " bifurcation point of periodic orbit")
@@ -107,12 +107,11 @@ function _show_po_iooss(io::IO, bp, title::String)
     end
     println(io, "├─ Normal form [Iooss:")
     println(io, "├\t∂τ = 1 + α⋅ξ + (a₁₁⋅ξ + a₀₁)⋅δp + a₂₀⋅ξ² + ...")
-    println(io, "├\t∂ξ = c₀₁⋅δp + c₁₁⋅δp⋅ξ + c₂⋅ξ² + a₃₀⋅ξ³ + ...")
+    println(io, "├\t∂ξ = c₀₁⋅δp + c₁₁⋅δp⋅ξ + c₂⋅ξ² + c₃⋅ξ³ + ...")
     println(io, "├─ Coefficients a:")
     println(io, "│  ├─ a₀₁ = ", nf.a01)
     println(io, "│  ├─ a₁₁ = ", nf.a11)
-    println(io, "│  ├─ a₂₀ = ", nf.a20)
-    println(io, "│  └─ a₃₀ = ", nf.a30)
+    println(io, "│  └─ a₂₀ = ", nf.a20)
     println(io, "└─ Coefficients c:")
     println(io, "   ├─ c₀₁ = ", nf.c01)
     println(io, "   ├─ c₁₁ = ", nf.c11)

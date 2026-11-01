@@ -97,6 +97,10 @@ for PoType in (:POInterpolation, :BVPInterpolation)
 
         ## Fields
         $(TYPEDFIELDS)
+
+        ## Methods
+        - `getx(interp)`, getter: return `x``
+        - `getprob(interp)`, getter: return `pb`
         """ struct $PoType{Tpb, Tx, Tp}
             "Problem."
             pb::Tpb
