@@ -156,6 +156,7 @@ $(TYPEDFIELDS)
 - `is_stable(state)` whether the current state is stable.
 - `in_bisection(state)` whether the state is in bisection for locating special points.
 - `getparams(iter, state)` return the current parameter set.
+- `return_code(state)` return the return code of the state.
 """
 Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractContinuationState{Tv}
     "predictor, i.e. the initial guess for the next Newton correction."
@@ -199,6 +200,8 @@ Base.@kwdef mutable struct ContState{Tv, T, Teigvals, Teigvec, Tcb} <: AbstractC
     eventValue::Tcb = nothing
     "whether the state is in bisection for locating special points."
     in_bisection::Bool = false
+    "Return code."
+    retcode::ReturnCode.T = ReturnCode.EmptyReturnCode
 end
 
 function EmptyContState(z::Tvec) where {Tvec} 
@@ -224,7 +227,8 @@ function Base.copy(state::ContState)
         eigvals             = state.eigvals,
         eigvecs             = state.eigvecs, # can be removed? to save memory?
         eventValue          = state.eventValue,
-        in_bisection        = state.in_bisection
+        in_bisection        = state.in_bisection,
+        retcode             = state.retcode
     )
 end
 
@@ -247,6 +251,7 @@ function Base.copyto!(dest::ContState, src::ContState)
         dest.eigvecs          = src.eigvecs # can be removed? to save memory?
         dest.eventValue       = src.eventValue
         dest.in_bisection     = src.in_bisection
+        dest.retcode          = src.retcode
     return dest
 end
 
@@ -265,16 +270,43 @@ end
 @inline stepsizecontrol(state::AbstractContinuationState) = state.stepsizecontrol
 @inline in_bisection(state::AbstractContinuationState)    = state.in_bisection
 @inline in_bisection(::Nothing) = false
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the [`ReturnCode`](@ref) attached to a continuation state.
+"""
+@inline return_code(state::AbstractContinuationState) = state.retcode
+
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when the continuation state terminated successfully.
+"""
+@inline successful_retcode(state::AbstractContinuationState) = successful_retcode(return_code(state))
 # there is a dispatch for codim2:
 getparams(iter::AbstractContinuationIterable, state::AbstractContinuationState) = setparam(iter, getp(state))
 
 @inline update_problem!(it::ContIterable, state::ContState) = update!(getprob(it), it, state)
 ####################################################################################################
 # condition for halting the continuation procedure (i.e. when returning false)
-@inline done(it::ContIterable, state::ContState) =
-            (state.step <= it.contparams.max_steps) &&
-            (isindomain(it, getp(state)) || state.step == 0) &&
-            (state.stopcontinuation == false)
+@inline function not_done(it::ContIterable, state::ContState, update_retcode::Bool = true)
+    result = true
+    if ~(state.step <= it.contparams.max_steps)
+        update_retcode && (state.retcode = ReturnCode.MaxSteps)
+        result = false
+    elseif ~(isindomain(it, getp(state)) || state.step == 0)
+        update_retcode && (state.retcode = ReturnCode.BoundaryHit)
+        result = false
+    elseif ~(state.stopcontinuation == false)
+        # do not overwrite a specific return code set by the corrector
+        if update_retcode && state.retcode == ReturnCode.EmptyReturnCode
+            state.retcode = ReturnCode.Finalized
+        end
+        result = false
+    end
+    return result
+end
 
 function get_state_summary(it, state::ContState{Tv, T, Teigvals}) where {Tv, T, Teigvals}
     pt = record_from_solution(it, state)
@@ -305,8 +337,7 @@ function save!(br::ContResult,
     push!(br.branch, get_state_summary(it, state))
     # save solution
     if (it.contparams.save_sol_every_step > 0 && 
-        (mod_counter(state.step, it.contparams.save_sol_every_step)) || 
-        ~done(it, state))
+        (mod_counter(state.step, it.contparams.save_sol_every_step)) ||  ~not_done(it, state, false))
         push!(br.sol, (x = save_solution(getprob(it), _copy(getx(state)), setparam(getprob(it), getp(state))),
                        p = getp(state),
                        step = state.step))
@@ -455,7 +486,8 @@ function iterate_from_two_points(it::ContIterable,
                         ds = it.contparams.ds,
                         eigvals,
                         eigvecs,
-                        eventValue = (cbval, cbval)
+                        eventValue = (cbval, cbval),
+                        retcode = ReturnCode.EmptyReturnCode
                     )
 
     # initialize the state for the continuation algorithm, at this stage, the tangent is set up
@@ -479,7 +511,7 @@ end
 function Base.iterate(it::ContIterable,
                       state::ContState; 
                       _verbosity = it.verbosity)
-    if !done(it, state) return nothing end
+    if !not_done(it, state) return nothing end
     # the next line is to overwrite verbosity behaviour, for example when locating bifurcations
     verbosity = min(it.verbosity, _verbosity)
     verbose = verbosity > 0; verbose1 = verbosity > 1
@@ -621,6 +653,7 @@ function continuation!(it::ContIterable, state::ContState, contRes::ContResult)
     # the endpoint converged only if the branch reached p_min or p_max; a run stopped inside the domain gets :guess
     status = isindomain(it, getp(state)) ? :guess : :converged
     push!(contRes.specialpoint, SpecialPoint(it, state, :endpoint, status, (getp(state), getp(state))))
+    @reset contRes.retcode = state.retcode
     return contRes
 end
 

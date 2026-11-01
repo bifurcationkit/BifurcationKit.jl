@@ -202,6 +202,8 @@ You can directly call
 
 which is a shortcut for `get_normal_form(getprob(br), br, ind_bif ; kwargs...)`.
 
+For a `Branch` holding several branches (for example the result of [`multicontinuation`](@ref) from an Nd bifurcation point), select one branch with `br[k]` (or `getbranches(br)[k]`) before computing the normal form.
+
 Once the normal form `nf` has been computed, you can call `predictor(nf, δp)` to obtain an estimate of the bifurcating branch.
 
 # References
@@ -395,6 +397,8 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 end
 
 get_normal_form1d(br::Branch{Tkind, Tprob, <: ContResult}, ind_bif::Int; kwargs...) where {Tkind, Tprob} = get_normal_form1d(getprob(br), get_contresult(br), ind_bif; kwargs...)
+get_normal_form1d(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}, ind_bif::Int; kwargs...) where {Tkind, Tprob} =
+    throw(ArgumentError("This `Branch` holds several branches (`Vector{ContResult}`). Select one with `br[k]` (or `getbranches(br)[k]`) before computing the normal form."))
 get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif; kwargs...)
 
 function _trivial_predictor(bp, ds; verbose = false, ampfactor::𝒯 = 1) where {𝒯 <: Number}
@@ -764,7 +768,7 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 
     L = jacobian(prob_vf, x0, parbif)
     # we invert L repeatedly, so we try to factorize it
-    L_fact = L isa AbstractMatrix ? LA.factorize(L) : L
+    L_fact = L isa AbstractMatrix ? LA.factorize(L) : L # TODO: is it really useful for bordered solvers?
 
     # "zero" eigenvalues at bifurcation point
     rightEv = br.eig[bifpt.idx].eigenvals
@@ -958,6 +962,8 @@ function get_normal_formNd(prob::AbstractBifurcationProblem,
 end
 
 get_normal_form(br::AbstractBranchResult, id_bif::Int; kwargs...) = get_normal_form(getprob(br), br, id_bif; kwargs...)
+get_normal_form(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}, id_bif::Int; kwargs...) where {Tkind, Tprob} =
+    throw(ArgumentError("This `Branch` holds several branches (`Vector{ContResult}`). Select one with `br[k]` (or `getbranches(br)[k]`) before computing the normal form."))
 
 # find the zeros of the normal form (reduced equation) on one side of the bifurcation point,
 # using deflated newton on the vertices of the hypercube `igs`
@@ -1024,7 +1030,9 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
                     verbose::Bool = false,
                     ampfactor = one(𝒯),
 
-                    deflation_Op = DeflationOperator(2, 𝒯(1//10), [zeros(𝒯, length(bp.ζ))]; autodiff = true),
+                    deflation_Op = DeflationOperator(2, 𝒯(1//10), [zeros(𝒯, length(bp.ζ))]; 
+
+                    autodiff = true),
                     nbfailures = 50,
                     maxiter = 100,
                     J = nothing,
@@ -1041,7 +1049,7 @@ function predictor(bp::NdBranchPoint, δp::𝒯;
 
     # initial guesses for newton
     if isnothing(igs)
-        igs = Iterators.product((-1:1 for _= 1:n)...)
+        igs = Iterators.product((-one(𝒯):convert(𝒯, 1//2):one(𝒯) for _= 1:n)...)
     end
     callback = cbMaxNorm(1e100)
 

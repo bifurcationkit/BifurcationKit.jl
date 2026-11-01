@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file (hopefully).
 - a Newton callback can return `NewtonConverged()` to stop the iterations as converged, allowing convergence tests other than `residual < tol`
 - add `geteigensolver` on `ContResult` and a `show` method for `ContinuationPar`
 - `FFTW` is now a direct dependency
+- add the `ReturnCode` enum and the `return_code` / `successful_retcode` accessors (including for `Branch`); `copy(::ContState)` preserves the return code and, when merging branches, the retcodes are combined with a symmetric priority matrix in which `DsLessThanMin` is absorbing and the most informative successful code is kept
 
 ### Fixed
 - check the constant mass-matrix restriction in `hopf_normal_form` only when the mass matrix is actually used

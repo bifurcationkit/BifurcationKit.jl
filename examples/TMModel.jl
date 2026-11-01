@@ -27,7 +27,6 @@ plot(br, plotfold = false)
 br_hopf = @time BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
-        jacobian_ma = BK.MinAugMatrixBased(),
         bothside = Val(true),)
 plot(br_hopf)
 ####################################################################################################
@@ -84,7 +83,7 @@ using OrdinaryDiffEqRosenbrock
 # this is the ODEProblem used with `ODE.solve`
 prob_ode = ODE.ODEProblem(TMvf!, copy(z0), (0., 1.), par_tm; abstol = 1e-11, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7, verbose = false), tol_stability = 1e-7, detect_bifurcation = 3, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7), tol_stability = 1e-7, detect_bifurcation = 3)
 
 br_posh = @time continuation(
     br, 4,

@@ -16,6 +16,61 @@ _namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x).
 _mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
+`BifurcationKit.ReturnCode` is the standard return code enum interface for the BifurcationKit interface.
+Return codes are notes given by the solvers to indicate the state of the solution, for example whether it successfully solved the equations, whether it failed to solve the equations, and importantly, why it exited.
+
+## Using `BifurcationKit.ReturnCode`
+
+`BifurcationKit.ReturnCode` uses the interface of [EnumX.jl](https://github.com/fredrikekre/EnumX.jl) and thus inherits all of the behaviors of being an EnumX. This includes the Enum type itself being referred to as `BifurcationKit.ReturnCode.T`, and each constituent enum state being accessed as a module property, for example BifurcationKit.ReturnCode.EmptyReturnCode`.
+
+## Properties
+- `successful_retcode(retcode::ReturnCode.T)`: Determines whether the output enum is considered a success state of the solver, i.e. the solver successfully solved the equations. `ReturnCode.EmptyReturnCode` is the most basic form, simply declaring that it was successful, but many more informative success return codes exist as well.
+
+When two branches are concatenated, their retcodes are combined with [`_RETCODE_CONCAT_MATRIX`](@ref): `ReturnCode.DsLessThanMin` is absorbing and, between successful retcodes, the most informative one is kept.
+"""
+EnumX.@enumx ReturnCode begin
+    EmptyReturnCode
+    "Stopped by a finalizer."
+    Finalized
+    "Reached continuation max steps."
+    MaxSteps
+    "Stopped by ds smaller than ContinuationPar.dsmin"
+    DsLessThanMin
+    "Parameter boundary hit."
+    BoundaryHit
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when `retcode` corresponds to a successful termination.
+"""
+function successful_retcode(retcode::ReturnCode.T)
+    return  retcode == ReturnCode.EmptyReturnCode ||
+            retcode == ReturnCode.Finalized ||
+            retcode == ReturnCode.MaxSteps ||
+            retcode == ReturnCode.BoundaryHit
+end
+
+"""
+Matrix giving the plausible combination of two [`ReturnCode`](@ref)s when concatenating branches. The combination is symmetric.
+"""
+const _RETCODE_CONCAT_MATRIX = ReturnCode.T[
+    ReturnCode.EmptyReturnCode   ReturnCode.Finalized     ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.Finalized         ReturnCode.Finalized     ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.MaxSteps          ReturnCode.MaxSteps      ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.DsLessThanMin     ReturnCode.DsLessThanMin ReturnCode.DsLessThanMin ReturnCode.DsLessThanMin  ReturnCode.DsLessThanMin;
+    ReturnCode.BoundaryHit       ReturnCode.BoundaryHit   ReturnCode.BoundaryHit   ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit
+]
+
+"""
+$(TYPEDSIGNATURES)
+
+Combine the retcodes `rc1` and `rc2` of two concatenated branches. See [`_RETCODE_CONCAT_MATRIX`](@ref) for the combination rule.
+"""
+@inline _combine_retcodes(rc1::ReturnCode.T, rc2::ReturnCode.T) = _RETCODE_CONCAT_MATRIX[Int(rc1) + 1, Int(rc2) + 1]
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
 $(TYPEDEF)
 
 Structure which holds the results after a call to [`continuation`](@ref).
@@ -110,6 +165,9 @@ julia> br.param
     "Continuation algorithm used for the computation of the branch"
     alg::Talg
 
+    "Return code. See [`ReturnCode`](@ref)"
+    retcode::ReturnCode.T = ReturnCode.EmptyReturnCode
+
     @assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
@@ -124,6 +182,13 @@ getkind(br::AbstractVector{ <: ContResult}) = getkind(first(br))
 """
 $(TYPEDSIGNATURES)
 
+Return the [`ReturnCode`](@ref) of a continuation result.
+"""
+@inline return_code(br::ContResult) = getfield(br, :retcode)
+
+"""
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem of the branch.
 """
 getparams(br::AbstractBranchResult) = getparams(getprob(br))
@@ -132,8 +197,15 @@ getparams(br::AbstractBranchResult) = getparams(getprob(br))
 $(TYPEDSIGNATURES)
 
 Return the parameters corresponding to the ind-th step in the branch.
+
 """
 getparams(br::AbstractBranchResult, ind::Int) = setparam(br, get_solp(br, ind))
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when the continuation result terminated successfully.
+"""
+successful_retcode(br::ContResult) = successful_retcode(return_code(br))
 
 getlens(br::AbstractBranchResult) = getlens(getprob(br))
 @inline getprob(br::AbstractBranchResult) = getfield(br, :prob)
@@ -165,8 +237,12 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 get_bordered_linsolver(br::AbstractBranchResult) = get_bordered_linsolver(getalg(br))
 geteigensolver(br::ContResult) = geteigensolver(getcontparams(br))
 
+@inline _firstbranch(γ::ContResult) = γ
+@inline _firstbranch(γ::Vector{ <: ContResult}) = first(γ)
+
 """
-    setparam(br, p0)
+$(TYPEDSIGNATURES)
+
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `getprob(br)`.
 """
 setparam(br::AbstractBranchResult, p0) = setparam(getprob(br), p0)
@@ -180,25 +256,20 @@ function Base.getindex(br::ContResult, k::Int)
     return (; br.branch[k]..., eigenvals, eigenvecs)
 end
 
-function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
+function Base.getindex(br0::ContResult, k::UnitRange{ <: Integer})
     br = deepcopy(br0)
-
     if ~isnothing(br.branch)
         @reset br.branch = br.branch[k]
     end
-
     if ~isnothing(br.eig)
         @reset br.eig = [pt for pt in br.eig if pt.step in br.branch.step]
     end
-
     if ~isnothing(br.sol)
         @reset br.sol = [pt for pt in br.sol if pt.step in br.branch.step]
     end
-
     if ~isnothing(br.specialpoint)
-        @reset br.specialpoint = [setproperties(pt; idx=pt.idx + 1 - k[1]) for pt in br.specialpoint if pt.idx in k]
+        @reset br.specialpoint = [setproperties(pt; idx = pt.idx + 1 - k[1]) for pt in br.specialpoint if pt.idx in k]
     end
-
     return br
 end
 
@@ -227,7 +298,7 @@ Return the parameter for the ind-th point stored in br.sol
 end
 
 function Base.getproperty(br::ContResult, s::Symbol)
-    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg)
+    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg, :retcode)
         getfield(br, s)
     else
         getproperty(br.branch, s)
@@ -291,6 +362,8 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
     print(io, prefix * "├─ Algo: ")
     printstyled(io, _shortname(getalg(br)), "\n", color=:cyan, bold = true)
+    print(io, prefix * "├─ Return code: ")
+    printstyled(io, return_code(br), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
         println(io, prefix * "└─ Special points:")
         print_specialpoints(io, br)
@@ -333,7 +406,8 @@ function _contresult(iter,
                     contparams = contparams,
                     alg = iter.alg,
                     kind = iter.kind,
-                    prob = iter.prob)
+                    prob = getprob(iter)
+                    )
 end
 
 """
@@ -382,6 +456,29 @@ getalg(br::Branch) = getalg(_firstbranch(getbranches(br)))
 getkind(br::Branch) = getkind(getbranches(br))
 getcontparams(br::Branch) = getcontparams(_firstbranch(getbranches(br)))
 
+"""
+$(TYPEDSIGNATURES)
+
+Return the [`ReturnCode`](@ref) of a `Branch`. When the branch holds several
+continuation results, a failure on any of them is propagated.
+"""
+return_code(br::Branch{Tk, Tp, <: ContResult}) where {Tk, Tp} = return_code(getbranches(br))
+
+function return_code(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp}
+    codes = map(return_code, getbranches(br))
+    for code in codes
+        ~successful_retcode(code) && return code
+    end
+    return isempty(codes) ? ReturnCode.EmptyReturnCode : first(codes)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when the `Branch` terminated successfully.
+"""
+successful_retcode(br::Branch) = successful_retcode(return_code(br))
+
 haseigenvalues(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvalues, getbranches(br))
 hassolution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(hassolution, getbranches(br))
 haseigenvector(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvector, getbranches(br))
@@ -429,26 +526,19 @@ function _reverse(br0::ContResult)
     br = deepcopy(br0)
     nb = length(br.branch)
     if ~isnothing(br.branch)
-        @reset br.branch =
-            StructArrays.StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
+        @reset br.branch = StructArrays.StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
     end
-
     if ~isnothing(br.specialpoint)
-        @reset br.specialpoint =
-            [setproperties(pt;
-                step = nb - pt.step - 1,
-                idx  = nb - pt.idx + 1,
-                δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
+        @reset br.specialpoint = [setproperties(pt;
+                                    step = nb - pt.step - 1,
+                                    idx  = nb - pt.idx + 1,
+                                    δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
     end
-
     if ~isnothing(br.eig)
-        @reset br.eig =
-            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
+        @reset br.eig = [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
     end
-
     if ~isnothing(br.sol)
-        @reset br.sol =
-            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
+        @reset br.sol = [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
     end
     return br
 end
@@ -464,30 +554,25 @@ Merge two `ContResult`s and put the result in `br`. This is a barbone cat, in a 
 function _cat!(br::ContResult, br1::ContResult)
     nb = length(br.branch)
     if ~isnothing(br.branch)
-        append!(br.branch,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.branch])
+        append!(br.branch, [setproperties(pt; step = nb + pt.step) for pt in br1.branch])
     end
     if ~isnothing(br.specialpoint)
-        append!(br.specialpoint,
-            [setproperties(pt;
-                step = nb + pt.step,
-                idx = nb + pt.idx) for pt in br1.specialpoint])
+        append!(br.specialpoint, [setproperties(pt;
+                                    step = nb + pt.step,
+                                    idx = nb + pt.idx) for pt in br1.specialpoint])
     end
-
     if ~isnothing(br.eig)
-        append!(br.eig,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.eig])
+        append!(br.eig, [setproperties(pt; step = nb + pt.step) for pt in br1.eig])
     end
-
     if ~isnothing(br.sol)
-        append!(br.sol,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.sol])
+        append!(br.sol, [setproperties(pt; step = nb + pt.step) for pt in br1.sol])
     end
+    @reset br.retcode = _combine_retcodes(br.retcode, br1.retcode)
     return br
 end
 
 """
-Same as `_cat!` but determine the ordering so that the branches merge properly.
+Same as `_cat!` but determine the ordering so that the branches merge properly. The retcodes of the two branches are combined with [`_RETCODE_CONCAT_MATRIX`](@ref), which is symmetric so that the result does not depend on the ordering of `br1` and `br2`.
 """
 function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
     # find the intersection point

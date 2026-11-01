@@ -13,6 +13,7 @@ module BifurcationKit
     import PreallocationTools: DiffCache, get_tmp
     using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF, TYPEDFIELDS, TYPEDSIGNATURES
 
+    import EnumX
     # used in Problems.jl
     import SciMLBase
 
