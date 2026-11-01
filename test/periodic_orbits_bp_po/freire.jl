@@ -84,12 +84,14 @@ begin
     for meshadapt in (false, true)
         br_po = continuation(br, 1, 
             ContinuationPar(br.contparams, ds = -0.001, dsmax = 0.01, tol_stability = 1e-4, p_min = -0.7), 
-            Collocation(20, 4; jacobian = BK.DenseAnalyticalInplace(), meshadapt);
+            Collocation(30, 4; jacobian = BK.DenseAnalyticalInplace(), meshadapt);
             δp = 0.001,
         )
         # plot(br, br_po)
         @test br_po.specialpoint[1].type == :bp
+        @test br_po.specialpoint[1].param ≈ -0.5843347768629144 rtol = 1e-5
         @test br_po.specialpoint[2].type == :bp
+        @test br_po.specialpoint[2].param ≈ -0.5870285000430254 rtol = 1e-5
         
         bp = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(true))
         @test bp.nf isa BK.PitchforkMap
@@ -100,10 +102,25 @@ begin
         @test_skip bp.nf.nf.b30 ≈ 1657  rtol = 1e-2
         
         bppo = get_normal_form(br_po, 2; detailed = Val(true), prm = Val(false))
+        # ├─ Coefficients a:
+        # │  ├─ a₀₁ = 6.0637
+        # │  ├─ a₁₁ = -0.198
+        # │  └─ a₂₀ = 5.1543
+        # └─ Coefficients c:
+        # ├─ c₀₁ = 1.35e-9
+        # ├─ c₁₁ = 23.96285
+        # ├─ c₂  = 0.00424
+        # └─ c₃  = 40.5156
         @test bppo isa BK.PitchforkPO
         @test bppo.nf.type == :SubCritical
+        # the coefficients are mesh independent (uniform/adapted) and
+        # converge with Ntst
+        @test abs(bppo.nf.nf.c01) < 1e-5
+        @test bppo.nf.nf.c11 ≈ 23.9628 rtol = 3e-2
+        @test bppo.nf.nf.c3  ≈ 40.54   rtol = 3e-2
+        @test bppo.nf.nf.a01 ≈ 6.0637  rtol = 3e-2
+        @test bppo.nf.nf.a20 ≈ 5.157   rtol = 3e-2
         pred = BK.predictor(bppo, 0.01, 0.1)
-        @test !isnothing(pred)
 
         # detailed = Val(false) skips all the normal form coefficients
         bppo_lite = get_normal_form(br_po, 2; detailed = Val(false))

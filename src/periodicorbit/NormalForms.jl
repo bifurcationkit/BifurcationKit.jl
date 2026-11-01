@@ -278,7 +278,7 @@ end
     Jbd = similar(J, nj+1, nj+1) # carefull for sparse matrices
     Jbd[1:nj,1:nj] .= J
     Jbd[1:nj-1,end] .= Fu₀# ∂(coll, vcat(Fu₀,period), pars)[begin:end-1]
-    Jbd[end,1:nj-1] .= randn(nj-1)
+    Jbd[end,1:nj-1] .= _rand(nj-1)
     Jbd[end-1:end,end-1:end] .= 0
     rhs = zeros(𝒯, nj+1, 2); rhs[end-1:end,end-1:end] .= LA.I(2)
     sols   = Jbd  \ rhs
@@ -387,7 +387,12 @@ end
 @views function _iooss_rows(coll, hg)
     N, m, Ntst = size(coll)
     out = zeros(eltype(hg), length(coll))
-    out[begin:begin + N*m*Ntst - 1] .= vec(hg)
+    # weight each Gauss row by dt_j = (τ_{j+1}-τ_j)/2 so that the sums
+    # dot(p, rows(g)) approximate the integrals ∫_0^1 ⟨p(t), g(t)⟩ dt,
+    # consistently with the collocation operator J0 = dt * L_cont
+    mesh = getmesh(coll)
+    dtvec = repeat([(mesh[j+1]-mesh[j])/2 for j in 1:Ntst], inner=m)
+    out[begin:begin + N*m*Ntst - 1] .= vec(hg) .* repeat(dtvec, inner=N)
     return out
 end
 
@@ -467,9 +472,11 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     u0dot = Fu₀
     v = v₁
 
+    rows(g) = _iooss_rows(coll, g)
+
     # matrix of solvability conditions
-    Mcoef = [LA.dot(p₀, v) LA.dot(p₀, u0dot);
-             LA.dot(p₁, v) LA.dot(p₁, u0dot)]
+    Mcoef = [LA.dot(p₀, rows(vg)) LA.dot(p₀, rows(Fu0g));
+             LA.dot(p₁, rows(vg)) LA.dot(p₁, rows(Fu0g))]
 
     # alpha is defined by J0 v = -alpha T F(u0)
     J0v = J0 * v
@@ -478,7 +485,6 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
     α = -LA.dot(den, num) / (T * LA.dot(den, den))
 
     vdotg = Av .- α .* Fu0g
-    rows(g) = _iooss_rows(coll, g)
     coeff(g) = Mcoef \ [LA.dot(p₀, rows(g)), LA.dot(p₁, rows(g))]
 
     # equation (5): c01, a01 and h01
@@ -521,7 +527,7 @@ function branch_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
         Bv20[:, p] .= B(u0g[:, p], par, vg[:, p], h20g[:, p])
     end
     rhs8raw = @. 3 * Bv20 - 6c2 * h20g - 6a20 * vdotg - 3 * α * h20dotg
-    dv = [LA.dot(p₀, v), LA.dot(p₁, v)]
+    dv = [LA.dot(p₀, rows(vg)), LA.dot(p₁, rows(vg))]
     c3 = LA.dot(dv, [LA.dot(p₀, rows(rhs8raw)), LA.dot(p₁, rows(rhs8raw))]) /
           (6 * LA.dot(dv, dv))
     rhs8g = @. rhs8raw - 6c3 * vg
@@ -1750,8 +1756,10 @@ function predictor(nf::BranchPointPO{ <: Collocation},
         if nf.prm == true && ~isnothing(nf.nf.nf)
             # normal form based on Poincaré return map
             pred = predictor(nf.nf, δp)
-            ampfactor *= pred.amp
-            δp = pred.extras.δp
+            if ~(pred isa EmptyPredictor)
+                ampfactor *= pred.amp
+                δp = pred.extras.δp
+            end
         end
         # For the Iooss normal form (nf.prm == false), the coefficients
         # a01, a11, a20, c3 can be used for a refined predictor. We keep
@@ -1817,13 +1825,7 @@ function predictor(nf::TranscriticalPO{ <: Collocation},
     return _predictor_po_iooss(nf, amp, nf.nf.p + δp)
 end
 
-function predictor(nf::FoldPO{ <: Collocation},
-                    δp,
-                    ampfactor;
-                    override = false)
-    return EmptyPredictor()
-end
-
+predictor(::FoldPO{ <: Collocation}, δp, ampfactor; override = false) = EmptyPredictor()
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDSIGNATURES)
