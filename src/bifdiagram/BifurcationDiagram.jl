@@ -1,7 +1,9 @@
 """
 $(TYPEDSIGNATURES)
 
-Structure to hold a connected component of a bifurcation diagram which is encoded as a tree of `BifDiagNode`(s).
+Node of the tree encoding a connected component of a bifurcation diagram. The root node holds the initial branch, computed with [`continuation`](@ref); every other node corresponds to a branch computed from a bifurcation point on its parent branch, see [`bifurcationdiagram`](@ref) and [`bifurcationdiagram!`](@ref).
+
+There is usually no need to construct a `BifDiagNode` by hand: it is created and filled in automatically by [`bifurcationdiagram`](@ref). You mostly need the accessor methods below.
 
 # Internal fields
 
@@ -9,10 +11,14 @@ $(TYPEDFIELDS)
 
 # Methods
 
-- `hasbranch(diagram)`
-- `get_branch(diagram)` return the `AbstractBranch` stored inside the current node.
-- `from(diagram)` return the parent bifurcation point.
-- `diagram[code]` For example `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. This is essentially the Ulam-Harris-Neveu labeling.
+- `hasbranch(diagram)` returns whether the node stores a branch.
+- `get_branch(diagram)` returns the `AbstractBranch` stored in the node.
+- `get_branch(diagram, code)` descends the tree along the `Int`-valued tuple `code` and returns the resulting node; `get_branch(diagram, ())` returns `diagram` itself.
+- `from(diagram)` returns the bifurcation point from which the branch stored in the node emanates.
+- `get_branches_from_BP(diagram, indbif)` returns the children of the root node emanating from the `indbif`-th bifurcation point on the root branch.
+- `diagram[code...]` is equivalent to `get_branch(diagram, code)`, e.g. `diagram[1,2,3]` returns `diagram.child[1].child[2].child[3]`. This is essentially the Ulam-Harris-Neveu labeling: the `i`-th entry of `code` indexes the bifurcation point on the parent branch from which the child branch was computed.
+- `level(diagram)` returns the recursion level of the node in the tree.
+- `size(diagram)` (or `size(diagram, code)`) returns the number of nodes in the (sub-)tree.
 """
 mutable struct BifDiagNode{Tγ, Tc}
     "current recursion level in the tree."
@@ -185,7 +191,6 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
         return node
     end
     verbose = (get(kwargs, :verbosity, 0) > 0) || verbosediagram
-
     # current level of recursion
     level = node.level
     γ0 = get_branch(node)
