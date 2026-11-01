@@ -403,9 +403,9 @@ get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(g
 
 function _trivial_predictor(bp, ds; verbose = false, ampfactor::𝒯 = 1) where {𝒯 <: Number}
     return (;x0 = bp.x0, 
-      x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
-       p =  bp.p + ds, 
-     amp = ampfactor)
+            x1 = bp.x0 .+ ampfactor .* real.(bp.ζ), 
+            p =  bp.p + ds, 
+            amp = ampfactor)
 end
 
 """

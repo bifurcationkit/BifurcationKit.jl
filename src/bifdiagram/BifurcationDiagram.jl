@@ -152,6 +152,8 @@ function _lets_branch_from_bif_point(br::AbstractBranchResult,
     )
 end
 
+filter_bif_points_defaults(prob, γ, bp) = true
+
 """
 $(TYPEDSIGNATURES)
 
@@ -167,6 +169,7 @@ Similar to [`bifurcationdiagram`](@ref) but you pass a previously computed `node
 - `usedeflation = false`
 - `halfbranch = false` for Pitchfork / Transcritical bifurcations, compute only half of the branch. Can be useful when there are symmetries.
 - `verbosediagram` verbose specific to bifurcation diagram. Print information about the branches as they are being computed.
+- `filter_bif_points = filter_bif_points_defaults` a predicate `(prob, γ, bp) -> Bool` called on each detected bifurcation point `bp` before computing the bifurcated branch. Return `false` to skip it. See [`filter_bif_points_defaults`](@ref).
 - `kwargs` optional arguments as for [`continuation`](@ref) but also for the different versions listed in [Continuation](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/library/#Continuation-1).
 """
 function bifurcationdiagram!(prob::AbstractBifurcationProblem,
@@ -176,6 +179,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                               code = "0",
                               halfbranch = false,
                               verbosediagram = false,
+                              filter_bif_points = filter_bif_points_defaults,
                               kwargs...)
     if node.level >= maxlevel || isnothing(node.γ)
         return node
@@ -189,8 +193,8 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     for (id, pt) in pairs(γ0.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
-        if pt.step > 1 && (pt.type in (:bp, :nd))
             try
+        if pt.step > 1 && (pt.type in (:bp, :nd, :pd)) && filter_bif_points(prob, γ0, pt)
                 if verbose
                     println("─"^80*"\n──▶ New branch, level = $(level+1), dim(Kernel) = ", 
                                     kernel_dimension(pt), 
@@ -229,6 +233,7 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                             options; 
                             code = (code..., ii), 
                             verbosediagram, 
+                            filter_bif_points,
                             kwargs...)
     end
     return node

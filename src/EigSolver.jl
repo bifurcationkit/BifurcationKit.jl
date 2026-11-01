@@ -259,7 +259,7 @@ function (eig_si::ShiftInvert)(J, nev; kwargs...)
     function Jmap(rhs)
         eig_si.ls(ShiftedOperator(;J, a₀ = -eig_si.sigma , a₁ = VI.One()), rhs)[1]
     end
-    vals, vecs, cv, n = @time "SI-ev" eig_si.eig(Jmap, nev; kwargs...)
+    vals, vecs, cv, n = eig_si.eig(Jmap, nev; kwargs...)
     rescaled_vals = 1 ./vals .+ eig_si.sigma
     λ, ϕ = __sort_spectrum(eig_si.eig, rescaled_vals, vecs)
     return λ, ϕ, cv, n

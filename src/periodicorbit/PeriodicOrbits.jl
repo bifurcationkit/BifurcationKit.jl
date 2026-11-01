@@ -338,7 +338,7 @@ function continuation(discPO::AbstractShootingDiscretization,
         contParams = @set contParams.newton_options.eigsolver = eigsolver
     end
 
-    _plotsol   = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
+    _plotsol  = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
     record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
     wrap = PeriodicOrbitFunctionalSh(discPO, jac, orbitguess, _plotsol, record_po)
 
@@ -626,7 +626,6 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     if abs(bifpt.δ[1]) != 1
         error("Only simple bifurcation points are handled properly")
     end
-
     nf = get_normal_form(br, ind_bif; 
                             detailed = Val(true),
                             autodiff = true,

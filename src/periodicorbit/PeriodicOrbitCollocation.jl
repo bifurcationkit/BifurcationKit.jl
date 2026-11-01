@@ -1166,7 +1166,6 @@ function continuation(coll::Collocation,
             @reset eigsolver.cache = COPCACHE(coll, Val(0))
         end
     else
-        # linear_algo = @set linear_algo.solver = FloquetWrapperLS(linear_algo.solver)
         jacPO = _generate_jacobian(coll, coll.jacobian, orbitguess, getparams(coll); δ)
     end
     contParams = _contParams

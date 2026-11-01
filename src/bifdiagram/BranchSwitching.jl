@@ -77,7 +77,7 @@ Automatic branch switching at branch points based on a computation of the normal
 """
 function continuation(br::AbstractResult{Tkind, Tprob}, 
                       ind_bif::Int, 
-                      options_cont::ContinuationPar = br.contparams;
+                      options_cont::ContinuationPar = getcontparams(br);
 
                       alg = getalg(br),
 
@@ -268,7 +268,7 @@ function get_first_points_on_branch(br::AbstractBranchResult,
                                     options_cont::ContinuationPar = br.contparams ;
                                     δp = nothing,
                                     usedeflation = true,
-                                    deflated_newton_kwargs = (),
+                                    deflated_newton_kwargs = (;),
                                     kwargs...)
     # compute predictor for point on new branch
     ds = isnothing(δp) ? options_cont.ds : δp |> abs

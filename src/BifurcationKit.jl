@@ -179,10 +179,10 @@ module BifurcationKit
     export ContIterable, iterate, ContState, getsolution, getx, getp, getpreviousx, getpreviousp, gettangent, getpredictor, get_previous_solution
 
     # codim2 Fold continuation
-    export foldpoint, FoldLinearSolverMinAug
+    export FoldLinearSolverMinAug
 
     # codim2 Hopf continuation
-    export HopfPoint, HopfLinearSolverMinAug
+    export HopfLinearSolverMinAug
 
     # normal form
     export get_normal_form, hopf_normal_form, predictor, normal_form
@@ -191,13 +191,13 @@ module BifurcationKit
     export bifurcationdiagram, bifurcationdiagram!, Branch, BifDiagNode, get_branch, get_branches_from_BP, getbranches
 
     # Periodic orbit computation
-    export generate_solution, getperiod, get_periodic_orbit, guess_from_hopf, generate_ci_problem
+    export generate_solution, getperiod, get_periodic_orbit, generate_ci_problem
 
     # Periodic orbit computation based on Trapeze method
-    export Trapeze, continuation_potrap
+    export Trapeze
 
     # Periodic orbit computation based on Shooting
-    export Flow, Shooting, PoincareShooting, AbstractShootingProblem, SectionPS, SectionSS
+    export Flow, Shooting, PoincareShooting, SectionPS, SectionSS
 
     # Periodic orbit computation based on Collocation
     export Collocation, COPBLS, COPLS

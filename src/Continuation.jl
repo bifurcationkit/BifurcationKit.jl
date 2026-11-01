@@ -723,9 +723,10 @@ function continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
                       kwargs...)
-    _continuation(prob, alg, contparams;kwargs...)
+    _continuation(prob, alg, contparams; kwargs...)
 end
 
+# the use of _continuation is to allow for dispatch and allow pre-treatment before _continuation 
 function _continuation(prob::AbstractBifurcationProblem,
                       alg::AbstractContinuationAlgorithm,
                       contparams::ContinuationPar;
@@ -734,7 +735,6 @@ function _continuation(prob::AbstractBifurcationProblem,
                       kwargs...) where {bothside_type}
     # Note that bothside and kwargs are parameters that are easy to switch for debug/plot purposes. 
     # They could have been placed in ContinuationPar but it would have been less convenient.
-    # Init the continuation parameters
     contparams = init(contparams, prob, alg)
     contparams_fwd = contparams
 

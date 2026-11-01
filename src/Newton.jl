@@ -42,7 +42,7 @@ Structure which holds the solution from application of Newton-Krylov algorithm t
 
 For example
 
-    sol = newton(prob, NewtonPar())
+    sol = solve(prob, Newton(), NewtonPar())
 
 # methods
 

@@ -194,30 +194,17 @@ Depending on the options in `contParams`, it can locate the bifurcation points o
 # Outputs:
 - `contres::DCResult` composite type which contains the computed branches. See [`ContResult`](@ref) for more information,
 """
-function continuation(prob::AbstractBifurcationProblem,
-            algdc::DefCont,
-            contParams::ContinuationPar;
-            verbosity::Int = 2,
-            plot::Bool = true,
-            linear_algo = BorderingBLS(contParams.newton_options.linsolver),
-            dot_palc = DotTheta(),
-            callback_newton = cb_default,
-            filename = "branch-" * string(Dates.now()),
-            normC = norm,
-            kwcont...)
-    _deflated_continuation(prob, algdc, contParams; verbosity, plot, linear_algo, dot_palc, callback_newton, filename, normC, kwcont...)
+function continuation(prob::AbstractBifurcationProblem, algdc::DefCont, contParams::ContinuationPar; kwcont...)
+    return _deflated_continuation(prob, algdc, contParams; kwcont...)
 end
 
 
 function _deflated_continuation(prob::AbstractBifurcationProblem,
             algdc::DefCont,
             contParams::ContinuationPar;
-            verbosity::Int = 2,
+            verbosity::Int = 0,
             plot::Bool = true,
-            linear_algo = BorderingBLS(contParams.newton_options.linsolver),
-            dot_palc = DotTheta(),
             callback_newton = cb_default,
-            filename = "branch-" * string(Dates.now()),
             normC = norm,
             kwcont...)
 
@@ -230,7 +217,6 @@ function _deflated_continuation(prob::AbstractBifurcationProblem,
 
     # we make a copy of the deflation operator
     deflationOp = copy(defOp)
-
     verbosity > 0 && printstyled(color=:magenta, "━"^31*"\n")
     verbosity > 0 && printstyled(color=:magenta, "──▶ There are $(length(deflationOp)) branche(s)\n")
 
@@ -238,14 +224,12 @@ function _deflated_continuation(prob::AbstractBifurcationProblem,
     # we "hack" the save_sol_every_step option because we always want to record the first point on each branch
     contIt = ContIterable(prob, algdc.alg, ContinuationPar(contParams, 
                     save_sol_every_step = contParams.save_sol_every_step == 0 ? Int(1e14) : contParams.save_sol_every_step);
-                    plot = plot,
-                    normC = normC,
-                    callback_newton = callback_newton,
+                    plot,
+                    normC,
+                    callback_newton,
                     verbosity = max(0, verbosity - 2),
                     kwcont...)
-
     iter = DefContIterable(contIt, algdc)
-
     return deflatedContinuation(iter, deflationOp, contParams, verbosity, plot)
 end
 

@@ -22,7 +22,7 @@ $(TYPEDFIELDS)
 @with_kw struct SpecialPoint{T, Tp, Tv, Tvτ} <: AbstractBifurcationPoint
     "Description of the special points. In case of `Events`, this field records the user passed name to the event, or the default `:userD`, `:userC`. In case of bifurcation points, it can be one of the following names:
 
-    - :bp Bifurcation point, simple eigenvalue crossing the imaginary axis
+    - :bp Bifurcation point, simple real eigenvalue crossing the imaginary axis
     - :fold Fold point
     - :hopf Hopf point
     - :nd not documented bifurcation point. Detected by multiple eigenvalues crossing. Generally occurs in problems with symmetries or in cases where the continuation step size is too large and merge two different bifurcation points.
