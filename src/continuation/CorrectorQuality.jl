@@ -99,8 +99,12 @@ _deceleration(::Nothing, ratio::Real) = 0
 $(TYPEDSIGNATURES)
 
 Contraction rate of a Newton step of length `distance` that follows one of length `quality.previous`. It is only defined after the first step.
+A step of length zero has contracted fully, rate zero, also after a step of length zero with `tol = 0`, where the quotient would be `0 / 0`.
 """
 function contraction_rate(control::CorrectorQuality{T}, quality::StepQuality{T}, distance::T, tol::Real)::T where {T <: Real}
+    if iszero(distance)
+        return zero(T)
+    end
     return distance / (quality.previous + convert(T, tol) * control.η)
 end
 
