@@ -362,7 +362,7 @@ function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
     ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product <normal, y> is not zero, $(abs(LA.dot(normal, y)))"
+    abs(LA.dot(normal, y)) > 1e-10 && @error "[d2F-PoincaréMap] This dot product <normal, y> is not zero, $(abs(LA.dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end

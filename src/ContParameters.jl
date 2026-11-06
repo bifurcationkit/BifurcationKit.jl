@@ -53,18 +53,18 @@ Returns a variable containing the parameters to affect the `continuation` algori
     `DefaultEig()` follows the type of the Jacobian, whereas `EigArpack`
     only supports `Float64`.
 """
-@with_kw struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+@with_kw_noshow struct ContinuationPar{T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
     # tangent predictor parameters for continuation
-    ds::T       = 1e-2
-    dsmin::T    = oftype(ds, 1e-4)
-    dsmax::T    = oftype(ds, 1e-1)
+    ds::T    = 1e-2
+    dsmin::T = oftype(ds, 1e-4)
+    dsmax::T = oftype(ds, 1e-1)
 
     # parameters for continuation
-    a::T    = oftype(ds, 0.5) # aggressiveness factor for step size adaptation
+    a::T = oftype(ds, 0.5) # aggressiveness factor for step size adaptation
 
     # parameters bound
-    p_min::T    = oftype(ds, -1.0)
-    p_max::T    = oftype(ds,  1.0)
+    p_min::T = oftype(ds, -1.0)
+    p_max::T = oftype(ds,  1.0)
 
     # maximum number of continuation steps
     max_steps::Int64  = 400
@@ -84,7 +84,7 @@ Returns a variable containing the parameters to affect the `continuation` algori
     plot_every_step::Int64 = 10
 
     # handling bifurcation points
-    tol_stability::T = oftype(ds, 1e-10)              # lower bound for stability of equilibria and periodic orbits
+    tol_stability::T = oftype(ds, 1e-10)  # lower bound for stability of equilibria and periodic orbits
     detect_fold::Bool = true              # detect fold points?
     detect_bifurcation::Int64 = 3         # detect other bifurcation points?
     dsmin_bisection::T = oftype(ds, 1e-16)            # dsmin for the bisection algorithm when locating bifurcation points
@@ -114,22 +114,39 @@ end
 @inline compute_eigenelements(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline compute_eigenvalues(cp::ContinuationPar) = cp.detect_bifurcation > 0
 @inline save_eigenvectors(cp::ContinuationPar) = cp.save_eigenvectors
+@inline get_newton_options(cp::ContinuationPar) = cp.newton_options
+@inline geteigensolver(cp::ContinuationPar) = geteigensolver(get_newton_options(cp))
 
 # clamp ds value
 clamp_ds(ds, contparams::ContinuationPar) = sign(ds) * clamp(abs(ds), contparams.dsmin, contparams.dsmax)
 
+function Base.show(io::IO, cp::ContinuationPar{T, S, E}; prefix = "    ") where {T, S <: AbstractLinearSolver, E <: AbstractEigenSolver}
+    printstyled(io, "ContinuationPar{$T, $S, $E}\n", bold = true, color = :blue)
+    fields = sort(collect(fieldnames(typeof(cp))); by = String)
+    for (i, f) in enumerate(fields)
+            print(io, prefix, i == lastindex(fields) ? "└─ " : (i == firstindex(fields) ? "┌─ " : "├─ "))
+            print(io, f, " = ")
+            if (getfield(cp, f) isa NewtonPar) == false
+                show(io, getfield(cp, f))
+            else
+                print(io, "NewtonPar{$T, $S, $E}")
+            end
+            println(io)
+    end
+end
+
 """
 Allows to alter the continuation parameters based on the bifurcation problem and the continuation algorithm.
 """
-function init(contparams::ContinuationPar{T,S,E}, 
+function init(contparams::ContinuationPar{T, S, E}, 
                ::AbstractBifurcationProblem, 
-               ::AbstractContinuationAlgorithm) where {T,S,E}
+               ::AbstractContinuationAlgorithm) where {T, S, E}
     return contparams
 end
 
-function init(contparams::ContinuationPar{T,S,E}, 
+function init(contparams::ContinuationPar{T, S, E}, 
                prob::Union{ODEBifProblem, DAEMassBifProblem}, 
-               ::AbstractContinuationAlgorithm) where {T,S,E <: DefaultEig}
+               ::AbstractContinuationAlgorithm) where {T, S, E <: DefaultEig}
     n = length(getu0(prob))
     @reset contparams.nev = n
     return contparams

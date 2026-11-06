@@ -102,7 +102,7 @@ $(TYPEDFIELDS)
 - `∇_x_mass_matrix(pb, x, p, v, w)` returns `∇_x ⟨w, M(x, p) v⟩`, see [`MassFunction`](@ref)
 - `has_massmatrix_adjoint(pb)` returns whether a dedicated mass adjoint `pb.M.Mᵗ` was provided
 - `getmassmatrix_adjoint(pb, x, p)` returns the user provided mass adjoint `pb.M.Mᵗ` (matrix or function)
-- `record_from_solution(pb)`, `save_solution(pb, u, pars)`, `update!(pb, iter, state)` are forwarded to `pb.prob_vf`
+- `record_from_solution(pb)`, `save_solution(pb, u, pars)`, `restore_problem!(pb, u, pars)`, `update!(pb, iter, state)` are forwarded to `pb.prob_vf`
 - `re_make(pb; M = …, Mᵗ = …, R01 = …, ∇x = …, applyM = …, dMv = …, kwargs…)` rebuilds the problem, possibly with another mass matrix (and/or its derivatives)
 - the jet methods of the wrapped problem (`R01`, `dF`, `d2F`, `d3F`, …) are forwarded as well
 
@@ -146,6 +146,7 @@ jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x
 record_from_solution(dae::DAEMassBifProblem) = record_from_solution(dae.prob_vf)
 plot_solution(dae::DAEMassBifProblem) = plot_solution(dae.prob_vf)
 save_solution(dae::DAEMassBifProblem, u, pars) = save_solution(dae.prob_vf, u, pars)
+restore_problem!(dae::DAEMassBifProblem, u, pars) = restore_problem!(dae.prob_vf, u, pars)
 update!(dae::DAEMassBifProblem, iter, state) = update!(dae.prob_vf, iter, state)
 
 R01(dae::DAEMassBifProblem, u, pars) = R01(dae.prob_vf, u, pars)

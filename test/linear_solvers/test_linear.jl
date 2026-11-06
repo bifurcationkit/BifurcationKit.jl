@@ -1,7 +1,7 @@
 # test that the top eigenvalues are sorted by decreasing real part
 _test_sorted(x) = issorted(x, by = real, rev = true)
 ####################################################################################################
-using Test, BifurcationKit, LinearAlgebra, SparseArrays, Arpack, Random
+using Test, BifurcationKit, LinearAlgebra, SparseArrays, Random
 const BK = BifurcationKit
 Random.seed!(1234)
 ####################################################################################################
@@ -626,7 +626,7 @@ let
     @test _test_sorted(DefaultEig()(J0, 10)[1])
 
     B = sparse(I(length(x0)))
-    out = Arpack.eigs(J0, nev = 20, which = :LR)
+    out = BK.EigArpack(; sigma = nothing, which = :LR)(J0, 20)
     resgev = BK.gev(DefaultEig(), J0, B, 10)
     @test _test_sorted(resgev[1])
 

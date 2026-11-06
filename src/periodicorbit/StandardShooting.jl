@@ -106,21 +106,16 @@ function Base.show(io::IO, sh::Shooting)
     println(io, "┌─ Standard shooting method for periodic orbits (PO) / bvp")
     print(io, "├─ time slices    : ")
     printstyled(io, get_mesh_size(sh), "\n"; color, bold)
-
     print(io, "├─ lens           : ")
     printstyled(io, get_lens_symbol(sh.lens), "\n"; color, bold)
-
     print(io, "├─ jacobian       : ")
     printstyled(io, sh.jacobian, "\n"; color, bold)
-
     print(io, "├─ update section : ")
     printstyled(io, sh.update_section_every_step, "\n"; color, bold)
-
     if sh.flow isa FlowDE
         print(io, "├─ integrator     : ")
         printstyled(io, "$(typeof(sh.flow.alg).name.name)\n"; color, bold)
     end
-
     print(io, "└─ parallel       : ")
     printstyled(io, isparallel(sh), "\n"; color, bold)
 end

@@ -3,12 +3,17 @@ BifurcationKit.jl, Changelog
 
 All notable changes to this project will be documented in this file (hopefully). No performance improvements will be notified but mainly the addition of new methods, the modifications of internal structs, etc.
 
-## [Unreleased]
+## [0.8.9]
 
 ### Breaking changes
 - `DAEMassBifProblem` no longer exposes a `Mᵗ` field: the mass matrix, its adjoint and the optional mass derivatives are grouped in a `MassFunction` stored in the field `M`. They are passed through `DAEMassBifProblem(prob, M; Mᵗ = nothing, R01 = FiniteDifferences(), ∇xM = AutoDiff(), type = ConstantMass)` or `re_make`
 - the low-level methods `newton_fold` / `newton_hopf` now take the bordered vectors `(ζ, ζ★)` and the keyword `jacobian_ma` (default `AutoDiff()`); as a consequence `newton(br, ind)` on a Fold / Hopf point uses the matrix-based jacobian by default
 - `get_mass_matrix(::Trapeze)` is renamed `_get_mass_matrix`
+- branch switching now takes the NamedTuples `normal_form_kwargs` and `deflated_newton_kwargs` instead of the flat keywords `nev`, `scaleζ`, `detailed`, `autodiff_nf`, `kwargs_nf`, `verbosedeflation`, `max_iter_deflation` and `perturb`
+- `detailed` is now a `Val{Bool}` for the normal forms, defaulting to `Val(true)`
+- `bothside` is typed as a `Val` (`Val(true)` / `Val(false)`)
+- `multicontinuation` and `continuation(br, ind, opts, disc)` return a `Branch` (possibly holding a vector of branches)
+- `BifurcationProblem` / `ODEBifProblem` / `PDEBifProblem` have a new field `restore_problem!`; this adds a type parameter, so archives saved with a previous version cannot be reloaded
 
 ### Added
 - add the mass-adjoint interface `getmassmatrix_adjoint` / `has_massmatrix_adjoint`, and the `MassFunction` structure holding the mass matrix, its adjoint and the optional derivatives `R01` (`∂ₚ⟨w, M(x,p) v⟩`) and `∇x` (`∇ₓ⟨w, M(x,p) v⟩`), exposed through `R01_mass_matrix` / `∇_x_mass_matrix`
@@ -16,10 +21,25 @@ All notable changes to this project will be documented in this file (hopefully).
 - `Trapeze` now resolves its mass matrix from the underlying vector field through `getmassmatrix(prob_vf, x, p)` when the `massmatrix` field is not set, so that a `DAEMassBifProblem` (constant, parameter or state dependent mass) can be discretized; a `massmatrix` provided in the field still takes precedence. For a state dependent `M(x,p)`, the residual evaluates `M` at each time slice while the analytic jacobian treats it as frozen (no `∇ₓM` terms)
 - support mass matrices depending on the state and on the parameters in the Hopf Minimally Augmented formulation (`jacobian_ma = MinAug()` and `MinAugMatrixBased()`): the bordered scalar σ1 now includes the `∂ₓM` and `∂ₚM` contributions, and the former "Non constant mass matrix not taken into account!" guards are removed from `continuation_hopf`
 - add the `jacobian_ma` keyword to `newton_fold` / `newton_hopf`, like in `continuation_fold` / `continuation_hopf`
+- add the `restore_problem!` hook (with `save_solution` / `saved_solution`), used by `bothside` continuation and forwarded by `DAEMassBifProblem` and `WrapTW`
+- add `detailed = Val(false)` to skip the higher-order coefficients of the normal forms
+- a Newton callback can return `NewtonConverged()` to stop the iterations as converged, allowing convergence tests other than `residual < tol`
+- add `geteigensolver` on `ContResult` and a `show` method for `ContinuationPar`
+- `FFTW` is now a direct dependency
+- add the `ReturnCode` enum and the `return_code` / `successful_retcode` accessors (including for `Branch`); `copy(::ContState)` preserves the return code and, when merging branches, the retcodes are combined with a symmetric priority matrix in which `DsLessThanMin` is absorbing and the most informative successful code is kept
 
 ### Fixed
 - check the constant mass-matrix restriction in `hopf_normal_form` only when the mass matrix is actually used
 - pass `J = nothing` as a keyword in the `callback` invoked by `_newton`
+- use the right eigenvector in the `c₁₁` coefficient of the PD-Iooss normal form
+- update the predictor in `bothside = Val(true)` continuation, fixing an inert backward branch when the initial parameter lies on `p_min` or `p_max`
+- mark the endpoint as `:converged` only when the branch reaches `p_min` / `p_max`, and as `:guess` otherwise
+- report a NaN final residual as a failure to converge in `newton`
+- drop the spurious infinite eigenvalues of a singular `B` in `DefaultGEig`
+- detect an in-place vector field only when `inplace` is not set
+- scale the scalar (`BorderedArray`) component in place in `R01!`, fixing Fold `MinAug` codim 2 continuation
+- restore the raw saved solution in codim 2 routines and initialise the PD/NS codim 2 vectors with minimal augmentation
+- fix `has_adjoint` for `PeriodicOrbitFunctionalSh{<:Shooting{𝒯p, 𝒯j}}` and refine the periodic orbit normal forms and branch switching
 
 ## [0.8.5]
 
