@@ -284,6 +284,8 @@ opts_bratu = ContinuationPar(
         J = J_bratu_free,
     )
     free_policy = JacobianReuse(max_age = 50)
+    # NonlinearSolve.jl PR 1353 adds `reinit!(...; reuse_jacobian)` and preconditioner reuse for matrix-free Jacobians
+    nonlinearsolve_reuses = any(method -> :reuse_jacobian in Base.kwarg_decl(method), methods(NonlinearSolve.SciMLBase.reinit!))
 
     @testset "a matrix-free Newton solve reaches the root of the dense one" begin
         prob = re_make(prob_free; params = (λ = 1.0,), u0 = fill(0.1, 20))
@@ -300,8 +302,12 @@ opts_bratu = ContinuationPar(
         sol1 = BK.solve(prob, NonlinearSolveCorrector(alg), NewtonPar(tol = 1.0e-9))
         @test BK.converged(sol1)
         @test norm(sol0.u - sol1.u, Inf) < 1.0e-7
-        # the preconditioner is built when the policy refreshes the Jacobian
-        @test builds[] < sol1.itnewton
+        # the preconditioner is built when the policy refreshes it, not at every iterate
+        if nonlinearsolve_reuses
+            @test builds[] < sol1.itnewton
+        else
+            @test_skip builds[] < sol1.itnewton
+        end
     end
 
     @testset "matrix-free PALC follows the dense branch, rebuilding the preconditioner only when reuse refreshes it" begin
@@ -338,7 +344,11 @@ opts_bratu = ContinuationPar(
             @test maximum(point -> point.p, br.sol) ≈
                 maximum(point -> point.p, br_default.sol) atol = 0.02
         end
-        @test builds_reused[] < builds_fresh[]
+        if nonlinearsolve_reuses
+            @test builds_reused[] < builds_fresh[]
+        else
+            @test_skip builds_reused[] < builds_fresh[]
+        end
     end
 
     @testset "the state can be any AbstractArray" begin
@@ -407,7 +417,7 @@ opts_bratu = ContinuationPar(
         par_com = (q1 = 2.5, q2 = 2.0, q3 = 10.0, q4 = 0.0675, q5 = 1.0, q6 = 0.1, k = 0.4)
         prob_com = BifurcationProblem(COm, [0.07, 0.2, 5.0], par_com, (@optic _.q2))
         opts_com = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
-        br_com = continuation(prob_com, PALC(), opts_com; normC = norminf, bothside = true)
+        br_com = continuation(prob_com, PALC(), opts_com; normC = norminf, bothside = Val(true))
         @test br_com.specialpoint[2].type == :hopf
 
         alg = PALC(; corrector = NonlinearSolveCorrector(exact))
