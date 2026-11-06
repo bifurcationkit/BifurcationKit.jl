@@ -139,6 +139,8 @@ residual(dae::DAEMassBifProblem, x, p) = residual(dae.prob_vf, x, p)
 residual!(dae::DAEMassBifProblem, o, x, p) = residual!(dae.prob_vf, o, x, p)
 jacobian(dae::DAEMassBifProblem, x, p) = jacobian(dae.prob_vf, x, p)
 jacobian!(dae::DAEMassBifProblem, J, x, p) = jacobian!(dae.prob_vf, J, x, p)
+residual_and_jacobian(dae::DAEMassBifProblem, x, p) = residual_and_jacobian(dae.prob_vf, x, p)
+has_FJ(dae::DAEMassBifProblem) = has_FJ(dae.prob_vf)
 jacobian_adjoint(dae::DAEMassBifProblem, x, p) = jacobian_adjoint(dae.prob_vf, x, p)
 
 record_from_solution(dae::DAEMassBifProblem) = record_from_solution(dae.prob_vf)
