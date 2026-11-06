@@ -168,7 +168,7 @@ res = BK.continuation(br, 2,
     nev = 30, verbosity = 0,
     )
 
-plot(res..., br ;plotfold= false)
+plot(res, br ;plotfold= false)
 ####################################################################################################
 # deflated continuation
 deflationOp = DeflationOperator(2, 1., ([sol0]))

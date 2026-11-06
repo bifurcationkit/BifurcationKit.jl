@@ -44,8 +44,8 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
             𝐌𝐚 = 𝐏𝐛.prob
             powrap = 𝐌𝐚.prob_vf
 
-            x0, parbif = get_bif_point_codim2(br, ind_bif)
-            restore_problem!(powrap, x0, parbif)
+            (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
+            restore_problem!(powrap, saved, parbif)
 
             po = get_periodic_orbit(powrap, x0, parbif)
             period = getperiod(powrap, x0, parbif)

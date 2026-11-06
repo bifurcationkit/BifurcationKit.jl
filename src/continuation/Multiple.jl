@@ -92,7 +92,7 @@ function corrector!(_state::AbstractContinuationState,
     (;ds) = state
     (verbose > 1) && printstyled(color=:magenta, "──"^35*"\n   ┌─ Multiple tangent predictor\n")
     # we combine the callbacks for the newton iterations
-    cb = (args; k...) -> callback(it)(args; k...) && algo(args; k...)
+    cb = (args; k...) -> _verdict_and(callback(it)(args; k...), algo(args; k...))
     # base predictor: z + ds * τ (τ = current tangent), hence ii = 1 corresponds to the usual case
     z_pred0 = _copy(state.z_pred)
     for ii in algo.nb:-1:1

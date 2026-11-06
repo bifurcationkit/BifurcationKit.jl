@@ -118,7 +118,7 @@ br_hopf = continuation(br, 1, (@optic _.γ),
     ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds= 0.01, p_max = 6.5, p_min = -0.1, detect_bifurcation = 1, newton_options = optnew, plot_every_step = 5, tol_stability = 1e-7, nev = 15, save_eigenvectors = false); 
     plot = true,
     start_with_eigen = false, 
-    bothside = false,
+    bothside = Val(false),
     detect_codim2_bifurcation = 2,
     verbosity = 3, normC = norminf,
     jacobian_ma = BK.MinAug(),
@@ -140,7 +140,7 @@ brfold = continuation(br_hopf, indbt,
                     detect_codim2_bifurcation = 2,
                     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
                     jacobian_ma = BK.MinAug(),
-                    bothside = true, normC = norminf)
+                    bothside = Val(true), normC = norminf)
 
 plot(br_hopf, brfold; legend = :topleft, branchlabel = ["Hopf", "Fold"])
 
@@ -153,7 +153,7 @@ hopf_from_zh = continuation(brfold, 4, ContinuationPar(brfold.contparams; max_st
     plot = true,
     bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
     jacobian_ma = BK.MinAug(),
-    bothside = false, 
+    bothside = Val(false), 
     normC = norminf)
 
 plot(
