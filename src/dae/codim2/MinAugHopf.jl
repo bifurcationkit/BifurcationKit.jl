@@ -16,6 +16,7 @@ function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, M, M�
 
     # we solve (J' + iωM')w + M·b·σ2 = 0 with <M·a, w> = 1
     # (conjugate adjoint of the bordered system above)
+    # TODO: this generates a second F★ = factorize(SO★) whereas adjoint(F) would do!
     maj = MassAndJacobian(M★, J★); so = ShiftedOperator(J = maj, a₀ = Complex{𝒯}(0, ω))
     w, σ2, cv, itw = linbdsolver_adjoint(so, Mb, Ma, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J-iωM)' did not converge."

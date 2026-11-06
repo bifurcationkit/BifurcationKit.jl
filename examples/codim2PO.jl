@@ -94,7 +94,7 @@ fold_po_trap1 = continuation(deepcopy(brpo_fold), 2, (@optic _.ϵ), opts_potrap_
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 0,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         usehessian = false,
         jacobian_ma = BK.MinAug(),
         )
@@ -154,7 +154,7 @@ fold_po_coll1 = @time continuation(deepcopy(brpo_fold), 1, (@optic _.ϵ), opts_p
         verbosity = 3, plot = true,
         detect_codim2_bifurcation = 2,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         usehessian = true,
         jacobian_ma = BK.MinAug(),
         # jacobian_ma = BK.MinAugMatrixBased(),
@@ -168,7 +168,7 @@ fold_po_coll2 = @time continuation(deepcopy(brpo_fold), 2, (@optic _.ϵ), opts_p
         detect_codim2_bifurcation = 2,
         update_minaug_every_step = 1,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         jacobian_ma = BK.MinAug(),
         # jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
@@ -193,7 +193,7 @@ pd_po_coll = @time continuation(deepcopy(brpo_pd), 1, (@optic _.b0), opts_pocoll
         callback_newton = BK.cbMaxNorm(10),
         linear_algo = MatrixBLS(),
         # linear_algo = COPBLS(),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         # bdlinsolver = BK.COPBLS(),
         )
@@ -213,7 +213,7 @@ fold_po_coll2 = continuation(brpo_fold, 2, (@optic _.ϵ), opts_pocoll_fold;
         detect_codim2_bifurcation = 2,
         update_minaug_every_step = 1,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         jacobian_ma = BK.MinAug(),
         callback_newton = BK.cbMaxNorm(10),
         bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
@@ -237,7 +237,7 @@ probcoll, ci = generate_ci_problem(Collocation(30, 4;
 brpo_ns = continuation(probcoll, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 3, plot = true,
     argspo...,
-    # bothside = true,
+    # bothside = Val(true),
     )
 
 get_normal_form(brpo_ns, 1; prm = Val(true))
@@ -246,7 +246,7 @@ prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
-    bothside = true,
+    bothside = Val(true),
     )
 @time get_normal_form(brpo_pd, 2)
 
@@ -263,7 +263,7 @@ pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0), opts_pocoll_pd;
         jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(1),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
@@ -281,7 +281,7 @@ ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         jacobian_ma = BK.MinAugMatrixBased(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 f,ax=BK.plot(ns_po_coll, pd_po_coll2, vars = (:ϵ, :b0)); f
@@ -299,7 +299,7 @@ prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
-    bothside = true,
+    bothside = Val(true),
     )
 
 # codim 2 PD
@@ -313,7 +313,7 @@ pd_po_coll2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 
@@ -370,7 +370,7 @@ fold_po_sh1 = continuation(deepcopy(br_fold_sh), 2, (@optic _.ϵ), opts_posh_fol
         jacobian_ma = BK.MinAug(),
         start_with_eigen = false,
         usehessian = false,
-        bothside = true,
+        bothside = Val(true),
         callback_newton = BK.cbMaxNorm(1),
         )
 
@@ -379,7 +379,7 @@ fold_po_sh2 = continuation(deepcopy(br_fold_sh), 1, (@optic _.ϵ), opts_posh_fol
         detect_codim2_bifurcation = 2,
         jacobian_ma = BK.MinAug(),
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         usehessian = false,
         callback_newton = BK.cbMaxNorm(1),
         )
@@ -397,7 +397,7 @@ pd_po_sh = continuation(deepcopy(brpo_pd_sh), 1, (@optic _.b0), opts_posh_pd;
         jacobian_ma = BK.MinAug(),
         usehessian = false,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         callback_newton = BK.cbMaxNorm(1),
         )
 
@@ -418,7 +418,7 @@ probshns, ci = generate_ci_problem(Shooting(M=3), re_make(prob_bif, params = sol
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 0, plot = true,
     argspo...,
-    # bothside = true,
+    # bothside = Val(true),
     callback_newton = BK.cbMaxNorm(1),
     )
 
@@ -435,7 +435,7 @@ ns_po_sh = continuation(deepcopy(brpo_ns), 1, (@optic _.ϵ), opts_posh_ns;
         usehessian = false,
         jacobian_ma = BK.MinAug(),
         normC = norminf,
-        bothside = false,
+        bothside = Val(false),
         callback_newton  = BK.cbMaxNorm(1),
         )
 
@@ -457,7 +457,7 @@ prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 3, plot = true,
     argspo...,
-    bothside = true,
+    bothside = Val(true),
     )
 
 get_normal_form(brpo_pd, 2)
@@ -472,7 +472,7 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 

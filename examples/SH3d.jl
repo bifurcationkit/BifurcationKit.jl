@@ -118,6 +118,7 @@ const w = rand(Nx*Ny*Nz)
 prob = BK.BifurcationProblem(F_sh, AF(vec(sol0)), par, (@optic _.l),
     J = (x, p) -> (dx -> dF_sh(x, p, dx)),
     # J = (x, p) -> J_sh(x, p),
+    R11 = BK.AutoDiff(),
     plot_solution = (ax, x, p; ax1=nothing,iter, state) -> contour3dMakie!(ax, x),
     record_from_solution = (x, p; k...) -> (n2 = norm(x), n8 = norm(x, 8), nw = norm(x .* w) / sqrt(length(x))),
     issymmetric = true)
@@ -152,12 +153,12 @@ function (sheig::SH3dEigMatrixBased)(J, nev::Int; verbosity = 0, kwargs...)
     # return vals2[Ind], vecs[:, Ind], true, info
     return vals2[Ind], vecs[Ind], true, info
 end
-BifurcationKit.geteigenvector(eigsolve::SH3dEigMatrixBased, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
+BifurcationKit.geteigenvector(::SH3dEigMatrixBased, vecs, n::Union{Int, Array{Int64,1}}) = vecs[n]
 eigSH3d = SH3dEigMatrixBased(0.0, lu(L1))
 eigSH3d = SH3dEig((@set ls.rtol = 1e-9), 0.1)
 # @time eigSH3d(BK.jacobian(prob, sol_hexa.u, par), 10);
 ###################################################################################################
-optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = NewtonPar(optnew; tol = 1e-9, max_iterations = 15), max_steps = 146, detect_bifurcation = 3, nev = 15, n_inversion = 4, plot_every_step  = 1)
+optcont = ContinuationPar(dsmin = 0.0001, dsmax = 0.005, ds= -0.001, p_max = 0.15, p_min = -.1, newton_options = NewtonPar(optnew; tol = 1e-9, max_iterations = 15), max_steps = 150, detect_bifurcation = 3, nev = 20, n_inversion = 6, plot_every_step  = 1)
 
 br = @time continuation(
     prob, PALC(tangent = Bordered(), bls = BorderingBLS(solver = optnew.linsolver, check_precision = false)), optcont;
@@ -166,29 +167,38 @@ br = @time continuation(
     event = BK.FoldDetectEvent,
     )
 
-BK.plot(br)
+BK.plot(br)[1]
 ####################################################################################################
-bp=get_normal_form(br, 3; nev = 30, bls = BorderingBLS(solver = optnew.linsolver, check_precision = false), scaleζ = norminf, verbose = true)
+bp = get_normal_form(br, 3; nev = 50, bls_block = BorderingBLS(solver = optnew.linsolver, check_precision = false), scaleζ = norminf, verbose = true)
 
-br1 = @time continuation(br, 3, ContinuationPar(optcont; save_sol_every_step = 10, detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01);
+###########
+# example for manual branch switching
+δp = 0.005
+pred = predictor(bp, δp; amp_igs = 0.1, ); pred.before
+pts = BK.get_first_points_on_branch(br, bp, pred, optcont; δp)
+br1 = @time BK.multicontinuation(br, bp, pts.before, pts.after, ContinuationPar(optcont; detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01, ds = 0.001), plot=true)
+###########
+
+br1 = @time continuation(br, 3, ContinuationPar(optcont; detect_bifurcation = 0, p_max = 0.1, plot_every_step = 5, dsmax = 0.01, ds = 0.001);
     plot = true, verbosity = 3,
     δp = 0.005,
-    verbosedeflation = true,
+    deflated_newton_kwargs = (verbosedeflation = true,),
     finalise_solution = (z, tau, step, contResult; k...) -> begin
         if isnothing(br.eig) == true
             Base.display(contResult.eig[end].eigenvals)
         end
         true
     end,
-    scaleζ = norminf,
+    normal_form_kwargs = (scaleζ = norminf, bls_block = BorderingBLS(solver = optnew.linsolver, check_precision = false)),
     # callback_newton = cb,
     normC = norminf)
 
-BK.plot(br, br1...)
-BK.plot(br1...)
+BK.plot(br, br1)
+BK.plot(br1)
 
-BK.plot(br1...)
+BK.plot(br1)
 
+let
 fig = Figure(resolution = (1200, 900))
 for i=1:min(25,length(br1))
     ix = div(i,5)+1; iy = i%5+1
@@ -203,3 +213,4 @@ for i=1:min(25,length(br1))
     # Colorbar(ax, hm)
 end
 display(fig)
+end

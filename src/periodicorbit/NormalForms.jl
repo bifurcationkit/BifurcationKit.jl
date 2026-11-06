@@ -24,31 +24,20 @@ For collocation, the default method to compute the NF of Period-doubling and Nei
 """
 function get_normal_form(wrap::AbstractWrapperPeriodicOrbitProblem,
                         br::AbstractResult{ <: PeriodicOrbitCont}, 
-                        id_bif::Int,
-                        Teigvec::Type{𝒯eigvec} = _getvectortype(br);
-                        nev::Int = length(eigenvalsfrombif(br, id_bif)),
-                        verbose = false,
-                        ζs = nothing,
-                        lens = getlens(br),
-                        scaleζ = norm,
-                        autodiff = false,
-                        δ = getdelta(wrap),
-                        k...) where {𝒯eigvec}
+                        id_bif::Int;
+                        k...)
     bifpt = br.specialpoint[id_bif]
 
     if bifpt.type == :endpoint
         error("Don't select an end point!")
     end
 
-    # parameters for normal form
-    kwargs_nf = (;nev, verbose, lens, scaleζ, k...)
-
     if bifpt.type == :pd
-        return period_doubling_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return period_doubling_normal_form(wrap, br, id_bif; k...)
     elseif bifpt.type == :bp
-        return branch_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return branch_normal_form(wrap, br, id_bif; k...)
     elseif bifpt.type == :ns
-        return neimark_sacker_normal_form(wrap, br, id_bif, Teigvec; δ, autodiff, kwargs_nf...)
+        return neimark_sacker_normal_form(wrap, br, id_bif; k...)
     end
     error("Normal form for $(bifpt.type) not yet implemented.")
 end
@@ -58,8 +47,8 @@ end
 """
 function branch_normal_form(pbwrap,
                             br,
-                            ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             verbose = false,
                             lens = getlens(br),
                             scaleζ = norminf,
@@ -69,11 +58,10 @@ function branch_normal_form(pbwrap,
     bifpt = br.specialpoint[ind_bif]
     par = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
-    restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, x0, par)
     period = getperiod(disc, x0, par)
 
     # let us compute the kernel
@@ -92,19 +80,18 @@ function branch_normal_form(pbwrap,
 
     # normal form for the Poincaré return map
     nf = BranchPoint(x0, bifpt.τ, bifpt.param, par, lens, nothing, nothing, nothing, :none)
-
     ζ★ = nothing
     return BranchPointPO(x0, period, real.(ζs), ζ★, nf, disc, true)
 end
 
-function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
+@views function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                             br,
-                            ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             lens = getlens(br),
-                            scaleζ = norminf,
+                            scaleζ = norm,
                             detailed::Val{detailed_type} = Val(true),
                             kwargs_nf...) where {𝒯eigvec, detailed_type}
     verbose && println("━"^53*"\n──▶ Branch point of periodic orbit normal form computation")
@@ -112,11 +99,10 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
 
-    # we put the problem back to the state it was
+    # we then put the problem back to the state it was
     restore_problem!(pbwrap, bifpt.x, pars)
     # we need this conversion when running on GPU and loading the branch from the disk
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
-    
     period = getperiod(prob_sh, x0, pars)
 
     # we compute the kernel:
@@ -130,8 +116,8 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     spectrum = br.eig[bifpt.idx].eigenvals
     ind = sortperm(spectrum; by = abs)
     verbose && println("┌─ two smallest eigenvalues are ", real.(spectrum[ind[1:2]]))
-    verbose && println("├─ computing the non trivial null vector")
 
+    # computing the non trivial null vector
     # get the scalar products
     floquetsolver = br.contparams.newton_options.eigsolver
     ζ1 = real(geteigenvector(floquetsolver, br.eig[bifpt.idx].eigenvecs, ind[1]))
@@ -143,7 +129,7 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     _ζ₀ = prob_sh isa PoincareShooting ? R(prob_sh.section, ζ₀, 1) : ζ₀
     _dot_prods = (LA.dot(_ζ₀, ζ1), LA.dot(_ζ₀, ζ2))
     verbose && println("├─ scalar products with ζ₀ are  ", _dot_prods)
-    ind0 = argmax(abs.(abs.(_dot_prods) .- 1))
+    ind0 = argmax(x -> abs(abs(x) - 1), _dot_prods)
     ζ = ind0 == 1 ? ζ1 : ζ2
     verbose && println("├─ scalar product dot(ζ₀, ζ) is ", LA.dot(_ζ₀, ζ))
 
@@ -164,23 +150,18 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     branch_point_normal_form(pbwrap, bp0, (ζ, ζs, ζ₀), optn, bifpt.τ; verbose, nev, kwargs_nf...)
 end
 
-function _get_spectral_basis_prm_bp(dΠ, verbose)
+@views function _get_spectral_basis_prm_bp(dΠ::AbstractMatrix, verbose)
     # the spectrum of  M is {1,1,...} (M is the Monodromy matrix)
     # the spectrum of dΠ is {1,0,...}
     F  = LA.eigen(dΠ)
-    
     ind = argmin(abs.(F.values .- 1))
     λ₁ = F.values[ind] # λ₁ ≈ 1
     verbose && println("├─── [PRM] eigenvalue closest to 1 is ", λ₁)
-    verbose && println("└─── [PRM] computing the non trivial null vector")
-
     # get the scalar products
     ev = F.vectors[:, ind]
-
     Fp = LA.eigen(dΠ')
     indp = argmin(abs.(Fp.values .- λ₁)) # eigenvalue closest to λ₁
     ev★ = Fp.vectors[:, indp]
-
     # normalize eigenvectors
     ev ./= sqrt(LA.dot(ev, ev))
     ev★ ./= LA.dot(ev★, ev)
@@ -195,7 +176,6 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
                                     nev::Int = 3,
                                     verbose = false,
                                     lens = getlens(pbwrap),
-                                    autodiff = false,
                                     scaleζ = norminf,
                                     detailed::Val{detailed_type} = Val(true),
                                     kwargs_nf...) where {detailed_type}
@@ -220,12 +200,14 @@ function branch_point_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting
                     jvp = (x,p,dx) -> apply(jacobian(Π,x,p), dx),
                     d2F = (x,p,h1,h2) -> d2F(Π,x,p,h1,h2).u,
                     d3F = (x,p,h1,h2,h3) -> d3F(Π,x,p,h1,h2,h3).u,
-                    R01 = FiniteDifferences(),
+                    # R01 = FiniteDifferences(),
+                    R11 = (x,p,h1) -> BifurcationKit.R11(Π,x,p,h1).u,
+                    R01 = (x,p) -> BifurcationKit.R01(Π,x,p).u,
     )
 
     ζ★ = nothing
-    bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
     if detailed_type
+        bp1 = BranchPointMap(xₛ, τ, bp0.p, pars, lens, ev, ev★, nothing, :none)
         bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         return BranchPointPO(bp0.x0, period, real.(ζs), ζ★, bp, sh, true)
     end
@@ -234,8 +216,8 @@ end
 
 function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                             br,
-                            ind_bif::Int,
-                            ::Type{𝒯eigvec} = _getvectortype(br);
+                            ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             verbose = false,
                             nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                             prm::Val{prm_type} = Val(false),
@@ -250,16 +232,14 @@ function branch_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
     # we put the problem back to the state it was
     restore_problem!(pbwrap, bifpt.x, par)
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
+    x0 = convert(𝒯eigvec, saved_solution(bifpt.x)) 
 
     bp0 = BranchPoint(x0, bifpt.τ, bifpt.param, par, getlens(br), nothing, nothing, nothing, :none)
     if ~prm_type || ~detailed_type
         # method based on Iooss method
         return branch_normal_form_iooss(pbwrap, bp0; detailed, verbose, nev, kwargs_nf...)
-    end
-    # method based on Poincaré Return Map (PRM), newton parameter
+    end # method based on Poincaré Return Map (PRM), newton parameter
     optn = br.contparams.newton_options
-    # @warn "[BP-PO NF] Computation of BP-PO normal form based on Poincaré return map is not yet unavailable.\nDefaulting to the one based on Iooss form." # TODO: remove
     return branch_normal_form_prm(pbwrap, bp0, optn; verbose, nev, kwargs_nf...)
 end
 
@@ -347,8 +327,8 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
                                 lens = getlens(pbwrap),
                                 autodiff = false,
                                 scaleζ = norminf,
-                                detailed = true,
-                                kwargs_nf...)
+                                detailed::Val{detailed_type} = Val(true),
+                                kwargs_nf...) where {detailed_type}
     @debug "PD normal form collocation, method PRM"
     coll = get_discretization(pbwrap)
     𝒯 = eltype(coll)
@@ -388,7 +368,7 @@ function branch_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
 
     ζ★ = nothing
     bp1 = BranchPointMap(xₛ, nothing, bp0.p, pars, lens, ev, ev★, nothing, :none)
-    if detailed
+    if detailed_type
         bp = get_normal_form1d_maps(probΠ, bp1, optn.linsolver; verbose)
         (;v₁, v₀, p₀, p₁) = _get_spectral_basis_iooss_bp(pbwrap, bp0)
         return BranchPointPO(bp0.x0, period, (v₀, v₁), (p₀, p₁), bp, coll, true)
@@ -421,8 +401,8 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function period_doubling_normal_form(pbwrap,
                                 br,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
@@ -453,8 +433,8 @@ end
 
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
                                      br,
-                                     ind_bif::Int,
-                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                     ind_bif::Int;
+                                     Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                      nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                      verbose = false,
                                      lens = getlens(br),
@@ -471,10 +451,8 @@ function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalSh,
     x0 = convert(𝒯eigvec, saved_solution(bifpt.x))
 
     # let us compute the kernel
-    λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
     verbose && print("├─ computing nullspace of Periodic orbit problem...")
     ζ₋₁ = geteigenvector(br.contparams.newton_options.eigsolver, br.eig[bifpt.idx].eigenvecs, bifpt.ind_ev) .|> real
-    # we normalize it by the sup norm because it could be too small/big in L2 norm
     ζ₋₁ ./= scaleζ(ζ₋₁)
     verbose && println("Done!")
 
@@ -573,8 +551,8 @@ end
 
 function period_doubling_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 verbose = false,
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
@@ -634,6 +612,7 @@ function period_doubling_normal_form_iooss(pbwrap,
 
     #########
     # compute v1
+    # the problem pbwrap should have been restored here.
     # we first compute the floquet eigenvector for μ = -1
     # we use an extended linear system for this
     jac = jacobian(pbwrap, saved_solution(pd.x0), par)
@@ -787,10 +766,10 @@ function period_doubling_normal_form_iooss(pbwrap,
     h₂ = J \ vcat(vec(r₂), 0)
     h₂ₛ = get_time_slices(coll, h₂)
     if abs(∫( ψ₁★ₛ, h₂ₛ)) > 1e-10
-        @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))"
+        @warn "[PD-Iooss] The integral ∫(ψ₁★ₛ, h₂ₛ) should be zero. We found $(∫(  ψ₁★ₛ, h₂ₛ ))."
     end
     if abs(h₂[end]) > 1e-10
-        @warn "[PD-Iooss] The value h₂[end] should be zero. We found $(h₂[end])"
+        @warn "[PD-Iooss] h₂[end] should be zero. We found $(h₂[end])."
     end
 
     ###################
@@ -859,7 +838,7 @@ function period_doubling_normal_form_iooss(pbwrap,
     end
     rhsc11_g = zero(u₀g)
     @inbounds for p in axes(rhsc11_g, 2)
-        rhsc11_g[:, p] .= B(u₀g[:, p], par, v₁★g[:, p], h₀₁g[:, p]) .+ R11vf(u₀g[:, p], par, v₁★g[:, p])
+        rhsc11_g[:, p] .= B(u₀g[:, p], par, v₁g[:, p], h₀₁g[:, p]) .+ R11vf(u₀g[:, p], par, v₁g[:, p])
     end
     c₁₁ = ∫_gauss(v₁★g, rhsc11_g) - a₀₁ * IA
     c₁₁ *= 2
@@ -953,8 +932,8 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function neimark_sacker_normal_form(pbwrap::AbstractPeriodicOrbitProblem,
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
@@ -976,8 +955,8 @@ end
 
 function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalColl,
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 verbose = false,
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 prm::Val{prm_type} = Val(false),
@@ -1038,7 +1017,7 @@ function neimark_sacker_normal_form_prm(pbwrap::PeriodicOrbitFunctionalColl,
     F = LA.eigen(dΠ)
 
     _nrm = norm(Π(xₛ, pars).u - xₛ, Inf)
-    _nrm > 1e-12 && @warn  "$_nrm"
+    _nrm > 1e-12 && @warn "$_nrm"
 
     ####
     ind = argmin(abs.(log.(complex.(F.values)) .- Complex(0, ns0.ω )))
@@ -1100,6 +1079,7 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
 
     #########
     # compute v1
+    # the problem pbwrap should have been restored here.
     # we first compute the NS floquet eigenvector
     # we use an extended linear system for this with periodic BC
     # J = D  -  T*A(t) + iθ/T
@@ -1252,10 +1232,10 @@ function neimark_sacker_normal_form_iooss(pbwrap::PeriodicOrbitFunctionalColl,
                 # _plot(real(vcat(vec(h₁₁ₛ),1)),label="h11")
     @debug "[NS-Iooss]" abs(∫( ϕ₁★ₛ, h₁₁ₛ))
     if abs(∫( ϕ₁★ₛ, h₁₁ₛ)) > 1e-10
-        @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))"
+        @warn "[NS-Iooss] The integral ∫(ϕ₁★ₛ, h₁₁ₛ) should be zero. We found $(∫( ϕ₁★ₛ, h₁₁ₛ ))."
     end
     if abs(h₁₁[end]) > 1e-10
-        @warn "[NS-Iooss] The value h₁₁[end] should be zero. We found $(h₁₁[end])"
+        @warn "[NS-Iooss] h₁₁[end] should be zero. We found $(h₁₁[end])."
     end
     #########
     # compute d
@@ -1296,8 +1276,8 @@ end
 
 function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooting },
                                 br::AbstractBranchResult,
-                                ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
                                 lens = getlens(br),
@@ -1312,6 +1292,8 @@ function neimark_sacker_normal_form(pbwrap::PeriodicOrbitFunctionalSh{ <: Shooti
     # bifurcation point
     bifpt = br.specialpoint[ind_bif]
     pars = setparam(br, bifpt.param)
+    # we put the problem back to the state it was
+    restore_problem!(pbwrap, bifpt.x, pars)
     period = getperiod(sh, bifpt.x, pars)
 
     # get the eigenvalue
@@ -1380,7 +1362,29 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Trapeze` method.
+
+The mesh size and the period are doubled. The orbit guess is built from the
+periodic orbit `nf.po` perturbed by `±ampfactor * nf.ζ` on the two halves of the
+doubled period.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Trapeze}`: period-doubling bifurcation point.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled mesh.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference, doubled over the new period.
+- `ζc`: critical eigenvector reshaped on the original mesh.
 """
 function predictor(nf::PeriodDoublingPO{ <: Trapeze},
                     δp,
@@ -1418,7 +1422,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Trapeze` method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`
+and the phase condition of the periodic orbit problem is updated accordingly.
+
+# Arguments
+- `nf::BranchPointPO{<:Trapeze}`: simple branch point of periodic orbits.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem with the updated phase condition.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
+- `ζc`: critical eigenvector reshaped on the mesh.
 """
 function predictor(nf::BranchPointPO{ <: Trapeze},
                     δp,
@@ -1446,7 +1471,30 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Collocation` method.
+
+The number of time slices and the period are doubled. Unless `override = true`,
+the normal form is used to correct the parameter increment `δp` and the
+amplitude `ampfactor` so that the guess lies on the bifurcated branch.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Collocation}`: period-doubling bifurcation point.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled mesh.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `δp`: parameter increment used to build the guess (possibly corrected).
+- `time_factor`: factor used to rescale time when building the guess.
+- `po`: periodic orbit used as reference, doubled over the new period.
 """
 function predictor(nf::PeriodDoublingPO{ <: Collocation }, 
                     δp, 
@@ -1459,20 +1507,20 @@ function predictor(nf::PeriodDoublingPO{ <: Collocation },
     # we update the problem by doubling Ntst
     # we need to save the mesh for adaptation
     old_mesh = getmesh(pbnew)
-    new_mesh = vcat(old_mesh[begin:end-1]/2, old_mesh ./2 .+ 1/2)
+    new_mesh = vcat(old_mesh[begin:end-1] / 2, old_mesh ./2 .+ 1/2)
     pbnew = set_collocation_size(pbnew, 2Ntst, m)
     update_mesh!(pbnew, new_mesh)
 
     # parameter to scale time
     time_factor = 1
 
-    if ~override # we use predictor from normal form
+    if ~override # we use the predictor from the normal form
         if nf.prm == true && ~isnothing(nf.nf.nf)
             # normal form based on Poincaré return map
             pred = predictor(nf.nf, δp)
             ampfactor *= pred.x1
             δp = pred.δp
-        elseif nf.prm == false && get(nf.nf.nf, :c₁₁, nothing) != nothing
+        elseif nf.prm == false && ~isnothing(get(nf.nf.nf, :c₁₁, nothing))
             # Iooss normal form
             (;c₁₁, b3) = nf.nf.nf
             c₃ = b3
@@ -1506,7 +1554,34 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Collocation`
+method.
+
+The number of time slices is doubled and the periodic orbit `nf.po` is perturbed
+along the second component `nf.ζ[2]` of the critical eigenvector. Unless
+`override = true`, the normal form based on the Poincaré return map is used to
+correct the parameter increment `δp` and the amplitude `ampfactor`.
+
+# Arguments
+- `nf::BranchPointPO{<:Collocation}`: simple branch point of periodic orbits.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
+
+# Note
+Only the normal form based on the Poincaré return map (`nf.prm == true`) is
+implemented. Using `nf.prm == false` with `override = false` raises an error.
 """
 function predictor(nf::BranchPointPO{ <: Collocation},
                     δp,
@@ -1541,7 +1616,30 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `Shooting` method.
+
+The number of time steps and the period are doubled. The orbit guess is built by
+perturbing the periodic orbit `nf.po` by `±ampfactor * nf.ζ` on the two halves of
+the doubled period. Unless `override = true`, the normal form is used to correct
+`δp` and `ampfactor`.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:Shooting}`: period-doubling bifurcation point.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem on the doubled time interval.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `δp`: parameter increment used to build the guess (possibly corrected).
+- `po`: periodic orbit used as reference, doubled over the new period.
 """
 function predictor(nf::PeriodDoublingPO{ <: Shooting },
                     δp,
@@ -1571,7 +1669,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `Shooting` method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`.
+Unless `override = true`, the normal form is used to correct `δp` and
+`ampfactor`.
+
+# Arguments
+- `nf::BranchPointPO{<:Shooting}`: simple branch point of periodic orbits.
+- `δp`: requested increment of the parent parameter. It may be corrected by the normal form.
+- `ampfactor`: requested multiplier applied to the critical eigenvector `nf.ζ`. It may be corrected by the normal form.
+
+# Keyword arguments
+- `override = false`: when `false`, use the normal form to correct `δp` and `ampfactor`. When `true`, use the supplied values directly.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
 """
 function predictor(nf::BranchPointPO{ <: Shooting },
                     δp,
@@ -1592,7 +1711,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the period-doubling bifurcation of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+period-doubling bifurcation point discretized with the `PoincareShooting` method.
+
+The section and the number of time steps are duplicated. The periodic orbit
+guess is built over two periods from `nf.po` perturbed by `ampfactor * nf.ζ`. No
+normal-form correction is applied by this method.
+
+# Arguments
+- `nf::PeriodDoublingPO{<:PoincareShooting}`: period-doubling bifurcation point.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch, over two periods.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem with the duplicated section.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference, duplicated over two periods.
 """
 function predictor(nf::PeriodDoublingPO{ <: PoincareShooting }, 
                     δp, 
@@ -1612,7 +1752,28 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the simple branch point of periodic orbit.
+Compute the initial guess for the branch of periodic orbits bifurcating from a
+simple branch point of periodic orbits discretized with the `PoincareShooting`
+method.
+
+The periodic orbit `nf.po` is perturbed along the critical eigenvector `nf.ζ`. No
+normal-form correction is applied by this method.
+
+# Arguments
+- `nf::BranchPointPO{<:PoincareShooting}`: simple branch point of periodic orbits.
+- `δp`: increment of the parent parameter. The new parameter value is `nf.nf.p + δp`.
+- `ampfactor`: multiplier applied to the critical eigenvector `nf.ζ`.
+
+# Keyword arguments
+- `override = false`: accepted for interface consistency, currently unused by this method.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbitguess`: guess for the periodic orbit on the bifurcated branch.
+- `pnew`: new parameter value `nf.nf.p + δp`.
+- `prob`: periodic orbit problem `nf.prob`.
+- `ampfactor`: amplitude multiplier used to build the guess.
+- `po`: periodic orbit used as reference.
 """
 function predictor(nf::BranchPointPO{ <: PoincareShooting},
                     δp,

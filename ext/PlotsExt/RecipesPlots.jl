@@ -86,15 +86,17 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
                             plotcirclesbif = true,
                             applytoY = identity,
                             applytoX = identity)
-    ind1, ind2 = get_plot_vars(brs[1], vars)
+    ind1, ind2 = get_plot_vars(first(_branches_iter(brs[1])), vars)
     if length(brs) == 0; return; end
     # handle bifurcation points, the issue is to simplify the legend. So we collect all bifurcation points
-    bptps = Any[(type = pt.type, param = getproperty(brs[1][pt.idx], ind1), printsol = getproperty(brs[1][pt.idx], ind2)) for pt in brs[1].specialpoint if ((pt.type != :none)&&(pt.type != :endpoint)&&(pt.idx <= length(brs[1])))]
-    for ii=2:length(brs)
-        _ind1, _ind2 = get_plot_vars(brs[ii], vars)
-        for pt in brs[ii].specialpoint
-            if (pt.type != :none) && (pt.type != :endpoint) && (pt.idx <= length(brs[ii]))
-                push!(bptps, (type = pt.type, param = getproperty(brs[ii][pt.idx], _ind1), printsol = getproperty(brs[ii][pt.idx], _ind2)))
+    bptps = Any[]
+    for br0 in brs
+        for contres in _branches_iter(br0)
+            _ind1, _ind2 = get_plot_vars(contres, vars)
+            for pt in contres.specialpoint
+                if (pt.type != :none) && (pt.type != :endpoint) && (pt.idx <= length(contres))
+                    push!(bptps, (type = pt.type, param = getproperty(contres[pt.idx], _ind1), printsol = getproperty(contres[pt.idx], _ind2)))
+                end
             end
         end
     end
@@ -115,34 +117,71 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
     end
 
     for (id, res) in pairs(brs)
+        for contres in _branches_iter(res)
+            @series begin
+                plotcirclesbif --> plotcirclesbif
+                putspecialptlegend --> false
+                plotfold --> plotfold
+                plotspecialpoints --> plotspecialpoints
+                plotstability --> plotstability
+                branchlabel --> branchlabel[id]
+                linewidthunstable --> linewidthunstable
+                linewidthstable --> linewidthstable
+                unstable_plot_type --> unstable_plot_type
+                applytoX --> applytoX
+                applytoY --> applytoY
+                vars --> vars
+                if ind1 == 1 || ind1 == :param
+                    xguide --> String(get_lens_symbol(contres))
+                elseif ind1 isa Symbol
+                    xguide --> String(ind1)
+                end
+                if ind2 isa Symbol
+                    yguide --> String(ind2)
+                end
+                # collect the values of the bifurcation points to be added in the legend
+                _ind1, _ind2 = get_plot_vars(contres, vars)
+                for pt in contres.specialpoint
+                    # this does not work very well when changing optional argument vars
+                    pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, _ind2)))
+                end
+                contres
+            end
+        end
+    end
+end
+
+# allow to plot a Branch holding several branches (from an Nd bifurcation point)
+RecipesBase.@recipe function Plots(br::Branch{<: Any, <: Any, <: Vector{ <: ContResult}};
+                            plotfold = false,
+                            putspecialptlegend = true,
+                            filterspecialpoints = false,
+                            vars = nothing,
+                            plotstability = true,
+                            plotspecialpoints = true,
+                            branchlabel = "",
+                            linewidthunstable = 1.0,
+                            linewidthstable = 2linewidthunstable,
+                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                            plotcirclesbif = true,
+                            applytoY = identity,
+                            applytoX = identity)
+    for contres in getbranches(br)
         @series begin
-            plotcirclesbif --> plotcirclesbif
-            putspecialptlegend --> false
             plotfold --> plotfold
-            plotspecialpoints --> plotspecialpoints
+            putspecialptlegend --> putspecialptlegend
+            filterspecialpoints --> filterspecialpoints
+            vars --> vars
             plotstability --> plotstability
-            branchlabel --> branchlabel[id]
+            plotspecialpoints --> plotspecialpoints
+            branchlabel --> branchlabel
             linewidthunstable --> linewidthunstable
             linewidthstable --> linewidthstable
             unstable_plot_type --> unstable_plot_type
-            applytoX --> applytoX
+            plotcirclesbif --> plotcirclesbif
             applytoY --> applytoY
-            vars --> vars
-            if ind1 == 1 || ind1 == :param
-                xguide --> String(get_lens_symbol(brs[id]))
-            elseif ind1 isa Symbol
-                xguide --> String(ind1)
-            end
-            if ind2 isa Symbol
-                yguide --> String(ind2)
-            end
-            # collect the values of the bifurcation points to be added in the legend
-            ind1, ind2 = get_plot_vars(brs[id], vars)
-            for pt in res.specialpoint
-                # this does not work very well when changing optional argument vars
-                pt.type != :none && push!(bp, (type = pt.type, param = getproperty(pt, :param), printsol = getproperty(pt.printsol, ind2)))
-            end
-            res
+            applytoX --> applytoX
+            contres
         end
     end
 end

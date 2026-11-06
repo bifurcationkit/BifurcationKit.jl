@@ -39,8 +39,7 @@ function (𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation)(x, p::𝒯, ω::
     # - x guess for the point at which the jacobian is singular
     # - p guess for the parameter value `<: Real` at which the jacobian is singular
     # The jacobian of the MA problem is solved with a BLS method
-    a = 𝐍𝐒.a
-    b = 𝐍𝐒.b
+    (;a, b) = 𝐍𝐒
     # update parameter
     par = set(params, getlens(𝐍𝐒), p)
     J = jacobian_neimark_sacker(𝐍𝐒.prob_vf, x, par, ω)
@@ -63,19 +62,19 @@ Compute the solution of
 and the same for the adjoint system.
 """
 function _compute_bordered_vectors(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, JNS, JNS★, ω)
-    a = 𝐍𝐒.a
-    b = 𝐍𝐒.b
     𝒯 = eltype(𝐍𝐒)
+    return __compute_bordered_vectors_ns(𝐍𝐒.linbdsolver, 𝐍𝐒.linbdsolverAdjoint,
+                                         JNS, JNS★, 𝐍𝐒.a, 𝐍𝐒.b, 𝐍𝐒.zero, 𝒯)
+end
 
-    # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = nstest(JNS, a, b, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolver)
-    ~cv && @debug "[codim2 NS] Linear solver for N did not converge."
-
-    # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = nstest(JNS★, b, a, zero(𝒯), 𝐍𝐒.zero, one(𝒯), 𝐍𝐒.linbdsolverAdjoint)
-    ~cv && @debug "[codim2 NS] Linear solver for Nᵗ did not converge."
-
-    return (; v, w, itv, itw)
+function __compute_bordered_vectors_ns(linbdsolver, linbdsolver_adjoint, JNS, JNS★, a, b, _zero_vector, 𝒯)
+    # we solve JNS v + a σ1 = 0 with <b, v> = 1 ; i.e. N[v, σ1] = [0, 1]
+    v, σ1, cv, itv = linbdsolver(JNS, a, b, zero(𝒯), _zero_vector, one(𝒯))
+    ~cv && @debug "[NS] Bordered linear solver for JNS did not converge."
+    # we solve JNS' w + b σ2 = 0 with <a, w> = 1 ; i.e. Nᵗ[w, σ2] = [0, 1]
+    w, σ2, cv, itw = linbdsolver_adjoint(JNS★, b, a, zero(𝒯), _zero_vector, one(𝒯))
+    ~cv && @debug "[NS] Bordered linear solver for JNS' did not converge."
+    return (; v, w, itv, itw, σ1, σ2)
 end
 
 function _get_bordered_terms(𝐍𝐒::NeimarkSackerMinimallyAugmentedFormulation, x, p::𝒯, ω::𝒯, par) where 𝒯
@@ -366,7 +365,6 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
 
     # Jacobian for the NS problem
     record_ns = RecordForNS(record_from_solution, BifurcationKit.record_from_solution(prob))
-    # plot_ns = PlotForFold(plot_solution, BifurcationKit.plot_solution(prob)) # TODO: fix this
     plot_ns = plot_solution
     if jacobian_ma in (AutoDiff(), FiniteDifferencesMF(), FiniteDifferences(), MinAugMatrixBased())
         nspointguess = vcat(nspointguess.u, nspointguess.p...)
@@ -409,6 +407,36 @@ function continuation_ns(prob, alg::AbstractContinuationAlgorithm,
                     normC,
                     )
     _correct_event_labels(br_ns_po)
+end
+
+"""
+$(SIGNATURES)
+
+Compute the initial (right / left) eigenvectors `(ζ, ζad)` of the Neimark-Sacker
+bifurcation point using the minimally augmented formulation.
+"""
+function _init_ns_vectors_minaug(prob, xₙₛ, parₙₛ, ω, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    u0 = saved_solution(xₙₛ)
+    # a and b are perturbations of the orbit only, without the period
+    u_orb = u0[begin:end-1]
+    ζ = VI.scale(_copy(u_orb), one(Complex{VI.scalartype(u_orb)}))
+    a = isnothing(a) ? _randn(ζ) : a; VI.scale!(a, 1 / normC(a))
+    b = isnothing(b) ? _randn(ζ) : b; VI.scale!(b, 1 / normC(b))
+
+    𝒯 = VI.scalartype(u0)
+    L = jacobian_neimark_sacker(prob, u0, parₙₛ, ω)
+    L★ = has_adjoint(prob) ? jacobian_adjoint_neimark_sacker(prob, u0, parₙₛ, ω) : adjoint(L)
+
+    (; v, w, itv, itw) = __compute_bordered_vectors_ns(
+        bdlinsolver, bdlinsolver_adjoint,
+        L, L★, a, b, VI.zerovector(a), 𝒯)
+
+    @debug "RIGHT EIGENVECTORS" itv norminf(apply(L, v))
+    @debug "LEFT  EIGENVECTORS" itw norminf(apply(L★, w))
+
+    ζad = VI.scale(w, 1 / normC(w))
+    ζ   = VI.scale(v, 1 / normC(v))
+    return (; ζ, ζad)
 end
 
 # compute the first Lyapunov coefficient l1 from the NS normal form and sanitize it,

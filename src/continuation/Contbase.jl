@@ -95,6 +95,7 @@ function _step_size_control!(state, contparams::ContinuationPar, verbosity)
         if  abs(ds) <= contparams.dsmin
             @error "Failure to converge with given tolerance = $(contparams.newton_options.tol).\nStep = $(state.step)\nYou can decrease the tolerance or pass a different norm using the argument `normC`.\nWe reached the smallest value [dsmin] valid for ds, namely $(contparams.dsmin).\nStopping continuation at continuation step $(state.step)."
             # we stop the continuation
+            state.retcode = ReturnCode.DsLessThanMin
             state.stopcontinuation = true
             return
         end

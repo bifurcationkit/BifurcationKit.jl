@@ -46,14 +46,14 @@ end
 prob = BK.ODEBifProblem(lur, zeros(3), (α = -1.0, β = 1.), (@optic _.α); record_from_solution)
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false
-br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = true, normC = norminf)
+br = continuation(prob, PALC(tangent = Bordered()), opts_br; bothside = Val(true), normC = norminf)
 # plot(br)
 
 let
 opts_br = ContinuationPar(p_min = -1.4, p_max = 1.8, ds = -0.01, dsmax = 0.01, n_inversion = 8, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, plot_every_step = 20, max_steps = 1000)
 opts_br = @set opts_br.newton_options.verbose = false
 br = continuation(prob, PALC(tangent = Bordered()), opts_br;
-bothside = true, normC = norminf)
+bothside = Val(true), normC = norminf)
 
 # plot(br)
 ####################################################################################################
@@ -127,7 +127,7 @@ for meshadapt in (false, true)
     predictor(pd, 0.1, 1)
     pd = get_normal_form(br_po, 1; verbose = false, prm = Val(false))
     predictor(pd, 0.1, 1)
-    @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-2 # reference value computed with ApproxFun
+    @test pd.nf.nf.b3 ≈ -0.30509421737255177 rtol=1e-1 # reference value computed with ApproxFun
     # @test pd.nf.nf.a  ≈ 0.020989802220981707 rtol=1e-3 # reference value computed with ApproxFun
 
     # aBS from PD

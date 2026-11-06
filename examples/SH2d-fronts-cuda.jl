@@ -195,7 +195,7 @@ br2 = @time continuation(br, 2,
                         δp = δp,
                         )
 
-plot(br, br2...)
+plot(br, br2)
 
 # less automatic
 δp = 0.001
@@ -206,4 +206,4 @@ br2 = BK.multicontinuation(br, bpnf, (before = rootsNFm, after = rootsNFp),
                             δp = δp,
                             )
 
-plot(br, br2...)
+plot(br, br2)

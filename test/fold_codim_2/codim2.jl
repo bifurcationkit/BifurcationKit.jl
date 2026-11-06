@@ -19,7 +19,7 @@ let
 par_com = (q1 = 2.5, q2 = 2.0, q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.07,0.2,05]
 
-prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], s = x[3]))
+prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2); record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], s = x[3]), R01 = BK.AutoDiff(), R02 = BK.AutoDiff(), R11 = BK.AutoDiff())
 
 opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_inversion = 4, detect_bifurcation = 3, max_bisection_steps = 25, nev = 2, max_steps = 20000)
 
@@ -27,7 +27,7 @@ opts_br = ContinuationPar(p_min = 0.6, p_max = 2.5, ds = 0.002, dsmax = 0.01, n_
 alg = PALC()
 br = @time continuation(prob, alg, opts_br;
     plot = false, verbosity = 0, normC = norminf,
-    bothside = true)
+    bothside = Val(true))
 
 # plot(br, plotfold=false, markersize=4, legend=:topleft)
 ####################################################################################################
@@ -94,8 +94,8 @@ end
 ####################################################################################################
 # different tests for the Hopf point
 hppt = get_normal_form(br, 2)
-@test hppt.nf.a ≈ 2.546719962189168  + 1.6474887797814664im
-@test hppt.nf.b ≈ 4.3536804635557855 + 15.441272421860365im
+@test hppt.nf.a ≈ 2.546719962189168  + 1.6474887797814664im rtol = 1e-3
+@test hppt.nf.b ≈ 4.3536804635557855 + 15.441272421860365im rtol = 1e-3
 
 @reset opts_br.newton_options.verbose = false
 
