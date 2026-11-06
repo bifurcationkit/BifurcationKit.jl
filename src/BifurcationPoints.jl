@@ -44,7 +44,7 @@ $(TYPEDFIELDS)
     - :nsns Double Neimark-Sacker of periodic orbits
     - :ch Chenciner bifurcation of periodic orbits
     "
-    type::Symbol = :none
+    type::Symbol = :none # Bifurcation.jl uses Enum
 
     "Index in `br.branch` or `br.eig` (see [`ContResult`](@ref)) for which the bifurcation occurs."
     idx::Int64 = 0

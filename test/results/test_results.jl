@@ -10,6 +10,10 @@ f(u, p) = @. p.r * u - u^3
     @reset opt.newton_options.verbose = true
     contres = BK.continuation(prob, PALC(), opt)
     @test typeof(contres) <: BK.ContResult
+
+    # geteigensolver on ContResult
+    @test BK.geteigensolver(contres) == BK.geteigensolver(opt)
+
     bp = contres.specialpoint[1] # pitchfork bifurcation
 
     # Test slicing of ContResult object
@@ -62,6 +66,49 @@ end
     contres2 = BK.continuation(BK.re_make(prob; params = (r = -2.0,)), PALC(), opt2)
     new_branch = BK._merge(contres2, contres)
 end
+
+@testset "return codes" begin
+    mk() = BK.BorderedArray([0.0], 0.0)
+
+    s = BK.ContState(z_pred = mk(), τ = mk(), z = mk(), z_old = mk(),
+                     retcode = BK.ReturnCode.MaxSteps)
+    @test BK.return_code(s) == BK.ReturnCode.MaxSteps
+    @test BK.successful_retcode(s) == BK.successful_retcode(BK.ReturnCode.MaxSteps)
+    @test copy(s).retcode == BK.ReturnCode.MaxSteps
+
+    s2 = BK.ContState(z_pred = mk(), τ = mk(), z = mk(), z_old = mk())
+    copyto!(s2, s)
+    @test s2.retcode == BK.ReturnCode.MaxSteps
+
+    prob = BK.BifurcationProblem(f, zeros(1), (r = -1.0,), (@optic _.r))
+    contres = BK.continuation(prob, PALC(), BK.ContinuationPar(p_min = -1.0, p_max = 1.0))
+    @test BK.return_code(contres) isa BK.ReturnCode.T
+    @test BK.successful_retcode(contres) == BK.successful_retcode(BK.return_code(contres))
+
+    # a dsmin failure is reported as DsLessThanMin and is not overwritten by Finalized
+    s3 = BK.ContState(z_pred = mk(), τ = mk(), z = mk(), z_old = mk(),
+                      ds = 0.01, converged = false)
+    BK._step_size_control!(s3, BK.ContinuationPar(dsmin = 0.01), 0)
+    @test s3.stopcontinuation
+    @test BK.return_code(s3) == BK.ReturnCode.DsLessThanMin
+    @test !BK.successful_retcode(s3)
+
+    it = BK.ContIterable(prob, PALC(), BK.ContinuationPar(p_min = -1.0, p_max = 1.0))
+    @test !BK.not_done(it, s3)
+    @test BK.return_code(s3) == BK.ReturnCode.DsLessThanMin
+
+    # not_done(..., false) must not modify the return code
+    s4 = BK.ContState(z_pred = mk(), τ = mk(), z = mk(), z_old = mk(),
+                      stopcontinuation = true, retcode = BK.ReturnCode.EmptyReturnCode)
+    @test !BK.not_done(it, s4, false)
+    @test s4.retcode == BK.ReturnCode.EmptyReturnCode
+    @test !BK.not_done(it, s4)
+    @test s4.retcode == BK.ReturnCode.Finalized
+
+    # the accessor is defined on states, not on continuation kinds
+    @test_throws MethodError BK.return_code(BK.EquilibriumCont())
+end
+
 
 
 

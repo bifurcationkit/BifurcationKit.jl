@@ -75,7 +75,7 @@ A continuous call back returns a **tuple/scalar** value and we seek its zeros.
 # Internal fields
 $(TYPEDFIELDS)
 """
-struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
+struct ContinuousEvent{Tcb, Tl <: Union{Nothing, Tuple{Vararg{String}}}, T, Tf, Td} <: AbstractContinuousEvent
     "Number of events, i.e. the length of the result returned by the callback function."
     nb::Int64
 
@@ -110,13 +110,11 @@ struct ContinuousEvent{Tcb, Tl, T, Tf, Td} <: AbstractContinuousEvent
     end
 end
 
-function ContinuousEvent(nb::Int, fct, labels = nothing; k...)
-    ContinuousEvent(nb, fct, false, labels; k...)
-end
+ContinuousEvent(nb::Int, fct, labels = nothing; k...) = ContinuousEvent(nb, fct, false, labels; k...)
 
 @inline compute_eigenelements(eve::ContinuousEvent) = eve.computeEigenElements
 @inline length(eve::ContinuousEvent) = eve.nb
-@inline has_custom_labels(eve::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+@inline has_custom_labels(::ContinuousEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 finalise_event!(event_point, eve::ContinuousEvent, it, state, success) = eve.finaliser(event_point, it, state, success)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -128,7 +126,7 @@ A discrete call back returns a discrete value and we seek when it changes.
 # Internal fields
 $(TYPEDFIELDS)
 """
-struct DiscreteEvent{Tcb, Tl, Tf, Td} <: AbstractDiscreteEvent
+struct DiscreteEvent{Tcb, Tl <: Union{Nothing, Tuple{Vararg{String}}}, Tf, Td} <: AbstractDiscreteEvent
     "number of events, ie the length of the result returned by the callback function"
     nb::Int64
 
@@ -159,13 +157,11 @@ struct DiscreteEvent{Tcb, Tl, Tf, Td} <: AbstractDiscreteEvent
     end
 end
 
-function DiscreteEvent(nb::Int, fct, labels = nothing; k...)
-    DiscreteEvent(nb, fct, false, labels; k...)
-end
+DiscreteEvent(nb::Int, fct, labels = nothing; k...) = DiscreteEvent(nb, fct, false, labels; k...)
 
 @inline compute_eigenelements(eve::DiscreteEvent) = eve.computeEigenElements
 @inline length(eve::DiscreteEvent) = eve.nb
-@inline has_custom_labels(eve::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
+@inline has_custom_labels(::DiscreteEvent{Tcb, Tl}) where {Tcb, Tl} = ~(Tl == Nothing)
 finalise_event!(event_point, eve::DiscreteEvent, it, state, success) = eve.finaliser(event_point, it, state, success)
 
 function labels(eve::Union{ContinuousEvent{Tcb, Nothing}, DiscreteEvent{Tcb, Nothing}}, ind) where Tcb
@@ -197,7 +193,6 @@ $(TYPEDFIELDS)
 struct PairOfEvents{Tc <: AbstractContinuousEvent, Td <: AbstractDiscreteEvent}  <: AbstractEvent
     "Continuous event"
     eventC::Tc
-
     "Discrete event"
     eventD::Td
 end
@@ -248,7 +243,6 @@ $(TYPEDFIELDS)
 struct SetOfEvents{Tc <: Tuple, Td <: Tuple}  <: AbstractEvent
     "Continuous event"
     eventC::Tc
-
     "Discrete event"
     eventD::Td
 end
@@ -266,11 +260,11 @@ SetOfEvents(events::Union{AbstractEvent, Nothing}...) = SetOfEvents(split_events
 Split comma separated callbacks into sets of continuous and discrete callbacks. Inspired by DiffEqBase.
 """
 @inline split_events(cs, ds) = cs, ds
-@inline split_events(cs, ds, c::Nothing, args...) = split_events(cs, ds, args...)
+@inline split_events(cs, ds, ::Nothing, args...) = split_events(cs, ds, args...)
 @inline split_events(cs, ds, c::AbstractContinuousEvent, args...) = split_events((cs..., c), ds, args...)
 @inline split_events(cs, ds, d::AbstractDiscreteEvent, args...) = split_events(cs, (ds..., d), args...)
 @inline function split_events(cs, ds, d::SetOfEvents, args...)
-  split_events((cs...,d.eventC...), (ds..., d.eventD...), args...)
+  split_events((cs..., d.eventC...), (ds..., d.eventD...), args...)
 end
 
 @inline compute_eigenelements(eve::SetOfEvents) = mapreduce(compute_eigenelements, |, eve.eventC) || mapreduce(compute_eigenelements, |, eve.eventD)

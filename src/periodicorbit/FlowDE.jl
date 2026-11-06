@@ -161,14 +161,14 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <
 end
 
 # when no ODEProblem is passed for the monodromy, we use finite differences
-function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: Union{ODEProblem, EnsembleProblem},Talg, Tjac}
-    if T1 <: ODEProblem
-        return _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
-    else
-        sol1 = evolve(fl, x .+ δ .* dx, pars, tm; kw...)
-        sol2 = evolve(fl, x           , pars, tm; kw...)
-        return [(t = sol1[ii][1], u = sol2[ii][2], du = (sol1[ii][2] .- sol2[ii][2]) ./ δ) for ii = 1:size(x,2) ]
-    end
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: ODEProblem,Talg, Tjac}
+    return _dflow_finitediff_serial(x, pars, dx, tm, fl.odeprob, fl.alg; δ = δ, fl.kwargsDE..., kw...)
+end
+
+function jvp(fl::FlowDE{T1, Talg, Tjac, Nothing}, x::AbstractArray, pars, dx, tm;  δ = convert(VI.scalartype(x), getdelta(fl)), kw...) where {T1 <: EnsembleProblem,Talg, Tjac}
+    sol1 = evolve(fl, x .+ δ .* dx, pars, tm; kw...)
+    sol2 = evolve(fl, x           , pars, tm; kw...)
+    return [(t = sol1[ii][1], u = sol2[ii][2], du = (sol1[ii][2] .- sol2[ii][2]) ./ δ) for ii = 1:size(x,2) ]
 end
 ######### Optional methods
 # this gives access to the full solution

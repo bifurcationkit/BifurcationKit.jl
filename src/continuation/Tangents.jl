@@ -81,7 +81,7 @@ function gettangent!(state::AbstractContinuationState,
     dFdl = _dFdp(iter.prob, state.z.u, setparam(iter, state.z.p))
 
     # compute jacobian at the current solution
-    J = jacobian(iter.prob, state.z.u, setparam(iter, state.z.p))
+    J = jacobian(getprob(iter), state.z.u, setparam(iter, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
     τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),

@@ -37,7 +37,7 @@ function corrector!(state::AbstractContinuationState,
                     it::AbstractContinuationIterable,
                     ::Natural; 
                     kwargs...)
-    sol = _newton(it.prob,
+    sol = _newton(getprob(it),
                 state.z_pred.u,
                 setparam(it, clamp_predp(state.z_pred.p, it)), 
                 it.contparams.newton_options; 
