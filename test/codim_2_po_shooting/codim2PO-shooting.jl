@@ -79,7 +79,7 @@ fold_po_sh1 = continuation(br_fold_sh, 2, (@optic _.ϵ), opts_posh_fold;
         update_minaug_every_step = 1,
         jacobian_ma = BK.MinAug(),
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         callback_newton = BK.cbMaxNorm(1),
         )
 @test fold_po_sh1.kind isa BK.FoldPeriodicOrbitCont
@@ -95,7 +95,7 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
         jacobian_ma = BK.MinAug(),
         usehessian = false,
         start_with_eigen = false,
-        bothside = true,
+        bothside = Val(true),
         callback_newton = BK.cbMaxNorm(1),
         )
 
@@ -119,7 +119,7 @@ probshns, ci = generate_ci_problem(Shooting(M=3), re_make(prob, params = sol2.pr
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 20, ds = -0.001);
     verbosity = 0, plot = false,
     argspo...,
-    # bothside = true,
+    # bothside = Val(true),
     callback_newton = BK.cbMaxNorm(1),
     )
 
@@ -140,7 +140,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         usehessian = false,
         jacobian_ma = BK.MinAug(),
         normC = norminf,
-        bothside = false,
+        bothside = Val(false),
         callback_newton = BK.cbMaxNorm(1),
         )
 @test ns_po_sh.kind isa BK.NSPeriodicOrbitCont
@@ -182,7 +182,7 @@ prob2 = @set probshpd.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3);
     verbosity = 0, plot = false,
     argspo...,
-    bothside = true,
+    bothside = Val(true),
     )
 
 get_normal_form(brpo_pd, 2)
@@ -198,7 +198,7 @@ pd_po_sh2 = continuation(brpo_pd, 2, (@optic _.b0), opts_pocoll_pd;
         jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
+        bothside = Val(true),
         # bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
         )
 BK.getprob(pd_po_sh2)

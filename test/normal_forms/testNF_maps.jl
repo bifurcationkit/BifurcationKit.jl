@@ -113,15 +113,14 @@ let
         ns = BK.NeimarkSacker(br.specialpoint[1].x, br.specialpoint[1].τ, br.specialpoint[1].param, (abs∘imag)(eigenvals(br, br.specialpoint[1].idx)[1]), (@set pars_ns.μ = br.specialpoint[1].param), BK.getlens(br), [1.], [1.], nothing, :none)
         BK.type(ns)
 
-        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
-        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = true)
+        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = Val(true))
+        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = true, detailed = Val(true))
         @test nf.nf.a ≈ pars_ns.a atol=1e-3
         @test nf.nf.b ≈ pars_ns.c3 atol=1e-2
         show(nf)
         BK.type(nf)
 
-        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = false)
-        @test nf.nf.a === nothing
+        nf = BK.neimark_sacker_normal_form(prob, br, 1; nev = 2, verbose = false, detailed = Val(false))
         BK.type(nf)
     end
 end

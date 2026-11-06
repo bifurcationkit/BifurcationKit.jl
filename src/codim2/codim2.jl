@@ -109,7 +109,7 @@ for (op, at) in (
                     _norm = norm,
                     update_minaug_every_step = 1)
         a = b = 0.0
-        𝒯 = typeof(norm(a)) # this is valid, see https://jutho.github.io/KrylovKit.jl/stable/#Package-features-and-alternatives-1
+        𝒯 = typeof(norm(a))
         if ~(𝒯  <: Number)
             error("This norm must return a `Number`, returned $𝒯")
         end
@@ -185,7 +185,6 @@ get_frequency(sol::MASolutionFreq, 𝐇::AbstractMinimallyAugmentedFormulation_H
 
 function save_solution(𝐌𝐚::AbstractMinimallyAugmentedFormulation, x, p2)
     p1 = get_parameter(x, 𝐌𝐚)
-    # TODO!! is it a copy or else?
     x_ma = save_solution(𝐌𝐚.prob_vf, getvec(x, 𝐌𝐚), p2)
     if 𝐌𝐚 isa AbstractMinimallyAugmentedFormulation_Hopf_NS
         return MASolutionFreq(x_ma, p1, get_frequency(x, 𝐌𝐚))
@@ -204,11 +203,8 @@ residual(𝐏𝐛::AbstractMABifurcationProblem, x, p) = 𝐏𝐛.prob(x, p)
 residual!(𝐏𝐛::AbstractMABifurcationProblem, out, x, p) = (_copyto!(out, 𝐏𝐛.prob(x, p)); out)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, AutoDiff}, x, p) where {Tprob} = ForwardDiff.jacobian(z -> residual(𝐏𝐛, z, p), x)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferences}, x, p; δ = getdelta(𝐏𝐛)) where {Tprob} = finite_differences(z -> residual(𝐏𝐛, z, p), x)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, FiniteDifferencesMF}, x, p) where {Tprob} = dx -> (residual(𝐏𝐛, x .+ 1e-8 .* dx, p) .- residual(𝐏𝐛, x .- 1e-8 .* dx, p)) ./ (2e-8)
-
 jacobian(𝐏𝐛::AbstractMABifurcationProblem{Tprob, Nothing}, x, p) where {Tprob} = (x = x, params = p, pbma = 𝐏𝐛.prob)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # this function encodes the functional for Fold/PD
@@ -342,17 +338,18 @@ end
 function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem, PDMAProblem, NSMAProblem}}
     𝒯 = _getvectortype(br)
     bifpt = br.specialpoint[ind]
+    saved = bifpt.x.x
     # get the biurcation point. We perform a conversion in case GPU is used
     if 𝒯 <: BorderedArray
-        x0 = convert(𝒯.parameters[1], saved_solution(bifpt.x.x))
+        x0 = convert(𝒯.parameters[1], saved_solution(saved))
     else
-        x0 = convert(𝒯, saved_solution(bifpt.x.x))
+        x0 = convert(𝒯, saved_solution(saved))
     end
     # parameters for vector field
     p1 = bifpt.x.p1
     p2 = bifpt.param
     parbif = _set(getparams(br), get_lenses(br), (p1, p2))
-    return (x = x0, params = parbif)
+    return (x0 = x0, parbif = parbif, saved = saved)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
@@ -459,24 +456,31 @@ function continuation(br::AbstractBranchResult,
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # branch switching at BT / ZH / HH bifurcation point
+"""
+$(TYPEDSIGNATURES)
+
+Automatic branch switching at a codim 2 bifurcation point (Bogdanov-Takens `:bt`, Zero-Hopf `:zh` or Hopf-Hopf `:hh`) detected on a curve of Fold / Hopf points. This call switches to the curve of Hopf / Fold points emanating from the bifurcation point.
+
+# Arguments
+- `br` branch of Fold or Hopf points computed with [`continuation`](@ref)
+- `ind_bif` index of the bifurcation point in `br`
+- `options_cont` continuation parameters for the bifurcated curve
+
+# Optional arguments
+- `alg = getalg(br)` continuation algorithm to be used for the bifurcated curve
+- `δp` used to specify a particular guess for the parameter on the bifurcated curve, otherwise determined by `options_cont.ds`
+- `detect_codim2_bifurcation::Int = 0` whether to detect codim 2 bifurcation points on the bifurcated curve, see [`continuation`](@ref)
+- `update_minaug_every_step = 1` update frequency of the vectors `a, b` of the Minimally Augmented formulation
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` to skip the computation of the normal form coefficients.
+- `kwargs` optional arguments passed to [`continuation`](@ref)
+"""
 function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
                         options_cont::ContinuationPar = br.contparams;
                         alg = getalg(br),
-                        δp = nothing, 
-                        ampfactor::Real = 1,
-                        nev = options_cont.nev,
+                        δp = nothing,
                         detect_codim2_bifurcation::Int = 0,
                         update_minaug_every_step = 1,
-                        Teigvec = _getvectortype(br),
-                        scaleζ = norm,
-                        start_with_eigen = false,
-                        autodiff_nf = false,
-                        detailed = Val(true),
-                        ζs = nothing,
-                        ζs_ad = nothing,
-                        bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
-                        bdlinsolver_adjoint = bdlinsolver,
-                        bdlinsolver_block = bdlinsolver,
+                        normal_form_kwargs = (),
                         kwargs...) where {Tkind <: AbstractTwoParamCont, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
 
     verbose = get(kwargs, :verbosity, 0) > 0 ? true : false
@@ -497,22 +501,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     compute_eigen_elements = options_cont.detect_bifurcation > 0
     optionsCont = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; update_minaug_every_step, kwargs...)
 
-
-    # scalar type
-    Ty = eltype(Teigvec)
-
     # compute the normal form of the bifurcation point
-    nf = get_normal_form(getprob(br), br, ind_bif, Teigvec; 
-                            nev,
+    nf = get_normal_form(getprob(br), br, ind_bif; 
+                            nev = options_cont.nev,
+                            Teigvec = _getvectortype(br),
                             verbose,
-                            scaleζ,
-                            autodiff = autodiff_nf,
-                            detailed,
-                            bls = bdlinsolver,
-                            bls_adjoint = bdlinsolver_adjoint,
-                            bls_block = bdlinsolver_block,
-                            ζs,
-                            ζs_ad)
+                            bls = getprob(br).prob.linbdsolver,
+                            bls_adjoint = getprob(br).prob.linbdsolver,
+                            normal_form_kwargs...,
+                            )
 
     # compute predictor for point on new branch
     ds = isnothing(δp) ? optionsCont.ds : δp
@@ -520,20 +517,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     if prob_ma isa FoldMinimallyAugmentedFormulation || bif_type == :hh
         # define guess for the first Hopf point on the branch
         pred = predictor(nf, Val(:HopfCurve), ds)
-
         # new continuation parameters
         parcont = pred.hopf(ds)
-
         # new full parameters
         params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
-
         # guess for the Hopf point
         hopfpt = BorderedArray(nf.x0 .+ pred.x0(ds), [parcont[1], pred.ω(ds)])
-
         # estimates for eigenvectors for ±iω
         ζ = pred.EigenVec(ds)
         ζstar = pred.EigenVecAd(ds)
-
         # put back original options
         @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
@@ -554,20 +546,15 @@ function continuation(br::AbstractResult{Tkind, Tprob}, ind_bif::Int,
     else
         @assert prob_ma isa HopfMinimallyAugmentedFormulation
         pred = predictor(nf, Val(:FoldCurve), 0.)
-
         # new continuation parameters
         parcont = pred.fold(ds)
-
         # new full parameters
         params = set(set(nf.params, nf.lens[2], parcont[2]), nf.lens[1], parcont[1])
-
         # guess for the fold point
         foldpt = BorderedArray(nf.x0 .+ 0 .* pred.x0(ds), parcont[1])
-
         # estimates for null eigenvectors
         ζ = pred.EigenVec(ds) |> real
         ζstar = pred.EigenVecAd(ds) |> real
-
         # put back original options
         @reset optionsCont.newton_options.eigsolver =
                 getsolver(optionsCont.newton_options.eigsolver)
@@ -592,8 +579,8 @@ $(TYPEDSIGNATURES)
 
 This function uses information in the branch to detect codim 2 bifurcations like BT, ZH and Cusp.
 """
-_correct_event_labels(contres::ContResult) = contres
-_correct_event_labels(br::DCResult) = error("`_correct_event_labels` is not implemented for a deflated continuation result (::DCResult).")
+_correct_event_labels(contres::ContResult) = contres # TODO: find a way to remove this function
+_correct_event_labels(::DCResult) = error("`_correct_event_labels` is not implemented for a deflated continuation result (::DCResult).")
 
 function _correct_event_labels(contres::ContResult{Tkind}) where {Tkind <: Union{FoldCont, HopfCont}}
     if Tkind == FoldCont
@@ -611,6 +598,4 @@ function _correct_event_labels(contres::ContResult{Tkind}) where {Tkind <: Union
     return contres
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int)
-    real(br.l1[ind]) < 0
-end
+is_supercritical(br::AbstractResult{<:HopfCont}, ind::Int) = real(br.l1[ind]) < 0

@@ -21,11 +21,12 @@ par_com = (q1 = 2.5, q2 = 1., q3 = 10., q4 = 0.0675, q5 = 1., q6 = 0.1, k = 0.4)
 z0 = [0.001137, 0.891483, 0.062345]
 
 prob = BifurcationProblem(COm, z0, par_com, (@optic _.q2);
+        R01 = BK.AutoDiff(), R02 = BK.AutoDiff(), R11 = BK.AutoDiff(),
         record_from_solution = (x, p; k...) -> (x = x[1], y = x[2], s = x[3]))
 
 opts_br = ContinuationPar(p_min = 0.5, p_max = 2.3, ds = 0.002, dsmax = 0.01, n_inversion = 6, detect_bifurcation = 3, max_bisection_steps = 25, nev = 3, max_steps = 100)
 
-br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = true)
+br = continuation(prob, PALC(), opts_br; normC = norminf, bothside = Val(true))
 
 @test br.kind == BK.EquilibriumCont()
 @test br.specialpoint[2].param ≈ 1.04099606
@@ -41,7 +42,7 @@ sn_codim2 = continuation(br, 3, (@optic _.k),
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     # record_from_solution = (u,p; kw...) -> (x = BK.getVec(u)[1] ),
-    bothside = true,
+    bothside = Val(true),
     )
 
 @test sn_codim2.kind == BK.FoldCont()
@@ -83,7 +84,7 @@ hp_codim2 = continuation(brh, 2, (@optic _.k), ContinuationPar(opts_br, p_min = 
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    bothside = true,
+    bothside = Val(true),
     bdlinsolver = MatrixBLS())
 
 show(hp_codim2)
@@ -113,7 +114,7 @@ hp_from_bt = continuation(sn_codim2, 4 , setproperties(sn_codim2.contparams, ds 
         normC = norminf,
         update_minaug_every_step = 1,
         detect_codim2_bifurcation = 2,
-        bothside = true,
+        bothside = Val(true),
         )
 
 @test hp_from_bt.kind == BK.HopfCont()

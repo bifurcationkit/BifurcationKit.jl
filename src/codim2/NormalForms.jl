@@ -11,10 +11,12 @@ Compute the Cusp normal form.
 # Optional arguments
 - `δ = getdelta(_prob)` used for finite differences
 - `verbose` bool to print information
+- `detailed::Val{Bool} = Val(true)` whether to compute the normal form coefficient `c`.
+  With `Val(false)`, only the eigen-elements are computed and `nf = nothing`.
 """
 function cusp_normal_form(𝐏𝐛,
-                            br::AbstractBranchResult, ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            br::AbstractBranchResult, ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
@@ -23,8 +25,9 @@ function cusp_normal_form(𝐏𝐛,
                             scaleζ = norm,
                             bls = nothing,
                             bls_adjoint = nothing,
+                            detailed::Val{detailed_type} = Val(true),
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
-                            ) where {𝒯eigvec, start_with_eigen_type}
+                            ) where {𝒯eigvec, start_with_eigen_type, detailed_type}
     if br.specialpoint[ind_bif].type != :cusp 
         error("The provided index does not refer to a Cusp Point")
     end
@@ -63,9 +66,9 @@ function cusp_normal_form(𝐏𝐛,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -86,10 +89,23 @@ function cusp_normal_form(𝐏𝐛,
 
     ζ★ = real.(ζ★); λ★ = real.(λ★)
 
-    @assert abs(VI.inner(ζ, ζ★)) > 1e-10 "We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev."
+    if abs(VI.inner(ζ, ζ★)) < 1e-10 
+        error("We got ζ⋅ζ★ = $((VI.inner(ζ, ζ★))). This dot product should not be zero. Perhaps, you can increase `nev` which is currently $nev.")
+    end
     ζ★ ./= VI.inner(ζ, ζ★)
 
     # Kuznetsov, Yu. A. “Numerical Normalization Techniques for All Codim 2 Bifurcations of Equilibria in ODE’s.” SIAM Journal on Numerical Analysis 36, no. 4 (January 1, 1999): 1104–24. https://doi.org/10.1137/S0036142998335005.
+    if ~detailed_type
+        return Cusp(
+                    x0, nothing, nothing, 
+                    parbif,
+                    (getlens(𝐌𝐚), lens),
+                    ζ, ζ★,
+                    nothing,
+                    :none
+                )
+    end
+
     B(dx1, dx2) = d2F(prob_vf, x0, parbif, dx1, dx2)
     C(dx1, dx2, dx3) = d3F(prob_vf, x0, parbif, dx1, dx2, dx3)
     q = ζ
@@ -326,7 +342,25 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the Hopf curve near the Bogdanov-Takens point.
+Compute a prediction for the Hopf curve emanating from the Bogdanov-Takens
+bifurcation point `bt`.
+
+# Arguments
+- `bt::BogdanovTakens`: Bogdanov-Takens bifurcation point together with its normal form.
+- `::Val{:HopfCurve}`: selects the Hopf curve.
+- `ds`: signed displacement in the normal-form parameter `β₁` which parametrises the Hopf curve. The actual value of `β₁` is made compatible with the criticality `a` of the normal form.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ds`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `hopf(t)`: two parameters corresponding to `t` on the Hopf curve.
+- `ω(t)`: frequency of the Hopf bifurcation at `t`.
+- `EigenVec(t)`: right eigenvector associated to the Hopf pair at `t`.
+- `EigenVecAd(t)`: left (adjoint) eigenvector associated to the Hopf pair at `t`.
+- `x0(t)`: increment of the equilibrium along the critical eigendirection at `t`.
 """
 function predictor(bt::BogdanovTakens, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
@@ -392,7 +426,24 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the Fold curve near the Bogdanov-Takens point.
+Compute a prediction for the Fold curve emanating from the Bogdanov-Takens
+bifurcation point `bt`.
+
+# Arguments
+- `bt::BogdanovTakens`: Bogdanov-Takens bifurcation point together with its normal form.
+- `::Val{:FoldCurve}`: selects the Fold curve.
+- `ds`: value of the normal-form parameter `β₂` used to parametrise the Fold curve.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ds`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `fold(t)`: two parameters corresponding to `t` on the Fold curve.
+- `EigenVec(t)`: right eigenvector associated to the zero eigenvalue at `t`.
+- `EigenVecAd(t)`: left (adjoint) eigenvector associated to the zero eigenvalue at `t`.
+- `x0(t)`: increment of the equilibrium along the critical eigendirection at `t`.
 """
 function predictor(bt::BogdanovTakens, ::Val{:FoldCurve}, ds::T; 
                     verbose = false, 
@@ -425,7 +476,26 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of homoclinic orbits near the Bogdanov-Takens point.
+Compute a prediction for the curve of homoclinic orbits emanating from the
+Bogdanov-Takens bifurcation point `bt`.
+
+The prediction is obtained from a Lindstedt-Poincaré expansion of the homoclinic
+solution, see the reference below. The returned functions depend on the
+homoclinic amplitude `ϵ`, not on the argument `ds`.
+
+# Arguments
+- `bt::BogdanovTakens`: Bogdanov-Takens bifurcation point together with its normal form.
+- `::Val{:HomoclinicCurve}`: selects the curve of homoclinic orbits.
+- `ds`: unused, kept for a uniform predictor interface.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ϵ`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `α(ϵ)`: two parameters corresponding to the homoclinic amplitude `ϵ`.
+- `orbit(t, ϵ)`: homoclinic orbit guess at the time-like variable `t` for the amplitude `ϵ`.
 
 ## Reference
 
@@ -494,8 +564,8 @@ Compute the Bogdanov-Takens normal form.
 - `start_with_eigen = Val(true)` whether to seed the construction of the Jordan basis using the eigensolver (`Val(true)`) or using random vectors and a bordered linear system (`Val(false)`).
 """
 function bogdanov_takens_normal_form(𝐏𝐛,
-                                    br::AbstractBranchResult, ind_bif::Int,
-                                    Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                    br::AbstractBranchResult, ind_bif::Int;
+                                    Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                     δ = getdelta(𝐏𝐛),
                                     nev::Int = length(eigenvalsfrombif(br, ind_bif)),
                                     verbose = false,
@@ -541,9 +611,9 @@ function bogdanov_takens_normal_form(𝐏𝐛,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     𝒯 = VI.scalartype(𝒯eigvec)
     # jacobian at bifurcation point
@@ -636,19 +706,19 @@ function bogdanov_takens_normal_form(𝐏𝐛,
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function bautin_normal_form(𝐏𝐛::HopfMAProblem,
-                            br::AbstractBranchResult, ind_bif::Int,
-                            Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                            br::AbstractBranchResult, ind_bif::Int;
+                            Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                             δ = getdelta(𝐏𝐛),
                             nev = length(eigenvalsfrombif(br, ind_bif)),
                             verbose = false,
                             ζs = nothing,
                             lens = getlens(br),
                             scaleζ = norm,
-                            detailed = false,
                             bls = MatrixBLS(),
                             bls_adjoint = bls,
+                            detailed::Val{detailed_type} = Val(true),
                             start_with_eigen::Val{start_with_eigen_type} = Val(true)
-                            ) where {𝒯eigvec, start_with_eigen_type}
+                            ) where {𝒯eigvec, start_with_eigen_type, detailed_type}
     @assert br.specialpoint[ind_bif].type == :gh "The provided index does not refer to a Bautin Point"
     verbose && println("━"^53*"\n──▶ Bautin Normal form computation")
 
@@ -689,9 +759,9 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
 
     # parameters for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -835,7 +905,7 @@ function bautin_normal_form(𝐏𝐛::HopfMAProblem,
     )
 
     # case of simplified normal form
-    if detailed == false
+    if detailed_type == false
         return pt
     end
 
@@ -937,7 +1007,24 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of Folds of periodic orbits near the Bautin bifurcation point.
+Compute a prediction for the curve of Folds of periodic orbits emanating from
+the Bautin bifurcation point `gh`.
+
+# Arguments
+- `gh::Bautin`: Bautin bifurcation point together with its normal form.
+- `::Val{:FoldPeriodicOrbitCont}`: selects the curve of Fold bifurcations of periodic orbits.
+- `ϵ`: amplitude of the predicted periodic orbit.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ϵ`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbit(θ)`: state-space guess of the periodic orbit at phase `θ`.
+- `ω`: frequency of the periodic orbit, corrected at order `ϵ²`.
+- `params`: two parameters corresponding to the predicted point.
+- `x0(t)`: constant function returning the base point of the periodic orbit.
 
 ## Reference
 
@@ -1002,8 +1089,8 @@ function _extract_hopf_hopf_eigenpairs(eigenvals, ω0)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function zero_hopf_normal_form(𝐏𝐛,
-                                br::AbstractBranchResult, ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                br::AbstractBranchResult, ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
@@ -1014,7 +1101,7 @@ function zero_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)
+                                detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :zh "The provided index does not refer to a Zero-Hopf Point"
     verbose && println("━"^53*"\n──▶ Zero-Hopf Normal form computation")
@@ -1053,9 +1140,9 @@ function zero_hopf_normal_form(𝐏𝐛,
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     x0 = if Teigvec <: BorderedArray
         convert(Teigvec.parameters[1], x0)
@@ -1268,7 +1355,29 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of Hopf bifurcations near the Zero-Hopf bifurcation point.
+Compute a prediction for the Hopf curve emanating from the Zero-Hopf
+bifurcation point `zh`.
+
+At first order, the Hopf curve starts at the Zero-Hopf point itself, so the
+prediction is constant and only provides the initial parameters, frequency and
+eigenvectors.
+
+# Arguments
+- `zh::ZeroHopf`: Zero-Hopf bifurcation point together with its normal form.
+- `::Val{:HopfCurve}`: selects the Hopf curve.
+- `ds`: unused, kept for a uniform predictor interface.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused.
+
+# Returned values
+A `NamedTuple` with fields:
+- `hopf(t)`: two parameters at the Zero-Hopf point.
+- `ω(t)`: frequency of the Hopf bifurcation.
+- `EigenVec(t)`: right eigenvector associated to the Hopf pair.
+- `EigenVecAd(t)`: left (adjoint) eigenvector associated to the Hopf pair.
+- `x0(t)`: zero vector, the equilibrium is not moved at first order.
 """
 function predictor(zh::ZeroHopf, ::Val{:HopfCurve}, ds::T; 
                     verbose = false, 
@@ -1303,7 +1412,29 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of Fold bifurcations near the Zero-Hopf bifurcation point.
+Compute a prediction for the Fold curve emanating from the Zero-Hopf
+bifurcation point `zh`.
+
+At first order, the Fold curve starts at the Zero-Hopf point itself, so the
+prediction is constant and only provides the initial parameters, null eigenvalue
+and eigenvectors.
+
+# Arguments
+- `zh::ZeroHopf`: Zero-Hopf bifurcation point together with its normal form.
+- `::Val{:FoldCurve}`: selects the Fold curve.
+- `ds`: unused, kept for a uniform predictor interface.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused.
+
+# Returned values
+A `NamedTuple` with fields:
+- `fold(t)`: two parameters at the Zero-Hopf point.
+- `λ0(t)`: null eigenvalue at the Zero-Hopf point.
+- `EigenVec(t)`: right eigenvector associated to the zero eigenvalue.
+- `EigenVecAd(t)`: left (adjoint) eigenvector associated to the zero eigenvalue.
+- `x0(t)`: zero vector, the equilibrium is not moved at first order.
 """
 function predictor(zh::ZeroHopf, ::Val{:FoldCurve}, ds::T; 
                     verbose = false, 
@@ -1338,7 +1469,25 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of Neimark-Sacker bifurcations near the Zero-Hopf bifurcation point.
+Compute a prediction for the curve of Neimark-Sacker bifurcations of periodic
+orbits emanating from the Zero-Hopf bifurcation point `zh`.
+
+# Arguments
+- `zh::ZeroHopf`: Zero-Hopf bifurcation point together with its normal form.
+- `::Val{:NS}`: selects the curve of Neimark-Sacker points of periodic orbits.
+- `ϵ`: amplitude of the predicted periodic orbit.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ϵ`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `orbit(θ)`: state-space guess of the periodic orbit at phase `θ`.
+- `hasNS`: whether a curve of Neimark-Sacker bifurcations of periodic orbits exists.
+- `params`: two parameters corresponding to the predicted point.
+- `T`: period of the predicted periodic orbit.
+- `k`: phase of the Floquet multiplier associated to the Neimark-Sacker bifurcation.
 
 ## Reference
 
@@ -1377,8 +1526,8 @@ function predictor(zh::ZeroHopf, ::Val{:NS}, ϵ::𝒯;
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function hopf_hopf_normal_form(𝐏𝐛,
-                                br::AbstractBranchResult, ind_bif::Int,
-                                Teigvec::Type{𝒯eigvec} = _getvectortype(br);
+                                br::AbstractBranchResult, ind_bif::Int;
+                                Teigvec::Type{𝒯eigvec} = _getvectortype(br),
                                 δ = getdelta(𝐏𝐛),
                                 nev = length(eigenvalsfrombif(br, ind_bif)),
                                 verbose = false,
@@ -1389,7 +1538,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
                                 bls_adjoint = nothing,
                                 autodiff = true,
                                 start_with_eigen::Val{start_with_eigen_type} = Val(true),
-                                detailed::Val{detailed_type} = Val(false)
+                                detailed::Val{detailed_type} = Val(true)
                                 ) where {𝒯eigvec, detailed_type, start_with_eigen_type}
     @assert br.specialpoint[ind_bif].type == :hh "The provided index does not refer to a Hopf-Hopf Point"
 
@@ -1430,9 +1579,9 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # parameter for vector field
     # we need this conversion when running on GPU and loading the branch from the disk
-    x0, parbif = get_bif_point_codim2(br, ind_bif)
+    (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
     # we put the problem back to the state it was
-    restore_problem!(prob_vf, x0, parbif)
+    restore_problem!(prob_vf, saved, parbif)
 
     # jacobian at bifurcation point
     L = jacobian(prob_vf, x0, parbif)
@@ -1446,8 +1595,7 @@ function hopf_hopf_normal_form(𝐏𝐛,
 
     # right / left eigenvectors
     if start_with_eigen_type
-        # right eigenvector
-        # TODO IMPROVE THIS
+        # right eigenvector # TODO IMPROVE THIS
         if true#haseigenvector(br) == false
             # we recompute the eigen-elements if there were not saved during the computation of the branch
             verbose && @info "Recomputing eigenvector on the fly"
@@ -1622,7 +1770,29 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the Hopf curve near the Hopf-Hopf bifurcation point.
+Compute a prediction for the Hopf curve emanating from the Hopf-Hopf
+bifurcation point `hh`.
+
+The curve is associated to one of the two Hopf pairs at the Hopf-Hopf point. The
+selected pair is the one whose eigenvalue has the imaginary part furthest from
+the reference frequency `ω₀`.
+
+# Arguments
+- `hh::HopfHopf`: Hopf-Hopf bifurcation point together with its normal form.
+- `::Val{:HopfCurve}`: selects the Hopf curve.
+- `ds`: unused, kept for a uniform predictor interface.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused.
+
+# Returned values
+A `NamedTuple` with fields:
+- `hopf(t)`: two parameters at the Hopf-Hopf point.
+- `ω(t)`: frequency of the selected Hopf pair.
+- `EigenVec(t)`: right eigenvector associated to the selected Hopf pair.
+- `EigenVecAd(t)`: left (adjoint) eigenvector associated to the selected Hopf pair.
+- `x0(t)`: zero vector, the equilibrium is not moved at first order.
 """
 function predictor(hh::HopfHopf, ::Val{:HopfCurve}, ds::𝒯; 
                     verbose = false, 
@@ -1661,7 +1831,31 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Compute the predictor for the curve of Neimark-Sacker points near the Hopf-Hopf bifurcation point.
+Compute a prediction for the curves of Neimark-Sacker bifurcations of periodic
+orbits emanating from the Hopf-Hopf bifurcation point `hh`.
+
+Two curves of Neimark-Sacker points are predicted, one for each Hopf pair at the
+Hopf-Hopf point.
+
+# Arguments
+- `hh::HopfHopf`: Hopf-Hopf bifurcation point together with its normal form.
+- `::Val{:NS}`: selects the curves of Neimark-Sacker points of periodic orbits.
+- `ϵ`: amplitude of the predicted periodic orbit.
+
+# Keyword arguments
+- `verbose = false`: accepted for interface consistency, currently unused.
+- `ampfactor = 1`: accepted for interface consistency, currently unused. The amplitude is controlled by `ϵ`.
+
+# Returned values
+A `NamedTuple` with fields:
+- `ns1(θ)`: state-space guess of the first periodic orbit at phase `θ`.
+- `ns2(θ)`: state-space guess of the second periodic orbit at phase `θ`.
+- `params1`: two parameters corresponding to the first predicted point.
+- `params2`: two parameters corresponding to the second predicted point.
+- `ω11`, `ω12`: frequencies of the two Hopf pairs, corrected at order `ϵ²`, for the first curve.
+- `ω21`, `ω22`: frequencies of the two Hopf pairs, corrected at order `ϵ²`, for the second curve.
+- `T1`, `T2`: periods of the two predicted periodic orbits.
+- `k1`, `k2`: phases of the Floquet multipliers associated to the two Neimark-Sacker bifurcations.
 
 ## Reference
 

@@ -15,7 +15,61 @@ _namedrecordfromsol(x::Tuple) = (;zip((Symbol("x$i") for i in eachindex(x)), x).
 """
 _mergewithrecordfromuser(x, a::NamedTuple) = merge(_namedrecordfromsol(x), a)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Structure to hold continuation result
+"""
+`BifurcationKit.ReturnCode` is the standard return code enum interface for the BifurcationKit interface.
+Return codes are notes given by the solvers to indicate the state of the solution, for example whether it successfully solved the equations, whether it failed to solve the equations, and importantly, why it exited.
+
+## Using `BifurcationKit.ReturnCode`
+
+`BifurcationKit.ReturnCode` uses the interface of [EnumX.jl](https://github.com/fredrikekre/EnumX.jl) and thus inherits all of the behaviors of being an EnumX. This includes the Enum type itself being referred to as `BifurcationKit.ReturnCode.T`, and each constituent enum state being accessed as a module property, for example BifurcationKit.ReturnCode.EmptyReturnCode`.
+
+## Properties
+- `successful_retcode(retcode::ReturnCode.T)`: Determines whether the output enum is considered a success state of the solver, i.e. the solver successfully solved the equations. `ReturnCode.EmptyReturnCode` is the most basic form, simply declaring that it was successful, but many more informative success return codes exist as well.
+
+When two branches are concatenated, their retcodes are combined with [`_RETCODE_CONCAT_MATRIX`](@ref): `ReturnCode.DsLessThanMin` is absorbing and, between successful retcodes, the most informative one is kept.
+"""
+EnumX.@enumx ReturnCode begin
+    EmptyReturnCode
+    "Stopped by a finalizer."
+    Finalized
+    "Reached continuation max steps."
+    MaxSteps
+    "Stopped by ds smaller than ContinuationPar.dsmin"
+    DsLessThanMin
+    "Parameter boundary hit."
+    BoundaryHit
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when `retcode` corresponds to a successful termination.
+"""
+function successful_retcode(retcode::ReturnCode.T)
+    return  retcode == ReturnCode.EmptyReturnCode ||
+            retcode == ReturnCode.Finalized ||
+            retcode == ReturnCode.MaxSteps ||
+            retcode == ReturnCode.BoundaryHit
+end
+
+"""
+Matrix giving the plausible combination of two [`ReturnCode`](@ref)s when concatenating branches. The combination is symmetric.
+"""
+const _RETCODE_CONCAT_MATRIX = ReturnCode.T[
+    ReturnCode.EmptyReturnCode   ReturnCode.Finalized     ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.Finalized         ReturnCode.Finalized     ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.MaxSteps          ReturnCode.MaxSteps      ReturnCode.MaxSteps      ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit;
+    ReturnCode.DsLessThanMin     ReturnCode.DsLessThanMin ReturnCode.DsLessThanMin ReturnCode.DsLessThanMin  ReturnCode.DsLessThanMin;
+    ReturnCode.BoundaryHit       ReturnCode.BoundaryHit   ReturnCode.BoundaryHit   ReturnCode.DsLessThanMin  ReturnCode.BoundaryHit
+]
+
+"""
+$(TYPEDSIGNATURES)
+
+Combine the retcodes `rc1` and `rc2` of two concatenated branches. See [`_RETCODE_CONCAT_MATRIX`](@ref) for the combination rule.
+"""
+@inline _combine_retcodes(rc1::ReturnCode.T, rc2::ReturnCode.T) = _RETCODE_CONCAT_MATRIX[Int(rc1) + 1, Int(rc2) + 1]
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 $(TYPEDEF)
 
@@ -111,6 +165,9 @@ julia> br.param
     "Continuation algorithm used for the computation of the branch"
     alg::Talg
 
+    "Return code. See [`ReturnCode`](@ref)"
+    retcode::ReturnCode.T = ReturnCode.EmptyReturnCode
+
     @assert contparams isa ContinuationPar "Only `::ContinuationPar` parameters are allowed"
 end
 
@@ -125,6 +182,13 @@ getkind(br::AbstractVector{ <: ContResult}) = getkind(first(br))
 """
 $(TYPEDSIGNATURES)
 
+Return the [`ReturnCode`](@ref) of a continuation result.
+"""
+@inline return_code(br::ContResult) = getfield(br, :retcode)
+
+"""
+$(TYPEDSIGNATURES)
+
 Return the parameters of the bifurcation problem of the branch.
 """
 getparams(br::AbstractBranchResult) = getparams(getprob(br))
@@ -133,8 +197,15 @@ getparams(br::AbstractBranchResult) = getparams(getprob(br))
 $(TYPEDSIGNATURES)
 
 Return the parameters corresponding to the ind-th step in the branch.
+
 """
 getparams(br::AbstractBranchResult, ind::Int) = setparam(br, get_solp(br, ind))
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when the continuation result terminated successfully.
+"""
+successful_retcode(br::ContResult) = successful_retcode(return_code(br))
 
 getlens(br::AbstractBranchResult) = getlens(getprob(br))
 @inline getprob(br::AbstractBranchResult) = getfield(br, :prob)
@@ -164,9 +235,14 @@ _getfirstusertype(br::AbstractBranchResult) = keys(br.branch[1])[1]
 
 # get the bordered linear solver used for the branch
 get_bordered_linsolver(br::AbstractBranchResult) = get_bordered_linsolver(getalg(br))
+geteigensolver(br::ContResult) = geteigensolver(getcontparams(br))
+
+@inline _firstbranch(γ::ContResult) = γ
+@inline _firstbranch(γ::Vector{ <: ContResult}) = first(γ)
 
 """
-    setparam(br, p0)
+$(TYPEDSIGNATURES)
+
 Set the parameter value `p0` according to the `::Lens` stored in `br` for the parameters of the problem `getprob(br)`.
 """
 setparam(br::AbstractBranchResult, p0) = setparam(getprob(br), p0)
@@ -180,25 +256,20 @@ function Base.getindex(br::ContResult, k::Int)
     return (; br.branch[k]..., eigenvals, eigenvecs)
 end
 
-function Base.getindex(br0::ContResult, k::UnitRange{<:Integer})
+function Base.getindex(br0::ContResult, k::UnitRange{ <: Integer})
     br = deepcopy(br0)
-
     if ~isnothing(br.branch)
         @reset br.branch = br.branch[k]
     end
-
     if ~isnothing(br.eig)
         @reset br.eig = [pt for pt in br.eig if pt.step in br.branch.step]
     end
-
     if ~isnothing(br.sol)
         @reset br.sol = [pt for pt in br.sol if pt.step in br.branch.step]
     end
-
     if ~isnothing(br.specialpoint)
-        @reset br.specialpoint = [setproperties(pt; idx=pt.idx + 1 - k[1]) for pt in br.specialpoint if pt.idx in k]
+        @reset br.specialpoint = [setproperties(pt; idx = pt.idx + 1 - k[1]) for pt in br.specialpoint if pt.idx in k]
     end
-
     return br
 end
 
@@ -227,7 +298,7 @@ Return the parameter for the ind-th point stored in br.sol
 end
 
 function Base.getproperty(br::ContResult, s::Symbol)
-    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg)
+    if s in (:specialpoint, :contparams, :lens, :sol, :kind, :branch, :eig, :prob, :alg, :retcode)
         getfield(br, s)
     else
         getproperty(br.branch, s)
@@ -291,9 +362,253 @@ function Base.show(io::IO, br::ContResult{Kind}; comment = "", prefix = " ") whe
     println(io, " starts at ", br.branch[1].param, ", ends at ", br.branch[end].param,)
     print(io, prefix * "├─ Algo: ")
     printstyled(io, _shortname(getalg(br)), "\n", color=:cyan, bold = true)
+    print(io, prefix * "├─ Return code: ")
+    printstyled(io, return_code(br), "\n", color=:cyan, bold = true)
     if length(br.specialpoint) > 0
         println(io, prefix * "└─ Special points:")
         print_specialpoints(io, br)
+    end
+end
+
+# This function is important because it provides the eigenelements corresponding to bp stored in br. 
+# We do not check that bp ∈ br for speed reasons.
+get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype} = br.eig[bp.idx]
+
+"""
+$(TYPEDSIGNATURES)
+[Internal] Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
+
+# Arguments
+- `iter` continuation iterator
+- `state` continuation state, used to get the initial eigen-elements
+- `printsol` value returned by `record_from_solution`
+- `br` result from `get_state_summary`
+- `x0` initial solution
+- `contparams::ContinuationPar` parameters of the continuation
+"""
+function _contresult(iter,
+                     state,
+                     printsol,
+                     br,
+                     x0,
+                     contparams::ContinuationPar{T, S, E}) where {T, S, E}
+    # example of bifurcation / special point
+    bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
+    # save full solution? At least, we keep the first one
+    sol = [(x = x0, p = getparam(getprob(iter)), step = 0)]
+    eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
+    _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
+    return ContResult(
+                    branch = StructArrays.StructArray([br]),
+                    specialpoint = Vector{typeof(bif0)}(undef, 0),
+                    eig = compute_eigenelements(iter) ? [_evvectors] : empty([_evvectors]),
+                    sol = sol,
+                    contparams = contparams,
+                    alg = iter.alg,
+                    kind = iter.kind,
+                    prob = getprob(iter)
+                    )
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the list of bifurcation points on a branch. It essentially filters the field `specialpoint`.
+"""
+function bifurcation_points(br::AbstractBranchResult)
+    [sp for sp in br.specialpoint if is_bifurcation(sp)]
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDEF)
+
+A Branch is a structure which encapsulates the result of the computation of a branch bifurcating from a bifurcation point.
+
+$(TYPEDFIELDS)
+"""
+struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ <: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
+    "Set of branche(s) branching off the bifurcation point `bp`."
+    γ::T
+    "Bifurcation point. It is thought as the root of the branche(s) in γ."
+    bp::Tbp
+    function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ <: AbstractResult{Tkind, Tprob}} }}
+        return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
+    end
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@ref) or a vector of branches when the `Branch` was obtained by branching from an Nd bifurcation point using [`continuation`](@ref) / `multicontinuation`.
+"""
+@inline getbranches(br::Branch) = getfield(br, :γ)
+
+# iterate the branches held in a Branch. Returns the vector of branches for a Branch holding
+# a vector, and an iterator with a single element otherwise
+@inline _branches_iter(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = getbranches(br)
+@inline _branches_iter(br) = (br,)
+
+Base.length(br::Branch) = length(getbranches(br))
+@inline kernel_dimension(br::Branch, ind) = kernel_dimension(_firstbranch(getbranches(br)), ind)
+get_solution(br::Branch, ind) = get_solution(_firstbranch(getbranches(br)), ind)
+getprob(br::Branch) = getprob(_firstbranch(getbranches(br)))
+getalg(br::Branch) = getalg(_firstbranch(getbranches(br)))
+getkind(br::Branch) = getkind(getbranches(br))
+getcontparams(br::Branch) = getcontparams(_firstbranch(getbranches(br)))
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the [`ReturnCode`](@ref) of a `Branch`. When the branch holds several
+continuation results, a failure on any of them is propagated.
+"""
+return_code(br::Branch{Tk, Tp, <: ContResult}) where {Tk, Tp} = return_code(getbranches(br))
+
+function return_code(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp}
+    codes = map(return_code, getbranches(br))
+    for code in codes
+        ~successful_retcode(code) && return code
+    end
+    return isempty(codes) ? ReturnCode.EmptyReturnCode : first(codes)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Return `true` when the `Branch` terminated successfully.
+"""
+successful_retcode(br::Branch) = successful_retcode(return_code(br))
+
+haseigenvalues(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvalues, getbranches(br))
+hassolution(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(hassolution, getbranches(br))
+haseigenvector(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(haseigenvector, getbranches(br))
+_hasstability(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}) where {Tk, Tp} = all(_hasstability, getbranches(br))
+
+kernel_dimension(::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
+get_solution(::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getprob(::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getalg(::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
+getcontparams(::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
+
+"""
+$(TYPEDSIGNATURES)
+
+Return the bifurcation point of a `::Branch`.
+"""
+from(br::Branch) = getfield(br, :bp)
+from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
+from(::ContResult) = nothing
+_getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(getbranches(br))
+_getfirstusertype(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}; k...) where {Tk, Tp} = _getfirstusertype(first(getbranches(br)))
+Base.firstindex(br::Branch) = firstindex(getbranches(br))
+Base.lastindex(br::Branch) = lastindex(getbranches(br))
+@inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(getbranches(br))
+
+# extend the getproperty for easy manipulation of a Branch
+# for example, it allows to use the plot recipe for ContResult as is
+Base.getproperty(br::Branch{Tk, Tp, <: ContResult}, s::Symbol) where {Tk, Tp} = s in (:γ, :bp) ? getfield(br, s) : getproperty(getbranches(br), s)
+Base.getindex(br::Branch, k::Int) = getindex(getbranches(br), k)
+# for a Branch holding a vector of branches, br[k] is the k-th branch as a Branch
+Base.getindex(br::Branch{Tk, Tp, <: Vector{ <: ContResult}}, k::Int) where {Tk, Tp} = Branch(getbranches(br)[k], getfield(br, :bp))
+Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(getbranches(br), k))
+
+Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, getbranches(br); comment = " from $(type(br.bp)) bifurcation point.", k...)
+
+function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: Vector{ <: ContResult}}
+    for contresult in getbranches(br)
+        show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
+    end
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_reverse!(x) = reverse!(x)
+_reverse!(::Nothing) = nothing
+function _reverse(br0::ContResult)
+    br = deepcopy(br0)
+    nb = length(br.branch)
+    if ~isnothing(br.branch)
+        @reset br.branch = StructArrays.StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
+    end
+    if ~isnothing(br.specialpoint)
+        @reset br.specialpoint = [setproperties(pt;
+                                    step = nb - pt.step - 1,
+                                    idx  = nb - pt.idx + 1,
+                                    δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
+    end
+    if ~isnothing(br.eig)
+        @reset br.eig = [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
+    end
+    if ~isnothing(br.sol)
+        @reset br.sol = [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
+    end
+    return br
+end
+
+_append!(x, y) = append!(x, y)
+_append!(x, ::Nothing) = nothing
+
+"""
+$(TYPEDSIGNATURES)
+
+Merge two `ContResult`s and put the result in `br`. This is a barbone cat, in a way `br <- cat(br, br1)`. Nothing is tested to see if this is valid.
+"""
+function _cat!(br::ContResult, br1::ContResult)
+    nb = length(br.branch)
+    if ~isnothing(br.branch)
+        append!(br.branch, [setproperties(pt; step = nb + pt.step) for pt in br1.branch])
+    end
+    if ~isnothing(br.specialpoint)
+        append!(br.specialpoint, [setproperties(pt;
+                                    step = nb + pt.step,
+                                    idx = nb + pt.idx) for pt in br1.specialpoint])
+    end
+    if ~isnothing(br.eig)
+        append!(br.eig, [setproperties(pt; step = nb + pt.step) for pt in br1.eig])
+    end
+    if ~isnothing(br.sol)
+        append!(br.sol, [setproperties(pt; step = nb + pt.step) for pt in br1.sol])
+    end
+    @reset br.retcode = _combine_retcodes(br.retcode, br1.retcode)
+    return br
+end
+
+"""
+Same as `_cat!` but determine the ordering so that the branches merge properly. The retcodes of the two branches are combined with [`_RETCODE_CONCAT_MATRIX`](@ref), which is symmetric so that the result does not depend on the ordering of `br1` and `br2`.
+"""
+function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
+    # find the intersection point
+    dst(x1, p1, x2, p2) = max(norminf(x1 - x2), abs(p1 - p2))
+    dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
+    ind = (1, 1)
+    for i in [1, length(br1)], j in [1, length(br2)]
+        if dst(i, j) < tol
+            ind = (i, j)
+            break
+        end
+    end
+
+    if ind[1] == 1
+        if ind[2] == 1
+            return _cat!(_reverse(br2), br1)
+        else
+            return _cat!((br2), br1)
+        end
+    else
+        if ind[2] == 1
+            return _cat!(br1, br2)
+        else
+            return _cat!(br1, _reverse(br2))
+        end
+
+    end
+
+    if minimum(br1.branch.param) < minimum(br2.branch.param)
+        @debug "b1-b2"
+        # br1 is the first branch and then br2
+        # we need to look at the indexing
+        return _cat!(_reverse(br1), br2)
+    else
+        @debug "b2-b1"
+        return _cat!(_reverse(br1), br2)
     end
 end
 
@@ -435,220 +750,4 @@ function print_specialpoints(io::IO, br)
     # Bottom
     # ------------------------------------------------------------------
     border("└", "┴", "┘")
-end
-
-# This function is important because it provides the eigenelements corresponding to bp stored in br. 
-# We do not check that bp ∈ br for speed reasons.
-get_eigenelements(br::ContResult{Tkind, Tbr, Teigvals, Teigvec, Biftype}, bp::Biftype) where {Tkind, Tbr, Teigvals, Teigvec, Biftype} = br.eig[bp.idx]
-
-"""
-$(TYPEDSIGNATURES)
-[Internal] Function is used to initialize the composite type `ContResult` according to the options contained in `contParams`
-
-# Arguments
-- `iter` continuation iterator
-- `state` continuation state, used to get the initial eigen-elements
-- `printsol` value returned by `record_from_solution`
-- `br` result from `get_state_summary`
-- `x0` initial solution
-- `contparams::ContinuationPar` parameters of the continuation
-"""
-function _contresult(iter,
-                     state,
-                     printsol,
-                     br,
-                     x0,
-                     contparams::ContinuationPar{T, S, E}) where {T, S, E}
-    # example of bifurcation / special point
-    bif0 = SpecialPoint(x0, state.τ, T, _namedrecordfromsol(printsol))
-    # save full solution? At least, we keep the first one
-    sol = [(x = x0, p = getparam(iter.prob), step = 0)]
-    eigvecs = contparams.save_eigenvectors ? _copy(state.eigvecs) : _empty(state.eigvecs)
-    _evvectors = (eigenvals = state.eigvals, eigenvecs = eigvecs, converged = true, step = 0)
-    return ContResult(
-                    branch = StructArrays.StructArray([br]),
-                    specialpoint = Vector{typeof(bif0)}(undef, 0),
-                    eig = compute_eigenelements(iter) ? [_evvectors] : empty([_evvectors]),
-                    sol = sol,
-                    contparams = contparams,
-                    alg = iter.alg,
-                    kind = iter.kind,
-                    prob = iter.prob)
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-Return the list of bifurcation points on a branch. It essentially filters the field `specialpoint`.
-"""
-function bifurcation_points(br::AbstractBranchResult)
-    [sp for sp in br.specialpoint if is_bifurcation(sp)]
-end
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-$(TYPEDEF)
-
-A Branch is a structure which encapsulates the result of the computation of a branch bifurcating from a bifurcation point.
-
-$(TYPEDFIELDS)
-"""
-struct Branch{Tkind, Tprob, T <: Union{ContResult, Vector{ <: ContResult}}, Tbp} <: AbstractResult{Tkind, Tprob}
-    "Set of branche(s) branching off the bifurcation point `bp`."
-    γ::T
-    "Bifurcation point. It is thought as the root of the branche(s) in γ."
-    bp::Tbp
-    function Branch(γ::Tγ, bp) where {Tkind, Tprob, Tγ <: Union{ AbstractResult{Tkind, Tprob}, Vector{ <: AbstractResult{Tkind, Tprob}} }}
-        return new{Tkind, Tprob, typeof(γ), typeof(bp)}(γ, bp)
-    end
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-Return the branche(s) held in a `Branch`. It is either a single [`ContResult`](@ref) or a vector of branches when the `Branch` was obtained by branching from an Nd bifurcation point using [`continuation`](@ref) / `multicontinuation`.
-"""
-@inline getbranches(br::Branch) = getfield(br, :γ)
-Base.length(br::Branch) = length(getbranches(br))
-@inline kernel_dimension(br::Branch, ind) = kernel_dimension(getbranches(br), ind)
-get_solution(br::Branch, ind) = get_solution(getbranches(br), ind)
-getprob(br::Branch) = getprob(getbranches(br))
-getalg(br::Branch) = getalg(getbranches(br))
-getkind(br::Branch) = getkind(getbranches(br))
-getcontparams(br::Branch) = getcontparams(getbranches(br))
-
-kernel_dimension(br::Vector{ <: ContResult}, ind) = error("`kernel_dimension` is not implemented for a `Branch` holding a vector of branches. Apply it to a single branch instead.")
-get_solution(br::Vector{ <: ContResult}, ind) = error("`get_solution` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getprob(br::Vector{ <: ContResult}) = error("`getprob` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getalg(br::Vector{ <: ContResult}) = error("`getalg` is not implemented for a vector of branches. Apply it to a single branch instead.")
-getcontparams(br::Vector{ <: ContResult}) = error("`getcontparams` is not implemented for a vector of branches. Apply it to a single branch instead.")
-
-"""
-$(TYPEDSIGNATURES)
-
-Return the bifurcation point of a `::Branch`.
-"""
-from(br::Branch) = getfield(br, :bp)
-from(br::Vector{ <: Branch}) = length(br) > 0 ? from(first(br)) : nothing
-from(::ContResult) = nothing
-_getfirstusertype(br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = _getfirstusertype(getbranches(br))
-Base.firstindex(br::Branch) = firstindex(getbranches(br))
-Base.lastindex(br::Branch) = lastindex(getbranches(br))
-@inline getparams(br::Branch{Tkind, Tprob, <: ContResult}) where {Tkind, Tprob} = getparams(getbranches(br))
-
-# extend the getproperty for easy manipulation of a Branch
-# for example, it allows to use the plot recipe for ContResult as is
-Base.getproperty(br::Branch, s::Symbol) = s in (:γ, :bp) ? getfield(br, s) : getproperty(getbranches(br), s)
-Base.getindex(br::Branch, k::Int) = getindex(getbranches(br), k)
-Base.getindex(br::Branch, k::UnitRange{ <: Integer}) = setproperties(br; γ = getindex(getbranches(br), k))
-
-Base.show(io::IO, br::Branch{Tk, Tp, <:ContResult}; k...) where {Tk, Tp} = show(io, getbranches(br); comment = " from $(type(br.bp)) bifurcation point.", k...)
-
-function Base.show(io::IO, br::Branch{Tk, Tp, T}; k...) where {Tk, Tp, T <: AbstractVector}
-    for contresult in getbranches(br)
-        show(io, contresult; comment = " from $(type(br.bp)) bifurcation point.", k...)
-    end
-end
-#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-_reverse!(x) = reverse!(x)
-_reverse!(::Nothing) = nothing
-function _reverse(br0::ContResult)
-    br = deepcopy(br0)
-    nb = length(br.branch)
-    if ~isnothing(br.branch)
-        @reset br.branch =
-            StructArrays.StructArray([setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.branch)])
-    end
-
-    if ~isnothing(br.specialpoint)
-        @reset br.specialpoint =
-            [setproperties(pt;
-                step = nb - pt.step - 1,
-                idx  = nb - pt.idx + 1,
-                δ = (-pt.δ[1], -pt.δ[2])) for pt in Iterators.reverse(br.specialpoint)]
-    end
-
-    if ~isnothing(br.eig)
-        @reset br.eig =
-            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.eig)]
-    end
-
-    if ~isnothing(br.sol)
-        @reset br.sol =
-            [setproperties(pt; step = nb - pt.step - 1) for pt in Iterators.reverse(br.sol)]
-    end
-    return br
-end
-
-_append!(x, y) = append!(x, y)
-_append!(x, ::Nothing) = nothing
-
-"""
-$(TYPEDSIGNATURES)
-
-Merge two `ContResult`s and put the result in `br`. This is a barbone cat, in a way `br <- cat(br, br1)`. Nothing is tested to see if this is valid.
-"""
-function _cat!(br::ContResult, br1::ContResult)
-    nb = length(br.branch)
-    if ~isnothing(br.branch)
-        append!(br.branch,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.branch])
-    end
-    if ~isnothing(br.specialpoint)
-        append!(br.specialpoint,
-            [setproperties(pt;
-                step = nb + pt.step,
-                idx = nb + pt.idx) for pt in br1.specialpoint])
-    end
-
-    if ~isnothing(br.eig)
-        append!(br.eig,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.eig])
-    end
-
-    if ~isnothing(br.sol)
-        append!(br.sol,
-            [setproperties(pt; step = nb + pt.step) for pt in br1.sol])
-    end
-    return br
-end
-
-"""
-Same as `_cat!` but determine the ordering so that the branches merge properly.
-"""
-function _merge(br1::ContResult, br2::ContResult; tol = 1e-6)
-    # find the intersection point
-    dst(x1, p1, x2, p2) = max(norminf(x1 - x2), abs(p1 - p2))
-    dst(i, j) = dst(br1.branch[i][1], br1.branch[i].param, br2.branch[j][1], br2.branch[j].param)
-    ind = (1, 1)
-    for i in [1, length(br1)], j in [1, length(br2)]
-        if dst(i, j) < tol
-            ind = (i, j)
-            break
-        end
-    end
-
-    if ind[1] == 1
-        if ind[2] == 1
-            return _cat!(_reverse(br2), br1)
-        else
-            return _cat!((br2), br1)
-        end
-    else
-        if ind[2] == 1
-            return _cat!(br1, br2)
-        else
-            return _cat!(br1, _reverse(br2))
-        end
-
-    end
-
-    if minimum(br1.branch.param) < minimum(br2.branch.param)
-        @debug "b1-b2"
-        # br1 is the first branch and then br2
-        # we need to look at the indexing
-        return _cat!(_reverse(br1), br2)
-    else
-        @debug "b2-b1"
-        return _cat!(_reverse(br1), br2)
-    end
 end

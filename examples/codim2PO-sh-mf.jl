@@ -132,7 +132,7 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 #     # # usehessian = false,
 
 #     start_with_eigen = true,
-#     bothside = true,
+#     bothside = Val(true),
 #     callback_newton = BK.cbMaxNorm(1),
 #     )
 
@@ -143,7 +143,7 @@ opts_posh_fold = ContinuationPar(br_fold_sh.contparams, detect_bifurcation = 0, 
 #         jacobian_ma = :finiteDifferencesMF,
 #         bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
 #         start_with_eigen = false,
-#         bothside = true,
+#         bothside = Val(true),
 #         callback_newton = BK.cbMaxNorm(1),
 #         )
 
@@ -162,7 +162,7 @@ pd_po_sh = continuation(brpo_pd_sh, 1, (@optic _.b0), opts_posh_pd;
     # jacobian_ma = BK.FiniteDifferencesMF(),
     bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+1),
     start_with_eigen = false,
-    bothside = true,
+    bothside = Val(true),
     callback_newton = BK.cbMaxNorm(1),
     )
 
@@ -189,7 +189,7 @@ probshns, ci = generate_ci_problem( Shooting(M=3), re_make(prob, params = sol2.p
 brpo_ns = continuation(probshns, ci, PALC(), ContinuationPar(opts_po_cont; max_steps = 50, ds = -0.001);
     verbosity = 3, plot = true,
     argspo...,
-    # bothside = true,
+    # bothside = Val(true),
     callback_newton = BK.cbMaxNorm(1),
     linear_algo = MatrixFreeBLS(@set lspo.N = lspo.N+1),
     )
@@ -209,7 +209,7 @@ ns_po_sh = continuation(brpo_ns, 1, (@optic _.ϵ), opts_posh_ns;
         # jacobian_ma = :autodiff,
         # jacobian_ma = :finiteDifferences,
         normC = norminf,
-        bothside = false,
+        bothside = Val(false),
         callback_newton = BK.cbMaxNorm(1),
         bdlinsolver = MatrixFreeBLS(@set lspo.N = lspo.N+2),
         # bdlinsolver = BorderingBLS(@set lspo.N = lspo.N+2),

@@ -1229,7 +1229,6 @@ end
             end
         end
     end
-    @debug "[collocation] update section: done"
     return true
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

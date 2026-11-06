@@ -390,9 +390,9 @@ Perform automatic branch switching from a Hopf bifurcation point labelled `ind_b
 - `alg = getalg(br)` continuation algorithm used for the bifurcated branch. It is inherited from the branch `br`.
 - `δp` used to specify the guess for the parameter on the bifurcated branch which otherwise defaults to `contParams.ds`. This allows to use an initial step larger than `contParams.dsmax`.
 - `ampfactor = 1` multiplicative factor to alter the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
-- `use_normal_form = true` whether to use the normal form in order to compute the predictor. When `false`, `ampfactor` and `δp` are used to make a predictor based on the bifurcating eigenvector. Setting `use_normal_form = false` can be useful when computing the normal form is not possible for example when higher order derivatives are not available.
+- `bif_prob = getprob(br)` bifurcation problem used both for the Hopf normal form and for building the periodic orbit problem. It must correspond to `br` (same equations, `lens` and parameters).
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`hopf_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` or `normal_form_kwargs = (start_with_eigen = Val(false),)`.
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `nev` number of eigenvalues to be computed to get the right eigenvector
 - all `kwargs` from [`continuation`](@ref)
 
 A modified version of `prob` is passed to `plot_solution` and `finalise_solution`.
@@ -405,19 +405,11 @@ function continuation(br::AbstractBranchResult,
                       _contParams::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization ;
                       bif_prob = getprob(br),
-
-                      detailed::Val{detailed_type} = Val(true), # TODO: we need a kwargs_nf = ()
-                      start_with_eigen::Val{start_with_eigen_type} = Val(true),
-
-                      use_normal_form = true,
-                      nev = length(eigenvalsfrombif(br, ind_bif)),
-                      kwargs...) where {detailed_type, start_with_eigen_type}
-    # compute the normal form of the branch point
+                      normal_form_kwargs = (),
+                      kwargs...)
     verbose = get(kwargs, :verbosity, 0) > 1
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-
-    detailed = Val(detailed_type && use_normal_form) # TODO improve type stability
-    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev, verbose, detailed, start_with_eigen)
+    hopfpt = hopf_normal_form(bif_prob, br, ind_bif; nev = length(eigenvalsfrombif(br, ind_bif)), verbose, normal_form_kwargs...)
     return _continuation(hopfpt, bif_prob, _contParams, disc; verbose, alg = getalg(br), kwargs...)
 end
 
@@ -600,18 +592,14 @@ Branch switching at a bifurcation point of periodic orbits (PO) specified by a `
 
 # Arguments
 - `br` branch of periodic orbits
-- `ind_bif` index of the branch point
+- `ind_bif` index of the bifurcation point (BP/PD)
 - `_contParams` continuation parameters, see [`continuation`](@ref)
 
 # Optional arguments
 - `δp = _contParams.ds` used to specify a particular guess for the parameter in the branch which is otherwise determined by `contParams.ds`. This allows to use a step larger than `contParams.dsmax`.
 - `ampfactor = 1` factor which alters the amplitude of the bifurcated solution. Useful to magnify the bifurcated solution when the bifurcated branch is very steep.
 - `usedeflation = false` whether to use nonlinear deflation (see [Deflated problems](@ref)) to help finding the guess on the bifurcated branch
-- `use_normal_form = true` if `false`, the predictor is based on the couple `δp, ampfactor`.
-
-## For normal form
-- `detailed = true` whether to fully compute the normal form or a very simplified version.
-- `autodiff_nf = true` whether to use `autodiff` in `get_normal_form`. This can be used in case automatic differentiation is not working as intented.
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (prm = Val(true),)` to compute the period-doubling normal form with the Poincaré return map.
 
 ## For continuation
 - `linear_algo = nothing`, same as for [`continuation`](@ref); when `nothing`, a `BorderingBLS` is built from `_contParams.newton_options.linsolver`.
@@ -625,23 +613,23 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
                       ampfactor = 1,
                       usedeflation = false,
                       linear_algo = nothing,
-                      detailed::Val{detailed_type} = Val(true),
-                      prm::Val{prm_type} = Val(getprob(br) isa PeriodicOrbitFunctionalColl ? false : true),
-                      use_normal_form = true,
-                      autodiff_nf = true,
-                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem, detailed_type, prm_type}
+                      normal_form_kwargs = (),
+                      kwargs...) where {Tprob <: AbstractWrapperPeriodicOrbitProblem}
     bifpt = br.specialpoint[ind_bif]
     bptype = bifpt.type
     if ~(bptype in (:pd, :bp, :nd))
         error("Branching from $(bptype) not possible yet.")
     end
-    if abs(bifpt.δ[1]) != 1 
+    if abs(bifpt.δ[1]) != 1
         error("Only simple bifurcation points are handled properly")
     end
 
-    detailed = Val(detailed_type && use_normal_form)
-    nf = get_normal_form(br, ind_bif; detailed, prm, autodiff = autodiff_nf)
-    pred = predictor(nf, δp, ampfactor; override = ~use_normal_form)
+    nf = get_normal_form(br, ind_bif; 
+                            detailed = Val(true),
+                            autodiff = true,
+                            normal_form_kwargs...
+                            )
+    pred = predictor(nf, δp, ampfactor)
     orbitguess = pred.orbitguess
     newp = pred.pnew  # new parameter value
     new_disc = get_discretization(pred.prob) # modified discretization
@@ -650,7 +638,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
     verbose && printstyled(color = :green, "━"^55*
             "\n┌─ Start branching from $(bptype) point to periodic orbits.",
             "\n├─ Bifurcation type = ", bifpt.type,
-            "\n├─── normal form    = ", use_normal_form ? "based on $(detailed_type ? "Poincaré" : "Iooss") formulation" : "none",
+            "\n├─── normal form    = ", true ? "based on $(nf.prm ? "Poincaré" : "Iooss") formulation" : "none",
             "\n├─── bif. param  p0 = ", bifpt.param,
             "\n├─── period at bif. = ", getperiod(getprob(br), bifpt.x, setparam(br, bifpt.param)),
             "\n├─── new param    p = ", newp, 
@@ -680,8 +668,7 @@ function continuation(br::AbstractResult{PeriodicOrbitCont, Tprob},
         # find the bifurcated branch using deflation
         deflationOp = DeflationOperator(2, (x, y) -> VI.inner(x[begin:end-1], y[begin:end-1]), one(VI.scalartype(orbitguess)), [sol0.u]; autodiff = true)
         verbose && println("\n──> Compute point on the bifurcated branch...")
-        solbif = newton(new_disc, orbitguess, deflationOp,
-            (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
+        solbif = newton(new_disc, orbitguess, deflationOp, (@set optn.max_iterations = 10 * optn.max_iterations) ; kwargs...,)
         if converged(solbif) == false
             error("Deflated newton did not converge")
         end
