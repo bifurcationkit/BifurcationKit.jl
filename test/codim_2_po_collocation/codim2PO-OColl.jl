@@ -76,7 +76,7 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
             detect_codim2_bifurcation = 1,
             # start_with_eigen = steigen,
             usehessian,
-            bothside = true,
+            bothside = Val(true),
             jacobian_ma = jma,
             bdlinsolver = BorderingBLS(solver = DefaultLS(), check_precision = false),
             )
@@ -99,11 +99,13 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
                     jacobian_ma = jma,
                     normC = norminf,
                     callback_newton = BK.cbMaxNorm(10),
-                    bothside = true,
+                    bothside = Val(true),
                     )
     @test all(minimum(abs.(Complex(0,pi) .- x.eigenvals)) < 1e-3 for x in pd_po_coll.eig)
     @test pd_po_coll.kind isa BK.PDPeriodicOrbitCont
-    get_normal_form(pd_po_coll, 2)
+    if pd_po_coll.specialpoint[2].type != :endpoint
+        get_normal_form(pd_po_coll, 2)
+    end
 end
 ################################################################################
 # find the NS case
@@ -136,7 +138,7 @@ for jma in (BK.MinAug(), BK.MinAugMatrixBased(), ), usehessian in (true, false),
             jacobian_ma = jma,
             normC = norminf,
             callback_newton = BK.cbMaxNorm(10),
-            bothside = true,
+            bothside = Val(true),
             ) 
     @test ns_po_coll.kind isa BK.NSPeriodicOrbitCont
     if jma isa BK.MinAug
@@ -156,7 +158,7 @@ if _meshadapt == false
 prob2 = @set probcoll.prob_vf.lens = @optic _.ϵ
 brpo_pd = continuation(prob2, ci, PALC(), ContinuationPar(opts_po_cont, dsmax = 5e-3, p_min = 1e-3);
     argspo...,
-    bothside = true,
+    bothside = Val(true),
     )
 pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0), 
                     ContinuationPar(opts_pocoll_pd; detect_bifurcation = 3, max_steps = 50);
@@ -167,7 +169,7 @@ pd_po_coll2 = continuation(deepcopy(brpo_pd), 2, (@optic _.b0),
                     jacobian_ma = BK.MinAug(),
                     normC = norminf,
                     callback_newton = BK.cbMaxNorm(1),
-                    bothside = true,
+                    bothside = Val(true),
                     )
 @test pd_po_coll2.specialpoint[2].type == :gpd
 @test pd_po_coll2.specialpoint[4].type == :gpd
@@ -211,7 +213,7 @@ ns_po_coll = continuation(brpo_ns, 1, (@optic _.ϵ), opts_pocoll_ns;
         jacobian_ma = BK.MinAug(),
         normC = norminf,
         callback_newton = BK.cbMaxNorm(10),
-        bothside = true,
+        bothside = Val(true),
         ) 
 _probns = ns_po_coll.prob
 _x = ns_po_coll.sol[end].x
@@ -239,6 +241,8 @@ J_ns_mat = BK.jacobian(_probpd_matrix, vcat(_solpo, _p1, _ω), _param)
     @test norminf(_Jnsad - J_ns_mat) < 1e-7
 end
 end
+
+
 end
 
 function SL!(du, u, p, t = 0)

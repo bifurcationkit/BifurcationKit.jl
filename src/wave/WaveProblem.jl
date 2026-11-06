@@ -230,6 +230,12 @@ jacobian(tw::WrapTW, x, p) = _jacobian_tw(tw, tw.jacobian, x, p)
 isinplace(::TWModel) = false
 has_hessian(::WrapTW) = true # for Fold/hopf continuation
 @inline save_solution(::WrapTW, x, p) = x
+
+function restore_problem!(wrap::WrapTW, x, pars)
+    updatesection!(get_discretization(wrap), saved_solution(x))
+    return true
+end
+
 @inline is_symmetric(::WrapTW) = false
 @inline has_adjoint(::WrapTW) = false
 R01(tw::WrapTW, x, p) = R01(FiniteDifferences(), tw, x, p)

@@ -7,6 +7,18 @@ abstract type AbstractGFloquetSolver <: AbstractFloquetSolver end
 convert_to_GEV(l::AbstractGEigenSolver, B) = l
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
+    is_finite_eigenpair(λ, v, B)
+
+Whether `(λ, v)` is a finite eigenpair of the pencil `(A, B)`. With a singular `B`, rounding turns an
+infinite eigenvalue (`β = 0` in `β A v = α B v`) into a huge finite `λ = α / β`. Since
+`|β| / |α| = ‖B v‖ / ‖A v‖`, the pair is infinite when `‖B v‖₁ ≤ n eps ‖B‖₁ ‖v‖₁`.
+"""
+function is_finite_eigenpair(λ, v, B)
+    rounding = size(B, 1) * eps(real(float(eltype(B)))) * LA.opnorm(B, 1)
+    return isfinite(λ) && LA.norm(B * v, 1) > rounding * LA.norm(v, 1)
+end
+
+"""
     gev(l, A, B, nev; kwargs...)
 
 Solve the generalized eigenvalue problem ``A x = \\lambda B x`` using `l`.
@@ -18,8 +30,9 @@ Solve the generalized eigenvalue problem ``A x = \\lambda B x`` using `l`.
 """
 function gev(eig::DefaultEig, A, B, nev; kwargs...)
     # we convert to Array so we can call it on small sparse matrices
-    F = LA.eigen(__to_array_for_eig(A), __to_array_for_eig(B); sortby = eig.which)
-    J = findall(isfinite, F.values)
+    Ad, Bd = __to_array_for_eig(A), __to_array_for_eig(B)
+    F = LA.eigen(Ad, Bd; sortby = eig.which)
+    J = findall([is_finite_eigenpair(λ, v, Bd) for (λ, v) in zip(F.values, eachcol(F.vectors))])
     nev2 = min(nev, length(J))
     return Complex.(F.values[J][end:-1:end-nev2+1]), Complex.(F.vectors[:, J[end:-1:end-nev2+1]]), true, 1
 end

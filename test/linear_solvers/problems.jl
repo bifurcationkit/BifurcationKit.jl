@@ -43,3 +43,21 @@ let
     BK.finite_differences(identity, zeros(2))
     BK.finite_differences!((o, x) -> o .= x, zeros(2, 2), zeros(2))
 end
+
+# ----- restore_problem! -----
+let
+    F(x,p) = [x[1]^2 + p.a]
+    par = (a = 0.1,)
+    prob = BifurcationProblem(F, [1.0], par, (@optic _.a))
+    @test BK.restore_problem!(prob, prob.u0, prob.params) === prob
+
+    flag = Ref(false)
+    prob2 = BifurcationProblem(F, [1.0], par, (@optic _.a);
+                restore_problem! = (prob, x, pars) -> (flag[] = true; prob))
+    @test BK.restore_problem!(prob2, prob2.u0, prob2.params) === prob2
+    @test flag[]
+
+    # re_make preserves the field
+    prob3 = BK.re_make(prob2, params = (a = 0.2,))
+    @test BK.restore_problem!(prob3, prob3.u0, prob3.params) === prob3
+end

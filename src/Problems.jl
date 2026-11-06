@@ -246,7 +246,6 @@ for Rij in _field_jet
 end
 
 function Base.show(io::IO, jet::Jet; prefix = "")
-    color = :cyan; bold = true
     println(io, prefix * "┌─ Tayor jet [fields not shown are nothing]")
     for Rij in _field_jet
         rij = getproperty(jet, Rij)
@@ -286,7 +285,7 @@ by forward finite differences with step `δ = getdelta(prob)`.
 
 # Arguments
 - `prob` bifurcation problem
-- `dFdp` output vector, overwritten inplace
+- `dFdp` output vector, overwritten inplace. It must have the same layout as the residual `F(x, p)`, which may differ from that of `x`.
 - `x` current solution
 - `par` full set of parameters
 - `p` current value of the parameter `getlens(prob)`
@@ -316,8 +315,10 @@ function R01(::FiniteDifferences,
                 prob::AbstractBifurcationProblem,
                 x,
                 par; δ = getdelta(prob))
-    dFdp = VI.zerovector(x)
-    R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)))
+    res_f = residual(prob, x, par)
+    # dFdp lives in the residual space, whose layout may differ from the state x
+    dFdp = VI.zerovector(res_f)
+    R01!(FiniteDifferences(), prob, dFdp, x, par, _get(par, getlens(prob)), res_f; δ)
     return dFdp
 end
 
@@ -368,6 +369,7 @@ const _dict_doc_string_prob = Dict(
 )
 
 save_solution_default(x, p) = x
+restore_problem_default(prob, x, pars) = prob
 update_default(args...; kwargs...) = true
 record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
@@ -422,11 +424,13 @@ for (op, at, kd) in (
                 - `d2F` second Differential of `F` with respect to `x`, signature `d2F(x, p, dx1, dx2)`
                 - `d3F` third Differential of `F` with respect to `x`, signature `d3F(x, p, dx1, dx2, dx3)`
                 - `save_solution` specify a particular way to record solution which are written in `br.sol`. This can be useful in very particular situations and we recommend using `record_from_solution` instead. For example, it is used internally to record the mesh in the collocation method because this mesh can be modified.
+                - `restore_problem!` function used to restore the problem to the state it had at a saved solution, signature `restore_problem!(prob, x_saved, pars)`
+                - `update!` function used to update the problem after each continuation step, signature `update!(prob, iter, state)`
 
             # Internal fields
             $(TYPEDFIELDS)
             """
-            struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Tupdate} <: AbstractAllJetBifProblem
+            struct $op{Tvf, Tu, Tp, Tl <: AllOpticTypes, Tplot, Trec, Tgets, Trestore, Tupdate} <: AbstractAllJetBifProblem
                 "Vector field, typically a [`BifFunction`](@ref)."
                 VF::Tvf
                 "Initial guess."
@@ -439,8 +443,10 @@ for (op, at, kd) in (
                 plotSolution::Tplot
                 "`record_from_solution = (x, p; k...) -> norm(x)` function used to record a few indicators about the solution. It could be `norm` or `(x, p; k...) -> x[1]`. This is also useful when saving several huge vectors is not possible for memory reasons (for example on GPU). This function can return pretty much everything but you should keep it small. For example, you can do `(x, p; k...) -> (x1 = x[1], x2 = x[2], nrm = norm(x))` or simply `(x, p; k...) -> (sum(x), 1)` or `(x, p; k...) -> [x[1], x[2]]`. This will be stored in `contres.branch` where `contres::AbstractBranchResult` is the continuation curve of the bifurcation problem. Finally, the first component is used for plotting in the continuation curve."
                 recordFromSolution::Trec
-                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`. The saved solution can be retrieved back using `saved_solution` with signature `saved_solution(x_saved)`. Finally, a function `restore_problem!(prob, x_saved, pars)` which defaults to `restore_problem!(prob, x_saved, pars) = prob` should be provided. It allows to `update` the problem to the state it was at `x_saved`"
+                "Function to save the full solution on the branch. Some problem are updated during computation (like periodic orbit functional with adaptive mesh) and this function allows to save the state of the problem along with the solution itself. Note that this should allocate the output (i.e. not as a view). Signature: `save_solution(x, p)`. Defaults to `save_solution_default(x, p) = x`. The saved solution can be retrieved back using `saved_solution` with signature `saved_solution(x_saved)`. See the field `restore_problem!` to restore the problem to the state it was at `x_saved`"
                 save_solution::Tgets
+                "Function to restore the problem to the state it had when a saved solution was recorded. Signature: `restore_problem!(prob, x_saved, pars)`. Defaults to `restore_problem_default(prob, x_saved, pars) = prob`."
+                restore_problem!::Trestore
                 "Function to update the problem after each continuation step. Defaults to `update_default`. It has signature `update!(prob, iter, state)` where `prob` is the current bifurcation problem, `iter::ContIterable` the current iterable and `state::ContState` the current state of the continuation. It should return `true` if the update was successful and `false` otherwise. The continuation will stop if `false` is returned. This type of function is useful for example to update the problem internals like meshes, preconditioners, etc. Note that you can extract the type of continuation from `iter` (for example `FoldCont`) and thus modify the method `update!` accordingly."
                 update!::Tupdate
             end
@@ -449,6 +455,7 @@ for (op, at, kd) in (
             plot_solution(prob::$op) = prob.plotSolution
             record_from_solution(prob::$op, x, p; k...) = prob.recordFromSolution(x, p; k...)
             save_solution(prob::$op, x, p) = prob.save_solution(x, p)
+            restore_problem!(prob::$op, x, pars) = prob.restore_problem!(prob, x, pars)
             @inline update!(prob::$op, args...; kwargs...) = prob.update!(args...; kwargs...)
         end
     elseif op in (:FoldMAProblem, :HopfMAProblem, :PDMAProblem, :NSMAProblem, :BTMAProblem)
@@ -537,6 +544,7 @@ for (op, at, kd) in (
                          delta = _getprecision(u0),
                          save_solution = save_solution_default,
                          inplace::Union{Nothing, Bool} = nothing,
+                         restore_problem! = restore_problem_default,
                          update! = update_default,
                          R01 = AutoDiff(),
                          R02 = AutoDiff(),
@@ -591,6 +599,7 @@ for (op, at, kd) in (
                             plot_solution,
                             record_from_solution,
                             save_solution,
+                            restore_problem!,
                             update!)
             end
         end

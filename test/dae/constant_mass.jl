@@ -10,10 +10,10 @@ let
     bifprob = ODEBifProblem(F_dae_fold, zeros(2), pars, (@optic _.p1); record_from_solution = (x,p;k...) -> x[1])
     opts_br = BK.ContinuationPar(p_min = -0.5, p_max = 0.5, ds = 0.01, dsmax = 0.05, nev = 2)
     daeproblem = BK.DAEMassBifProblem(bifprob, B)
-    br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = true)
+    br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = Val(true))
     # get_normal_form(br, 2; start_with_eigen = Val(false))
     # plot(br)
-    brfold = continuation(br, 2, (@optic _.p2); bothside = true)
+    brfold = continuation(br, 2, (@optic _.p2); bothside = Val(true))
     # plot(brfold)
 end
 
@@ -24,7 +24,7 @@ let
     bifprob = ODEBifProblem(F_dae_bt, rand(3), pars, (@optic _.p1); record_from_solution = (x,p;k...) -> x[1])
     opts_br = BK.ContinuationPar(p_min = -0.5, p_max = 0.5, ds = 0.01, dsmax = 0.05, nev = 2)
     daeproblem = BK.DAEMassBifProblem(bifprob, B)
-    br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = true)
+    br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = Val(true))
     # get_normal_form(br, 3)
     # plot(br)
     # locate the Fold and Hopf points of the equilibrium branch by their type:
@@ -34,9 +34,9 @@ let
     @test ind_fold !== nothing
     @test ind_hopf !== nothing
 
-    brfold = continuation(br, ind_fold, (@optic _.p2), ContinuationPar(br.contparams, detect_bifurcation = 0 ); bothside = true)
+    brfold = continuation(br, ind_fold, (@optic _.p2), ContinuationPar(br.contparams, detect_bifurcation = 0 ); bothside = Val(true))
     @test :bt in [pt.type for pt in brfold.specialpoint]
-    brhopf = continuation(br, ind_hopf, (@optic _.p2); bothside = true)
+    brhopf = continuation(br, ind_hopf, (@optic _.p2); bothside = Val(true))
     @test :bt in [pt.type for pt in brhopf.specialpoint]
 
     # the Bogdanov-Takens normal form (from a branch) is not implemented for DAE.
@@ -57,7 +57,7 @@ let
     # (a) the matrix based Hopf continuation detects the same BT point as the
     #     default (AutoDiff) one
     brhopf_mb = continuation(br, ind_hopf, (@optic _.p2);
-                bothside = true,
+                bothside = Val(true),
                 jacobian_ma = BK.MinAugMatrixBased())
     @test :bt in [pt.type for pt in brhopf_mb.specialpoint]
     bt_ad  = filter(pt -> pt.type == :bt, brhopf.specialpoint)
@@ -112,7 +112,7 @@ bifprob = ODEBifProblem(Colpitts!, z0, par_Colpitts, (@optic _.μ); record_from_
 daeproblem = BK.DAEMassBifProblem(bifprob, Be)
 opts_br = BK.ContinuationPar(p_min = -0.4, p_max = 6.8, ds = 0.01, dsmax = 0.05, nev = 4, plot_every_step = 3, max_steps = 1000)
 # opts_br = @set opts_br.newton_options.verbose = true
-br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = true)
+br = BK.continuation(daeproblem, BK.PALC(), opts_br; normC = BK.norminf, verbosity = 0, bothside = Val(true))
 # plot(br, vars = (:param, :x1)) |> display
 # hp = BK.hopf_normal_form(daeproblem, br, 2; start_with_eigen = Val(false))
 # @test hp isa BK.Hopf
@@ -123,7 +123,7 @@ brhopf = continuation(br, 2, (@optic _.C1), ContinuationPar(BK.getcontparams(br)
             start_with_eigen = false,
             # verbosity = 2,
             detect_codim2_bifurcation = 2,
-            bothside = true,
+            bothside = Val(true),
             # jacobian_ma = BK.AutoDiff(),
             linear_algo = MatrixBLS(),
             # bdlinsolver = MatrixBLS(),

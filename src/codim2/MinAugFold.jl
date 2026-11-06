@@ -27,8 +27,7 @@ function (𝐅::FoldMinimallyAugmentedFormulation)(x, p::𝒯, params) where �
     #       a should be a null vector of J'
     # we solve J⋅v + a σ1 = 0 with <b, v> = 1
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J^{-1}a>
-    a = 𝐅.a
-    b = 𝐅.b
+    (;a, b) = 𝐅
     # update parameter
     par = set(params, getlens(𝐅), p)
     J = jacobian(𝐅.prob_vf, x, par)
@@ -62,12 +61,10 @@ function __compute_bordered_vectors_fold(linbdsolver, linbdsolver_adjoint, J, J�
     # the solution is v = -σ1 J\a with σ1 = -1/<b, J\a>
     v, _, cv, itv = linbdsolver(J, a, b, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J did not converge."
-
     # we solve J'w + b σ2 = 0 with <a, w> = 1
     # the solution is w = -σ2 J'\b with σ2 = -1/<a, J'\b>
     w, _, cv, itw = linbdsolver_adjoint(J★, b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for J' did not converge."
-
     return (; v, w, itv, itw)
 end
 
@@ -296,7 +293,6 @@ function update!(probma::FoldMAProblem, iter, state::ContState)
     # if not, we do not update the problem with bad information!
     # if we are in a bisection, we still update the MA problem, this does not work well otherwise
     𝐅 = get_formulation(probma)
-    𝒯 = eltype(𝐅)
     step = state.step
     if (~mod_counter(step, 𝐅.update_minaug_every_step) || converged(state) == false) || in_bisection(state)
         return update!(𝐅, iter, state)
@@ -546,8 +542,7 @@ function _init_fold_vectors_minaug(prob, x₀, par₀, bdlinsolver, bdlinsolver_
 
     (; v, w, itv, itw) = __compute_bordered_vectors_fold(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
 
-    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v))
-    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, par₀)) norminf(apply(L★, w))
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v)) norminf(apply(L★, w))
 
     ζad = w; VI.scale!(ζad, 1 / normC(ζad))
     ζ   = v; VI.scale!(ζ,   1 / normC(ζ))

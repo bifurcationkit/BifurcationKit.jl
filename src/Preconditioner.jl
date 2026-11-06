@@ -58,5 +58,6 @@ function PrecPartialSchurArnoldiMethod(J, N, nev, which = ArnoldiMethod.LM(); to
     end
     return PrecPartialSchur(decomp.R, decomp.Q, inv(decomp.R), decomp.eigenvalues)
 end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 PrecPartialSchurArnoldiMethod(J::AbstractArray, nev, which = LM(); tol = 1e-9, kwargs...) = PrecPartialSchurArnoldiMethod(J, size(J)[1], nev, which ; tol, kwargs...)

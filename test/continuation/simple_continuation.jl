@@ -413,7 +413,7 @@ let
     br2 = continuation(prob, x0.u, -1.5, x1.u, -1.45, PALC(tangent = Bordered()), (@optic _), opts)
     ####################################################################################################
     # test for computing both sides
-    br3 = continuation(prob, PALC(tangent = Bordered()), opts; bothside = true)
+    br3 = continuation(prob, PALC(tangent = Bordered()), opts; bothside = Val(true))
     ####################################################################################################
     # test for deflated continuation
     BK._perturbSolution(1, 0, 1)

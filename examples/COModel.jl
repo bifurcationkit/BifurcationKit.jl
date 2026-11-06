@@ -24,7 +24,7 @@ prob = ODEBifProblem(COm!, z0, par_com, (@optic _.q2); record_from_solution)
 opts_br = ContinuationPar(dsmax = 0.01, dsmin=1e-4, ds=1e-4, p_min = 0.5, p_max = 2.0, n_inversion = 8, detect_bifurcation = 3)
 br = @time continuation(prob, PALC(), opts_br;
     normC = norminf,
-    bothside = true
+    bothside = Val(true)
     )
 
 plot(br)
@@ -70,7 +70,7 @@ brpo = @time continuation(br, 5, opts_po_cont,
     δp = 0.00025,
     linear_algo = COPBLS(),
     callback_newton = BK.cbMaxNormAndΔp(1., 1.0e-3),
-    # bothside = true,
+    # bothside = Val(true),
     args_po...
     )
 
@@ -80,7 +80,7 @@ plot!(brpo.param, brpo.min, label = "min", xlims = (1.037, 1.055))
 ####################################################################################################
 sn_codim2 = continuation(br, 3, (@optic _.k), ContinuationPar(opts_br, p_max = 3.2, p_min = 0., detect_bifurcation = 0, ds = -0.001, n_inversion = 6) ;
     normC = norminf,
-    bothside = true,
+    bothside = Val(true),
     )
 
 plot(sn_codim2)
@@ -88,7 +88,7 @@ plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold", plotstability = false);plo
 
 hp_codim2 = continuation((@set br.alg.tangent = Bordered()), 2, (@optic _.k), ContinuationPar(opts_br, p_min = 0., p_max = 2.8, detect_bifurcation = 0, dsmax = 0.02, dsmin = 1e-4, n_inversion = 6, max_steps = 50) ;
     normC = norminf,
-    bothside = true,
+    bothside = Val(true),
     bdlinsolver = MatrixBLS())
 
 plot(sn_codim2, vars=(:q2, :x), branchlabel = "Fold")
