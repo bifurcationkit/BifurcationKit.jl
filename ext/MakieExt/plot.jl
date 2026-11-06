@@ -82,20 +82,20 @@ Plot the branch of solutions.
 - `branchcolor` assign color to a branch without affecting the color of the special points.
 """
 function plot!(ax1, contres::AbstractResult{Tkind, Tprob}; 
+                applytoY = identity, 
+                applytoX = identity,
+                branchlabel = nothing,
+                branchcolor = nothing,
+                dash_unstable_style = false,
+                filterspecialpoints = false,
+                linewidthunstable = 1,
+                linewidthstable = 3linewidthunstable,
+                plotcirclesbif = true,
                 plotfold = false,
                 plotstability = true,
                 plotspecialpoints = true,
                 putspecialptlegend = true,
-                filterspecialpoints = false,
                 vars = nothing,
-                linewidthunstable = 1,
-                linewidthstable = 3linewidthunstable,
-                dash_unstable_style = false,
-                plotcirclesbif = true,
-                branchlabel = nothing,
-                branchcolor = nothing,
-                applytoY = identity, 
-                applytoX = identity,
                 kw...) where {Tkind, Tprob}
 
     # names for axis labels
@@ -257,6 +257,16 @@ end
 
 plot(brdc::DCResult; kP...) = plot(brdc.branches...; kP...)
 
+# allow to plot a Branch holding several branches (from an Nd bifurcation point)
+function plot!(ax1, br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}; kw...) where {Tkind, Tprob}
+    for contres in getbranches(br)
+        plot!(ax1, Branch(contres, getfield(br, :bp)); kw...)
+    end
+    ax1
+end
+
+plot(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}; branchlabel = ["$i" for i = 1:length(br)], kP...) where {Tkind, Tprob} = plot([Branch(contres, getfield(br, :bp)) for contres in getbranches(br)]...; branchlabel, kP...)
+
 function plot(brs::AbstractBranchResult...; branchlabel = ["$i" for i = 1:length(brs)], kP...)
     if length(brs) == 0
         return
@@ -335,7 +345,7 @@ function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, app
     end
 end
 ####################################################################################################
-plotAllDCBranch(branches) = plot(branches...)
+plotAllDCBranch(::BK_Makie, branches) = plot(branches...)
 
 function plot_DCont_branch(::BK_Makie, 
                             branches, 

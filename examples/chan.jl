@@ -22,11 +22,10 @@ n = 101
 par = (α = 3.3, β = 0.01)
 sol0 = [(i-1)*(n-i)/n^2+0.1 for i=1:n]
 
-prob = BifurcationProblem(F_chan, sol0, par, (@optic _.α); 
+prob = BifurcationProblem(F_chan, sol0, par, (@optic _.α); R01 = BK.FiniteDifferences(),
     plot_solution = (x, p; kwargs...) -> (plot!(x;ylabel="solution",label="", kwargs...)))
 
 optnewton = NewtonPar(tol = 1e-8, verbose = true)
-# ca fait dans les 63.59k Allocations
 sol = @time BK.solve(prob, Newton(), optnewton)
 
 optscont = ContinuationPar(dsmin = 0.01, dsmax = 0.5, ds= 0.1, p_max = 4.25, nev = 5, detect_fold = true, plot_every_step = 10, newton_options = NewtonPar(max_iterations = 10, tol = 1e-9, verbose = false), max_steps = 150)
@@ -60,7 +59,7 @@ optscont = (@set optscont.newton_options = setproperties(optscont.newton_options
 indfold = 2
 
 outfold = @time newton(br, indfold)
-BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
+BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.05, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=false, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 foldbranch = @time continuation(br, indfold, (@optic _.β),
@@ -71,11 +70,10 @@ foldbranch = @time continuation(br, indfold, (@optic _.β),
 plot(foldbranch, label = "")
 ################################################################################################### Fold Newton / Continuation when Hessian is known. Does not require state to be AbstractVector
 d2F(x, p, u, v; b = 0.01) = p.α .* d2Nl.(x; b = b) .* u .* v
-
 prob2 = re_make(prob; d2F)
 
 outfold = @time newton((@set br.prob = prob2), indfold)
-BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u.p, ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
+BK.converged(outfold) && printstyled(color=:red, "--> We found a Fold Point at α = ", outfold.u[end], ", β = 0.01, from ", br.specialpoint[indfold].param,"\n")
 
 optcontfold = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds= 0.01, p_max = 4.1, p_min = 0., newton_options = NewtonPar(verbose=true, tol = 1e-8), max_steps = 1300, detect_bifurcation = 0)
 

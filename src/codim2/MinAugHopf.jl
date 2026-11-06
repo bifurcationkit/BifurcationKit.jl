@@ -31,8 +31,7 @@ function (𝐇::HopfMinimallyAugmentedFormulation)(x, p::𝒯, ω::𝒯, params)
     # In the notations of Govaerts 2000, a = w, b = v
     # Thus, b should be a null vector of J - iω⋅M
     #       a should be a null vector of J'+ iω⋅M'
-    a = 𝐇.a
-    b = 𝐇.b
+    (;a, b) = 𝐇
     # update parameter
     par = set(params, getlens(𝐇), p)
     # we solve (J - iω)⋅v + M⋅a σ1 = 0 with <M⋅b, v> = 1
@@ -117,6 +116,7 @@ function __compute_bordered_vectors_hopf(linbdsolver, linbdsolver_adjoint, ::Ide
     ~cv && @debug "Bordered linear solver for (J-iωI) did not converge."
 
     # we solve (J+iωI)'w + b σ2 = 0 with <a, w> = 1
+    # TODO: this generates a second F★ = factorize(SO★) whereas adjoint(F) would do!
     w, σ2, cv, itw = linbdsolver_adjoint(ShiftedOperator(J = J★, a₀ = Complex{𝒯}(0, ω) ), b, a, zero(𝒯), _zero_vector, one(𝒯))
     ~cv && @debug "Bordered linear solver for (J+iωI)' did not converge."
     # we should have σ1 ≈ conj(σ2)
@@ -538,7 +538,7 @@ function continuation_hopf(prob_vf, alg::AbstractContinuationAlgorithm,
                 record_from_solution = nothing,
                 kwargs...) where {Tb, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
-    lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1")
+    lens1 != getlens(prob_vf) && error("lens1 must be the continuation parameter. You passed $lens1. Perhaps you meant $lens2")
 
     # options for the Newton solver inherited from the ones provided by the user
     options_newton = options_cont.newton_options

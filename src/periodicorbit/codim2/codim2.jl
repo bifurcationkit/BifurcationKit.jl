@@ -73,7 +73,7 @@ for (op, at) in (
             "Update the problem every such step"
             update_minaug_every_step::Int
             "Compute the PO normal forms with Poincaré Return Map?"
-            prm::Bool
+            prm::Bool # TODO: Val{prm_type}
             "Newton options for normal form based on Poincaré Return Map"
             newton_options::Tnewton
         end
@@ -150,13 +150,17 @@ __wrap_po(prob::Collocation, args...) = PeriodicOrbitFunctionalColl(prob, args..
 __wrap_po(prob::Shooting, args...) = PeriodicOrbitFunctionalSh(prob, args...)
 __wrap_po(prob::Trapeze, args...) = PeriodicOrbitFunctionalTrap(prob, args...)
 
-function is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int)
-    real(br.CH[ind]) < 0
-end
+jacobian_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
+    error("Period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
+    error("Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_period_doubling(::PeriodicOrbitFunctionalTrap, x, par) =
+    error("Adjoint period-doubling jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
+jacobian_adjoint_neimark_sacker(::PeriodicOrbitFunctionalTrap, x, par, ω) =
+    error("Adjoint Neimark-Sacker jacobian not implemented for the Trapeze discretization. Use Shooting or Collocation.")
 
-function is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int)
-    real(br.GPD[ind]) < 0
-end
+is_supercritical(br::AbstractResult{<: NSPeriodicOrbitCont}, ind::Int) = real(br.CH[ind]) < 0
+is_supercritical(br::AbstractResult{<: PDPeriodicOrbitCont}, ind::Int) = real(br.GPD[ind]) < 0
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function _correct_event_labels(contres::ContResult{<: Union{FoldPeriodicOrbitCont, PDPeriodicOrbitCont, NSPeriodicOrbitCont}})
     if contres.prob.prob isa FoldMinimallyAugmentedFormulation
@@ -218,16 +222,34 @@ function __user_record_solution_periodic_orbit(pbwrap, ::UserPassedFunction, ite
     return pbwrap.recordFromSolution(po, (prob = get_discretization(pbwrap), p = newpar); iter, state)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(TYPEDSIGNATURES)
+
+Automatic branch switching at a codim 2 bifurcation point (Bautin, Zero-Hopf or Hopf-Hopf) detected on a curve of Fold / Hopf points, to a curve of Fold / Neimark-Sacker bifurcation points of periodic orbits.
+
+# Arguments
+- `br` branch of Fold or Hopf points computed with [`continuation`](@ref)
+- `ind_bif` index of the codim 2 bifurcation point in `br`
+- `options_cont` continuation parameters for the bifurcated curve of periodic orbits
+- `disc` discretization used to compute periodic orbits, see [Periodic orbits based on orthogonal collocation](@ref) or [Periodic orbits based on the shooting method](@ref)
+
+# Optional arguments
+- `detect_codim2_bifurcation::Int = 0` whether to detect codim 2 bifurcation points on the bifurcated curve, see [`continuation`](@ref)
+- `normal_form_kwargs = ()` `NamedTuple` of keyword arguments passed to [`get_normal_form`](@ref). For example, use `normal_form_kwargs = (detailed = Val(false),)` to skip the computation of the normal form coefficients.
+- `kwargs` optional arguments passed to [`continuation`](@ref), e.g. `δp` and `ampfactor` used to build the initial guess on the bifurcated curve
+"""
 function continuation(br::AbstractResult{Tkind, Tprob},
                       ind_bif::Int,
                       options_cont::ContinuationPar,
                       disc::AbstractBoundaryValueDiscretization;
                       detect_codim2_bifurcation::Int = 0,
-                      autodiff = true,
+                      normal_form_kwargs = (),
                       kwargs...) where {Tkind, Tprob <: Union{FoldMAProblem, HopfMAProblem}}
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
     verbose && (println("──▶ Considering bifurcation point:"); _show(stdout, br.specialpoint[ind_bif], ind_bif))
-    nf = get_normal_form(getprob(br), br, ind_bif; detailed = Val(true), autodiff)
+    nf = get_normal_form(getprob(br), br, ind_bif; 
+                nev = options_cont.nev,
+                normal_form_kwargs...)
     _contParams = modify_contparams_for_codim2(detect_codim2_bifurcation, options_cont; kwargs...)
     @reset _contParams.newton_options.eigsolver = getsolver(_contParams.newton_options.eigsolver)
     return _continuation(nf, br, _contParams, disc; kwargs...)
@@ -238,13 +260,9 @@ function _continuation(gh::Bautin,
                         _contParams::ContinuationPar,
                         discPO::AbstractBoundaryValueDiscretization;
                         alg = getalg(br),
-                        linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev::Int = _contParams.nev,
-                        detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
                         normC = norm,
-                        Jᵗ = nothing,
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
                         record_from_solution = nothing,
                         plot_solution = nothing,
@@ -325,13 +343,8 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
             discPO::AbstractBoundaryValueDiscretization;
             whichns::Int = 1,
             alg = getalg(br),
-            linear_algo = nothing,
             δp = nothing, ampfactor::Real = 1,
-            nev::Int = _contParams.nev,
-            detect_codim2_bifurcation::Int = 0,
             Teigvec = _getvectortype(br),
-            scaleζ = norm,
-            Jᵗ = nothing,
             eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
             bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
             record_from_solution = nothing,
@@ -355,11 +368,9 @@ function _continuation(hh::HopfHopf, br::AbstractResult{Tkind, Tprob},
     orbitguess_a = [_orbit(t - ϕ) for t in LinRange(0, 2pi, M + 1)[begin:M]]
 
     # extract the vector field and use it possibly to affect the PO functional
-    # TODO improve the following
     lens1, lens2 = hh.lens
     _params = whichns == 1 ? pred.params1 : pred.params2
-    newparams = set(hh.params, lens1, _params[1])
-    newparams = set(newparams, lens2, _params[2])
+    newparams = _set(hh.params, (lens1, lens2), (_params[1], _params[2]))
 
     prob_ma = get_formulation(getprob(br))
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
@@ -446,15 +457,12 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
                         discPO::AbstractBoundaryValueDiscretization;
                         whichns::Int = 1,
                         alg = getalg(br),
-                        linear_algo = nothing,
                         δp = nothing, ampfactor::Real = 1,
-                        nev::Int = _contParams.nev,
-                        detect_codim2_bifurcation::Int = 0,
                         Teigvec = _getvectortype(br),
-                        scaleζ = norm,
-                        Jᵗ = nothing,
                         eigsolver = FloquetQaD(getsolver(_contParams.newton_options.eigsolver)),
                         bdlinsolver::AbstractBorderedLinearSolver = getprob(br).prob.linbdsolver,
+                        record_from_solution = nothing,
+                        plot_solution = nothing,
                         kwargs...) where {Tkind, Tprob <: Union{HopfMAProblem, FoldMAProblem}}
     ~(whichns in (1,2)) && error("This parameter must belong to {1,2}.")
     verbose = get(kwargs, :verbosity, 0) > 1 ? true : false
@@ -476,8 +484,7 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
 
     # extract the vector field and use it possibly to affect the PO functional
     lens1, lens2 = zh.lens
-    newparams = set(zh.params, lens1, _params[1])
-    newparams = set(newparams, lens2, _params[2])
+    newparams = _set(zh.params, (lens1, lens2), _params)
 
     prob_ma = getprob(br).prob
     prob_vf = re_make(prob_ma.prob_vf, params = newparams)
@@ -502,19 +509,11 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     contParams = compute_eigenelements(_contParams) ? (@set _contParams.newton_options.eigsolver = eigsolver) : _contParams
 
     # change the user provided functions by passing discPO in its parameters
-    _recordsol = modify_po_record(discPO, kwargs, getparams(discPO), getlens(discPO))
-    _plotsol = modify_po_plot(discPO, kwargs)
+    record_po = RecordForPeriodicOrbits(record_from_solution, nothing)
+    _plotsol = modify_po_plot(discPO, getparams(discPO), getlens(discPO); plot_solution)
 
-    jac = generate_jacobian(discPO, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
-    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, _recordsol)
-
-    # we have to change the Bordered linearsolver to cope with our type FloquetWrapper
-    options = _contParams.newton_options
-    _linear_algo = isnothing(linear_algo) ?  MatrixBLS() : linear_algo
-    linear_algo = @set _linear_algo.solver = FloquetWrapperLS(_linear_algo.solver)
-    alg = update(alg, _contParams, linear_algo)
-
-    contParams = (@set contParams.newton_options.linsolver = FloquetWrapperLS(options.linsolver));
+    jac = _generate_jacobian(discPO, discPO.jacobian, orbitguess, getparams(discPO); δ = getdelta(prob_vf))
+    pbwrap = __wrap_po(discPO, jac, orbitguess, _plotsol, record_po)
 
     # create fold point guess
     ωₙₛ = pred.k
@@ -524,14 +523,14 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     if pbwrap isa PeriodicOrbitFunctionalColl
         @debug "Collocation, get borders"
         jac = jacobian(pbwrap, orbitguess, getparams(pbwrap))
-        J = Complex.(copy(_get_matrix(jac)))
+        J = Complex.(copy(jac))
         nj = size(J, 1)
         J[end, :] .= rand(nj) #must be close to eigensapce
         J[:, end] .= rand(nj)
         J[end, end] = 0
         # enforce NS boundary condition
         N, m, Ntst = size(discPO)
-        J[end-N:end-1, end-N:end-1] .= UniformScaling(cis(ωₙₛ))(N)
+        J[end-N:end-1, end-N:end-1] .= LA.UniformScaling(cis(ωₙₛ))(N)
 
         rhs = zeros(nj); rhs[end] = 1
         q = J  \ rhs; q = q[begin:end-1]; q ./= norm(q) #≈ ker(J)
@@ -559,8 +558,72 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
         kind = NSPeriodicOrbitCont(),
         kwargs...,
         plot_solution = _plotsol,
-        bdlinsolver = FloquetWrapperBLS(bdlinsolver),
+        bdlinsolver,
         # finalise_solution = _finsol
     )
     return Branch(branch, zh)
+end
+
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# shared implementation for the continuation of PD curves of periodic orbits
+function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
+        options_cont::ContinuationPar;
+        alg = getalg(br),
+        start_with_eigen = Val(false),
+        bdlinsolver = MatrixBLS(),
+        prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
+        kwargs...)
+    bifpt = br.specialpoint[ind_bif]
+    @assert bifpt.type == :pd "The provided index does not refer to a PD point"
+
+    par = setparam(br, bifpt.param)
+    pointguess = pd_point(br, ind_bif)
+
+    pbwrap = deepcopy(getprob(br))
+    restore_problem!(pbwrap, bifpt.x, par)
+    x0 = saved_solution(pointguess.u)
+
+    (; ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
+
+    return continuation_pd(pbwrap, alg,
+        pointguess, par,
+        getlens(br), lens2,
+        ζ, ζad,
+        options_cont;
+        kwargs...,
+        prm,
+        bdlinsolver,
+        kind = PDPeriodicOrbitCont())
+end
+
+# shared implementation for the continuation of NS curves of periodic orbits
+function _continuation_ns_po(br, ind_bif::Int64, lens2::AllOpticTypes,
+        options_cont::ContinuationPar;
+        alg = getalg(br),
+        start_with_eigen = Val(false),
+        bdlinsolver = MatrixBLS(),
+        prm::Bool = getprob(br) isa PeriodicOrbitFunctionalSh,
+        kwargs...)
+    bifpt = br.specialpoint[ind_bif]
+    @assert bifpt.type == :ns "The provided index does not refer to a NS point"
+
+    par = setparam(br, bifpt.param)
+    pointguess = ns_point(br, ind_bif)
+
+    pbwrap = deepcopy(getprob(br))
+    restore_problem!(pbwrap, bifpt.x, par)
+    x0 = saved_solution(pointguess.u)
+
+    λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
+    (; ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
+
+    return continuation_ns(pbwrap, alg,
+        pointguess, par,
+        getlens(br), lens2,
+        ζ, ζad,
+        options_cont;
+        kwargs...,
+        prm,
+        bdlinsolver,
+        kind = NSPeriodicOrbitCont())
 end

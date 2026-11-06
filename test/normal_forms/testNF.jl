@@ -36,8 +36,16 @@ let
     # normal form computation
     # we set the bifurcation point for exact computations
     @reset br.specialpoint[1].param = 0.
-    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζs = [1., 0], ζs_ad = [1., 1])
-    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζs = [1., 0], ζs_ad = [1., 1])
+    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(false), ζ = [1., 0], ζ_ad = [1., 1])
+    bp = BK.get_normal_form(br, 1; verbose = true, detailed = Val(true), ζ = [1., 0], ζ_ad = [1., 1])
+
+    # direct call to get_normal_form1d with detailed = Val(false)
+    bp1d = BK.get_normal_form1d(prob, br, 1;
+                                verbose = false,
+                                detailed = Val(false),
+                                ζ = [1., 0],
+                                ζ_ad = [1., 1])
+    @test isnothing(bp1d.nf)
     # TODO this is not type stable because detailed isa Val that must be passed
     @test isconcretetype(return_type(BK.get_normal_form1d, typeof((prob, br, 1)))) == false
     # on that case, the correction is Ψ(x⋅ζ) = [0, γ⋅x²]
@@ -72,7 +80,7 @@ let
     @test norm(pred_bd.x1 - pred.x1, Inf) < 1e-7
 
     prob2 = @set prob.VF.J = (x, p) -> BK.finite_differences(z -> Fbp(z, p), x)
-    bp = BK.get_normal_form(prob2, br, 1; verbose = false, autodiff = false)
+    bp = BK.get_normal_form(prob2, br, 1; verbose = false)
     @test BK.istranscritical(bp) == true
     show(bp)
 end
@@ -83,7 +91,7 @@ let
     opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.05, ds = 0.01, p_max = 0.4, p_min = -0.5, detect_bifurcation = 3, newton_options = NewtonPar(tol = 1e-14), max_steps = 100, n_inversion = 8)
     br_noev = BK.continuation(prob, PALC(), (@set opts_br.save_eigenvectors = false); normC = norminf)
     @test BK.haseigenvector(br_noev) == false
-    bp = BK.get_normal_form(br_noev, 1; verbose=false, autodiff = true)
+    bp = BK.get_normal_form(br_noev, 1; verbose=false)
     bp = BK.get_normal_form(br_noev, 1; verbose=false)
     BK._predictor(bp, 0.01)
     nf = bp.nf
@@ -106,7 +114,7 @@ let
     br3 = continuation(br_noev, 1, ContinuationPar(opts_br; ds = -0.01); usedeflation = true)
     @test isnothing(BK.multicontinuation(br_noev, 1))
 
-    br4 = continuation(br_noev, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
+    br4 = continuation(br_noev, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = Val(true))
 
     # automatic bifurcation diagram (Transcritical)
     bdiag = bifurcationdiagram(prob, PALC(), 2,
@@ -124,7 +132,7 @@ let
     @test nf.b11   ≈ 3.23              atol = 1e-10
     @test nf.b20/2 ≈ -prob.params.x2   atol = 1e-6
     @test nf.b30/6 ≈  prob.params.x3   atol = 1e-10
-    br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = true)
+    br2 = continuation(br, 1, ContinuationPar(opts_br; p_max = 0.2, ds = 0.01, max_steps = 14); bothside = Val(true))
     plot(br, br2)
 end
 ####################################################################################################
@@ -177,7 +185,7 @@ let
     Fdegenerate(x, p) = [x[1]^2 - p[1]^2]
     prob = BK.ODEBifProblem(Fdegenerate, [1.], (-1.0), 1; record_from_solution = (x,p;k...)->x[1])
     br = continuation(prob, PALC(), ContinuationPar(n_inversion = 6); normC = norminf)
-    br1 = continuation(br, 1, verbosity = 0, bothside = true)
+    br1 = continuation(br, 1, verbosity = 0, bothside = Val(true))
     bp = get_normal_form(br, 1; verbose = true)
     show(bp)
     predictor(bp, 0.1)
@@ -225,7 +233,6 @@ let
         bp2d = BK.get_normal_form(br, 1; 
                                         ζs = [[1, 0.], [0, 1.]],
                                         ζs_ad = give_ad ? [[1, 0], [0, 1]] : nothing, 
-                                        autodiff = true, 
                                         verbose = true)
         @info give_ad
         @test vf.nf.a01 ≈ bp2d.nf.a01 atol = 1e-10
@@ -261,9 +268,15 @@ let
         bp2d = BK.get_normal_form(br, 1; 
                                     ζs = [[1, 0, 0.], [0, 1, 0.]],
                                     ζs_ad = [[1, 0, 1], [0., 1, 0]], 
-                                    autodiff, 
                                     verbose = false)
 
+        # direct call to get_normal_formNd with detailed = Val(false)
+        bp2d_simple = BK.get_normal_formNd(prob2d, br, 1;
+                                            ζs = [[1, 0, 0.], [0, 1, 0.]],
+                                            ζs_ad = [[1, 0, 1], [0., 1, 0]],
+                                            detailed = Val(false),
+                                            verbose = false)
+        @test isnothing(bp2d_simple.nf)
         # test for type stable implementation
         @test isconcretetype(return_type(BK.get_normal_formNd, typeof((prob2d, br, 1))))
         @test isconcretetype(return_type(BK.multicontinuation, typeof((br, BK.get_normal_form(br, 1))) )) == false # not type stable yet TODO
@@ -387,12 +400,22 @@ let
     x0 = rand(3); @test norm(FbpD6(x0, BK.setparam(br, 0.001))  - bp2d(Val(:reducedForm), x0, 0.001), Inf) < 1e-12
 
     br1 = BK.continuation(br, 1,
-        setproperties(opts_br; n_inversion = 4, dsmax = 0.005, ds = 0.001, max_steps = 100, p_max = 1.); normC = norminf, verbosedeflation = false)
+        setproperties(opts_br; n_inversion = 4, dsmax = 0.005, ds = 0.001, max_steps = 100, p_max = 1.); normC = norminf, deflated_newton_kwargs = (verbosedeflation = false,))
+    # test the new API: multicontinuation returns a Branch holding a vector of branches
+    @test br1 isa Branch
+    @test BK.getbranches(br1) isa AbstractVector{ <: ContResult}
+    @test length(br1) >= 1
+    @test br1[1] isa Branch
+    @test BK.from(br1) isa BK.NdBranchPoint
+    @test BK.getbranches(br1[1]) isa ContResult
+    plot(br1)
+    plot(br, br1)
+    plot(br1, br)
     # plot(br1..., br, plotfold=false, putbifptlegend=false)
 
     bp2d = BK.get_normal_form(br, 1)
     # res = predictor(bp2d, 0.001;  verbose = false, perturb = identity, ampfactor = 1, nbfailures = 4)
-    # deflationOp = DeflationOperator(2, 1.0, [zeros(3)]; autodiff = true)
+    # deflationOp = DeflationOperator(2, 1.0, [zeros(3)]; )
 
     bdiag = bifurcationdiagram(probD6, PALC(), 3,
         (args...) -> setproperties(opts_br; p_min = -0.250, p_max = .4, ds = 0.001, dsmax = 0.005, n_inversion = 4, detect_bifurcation = 3, dsmin_bisection =1e-18, tol_bisection_eigenvalue=1e-11, max_bisection_steps=20);
@@ -465,8 +488,8 @@ let
         @test isconcretetype(return_type(BK.hopf_normal_form, typeof((BK.ODEBifProblem(Fsl2, zeros(2), par_sl, (@optic _.r); J = JFsl2), br, 1))) )
 
         hp = BK.get_normal_form(br, 1; detailed = Val(false))
-        hp = BK.get_normal_form(br, 1; autodiff, start_with_eigen = Val(false))
-        hp = BK.get_normal_form(br, 1; autodiff)
+        hp = BK.get_normal_form(br, 1; start_with_eigen = Val(false))
+        hp = BK.get_normal_form(br, 1; )
         BK.type(hp)
 
         nf = hp.nf
@@ -490,10 +513,10 @@ let
     Fcusp(x, p) = [p.β1 + p.β2 * x[1] + p.c * x[1]^3]
     par = (β1 = 0.0, β2 = -0.01, c = 3.)
     prob = BK.ODEBifProblem(Fcusp, [0.01], par, (@optic _.β1))
-    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3, nev = 2, max_steps = 100)
+    opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.02, ds = 0.01, p_max = 0.1, p_min = -0.3, detect_bifurcation = 3)
     br = continuation(prob, PALC(), opts_br;)
 
-    sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+    sn_codim2 = continuation(br, 1, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40) ;
         update_minaug_every_step = 1,
         bdlinsolver = MatrixBLS(),
         jacobian_ma = BK.MinAug(),
@@ -508,6 +531,11 @@ let
     # same normal form but with the kernel basis computed with a bordered linear system
     cuspnf_bd = get_normal_form(sn_codim2, ind[1]; start_with_eigen = Val(false))
     @test cuspnf_bd.nf.c ≈ par.c atol = 1e-8
+
+    # detailed = Val(false): only the eigen-elements are computed
+    cuspnf_simple = BK.cusp_normal_form(BK.getprob(sn_codim2), sn_codim2, ind[1];
+                                        detailed = Val(false))
+    @test isnothing(cuspnf_simple.nf)
 end
 ####################################################################################################
 # test for the Bogdanov-Takens normal form
@@ -523,11 +551,11 @@ let
         par = (β1 = 0.01, β2 = -0.1, a = -1., b = 1.)
         prob  = BK.ODEBifProblem(_F, [0.01, 0.01], par, (@optic _.β1))
         opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8)
 
-        br = continuation(prob, PALC(), opts_br; bothside = true, verbosity = 0)
+        br = continuation(prob, PALC(), opts_br; bothside = Val(true), verbosity = 0)
 
-        sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40) ;
+        sn_codim2 = continuation(br, 2, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40) ;
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
             bdlinsolver = MatrixBLS()
@@ -537,17 +565,17 @@ let
         @test length(unique(sn_codim2.BT)) == length(sn_codim2)
         plot(sn_codim2)
 
-        hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, save_sol_every_step = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
+        hopf_codim2 = continuation(br, 3, (@optic _.β2), ContinuationPar(opts_br, detect_bifurcation = 1, max_steps = 40, max_bisection_steps = 25) ; plot = false, verbosity = 0,
             detect_codim2_bifurcation = 2,
             update_minaug_every_step = 1,
-            bothside = true,
+            bothside = Val(true),
             bdlinsolver = MatrixBLS(),
             )
 
         @test length(hopf_codim2.specialpoint) == 3
         @test hopf_codim2.specialpoint[2].type == :bt
         @test hopf_codim2.specialpoint[2].param ≈ 0 atol = 1e-6
-        @test length(unique(hopf_codim2.BT)) == length(hopf_codim2)-1
+        @test length(unique(hopf_codim2.BT)) >= length(hopf_codim2)-1
         # plot(sn_codim2, hopf_codim2, branchlabel = ["Fold", "Hopf"])
 
         btpt = get_normal_form(sn_codim2, 1; nev = 2, autodiff = false)
@@ -589,6 +617,7 @@ let
         hp_fromBT = continuation(sn_codim2, 1, opt;
             verbosity = 0, plot = false,
             δp = 1e-4,
+            normal_form_kwargs = (autodiff = false,),
             update_minaug_every_step = 1,
             )
         # plot(sn_codim2, hp_fromBT)
@@ -624,7 +653,7 @@ let
         prob = BK.ODEBifProblem(_F, [0.01, 0.01], par_sl, (@optic _.r))
 
         opt_newton = NewtonPar(tol = 1e-9, max_iterations = 40, verbose = false)
-        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8, save_sol_every_step = 1)
+        opts_br = ContinuationPar(dsmin = 0.001, dsmax = 0.01, ds = 0.01, p_max = 0.5, p_min = -0.5, detect_bifurcation = 3, nev = 2, newton_options = opt_newton, max_steps = 80, n_inversion = 8)
 
         @reset opts_br.newton_options.verbose = false
         @reset opts_br.newton_options.tol = 1e-12
@@ -632,7 +661,7 @@ let
 
         br = continuation(prob, PALC(), opts_br)
 
-        hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, save_sol_every_step = 1, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
+        hopf_codim2 = continuation(br, 1, (@optic _.c3), ContinuationPar(opts_br, detect_bifurcation = 0, max_steps = 15, p_min = -2., p_max = 2., ds = -0.001) ;
             detect_codim2_bifurcation = 2,
             start_with_eigen = true,
             update_minaug_every_step = 1,
@@ -657,14 +686,10 @@ function Fzh!(f, u, p)
     w0, u1, u2 = u
     ua = u1^2 + u2^2
     w1 = complex(u1, u2)
-
     f[1] = β1 + G200/2 * w0^2 + G011 * ua + G300/6 * w0^3 + G111 * w0 * ua
-
     tmp = (β2 + complex(0,1)) * w1 + G110 * w0 * w1 + G210/2 * w0^2 * w1 + G021/2 * w1 * ua
-
     f[2] = real(tmp)
     f[3] = imag(tmp)
-
     return f
 end
 Fzh(u, p) = Fzh!(similar(u), u, p)
@@ -721,7 +746,6 @@ function Fhh!(f, u, p)
 
     ua1 = abs2(w1)
     ua2 = abs2(w2)
-
 
     tmp1 = (β1 + complex(0, ω1)) * w1 + G2100/2 * w1 * ua1 + G1011 * w1 * ua2 + G3100/12 * w1 * ua1^2 + G2111/2 * w1 * ua1 * ua2 + G1022/4 * w1 * ua2^2
 

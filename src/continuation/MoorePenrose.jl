@@ -1,4 +1,4 @@
-@enum MoorePenroseLS direct=1 pInv=2 iterative=3
+@enum MoorePenroseLS direct=1 pInv=2 iterative=3 # TODO: use type instead
 
 """
 $(TYPEDEF)
@@ -32,7 +32,9 @@ end
 internal_adaptation!(alg::MoorePenrose, swch::Bool) = internal_adaptation!(alg.predictor, swch)
 @inline getdot(alg::MoorePenrose) = getdot(alg.predictor)
 @inline getθ(alg::MoorePenrose) = getθ(alg.predictor)
-get_bordered_linsolver(alg::MoorePenrose) = alg.ls
+function get_bordered_linsolver(alg::MoorePenrose) # this is essentially for tangent prediction
+    return  alg.ls isa AbstractBorderedLinearSolver ? alg.ls : get_bordered_linsolver(alg.predictor)
+end
 
 _shortname(alg::MoorePenrose) = "MoorePenrose ($(_shortname(alg.predictor)))"
 
@@ -162,8 +164,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
     step = 0
 
     # total number of linear iterations
-    itlinear = 0
-    itlineartot = 0
+    itlinear = itlinear1 = itlineartot = 0
 
     verbose && print_nonlinear_step(step, res)
     line_step = true
@@ -180,7 +181,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
             nothing
     end
 
-    while (step < max_iterations) && (res > tol) && line_step && compute
+    while (step < max_iterations) && (res > tol) && line_step && _continues(compute)
         step += 1
         R01!(FiniteDifferences(), prob, dFdp, x, par, p)
         J = jacobian(prob, x, set(par, paramlens, p))
@@ -193,7 +194,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
                 ~flag && @debug "[MoorePenrose] Linear solver did not converge."
             else
                 # dx = pinv(Array(Jb)) * res_f #seems to work better than the following
-                dx = LinearAlgebra.pinv(Array(Jb)) * res_f
+                dx = LA.pinv(Array(Jb)) * res_f
                 flag = true
                 itlinear = 1
             end
@@ -238,7 +239,7 @@ function newton_moore_penrose(iter::AbstractContinuationIterable,
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, p, residuals, z0); fromNewton = false, kwargs...)
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
-    flag = (residuals[end] < tol) & callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...)
+    flag = _converged(residuals[end] < tol, callback((;x, res_f, nothing, residual=res, step, contparams, p, residuals, z0); fromNewton = false, kwargs...))
 
     return NonLinearSolution(BorderedArray(x, p),
                             prob,

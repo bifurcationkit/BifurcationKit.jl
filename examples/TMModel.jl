@@ -20,23 +20,20 @@ par_tm = (α = 1.5, τ = 0.013, J = 3.07, E0 = -2.0, τD = 0.200, U0 = 0.3, τF 
 z0 = [0.238616, 0.982747, 0.367876 ]
 
 prob = ODEBifProblem(TMvf!, z0, par_tm, (@optic _.E0); record_from_solution = (x, p; k...) -> (E = x[1], x = x[2], u = x[3]))
-opts_br = ContinuationPar(p_min = -10.0, p_max = 1., n_inversion = 8, max_steps = 100)
-
-br = @time continuation(prob, PALC(), opts_br; normC = norminf)
-
+opts_br = ContinuationPar(p_min = -10.0, p_max = -1., n_inversion = 8, max_steps = 100)
+br = @time continuation(prob, PALC(tangent = Bordered()), opts_br; normC = norminf)
 plot(br, plotfold = false)
 ####################################################################################################
 br_hopf = @time BK.continuation(br, 2, (@optic _.α),
         ContinuationPar(br.contparams, p_min = 0.2, p_max = 5.),
         detect_codim2_bifurcation = 2,
-        jacobian_ma = BK.MinAugMatrixBased(),
-        bothside = true,)
+        bothside = Val(true),)
 plot(br_hopf)
 ####################################################################################################
 # continuation parameters
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
-function recordPO(x, p; state, iter, k...)
+@views function recordPO(x, p; state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
@@ -44,7 +41,7 @@ function recordPO(x, p; state, iter, k...)
 end
 
 # arguments for periodic orbits
-function plotSolution(x, p; state, iter, k...)
+@views function plotSolution(x, p; state, iter, k...)
     xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "E", k...)
     plot!(xtt.t, xtt[2,:]; label = "x", k...)
@@ -81,11 +78,12 @@ plot(br, br_pocoll, markersize = 3, xlims = (-2., -1))
 ####################################################################################################
 # idem with Standard shooting
 import OrdinaryDiffEq as ODE
+using OrdinaryDiffEqRosenbrock
 
 # this is the ODEProblem used with `ODE.solve`
-prob_ode = ODE.ODEProblem(TMvf!, copy(z0), (0., 1000.), par_tm; abstol = 1e-11, reltol = 1e-9)
+prob_ode = ODE.ODEProblem(TMvf!, copy(z0), (0., 1.), par_tm; abstol = 1e-11, reltol = 1e-9)
 
-opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7, verbose = false), tol_stability = 1e-7, detect_bifurcation = 3, plot_every_step = 10)
+opts_po_cont = ContinuationPar(opts_br, ds= -0.0001, dsmin = 1e-4, max_steps = 120, newton_options = NewtonPar(tol = 1e-11, max_iterations = 7), tol_stability = 1e-7, detect_bifurcation = 3)
 
 br_posh = @time continuation(
     br, 4,
@@ -121,7 +119,7 @@ plot(br, br_popsh, markersize = 3)
 br_po_coll = @time BK.continuation_from_hopf_point(
     br_hopf, 2,
     # arguments for continuation
-    ContinuationPar(opts_po_cont; max_steps = 15, ds = 0.001),
+    ContinuationPar(opts_po_cont; max_steps = 15, ds = 0.001, p_max = 1.),
     Collocation(20, 4; jacobian = BK.DenseAnalyticalInplace());
     # lens = BK.getlens(prob),
     # verbosity = 2,

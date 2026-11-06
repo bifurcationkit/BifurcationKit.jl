@@ -30,14 +30,10 @@ let
 parlor = (α = 1//4, β = 1, G = .25, δ = 1.04, γ = 0.987, T=0.04,F=3.)
 
 opts_br = ContinuationPar(p_min = -1.5, p_max = 3.0, ds = 0.001, dsmax = 0.025,
-    # options to detect codim 1 bifurcations using bisection
     detect_bifurcation = 3,
-    # Optional: bisection options for locating bifurcations
-    n_inversion = 6, max_bisection_steps = 25,
-    # number of eigenvalues
+    n_inversion = 6,
+    newton_options = NewtonPar(max_iterations = 25),
     nev = 4, max_steps = 252)
-
-@reset opts_br.newton_options.max_iterations = 25
 
 z0 =  [2.9787004394953343, -0.03868302503393752,  0.058232737694740085, -0.02105288273117459]
 
@@ -54,7 +50,8 @@ br = @time continuation(prob,
                         alg,
                         opts_br;
                         normC = norminf,
-                        bothside = true)
+                        bothside = Val(true)
+                        )
 
 @test br.alg.tangent isa Bordered
 @test br.alg.bls isa MatrixBLS
@@ -91,7 +88,7 @@ hp_codim2_test = continuation(br, 2, (@optic _.T), ContinuationPar(opts_br, ds =
     update_minaug_every_step = 1,
     start_with_eigen = true,
     record_from_solution = recordFromSolutionLor,
-    bothside = true,
+    bothside = Val(true),
     bdlinsolver = MatrixBLS())
 
 @test hp_codim2_test.specialpoint[2].param ≈ +0.02627393 rtol = 1e-5
@@ -197,14 +194,14 @@ for _jac in (BK.AutoDiff(), BK.MinAug(), BK.FiniteDifferences(), BK.MinAugMatrix
     # locate BT point with newton algorithm and compute the normal form
     _bt = BK.bt_point(sn_codim2, 1) # does nothing
 
-    _optn = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15)
+    _optn = NewtonPar(br.contparams.newton_options; tol = 1e-15)
     solbt = newton(sn_codim2, 1; options = _optn, start_with_eigen = true, jacobian_ma = BK.FiniteDifferences())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.MinAug())
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.MinAug())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = false, jacobian_ma = BK.AutoDiff())
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; tol = 1e-15), start_with_eigen = false, jacobian_ma = BK.AutoDiff())
     @test BK.converged(solbt)
-    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; verbose = false, tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.AutoDiff())
+    solbt = newton(sn_codim2, 1; options = NewtonPar(br.contparams.newton_options; tol = 1e-15), start_with_eigen = true, jacobian_ma = BK.AutoDiff())
     @test BK.converged(solbt)
     @test norm(eigvals(BK.jacobian(br.prob, solbt.u.x0, solbt.u.params))[1:2], Inf) < 1e-8
 
@@ -248,7 +245,7 @@ sn_codim2 = @time continuation((@set br.alg.tangent = Secant()), 5, (@optic _.T)
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    # bothside = true,
+    # bothside = Val(true),
     record_from_solution = recordFromSolutionLor,
     event = SaveAtEvent((0.001,.01)),
     bdlinsolver = MatrixBLS())
@@ -263,7 +260,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    bothside = false,
+    bothside = Val(false),
     jacobian_ma = BK.AutoDiff(),
     event = SaveAtEvent((-0.05,.0)),
     record_from_solution = recordFromSolutionLor,
@@ -292,7 +289,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = true,
-    bothside = true,
+    bothside = Val(true),
     jacobian_ma = BK.AutoDiff(),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())
@@ -309,7 +306,7 @@ get_normal_form(hp_codim2_1, 2)
 # plot!(hp_codim2_1, vars=(:X,:U))
 
 get_normal_form(hp_codim2_1, 2; nev = 4, verbose = true)
-nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = true)
+nf = get_normal_form(hp_codim2_1, 3; nev = 4, verbose = true, detailed = Val(true))
 
 @test nf.nf.ω    ≈ 0.6903636672622595  atol = 1e-5
 @test nf.nf.l2   ≈ 0.15555332623343107 atol = 1e-3
@@ -352,7 +349,7 @@ hp_from_zh = continuation(sn_codim2, 2, ContinuationPar(opts_br, ds = 0.001, dsm
     # δp = 0.001,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    bothside = false,
+    bothside = Val(false),
     )
 @test hp_from_zh.kind isa BK.HopfCont
 @test length(hp_from_zh.γ.specialpoint) == 4
@@ -366,7 +363,7 @@ hp_from_hh = continuation(hp_from_zh, 3, ContinuationPar(opts_br, ds = 0.001, ds
     # δp = 0.001,
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
-    bothside = false,
+    bothside = Val(false),
     )
 @test hp_from_hh.kind isa BK.HopfCont
 
@@ -391,6 +388,8 @@ prob_ode = ODE.ODEProblem(Lor, z0, (0, 1), BK.getparams(hp_codim2_1), reltol = 1
 opts_fold_po = ContinuationPar(hp_codim2_1.contparams, dsmax = 0.01, detect_bifurcation = 0, max_steps = 3, detect_event = 0, ds = 0.001)
 @reset opts_fold_po.newton_options.verbose = false
 @reset opts_fold_po.newton_options.tol = 1e-8
+
+@test hp_codim2_1.specialpoint[3].type == :gh
 
 for disc in (
                 Collocation(20, 3), 
@@ -437,7 +436,7 @@ hp_codim2_1 = continuation(br, 3, (@optic _.T), ContinuationPar(opts_br, ds = -0
     detect_codim2_bifurcation = 2,
     update_minaug_every_step = 1,
     start_with_eigen = false,
-    bothside = true,
+    bothside = Val(true),
     jacobian_ma = BK.MinAug(),
     record_from_solution = recordFromSolutionLor,
     bdlinsolver = MatrixBLS())

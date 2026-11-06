@@ -33,7 +33,7 @@ corrector!(state::AbstractContinuationState,
             iter::AbstractContinuationIterable; kwargs...) = corrector!(state, iter, getalg(iter); kwargs...)
 
 step_size_control!(state::AbstractContinuationState,
-            iter::AbstractContinuationIterable; kwargs...) = step_size_control!(state, iter, getalg(iter); kwargs...)
+            iter::AbstractContinuationIterable) = step_size_control!(state, iter, getalg(iter))
 
 # used to reset the predictor when locating bifurcations
 Base.empty!(alg::AbstractContinuationAlgorithm) = alg
@@ -81,12 +81,21 @@ function step_size_control!(state::AbstractContinuationState,
     end
 end
 
+# Step size after a converged step, controlled to have the same number of Newton iterations.
+# The ratio `(Nmax - itnewton) / Nmax` is formed in the type of `ds`: an Int quotient is a Float64
+# and promotes the step of a Float32 continuation.
+function _step_growth(ds::Real, a::Real, Nmax::Integer, itnewton::Integer)
+    factor = convert(typeof(ds), Nmax - itnewton) / Nmax
+    return ds * (1 + a * factor^2)
+end
+
 function _step_size_control!(state, contparams::ContinuationPar, verbosity)
     ds = state.ds
     if converged(state) == false
         if  abs(ds) <= contparams.dsmin
             @error "Failure to converge with given tolerance = $(contparams.newton_options.tol).\nStep = $(state.step)\nYou can decrease the tolerance or pass a different norm using the argument `normC`.\nWe reached the smallest value [dsmin] valid for ds, namely $(contparams.dsmin).\nStopping continuation at continuation step $(state.step)."
             # we stop the continuation
+            state.retcode = ReturnCode.DsLessThanMin
             state.stopcontinuation = true
             return
         end
@@ -94,10 +103,7 @@ function _step_size_control!(state, contparams::ContinuationPar, verbosity)
         (verbosity > 0) && printstyled("Halving ds to $(dsnew)\n", color = :red)
 
     else
-        # control to have the same number of Newton iterations
-        Nmax = contparams.newton_options.max_iterations
-        factor = (Nmax - state.itnewton) / Nmax
-        dsnew = ds * (1 + contparams.a * factor^2)
+        dsnew = _step_growth(ds, contparams.a, contparams.newton_options.max_iterations, state.itnewton)
     end
 
     dsnew = clamp_ds(dsnew, contparams)

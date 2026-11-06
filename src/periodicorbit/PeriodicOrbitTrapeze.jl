@@ -184,7 +184,6 @@ end
 
 @inline apply_mass_matrix(trap::Trapeze, x, p, dx) = trap.massmatrix !== nothing ? trap.massmatrix * dx : apply_mass_matrix(trap.prob_vf, x, p, dx)
 
-# these functions extract the last component of the periodic orbit guess
 @inline _extract_period_fdtrap(trap::Trapeze, x::AbstractVector) = on_gpu(trap) ? x[end:end] : x[end]
 # these functions extract the time slices components
 get_time_slices(x::AbstractVector, N, M) = @views reshape(x[begin:end-1], N, M)
@@ -834,10 +833,8 @@ Update the section used for the phase constraint at the current guess `x`: the r
     @debug "Update section TRAP"
     M, N = size(trap)
     xc = get_time_slices(trap, x)
-
     # update the reference point
     trap.xπ .= x[begin:end-1]
-
     # update the normals
     for ii in 0:M-1
         # ii2 = (ii+1)<= M ? ii+1 : ii+1-M
@@ -942,9 +939,12 @@ end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # The following structure encodes the jacobian of a Trapeze which eases the use of PeriodicOrbitTrapBLS. It is made so that accessing the cyclic matrix Jc or Aγ is easier. It is combined with a specific linear solver. It is also a convenient structure for the computation of Floquet multipliers. Therefore, it is only used in the method continuation_potrap
 @with_kw struct POTrapJacobianBordered{T∂, Tag <: AbstractPOTrapAγOperator, Tϕ}
-    ∂TGpo::T∂ = nothing # derivative of the PO functional G w.r.t. T
-    Aγ::Tag             # Aγ Operator involved in the Jacobian of the PO functional
-    ϕT::Tϕ = nothing    # phase row scaled by the period T*ϕ, kept in sync in the update below
+    "derivative of the PO functional G w.r.t. T."
+    ∂TGpo::T∂ = nothing
+    "Aγ Operator involved in the Jacobian of the PO functional."
+    Aγ::Tag
+    "phase row scaled by the period T*ϕ, kept in sync in the update."
+    ϕT::Tϕ = nothing
 end
 
 # this function is called whenever the jacobian of G has to be updated
@@ -981,8 +981,8 @@ end
 function (ls::PeriodicOrbitTrapBLS)(J::POTrapJacobianBordered, rhs)
     # we solve the bordered linear system as follows
     dX, dl, flag, liniter = @views ls.linsolverbls(J.Aγ, J.∂TGpo[begin:end-1],
-                                             J.ϕT, J.∂TGpo[end],
-                                           rhs[begin:end-1], rhs[end])
+                                                   J.ϕT, J.∂TGpo[end],
+                                                   rhs[begin:end-1], rhs[end])
     return vcat(dX, dl), flag, sum(liniter)
 end
 
@@ -1021,7 +1021,7 @@ function _jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::Tuple{FullSparseInpl
     po_jacobian_sparse!(trap, _J, x, p, _indx)
 end
 
-_jacobian_po(wrap::PeriodicOrbitFunctionalTrap, J::FullLU, x, p) = po_jacobian_sparse(get_discretization(wrap), x, p)
+_jacobian_po(wrap::PeriodicOrbitFunctionalTrap, ::FullLU, x, p) = po_jacobian_sparse(get_discretization(wrap), x, p)
 POTrapJacobianBordered
 _jacobian_po(::PeriodicOrbitFunctionalTrap, J::POTrapJacobianBordered, x, p) = J(x, p)
 ##########################
@@ -1325,7 +1325,7 @@ where ``M_a`` is the mass matrix and ``\\bar{h}`` the mean time step. This block
     ┌                          ┐
     │  M̄   -H̄                  │
     │       M̄   -H̄             │
-    │            ⋱     ⋱       │
+    │            ⋱     ⋱      │
     │  -H̄            M̄         │
     └                          ┘
 
@@ -1357,31 +1357,29 @@ P  = BK.POTrapCirculantPrec(poTrap, orbitguess, par; ref = :average)
 ls = GMRESKrylovKit(Pl = P)
 ```
 """
-mutable struct POTrapCirculantPrec{TM, TH, TF}
+mutable struct POTrapCirculantPrec{TM, TH, TF, T}
     "Frozen ``\\bar{M} = M_a - (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
     M::TM
-
     "Frozen ``\\bar{H} = M_a + (\\bar{h}/2)\\bar{F}'`` block, see the documentation of [`POTrapCirculantPrec`](@ref)."
     H::TH
-
     "Dimension `N` of a time slice."
     N::Int
-
     "Number `m = M - 1` of cyclic time slices on which the preconditioner acts."
     m::Int
-
     "Vector of the `m` LU factorizations of the symbols ``\\Lambda_k = \\bar{M} - \\bar{H}e^{-2\\pi i(k-1)/m}``."
     facts::TF
-
     "FFT workspace of size `N × m`."
-    Rhat::Matrix{ComplexF64}
-
+    Rhat::Matrix{Complex{T}}
     "FFT workspace of size `N × m`."
-    Zhat::Matrix{ComplexF64}
+    Zhat::Matrix{Complex{T}}
 end
 
-# frozen cyclic blocks M, H from the orbit average of dF (or a single reference slice)
-function _circ_blocks(trap, u0, par; ref = :average)
+@inline _cyclic_length(P::POTrapCirculantPrec) = P.N * P.m
+
+# frozen cyclic blocks M, H from the orbit average of dF (or a single reference slice).
+# For a state dependent mass, the averaged jacobian dMv of the mass application is added
+# to the diagonal block M (the sub-diagonal block H has no such term)
+@views function _circ_blocks(trap, u0, par; ref = :average)
     M0, N = size(trap)
     m = M0 - 1
     T = _extract_period_fdtrap(trap, u0)
@@ -1409,22 +1407,28 @@ end
 
 function POTrapCirculantPrec(trap, u0::AbstractVector{𝒯}, par; ref = :average, ε = zero(𝒯)) where {𝒯}
     M, H, m, N = _circ_blocks(trap, u0, par; ref)
-    facts = [LA.lu(M - H * exp(-2π * im * (k - 1) / m) + ε * LA.I) for k in 1:m]
-    return POTrapCirculantPrec(M, H, N, m, facts, zeros(ComplexF64, N, m), zeros(ComplexF64, N, m))
+    facts = [LA.lu(M - H * cis(-2π * (k - 1) / m) + ε * LA.I) for k in 1:m]
+    return POTrapCirculantPrec(M, H, N, m, facts, zeros(Complex{𝒯}, N, m), zeros(Complex{𝒯}, N, m))
 end
 
 function update_preconditioner!(P::POTrapCirculantPrec, trap, u0, par; ref = :average, ε = 0.0)
     M, H, m, N = _circ_blocks(trap, u0, par; ref)
     P.M = M
     P.H = H
-    for k in 1:P.m
-        P.facts[k] = LA.lu(M - H * exp(-2π * im * (k - 1) / P.m) + ε * LA.I)
+    for k in 1:m
+        P.facts[k] = LA.lu(M - H * cis(-2π * (k - 1) / m) + ε * LA.I)
     end
     return P
 end
 
-@inline _cyclic_length(P::POTrapCirculantPrec) = P.N * P.m
-
 # The application of the preconditioner is provided by the `FFTExt` package extension and
 # requires `FFTW` to be loaded (e.g. `using FFTW`).
-Base.:\(P::POTrapCirculantPrec, x) = (y = similar(x); LA.ldiv!(y, P, x); y)
+function LA.ldiv!(y, ::POTrapCirculantPrec, x)
+    error("`POTrapCirculantPrec` requires the FFTW extension. Run `using FFTW` to enable the circulant preconditioner.")
+end
+
+function Base.:\(P::POTrapCirculantPrec, x)
+    y = similar(x)
+    LA.ldiv!(y, P, x)
+    return y
+end

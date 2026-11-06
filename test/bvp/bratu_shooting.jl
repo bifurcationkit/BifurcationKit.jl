@@ -79,10 +79,10 @@ bp_index = findfirst(sp -> sp.type == :bp, br.specialpoint)
 bp_index = bp_index::Int
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # NORMAL FORM COMPUTATION
-get_normal_form(br, bp_index; autodiff=false)
+get_normal_form(br, bp_index)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # BRANCH SWITCHING
-br2 = continuation(br, bp_index, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = true)
+br2 = continuation(br, bp_index, ContinuationPar(optc, max_steps=30); autodiff = false, bothside = Val(true))
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # AUTOMATIC BIFURCATION DIAGRAM
 diagram = bifurcationdiagram(prob, br, 2, BK.getcontparams(br); autodiff = false, plot = false)

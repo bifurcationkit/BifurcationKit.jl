@@ -45,7 +45,7 @@ function plot_branch_cont(::Union{BK_NoPlot, BK_Plots},
                 subplot = 2) |> display
 end
 ####################################################################################################
-plotAllDCBranch(branches) = display(plot(branches..., label = ""))
+plotAllDCBranch(::Union{BK_Plots, BK_NoPlot}, branches) = display(plot(branches..., label = ""))
 
 """
 $(SIGNATURES)

@@ -74,7 +74,7 @@ resAN = BK.po_jvp(_pb, initpo, par_hopf, _dx; δ = 1e-8)
 ####################################################################################################
 # test shooting interface M = 1
 @info "Single Shooting"
-_sh = Shooting(odeprob, Vern9(), [initpo[1:end-1]]; abstol=1e-10, reltol=1e-9, lens = (@optic _.r))
+_sh = Shooting(odeprob, Vern9(), [initpo[1:end-1]]; abstol = 1e-12, reltol = 1e-10, lens = (@optic _.r))
 res = BK.po_residual(_sh, initpo, par_hopf)
 res = BK.po_jvp(_sh, initpo, par_hopf, initpo)
 @test _sh.flow.odeprob.p == _sh.par
@@ -84,7 +84,7 @@ _Jad = FD.jacobian( x -> BK.po_residual(_sh, x, par_hopf), initpo)
 _Jana = BK.po_jacobian(_sh, initpo, par_hopf)
 @test norm(_Jad - _Jana, Inf) < 1e-7
 
-_sh2 = Shooting(odeprob, Vern9(), probMono, Vern9(), [initpo[1:end-1]]; abstol = 1e-10, reltol = 1e-9)
+_sh2 = Shooting(odeprob, Vern9(), probMono, Vern9(), [initpo[1:end-1]]; abstol = 1e-12, reltol = 1e-10)
 res = BK.po_residual(_sh2, initpo, par_hopf)
 res = BK.po_jvp(_sh2, initpo, par_hopf, initpo)
 @test BK.issimple(_sh2)

@@ -111,7 +111,7 @@ function updatebranch!(dcIter::DefContIterable,
     state.z_pred.p = current_param
 
     getpredictor!(state, it)
-    pbnew = re_make(it.prob; u0 = _copy(getx(state)), params = setparam(it, current_param))
+    pbnew = re_make(getprob(it); u0 = _copy(getx(state)), params = setparam(it, current_param))
     sol1 = solve(pbnew, defOp, it.contparams.newton_options, alg.jacobian;
                     normN = it.normC,
                     callback = it.callback_newton,
@@ -362,6 +362,6 @@ function deflatedContinuation(dc_iter::DefContIterable,
         end
         nstep += 1
     end
-    plot && plotAllDCBranch(branches)
+    plot && plotAllDCBranch(get_plot_backend(), branches)
     return DCResult(cont_iter.prob, branches, cont_iter, [getx(c.state) for c in dcstates if isactive(c)], dc_iter.alg)
 end

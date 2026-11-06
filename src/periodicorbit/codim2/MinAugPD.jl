@@ -73,22 +73,23 @@ Compute the solution of
 and the same for the adjoint system.
 """
 function _compute_bordered_vectors(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, JPD, JPD★)
-    a = 𝐏𝐝.a
-    b = 𝐏𝐝.b
     𝒯 = eltype(𝐏𝐝)
+    return __compute_bordered_vectors_pd(𝐏𝐝.linbdsolver, 𝐏𝐝.linbdsolverAdjoint,
+                                         JPD, JPD★, 𝐏𝐝.a, 𝐏𝐝.b, 𝐏𝐝.zero, 𝒯)
+end
 
-    # we solve N[v, σ1] = [0, 1]
-    v, σ1, cv, itv = test_ma(𝐏𝐝, JPD, a, b, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolver)
-    ~cv && @debug "Linear solver for N did not converge."
- 
-    # we solve Nᵗ[w, σ2] = [0, 1]
-    w, σ2, cv, itw = test_ma(𝐏𝐝, JPD★, b, a, zero(𝒯), 𝐏𝐝.zero, one(𝒯), 𝐏𝐝.linbdsolverAdjoint)
-    ~cv && @debug "Linear solver for Nᵗ did not converge."
-    return (; v, itv, w, itw)
+function __compute_bordered_vectors_pd(linbdsolver, linbdsolver_adjoint, JPD, JPD★, a, b, _zero_vector, 𝒯)
+    # we solve JPD v + a σ1 = 0 with <b, v> = 1 ; i.e. N[v, σ1] = [0, 1] 
+    v, _, cv, itv = linbdsolver(JPD, a, b, zero(𝒯), _zero_vector, one(𝒯))
+    ~cv && @debug "[PD] Bordered linear solver for JPD did not converge."
+    # we solve JPD' w + b σ2 = 0 with <a, w> = 1 ; i.e. Nᵗ[w, σ2] = [0, 1]
+    w, _, cv, itw = linbdsolver_adjoint(JPD★, b, a, zero(𝒯), _zero_vector, one(𝒯))
+    ~cv && @debug "[PD] Bordered linear solver for JPD' did not converge."
+    return (; v, w, itv, itw)
 end
 
 function _get_bordered_terms(𝐏𝐝::PeriodDoublingMinimallyAugmentedFormulation, x, p::𝒯, par) where 𝒯
-    # get the PO functional, ie a PeriodicOrbitFunctionalSh, PeriodicOrbitFunctionalTrap, PeriodicOrbitFunctionalColl
+    # get the PO functional
     POWrap = 𝐏𝐝.prob_vf
 
     # update parameter
@@ -233,7 +234,7 @@ function newton_pd(prob::AbstractBifurcationProblem,
                 kwargs...)
 
     𝐏𝐝 = PeriodDoublingMinimallyAugmentedFormulation(
-        prob,
+        re_make(prob; params = par),
         _copy(eigenvec),
         _copy(eigenvec_ad),
         options.linsolver,
@@ -242,10 +243,10 @@ function newton_pd(prob::AbstractBifurcationProblem,
         usehessian)
 
     pdpointguess = vcat(pdpointguess.u, pdpointguess.p)
-    prob_ma = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, par, nothing, plot_solution(prob), record_from_solution(prob))
+    prob_ma = PDMAProblem(𝐏𝐝, FiniteDifferences(), pdpointguess, nothing, plot_solution(prob), record_from_solution(prob))
     # options for the Newton Solver
     opt_pd = deepcopy(options)
-    return newton(prob_ma, opt_pd; normN, kwargs...)
+    return solve(prob_ma, Newton(), opt_pd; normN, kwargs...)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function update!(𝐏𝐛::PDMAProblem, iter, state::ContState)
@@ -310,10 +311,10 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
 
                 jacobian_ma::AbstractJacobianType = AutoDiff(),
                 compute_eigen_elements = false,
+                kind = PDCont(),
+                usehessian = false,
                 plot_solution = BifurcationKit.plot_solution(prob),
                 prm::Bool = prob isa PeriodicOrbitFunctionalSh,
-                usehessian = false,
-                kind = PDCont(),
                 kwargs...) where {𝒯, vectype}
     lens1 == lens2 && error("Please choose 2 different parameters. You only passed $lens1")
     lens1 != getlens(prob) && error("lens1 must be the continuation parameter. You only passed $lens1")
@@ -380,6 +381,37 @@ function continuation_pd(prob, alg::AbstractContinuationAlgorithm,
         event,
         )
     _correct_event_labels(br_pd_po)
+end
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+$(SIGNATURES)
+
+Compute the initial (right and left) eigenvectors `(ζ, ζad)` of the Period-Doubling bifurcation point using the minimally augmented formulation, i.e. by solving a bordered linear system.
+
+# Return
+A named tuple `(; ζ, ζad)` of the normalized right and left eigenvectors, with the normalization `⟨ζ, ζad⟩ = 1`.
+"""
+function _init_pd_vectors_minaug(prob, x₀, par₀, bdlinsolver, bdlinsolver_adjoint, a, b, normC)
+    u0 = saved_solution(x₀)
+    # a and b are perturbations of the orbit only, without the period
+    u_orb = u0[begin:end-1]
+    # we use a minimally augmented formulation to set the initial vectors
+    a = isnothing(a) ? _randn(_copy(u_orb)) : a; VI.scale!(a, 1 / normC(a))
+    b = isnothing(b) ? _randn(_copy(u_orb)) : b; VI.scale!(b, 1 / normC(b))
+
+    𝒯 = VI.scalartype(u0)
+    L = jacobian_period_doubling(prob, u0, par₀)
+    L★ = has_adjoint(prob) ? jacobian_adjoint_period_doubling(prob, u0, par₀) : transpose(L)
+
+    (; v, w, itv, itw) = __compute_bordered_vectors_pd(bdlinsolver, bdlinsolver_adjoint, L, L★, a, b, VI.zerovector(a), 𝒯)
+
+    @debug "RIGHT EIGENVECTORS" itv norminf(residual(prob, u0, par₀)) norminf(apply(L, v))
+    @debug "LEFT  EIGENVECTORS" itw norminf(residual(prob, u0, par₀)) norminf(apply(L★, w))
+
+    ζad = w; VI.scale!(ζad, 1 / normC(ζad))
+    ζ   = v; VI.scale!(ζ,   1 / normC(ζ))
+    VI.scale!(ζad, 1 / VI.inner(ζ, ζad))
+    return (; ζ, ζad)
 end
 
 # compute the generalized period-doubling coefficient GPD from the PD normal form

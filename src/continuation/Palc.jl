@@ -3,7 +3,10 @@ struct NormalisedDot{Tdot}
 end
 (dt::NormalisedDot)(x, y) = dt.dot(x, y) / length(x)
 
-__scaling_function_dot_palc(x) = VI.scale!(x, 1/length(x))
+# 1 / length(x) in the scalar type of x: `1 / length(x)` is a Float64 and promotes Float32 states
+_inverse_length(x) = inv(convert(VI.scalartype(x), length(x)))
+
+__scaling_function_dot_palc(x) = VI.scale!(x, _inverse_length(x))
 
 """
 $(TYPEDEF)
@@ -89,7 +92,7 @@ getdot(alg::PALC) = alg.dotθ
 getθ(alg::PALC) = alg.θ
 # we also extend this for ContIterable
 getdot(it::ContIterable) = getdot(it.alg)
-getθ(it::ContIterable) = getθ(it.alg)
+getθ(it::ContIterable) = convert(eltype(it), getθ(it.alg))
 
 # important for bisection algorithm, switch on / off internal adaptive behavior
 internal_adaptation!(alg::PALC, on_or_off::Bool) = internal_adaptation!(alg.tangent, on_or_off)
@@ -199,12 +202,11 @@ function newton_palc(iter::AbstractContinuationIterable,
                     normN = norm,
                     callback = cb_default,
                     kwargs...)
-    prob = iter.prob
+    prob = getprob(iter)
     par = getparams(prob)
     ϵ = getdelta(prob)
     paramlens = getlens(iter)
     contparams = getcontparams(iter)
-    𝒯 = eltype(iter)
     θ = getθ(iter)
 
     z0 = getsolution(state)
@@ -215,9 +217,6 @@ function newton_palc(iter::AbstractContinuationIterable,
     (;p_min, p_max) = contparams
     linsolver = get_bordered_linsolver(iter)
 
-    # record the damping parameter
-    α0 = α
-
     N(u, _p) = arc_length_eq(dotθ, u, z0.u, _p - z0.p, τ0.u, τ0.p, θ, ds)
     normAC(resf, resn) = max(normN(resf), abs(resn))
 
@@ -227,11 +226,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     x_pred = _copy(x)
 
     res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
-
-    # dFdp = (F(x, p + ϵ) - res_f) / ϵ
-    dFdp = _copy(residual(prob, x, set(par, paramlens, p + ϵ)))
-    dFdp = minus!!(dFdp, res_f) # dFdp = dFdp - res_f
-    dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
+    dFdp = R01(FiniteDifferences(), prob, x, set(par, paramlens, p))
 
     res       = normAC(res_f, res_n)
     residuals = [res]
@@ -243,12 +238,8 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     compute = callback((;x, res_f, residual = res, step, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
 
-    while (step < max_iterations) && (res > tol) && line_step && compute
-        # dFdp = (F(x, p + ϵ) - F(x, p)) / ϵ)
-        _copyto!(dFdp, residual(prob, x, set(par, paramlens, p + ϵ)))
-        dFdp = minus!!(dFdp, res_f); dFdp = VI.scale!(dFdp, one(𝒯) / ϵ)
-
-        # compute jacobian
+    while (step < max_iterations) && (res > tol) && line_step && _continues(compute)
+        R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
         J = jacobian(prob, x, set(par, paramlens, p))
         
         # solve linear system
@@ -285,8 +276,12 @@ function newton_palc(iter::AbstractContinuationIterable,
                     α /= 2
                 end
             end
-            # we put back the initial value
-            α = α0
+            # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
+            # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
+            if !line_step
+                _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+                res_n  = N(x, p); res = normAC(res_f, res_n)
+            end
         else
             x = minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
@@ -303,7 +298,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         compute = callback((;x, res_f, J, residual=res, step, itlinear, contparams, z0, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
     end
     verbose && print_nonlinear_step(step, res, 0, true) # display last line of the table
-    flag = (residuals[end] < tol) & callback((;x, res_f, residual = res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...)
+    flag = _converged(residuals[end] < tol, callback((;x, res_f, residual = res, step, contparams, p, residuals, options = (;linsolver)); fromNewton = false, kwargs...))
 
     return NonLinearSolution(BorderedArray(x, p),
                             prob,

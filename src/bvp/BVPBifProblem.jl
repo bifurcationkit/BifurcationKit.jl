@@ -243,7 +243,9 @@ function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocati
     return true
 end
 
-function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params, iter, state, update_pred = true)
+function __update_bvp_coll!(d_bvp::DiscretizedBVP, bvpsol, params,
+                            iter::BK.AbstractContinuationIterable, state::BK.ContState,
+                            update_pred = true)
     disc = get_discretizer(d_bvp)
     if meshadapt(disc) == false
         return true
@@ -300,7 +302,7 @@ end
 
 function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
                     iter::BK.ContIterable{Tkind},
-                    state; 
+                    state::BK.ContState; 
                     update_pred = true) where {Tmodel <: BVPModel, Tkind}
     d_bvp = get_bvp(prob)
     bvpsol = BK._copy(BK.getx(state))
@@ -309,7 +311,7 @@ end
 
 function BK.update!(prob::BVPBifProblem{ <: DiscretizedBVP{ Tmodel, <: Collocation}},
                     iter::BK.ContIterable{Tkind},
-                    state; 
+                    state::BK.ContState; 
                     update_pred = true) where {Tmodel <: BVPModel, Tkind <: BK.AbstractTwoParamCont}
     d_bvp = get_bvp(prob)
     Z = BK.getsolution(state)

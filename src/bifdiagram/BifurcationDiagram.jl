@@ -17,13 +17,10 @@ $(TYPEDFIELDS)
 mutable struct BifDiagNode{Tγ, Tc}
     "current recursion level in the tree."
     level::Int64
-
     "code for finding the current node in the tree, this is the index of the bifurcation point from which γ branches off."
     code::Int64
-
     "branch associated to the current node."
     γ::Tγ
-
     "children of current node. These are the different branches off the bifurcation point in γ."
     child::Tc
 end
@@ -35,6 +32,7 @@ get_branch(tree::BifDiagNode) = tree.γ
 from(tree::BifDiagNode) = from(tree.γ)
 add!(tree::BifDiagNode, γ::AbstractBranchResult, level::Int, code::Int) = push!(tree.child, BifDiagNode(level, code, γ, BifDiagNode[]))
 add!(tree::BifDiagNode, γ::Vector{ <: AbstractBranchResult}, level::Int, code::Int) = map(x -> add!(tree, x, level, code), γ)
+add!(tree::BifDiagNode, γ::Branch{Tk, Tp, <: Vector{ <: ContResult}}, level::Int, code::Int) where {Tk, Tp} = foreach(x -> add!(tree, Branch(x, getfield(γ, :bp)), level, code), getbranches(γ))
 add!(::BifDiagNode, ::Nothing, ::Int, ::Int) = nothing
 get_contresult(br::ContResult) = br
 get_contresult(br::Branch) = br.γ
@@ -137,6 +135,17 @@ function bifurcationdiagram(prob::AbstractBifurcationProblem,
     bifurcationdiagram!(prob, BifDiagNode(1, 0, br, BifDiagNode[]), maxlevel, options; code = "0", verbosediagram, kwargs...)
 end
 
+# convenient function for branching
+function _letsbranch_for_bd(br::AbstractBranchResult, _id::Int, _pt, _level::Int, options; _dsfactor = 1, _ampfactor = 1, kwargs...)
+    optscont = options(_pt.x, _pt.param, _level + 1)
+    @reset optscont.ds *= _dsfactor
+    continuation(get_contresult(br), _id, optscont;
+                normal_form_kwargs = (nev = optscont.nev,),
+                kwargs...,
+                ampfactor = _ampfactor,
+    )
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -170,17 +179,6 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
     # current level of recursion
     level = node.level
 
-    # convenient function for branching
-    function letsbranch(_id, _pt, _level; _dsfactor = 1, _ampfactor = 1)
-        optscont = options(_pt.x, _pt.param, _level + 1)
-        @reset optscont.ds *= _dsfactor
-        continuation(get_contresult(node.γ), _id, optscont;
-                    nev = optscont.nev, 
-                    kwargs...,
-                    ampfactor = _ampfactor,  
-        )
-    end
-
     for (id, pt) in pairs(node.γ.specialpoint)
         # We put the following condition in case the specialpoint at step = 0 corresponds to the one we are branching from. 
         # If we remove this, we may keep computing the same branch.
@@ -193,21 +191,21 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                                     " at p = ", pt.param, 
                                     ", type = ", type(pt))
                 end
-                γ = letsbranch(id, pt, level)
+                γ = _letsbranch_for_bd(node.γ, id, pt, level, options; kwargs...)
                 add!(node, γ, level+1, id)
                 if ~isnothing(γ) && verbose 
                     printstyled(color = :green, "────▶ From ", type(from(γ)), "\n")
                 end
                 verbose && _show(stdout, node.γ.specialpoint[id], id)
 
-                # in the case of a Transcritical bifurcation, we compute the other branch
-                if ~isnothing(γ) && ~(γ isa Vector)
-                    if ~halfbranch && from(γ) isa Transcritical
-                        γ = letsbranch(id, pt, level; _dsfactor = -1)
+                # in the case of a Transcritical / Pitchfork bifurcation, we compute the other branch
+                if ~isnothing(γ) && ~halfbranch && ~(γ isa Branch{<: Any, <: Any, <: Vector{ <: ContResult}})
+                    bp = from(γ)
+                    if bp isa Transcritical
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _dsfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
-                    end
-                    if ~halfbranch && from(γ) isa Pitchfork
-                        γ = letsbranch(id, pt, level; _ampfactor = -1)
+                    elseif bp isa Pitchfork
+                        γ = _letsbranch_for_bd(node.γ, id, pt, level, options; _ampfactor = -1, kwargs...)
                         add!(node, γ, level+1, id)
                     end
                 end

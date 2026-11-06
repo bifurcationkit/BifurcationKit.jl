@@ -73,18 +73,15 @@ function gettangent!(state::AbstractContinuationState,
                     ::Bordered, 
                     dotθ)
     (iter.verbosity > 0) && println("Predictor: Bordered")
-    ϵ = getdelta(iter.prob)
     τ = state.τ
     θ = getθ(iter)
     T = eltype(iter)
 
     # dFdl = (F(z.u, z.p + ϵ) - F(z.u, z.p)) / ϵ
-    dFdl = residual(iter.prob, state.z.u, setparam(iter, state.z.p + ϵ))
-    dFdl = minus!!(dFdl, residual(iter.prob, state.z.u, setparam(iter, state.z.p)))
-    dFdl = VI.scale!!(dFdl, 1/ϵ)
+    dFdl = R01(FiniteDifferences(), iter.prob, state.z.u, setparam(iter, state.z.p))
 
     # compute jacobian at the current solution
-    J = jacobian(iter.prob, state.z.u, setparam(iter, state.z.p))
+    J = jacobian(getprob(iter), state.z.u, setparam(iter, state.z.p))
 
     # extract tangent as solution of the above bordered linear system
     τu, τp, flag, iterl = solve_bls_palc(get_bordered_linsolver(iter),

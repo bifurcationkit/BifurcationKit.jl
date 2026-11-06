@@ -121,6 +121,11 @@ BK.record_from_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.r
 
 BK.plot_solution(model::BVPModel) = BK.plot_default
 BK.plot_solution(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.plot_solution(model.F)
+
+BK.getparams(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.getparams(model.F)
+BK.getlens(model::BVPModel{ BK.AbstractBifurcationProblem }) = BK.getlens(model.F)
+BK.getparams(model::BVPModel) = error("`BVPModel` does not store parameters. Build the model from an `AbstractBifurcationProblem` or pass `params` explicitly to `BVPBifProblem`.")
+BK.getlens(model::BVPModel) = error("`BVPModel` does not store a lens. Build the model from an `AbstractBifurcationProblem` or pass `lens` explicitly to `BVPBifProblem`.")
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Display
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

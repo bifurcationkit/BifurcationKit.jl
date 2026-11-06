@@ -19,9 +19,9 @@ end
 function _finaliser_sae!(event_point, it, state, success)
     p0 = event_point.param
     ps = it.event.data
-    p = argmin(x -> abs(x - p0), ps)
+    p = oftype(p0, argmin(x -> abs(x - p0), ps))
 
-    prob = it.prob
+    prob = getprob(it)
     (;newton_options, ) = it.contparams
     sol = solve(re_make(prob; params = setparam(it, p), u0 = event_point.x),
                             Newton(),

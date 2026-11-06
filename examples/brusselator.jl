@@ -127,7 +127,7 @@ if 1==1
         jacobian_ma = BK.MinAug(),
         # plot = true,
         verbosity = 2, normC = norminf, 
-        # bothside = true
+        # bothside = Val(true)
         )
 end
 

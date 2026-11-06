@@ -94,6 +94,9 @@ end
 function plot end
 function plot! end
 function plot_branch_cont end
+plot_branch_cont(::AbstractPlotBackend, contres, state, iter, plotuserfunction) = error("`plot_branch_cont` requires a plotting extension. Run `using Plots` or `using Makie` to enable plotting.")
+plot_DCont_branch(::AbstractPlotBackend, branches, nbrs, nactive, nstep) = error("`plot_DCont_branch` requires a plotting extension. Run `using Plots` or `using Makie` to enable plotting.")
+plotAllDCBranch(::AbstractPlotBackend, branches) = error("`plotAllDCBranch` requires a plotting extension. Run `using Plots` or `using Makie` to enable plotting.")
 function plot_periodic_potrap end
 function plot_periodic_shooting! end
 function plot_periodic_shooting end

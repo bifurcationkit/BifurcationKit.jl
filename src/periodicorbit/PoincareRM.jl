@@ -32,6 +32,9 @@ end
     return reshape(x[begin:end-1], N, M)
 end
 
+get_time_slices(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh}, x::BorderedArray) =
+    error("`get_time_slices` is not implemented for a `BorderedArray` argument for the Poincaré return map of a shooting problem. Use an `AbstractVector`.")
+
 function (Π::PoincaréMap)(xₛ, par)
     solΠ = _solve(Π, xₛ, par)
     _extend(Π, solΠ, par, xₛ)
@@ -359,7 +362,7 @@ function d2F(Π::PoincaréMap{ <: PeriodicOrbitFunctionalSh }, x, pars, h₁, h�
     ∂2t = -LA.dot(normal, y) / LA.dot(normal, Fx)
     y .+= ∂2t .* Fx
 
-    abs(LA.dot(normal, y)) > 1e-10 && @error "This dot product <normal, y> is not zero, $(abs(LA.dot(normal, y)))"
+    abs(LA.dot(normal, y)) > 1e-10 && @error "[d2F-PoincaréMap] This dot product <normal, y> is not zero, $(abs(LA.dot(normal, y)))"
 
     return (u = y, t = ∂2t)
 end
