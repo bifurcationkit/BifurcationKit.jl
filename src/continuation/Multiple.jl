@@ -52,7 +52,7 @@ function (algcont::Multiple)(state; kwargs...)
     if algcont.currentind > 1
         if iteration - algcont.pmimax > 0
             out = residuals[end] <= algcont.α * residuals[end-algcont.pmimax]
-            out = out || residuals[end] < tol
+            out = out || residuals[end] <= tol
             return out
         end
     end
@@ -170,3 +170,5 @@ function _step_size_control_multiple!(state, contparams::ContinuationPar, verbos
 
     return
 end
+
+_continuation_cache(alg::Multiple, z, ::Type{T}) where {T} = _continuation_cache(alg.alg, z, T)

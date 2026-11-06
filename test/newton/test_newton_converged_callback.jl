@@ -36,6 +36,12 @@ let
     @test BK._verdict_and(NewtonConverged(), true) === NewtonConverged()
     @test BK._verdict_and(NewtonConverged(), false) === false
 
+    # a first residual equal to `tol` stops the iterations, so it converges; this includes tol = 0 at an exact root
+    for (start, tol) in ((0.0, 0.5), (0.5, 0.0))
+        tie = BK.solve(BifurcationProblem((x, p) -> x .- p.r, [start], (r = 0.5,), (@optic _.r)), Newton(), NewtonPar(; tol))
+        @test BK.converged(tie) && tie.itnewton == 0
+    end
+
     # a zero `tol` is unreachable: the correctors converge at the callback's verdict only
     unreachable = ContinuationPar(p_min = 0.0, p_max = 1.0, ds = 0.05, max_steps = 200, detect_bifurcation = 0, newton_options = NewtonPar(tol = 0.0, max_iterations = 10))
     for alg in (PALC(), MoorePenrose(), Natural())
