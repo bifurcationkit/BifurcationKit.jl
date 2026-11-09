@@ -170,3 +170,5 @@ function _step_size_control_multiple!(state, contparams::ContinuationPar, verbos
 
     return
 end
+
+_continuation_cache(alg::Multiple, z, ::Type{T}) where {T} = _continuation_cache(alg.alg, z, T)

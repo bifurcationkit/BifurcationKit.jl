@@ -57,6 +57,7 @@ module BifurcationKit
 
     # continuers
     include("continuation/Contbase.jl")
+    include("continuation/CorrectorQuality.jl")
     include("continuation/Palc.jl")
     include("continuation/Tangents.jl")
     include("continuation/Natural.jl")
@@ -164,7 +165,7 @@ module BifurcationKit
     export DeflationOperator, DeflatedProblem
 
     # predictors for continuation
-    export Natural, PALC, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS, AutoSwitch
+    export Natural, PALC, CorrectorQuality, Multiple, Secant, Bordered, DefCont, Polynomial, MoorePenrose, MoorePenroseLS, AutoSwitch
 
     # newton methods
     export NewtonPar, Newton, newton, newton_palc, newton_hopf, NonLinearSolution, NewtonConverged
