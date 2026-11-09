@@ -52,7 +52,7 @@ function (algcont::Multiple)(state; kwargs...)
     if algcont.currentind > 1
         if iteration - algcont.pmimax > 0
             out = residuals[end] <= algcont.α * residuals[end-algcont.pmimax]
-            out = out || residuals[end] < tol
+            out = out || residuals[end] <= tol
             return out
         end
     end

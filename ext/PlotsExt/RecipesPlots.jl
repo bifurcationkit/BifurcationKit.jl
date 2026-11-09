@@ -12,7 +12,7 @@ RecipesBase.@recipe function Plots(contres::AbstractBranchResult;
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
                             plotcirclesbif = true,
-                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                            unstable_plot_type = :dot,
                             applytoY = identity,
                             applytoX = identity)
     # Special case labels when vars = (:p,:y,:z) or (:x) or [:x,:y] ...
@@ -82,7 +82,7 @@ RecipesBase.@recipe function Plots(brs::AbstractBranchResult...;
                             branchlabel = fill("", length(brs)),
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
-                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                            unstable_plot_type = :dot,
                             plotcirclesbif = true,
                             applytoY = identity,
                             applytoX = identity)
@@ -162,7 +162,7 @@ RecipesBase.@recipe function Plots(br::Branch{<: Any, <: Any, <: Vector{ <: Cont
                             branchlabel = "",
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
-                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                            unstable_plot_type = :dot,
                             plotcirclesbif = true,
                             applytoY = identity,
                             applytoX = identity)
@@ -196,7 +196,7 @@ RecipesBase.@recipe function Plots(brs::DCResult;
                             branchlabel = "",
                             linewidthunstable = 1.0,
                             linewidthstable = 2linewidthunstable,
-                            unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                            unstable_plot_type = :dot,
                             plotcirclesbif = false,
                             applytoY = identity,
                             applytoX = identity)
@@ -278,7 +278,7 @@ RecipesBase.@recipe function Plots(contres::AbstractResult{Tk, Tprob};
                                     branchlabel = "",
                                     linewidthunstable = 1.0,
                                     linewidthstable = 2linewidthunstable,
-                                    unstable_plot_type::Union{Nothing, Symbol} = :dot,
+                                    unstable_plot_type = :dot,
                                     plotcirclesbif = true,
                                     _basicplot = true,
                                     applytoY = identity,

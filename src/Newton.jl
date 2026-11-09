@@ -112,7 +112,7 @@ function _newton(prob::AbstractBifurcationProblem, x0, params0, options::NewtonP
 
         compute = callback((;x, fx, J, residual = res, step, itlinear, options, x0, residuals); fromNewton = true, kwargs...)
     end
-    flag = _converged(residuals[end] < tol, callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...))
+    flag = _converged(residuals[end] <= tol, callback((;x, fx, residual = res, step, options, x0, residuals); fromNewton = true, kwargs...))
     (~flag && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
     verbose && print_nonlinear_step(0, res, 0, true) # display last line of the table
     ((residuals[end] > tol) && verbose) && @error("\n──> Newton algorithm failed to converge, residual = $(residuals[end])")
@@ -143,7 +143,7 @@ This is the Newton-Krylov Solver for `F(x, p0) = 0` with Jacobian w.r.t. `x` wri
     
     They can be used as `callback = (state;k...) -> state.residual<1` for example.
 
-    The callback returns `true` to go on, `false` to stop, not converged, or [`NewtonConverged()`](@ref NewtonConverged) to stop, converged, whatever `options.tol`. The value of the call after the last iteration decides convergence: `true` leaves it to `residual < options.tol`, `false` refuses it and `NewtonConverged()` accepts the last iterate.
+    The callback returns `true` to go on, `false` to stop, not converged, or [`NewtonConverged()`](@ref NewtonConverged) to stop, converged, whatever `options.tol`. The value of the call after the last iteration decides convergence: `true` leaves it to `residual <= options.tol`, `false` refuses it and `NewtonConverged()` accepts the last iterate.
 - `kwargs` arguments passed to the callback. Useful when `newton` is called from `continuation`
 
 # Output:
@@ -160,7 +160,7 @@ cb_default(state; k...) = true
 """
     NewtonConverged()
 
-A Newton callback's verdict that the current iterate is a solution: the iterations stop, and the call after the last one returning it marks the solution converged whatever its residual. It hosts convergence tests other than `residual < tol`, such as a tolerance that depends on the iterate. See [`newton`](@ref).
+A Newton callback's verdict that the current iterate is a solution: the iterations stop, and the call after the last one returning it marks the solution converged whatever its residual. It hosts convergence tests other than `residual <= tol`, such as a tolerance that depends on the iterate. See [`newton`](@ref).
 """
 struct NewtonConverged end
 
@@ -168,7 +168,7 @@ struct NewtonConverged end
 _continues(verdict::Bool) = verdict
 _continues(::NewtonConverged) = false
 
-# whether a solve whose last residual is under `tol` (`below_tol`) converged, given the last call of the callback
+# whether a solve whose last residual is at most `tol` (`below_tol`) converged, given the last call of the callback
 _converged(below_tol::Bool, verdict::Bool) = below_tol & verdict
 _converged(::Bool, ::NewtonConverged) = true
 
