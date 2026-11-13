@@ -216,7 +216,7 @@ function newton_palc(iter::AbstractContinuationIterable,
     p = z_pred.p
     x_pred = _copy(x)
 
-    res_f = residual(prob, x, set(par, paramlens, p));  res_n = N(x, p)
+    res_f, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p));  res_n = N(x, p)
     dFdp = R01(FiniteDifferences(), prob, x, set(par, paramlens, p))
 
     res       = normAC(res_f, res_n)
@@ -231,7 +231,10 @@ function newton_palc(iter::AbstractContinuationIterable,
 
     while (step < max_iterations) && (res > tol) && line_step && _continues(compute)
         R01!(FiniteDifferences(), prob, dFdp, x, par, p, res_f)
-        J = jacobian(prob, x, set(par, paramlens, p))
+        J = J_next
+        if isnothing(J)
+            J = jacobian(prob, x, set(par, paramlens, p))
+        end
         
         # solve linear system
         # ┌            ┐┌  ┐   ┌     ┐
@@ -243,13 +246,15 @@ function newton_palc(iter::AbstractContinuationIterable,
         itlineartot += sum(itlinear)
 
         if linesearch
+            J_next = nothing
             line_step = false
             while !line_step && (α > αmin)
                 # x_pred = x - α * u
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
-                _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
+                res_trial, J_trial = _residual_maybe_jacobian(prob, x_pred, set(par, paramlens, p_pred))
+                _copyto!(res_f, res_trial)
 
                 res_n  = N(x_pred, p_pred)
                 res = normAC(res_f, res_n)
@@ -263,6 +268,8 @@ function newton_palc(iter::AbstractContinuationIterable,
 
                     # p = p_pred
                     p  = clamp(p_pred, p_min, p_max)
+                    # a clamped parameter is not where J_trial was evaluated
+                    J_next = p == p_pred ? J_trial : nothing
                 else
                     α /= 2
                 end
@@ -270,13 +277,15 @@ function newton_palc(iter::AbstractContinuationIterable,
             # the linesearch failed: res, res_f, res_n still hold the last rejected trial.
             # Recompute them at the accepted point (x, p), like `res = res0` in pde2path's nloopext.m
             if !line_step
-                _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+                res_accepted, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p))
+                _copyto!(res_f, res_accepted)
                 res_n  = N(x, p); res = normAC(res_f, res_n)
             end
         else
             x = minus!!(x, u)
             p = clamp(p - up, p_min, p_max)
-            _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
+            F, J_next = _residual_maybe_jacobian(prob, x, set(par, paramlens, p))
+            _copyto!(res_f, F)
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
 
@@ -297,4 +306,16 @@ function newton_palc(iter::AbstractContinuationIterable,
                             flag,
                             step,
                             itlineartot)
+end
+
+"""
+$(SIGNATURES)
+
+`(F(x, p), J(x, p))` when the problem evaluates both in one call (`has_FJ(prob)`), else `(F(x, p), nothing)`.
+"""
+function _residual_maybe_jacobian(prob::AbstractBifurcationProblem, x, p)
+    if has_FJ(prob)
+        return residual_and_jacobian(prob, x, p)
+    end
+    return residual(prob, x, p), nothing
 end
