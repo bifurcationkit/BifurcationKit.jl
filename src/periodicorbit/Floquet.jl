@@ -516,11 +516,13 @@ struct FloquetColl{E <: AbstractEigenSolver, C} <: AbstractFloquetSolver
     cache::C
     "Whether to use optimized COP to compute the Floquet exponents. Note that this does not work well for sparse matrices. Defaults to `true`."
     small_n::Bool
+    "Apply procedure 3.2 in [3]."
+    use_deflation::Bool
 end
 
-function FloquetColl(;eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_n = true)
+function FloquetColl(;eigls::AbstractEigenSolver = DefaultEig(), cache = nothing, small_n = true, use_deflation = true)
     eigls2 = _check_floquet_options(eigls)
-    return FloquetColl(eigls2, cache, small_n)
+    return FloquetColl(eigls2, cache, small_n, use_deflation)
 end
 FloquetColl(eigls::FloquetColl) = eigls
 
@@ -534,13 +536,21 @@ end
 function (eig::FloquetColl)(coll, J, nev; kwargs...)
     n, m, Ntst = size(coll)
     if eig.small_n && ~isnothing(eig.cache)
-        return _eig_floquet_coll_small_n(J, n, m, Ntst, nev, eig.cache)
+        return _eig_floquet_coll_small_n(J, n, m, Ntst, nev, eig.cache, eig.use_deflation)
     else
         return _eig_floquet_coll(J, n, m, Ntst, nev, eig.cache)
     end
 end
 
-@views function _eig_floquet_coll_small_n(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cop_cache::COPCACHE{dim}) where {𝒯, dim}
+function _reflection(x)
+    v = copy(x)
+    v[1] += sign(x[1]) * norm(x)  # Adjust the first component
+    v ./= v[1]
+    β = 2 / LA.dot(v, v)  # Compute scaling factor
+    return β, v
+end
+
+@views function _eig_floquet_coll_small_n(J::AbstractMatrix{𝒯}, n, m, Ntst, nev, cop_cache::COPCACHE{dim}, use_deflation::Bool) where {𝒯, dim}
     coll = cop_cache.coll
     nbcoll = n * m
     Npo = length(coll) + 1
@@ -558,29 +568,63 @@ end
     P1 = Jext_gauss[1:n, 1:n]
     P0 = Jext_gauss[1:n, n+1:2n]
 
-    vals_b = LA.eigvals(P0, -P1)
-    logvals = Complex{𝒯}[]
-
-    for ev in vals_b
-        if true#isfinite(ev)
-            push!(logvals, -log(Complex(ev)))
+    if ~use_deflation
+        vals_b = LA.eigvals(P0, -P1)
+        logvals = Complex{𝒯}[]
+        for ev in vals_b
+            if true#isfinite(ev)
+                push!(logvals, -log(Complex(ev)))
+            end
         end
+        nev = min(n, nev, length(logvals))
+        I = sortperm(logvals, by = real, rev = true)[1:nev]
+        # floquet exponents
+        σ = logvals[I]
+        # give indications on the precision on the Floquet coefficients
+        _display_floquet_cv_info(σ)
+        return σ, nothing, true, 1
+    else
+        C0 = P0
+        C1 = -P1
+        F = LA.svd(C0 - C1)
+        # apply Householder transformation H1 = F.Vt'
+        C0 .= C0 * F.Vt'
+        C1 .= C1 * F.Vt'
+        # Householder transformation H2
+        n0 = norm(C0[:, end])
+        n1 = norm(C1[:, end])
+        X = @. (C0[:, end] / n0 + C1[:, end] / n1) / 2
+        β, V = _reflection(X)
+        LA.reflectorApply!(V, β, C0)
+        LA.reflectorApply!(V, β, C1)
+
+        vals_b = LA.eigvals(C0[2:end, 1:end-1], C1[2:end, 1:end-1])
+
+        vals = Complex{𝒯}[C0[1, end] / C1[1, end]]
+        for ev in vals_b
+            if iszero(ev)
+                push!(vals, Complex{𝒯}(Inf, Inf))
+            else
+                push!(vals, ev)
+            end
+        end
+
+        nev = min(n, nev)
+        logvals = @. -log(Complex(vals))
+        I = sortperm(logvals, by = real, rev = true)[1:nev]
+
+        # floquet exponents
+        σ = logvals[I]
+
+        # give indications on the precision on the Floquet coefficients
+        _display_floquet_cv_info(σ)
+        return σ, nothing, true, 1
     end
-
-    nev = min(n, nev, length(logvals))
-    I = sortperm(logvals, by = real, rev = true)[1:nev]
-
-    # floquet exponents
-    σ = logvals[I]
-
-    # give indications on the precision on the Floquet coefficients
-    _display_floquet_cv_info(σ)
-    return σ, nothing, true, 1
 end
 
 @views function _eig_floquet_coll(J::AbstractMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where {𝒯}
     nbcoll = N * m
-    In = LinearAlgebra.I(N)
+    In = LA.I(N)
 
     # Condensation of parameters:
     # this removes the internal unknowns of each mesh interval
@@ -722,17 +766,13 @@ end
 function _floquetcoll_from_reduced_problem(M, Ntst, N, nev)
     # in theory, it should be multiplied by (-1)ᴺᵗˢᵗ
     factor = iseven(Ntst) ? 1 : -1
-
     # floquet multipliers
     vals = LA.eigvals(M)
-
-    nev = min(N, nev)
     logvals = @. log(Complex(factor * vals))
+    nev = min(N, nev)
     I = sortperm(logvals, by = real, rev = true)[1:nev]
-
     # floquet exponents
     σ = logvals[I]
-
     # give indications on the precision on the Floquet coefficients
     _display_floquet_cv_info(σ)
     return σ, nothing, true, 1

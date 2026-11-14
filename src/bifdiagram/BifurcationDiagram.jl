@@ -214,8 +214,8 @@ function bifurcationdiagram!(prob::AbstractBifurcationProblem,
                 end
                 verbose && _show(stdout, γ0.specialpoint[id], id)
                 
-                # in the case of a Transcritical / Pitchfork bifurcation, we compute the other branch
                 if ~isnothing(γ) && ~halfbranch && ~(γ isa Branch{<: Any, <: Any, <: Vector{ <: ContResult}})
+                # for Transcritical / Pitchfork bifurcation, we compute the other branch
                     bp = from(γ)
                     if bp isa Transcritical
                         γ = _lets_branch_from_bif_point(γ0, id, pt, level, options; _dsfactor = -1, kwargs...)
