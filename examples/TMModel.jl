@@ -34,15 +34,15 @@ plot(br_hopf)
 opts_po_cont = ContinuationPar(opts_br, dsmin = 1e-4, ds = 1e-4, max_steps = 90, tol_stability = 1e-6, detect_bifurcation = 2, plot_every_step = 20)
 
 @views function recordPO(x, p; state, iter, k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
-            period = getperiod(p.prob, x, p.p))
+            period = getperiod(BK.getprob(iter), x, BK.getparams(iter, state)))
 end
 
 # arguments for periodic orbits
 @views function plotSolution(x, p; state, iter, k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, BK.getparams(iter, state))
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; label = "E", k...)
     plot!(xtt.t, xtt[2,:]; label = "x", k...)
     plot!(xtt.t, xtt[3,:]; label = "u", k...)

@@ -71,15 +71,35 @@ function plot_stability_segments!(ax,
     return ax
 end
 
+const _PLOT_KWARGS_DOC = """
+# Keyword arguments
+- `vars = nothing`: `Tuple{Symbol, Symbol}` or `Tuple{Int, Int}` selecting the quantities plotted on the horizontal and vertical axes. A `Symbol` refers to a field of `contres.branch` (for example `(:param, :x1)` or `(:param, :period)`) while an `Int` refers to the index of the recorded solution. Defaults to `(:param, _getfirstusertype(contres))`, i.e. the continuation parameter against the first recorded variable; see `get_plot_vars`.
+- `applytoX = identity`, `applytoY = identity`: functions applied to the horizontal and vertical coordinates before plotting, e.g. `applytoX = inv` to plot the inverse of the parameter.
+- `branchlabel = nothing`: label of the branch in the legend.
+- `branchcolor = nothing`: color of the branch line. It does not affect the colors of the special points.
+- `plotstability = true`: if `true` and stability information is available, the stability along the branch is encoded in the line width, using `linewidthstable` for stable parts and `linewidthunstable` for unstable parts. For branches of periodic orbits, stability is deduced from the type of the bifurcation (e.g. supercriticality); for two-parameter continuations without stability information, the line width is constant.
+- `linewidthunstable = 1`: line width used for the unstable parts of the branch.
+- `linewidthstable = 3linewidthunstable`: line width used for the stable parts of the branch.
+- `dash_unstable_style = false`: if `true`, the unstable parts are drawn with dashed lines (see `plot_stability_segments!`) rather than relying on line widths only.
+- `plotspecialpoints = true`: whether to draw the special points (fold, Hopf, NS, PD, ...) found along the branch.
+- `plotfold = false`: whether to draw fold points. They are hidden by default.
+- `filterspecialpoints = false`: whether to filter out fold/branch points which are too close to each other to avoid overplotting, see `filter_bifurcations`.
+- `plotcirclesbif = true`: whether special points are drawn as circles. If `false`, points whose location is only a guess (`status == :guess`) are drawn as squares, indicating that they have not been refined by bisection.
+- `putspecialptlegend = true`: whether to add one legend entry per type of special point.
+- `kw...`: additional attributes forwarded to the Makie plotting functions (`lines!`, `scatter!`, ...), for example `color`, `linewidth`, `linestyle` or `alpha`.
 """
-$(SIGNATURES)
 
-Plot the branch of solutions.
+"""
+$(TYPEDSIGNATURES)
 
-# Arguments
-- `plotcirclesbif = true`, indicates the special points well determined by bisection (circle) versus not well determined (square).
-- `branchlabel` example `["Fold", "Hopf"]` assigns label to branch.
-- `branchcolor` assign color to a branch without affecting the color of the special points.
+Add the branch of solutions `contres` to the existing Makie axis `ax`. The axis labels are set according to `vars`.
+
+$(_PLOT_KWARGS_DOC)
+
+# Returns
+- `ax`: the Makie axis on which the branch was drawn.
+
+See also [`plot`](@ref) to create a new figure and axis.
 """
 function plot!(ax1, contres::AbstractResult{Tkind, Tprob}; 
                 applytoY = identity, 
@@ -240,6 +260,32 @@ function plot_branch_cont(::BK_Makie,
     fig
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Plot the branch(es) of solutions with the Makie backend. This method is only available after loading Makie (or one of its backends, e.g. `CairoMakie` or `GLMakie`); call it as `BifurcationKit.plot` to avoid a name clash with `Makie.plot`.
+
+The following dispatch variants are supported:
+- `plot(contres::AbstractBranchResult; kwargs...)` plots a single branch, e.g. a [`ContResult`](@ref) returned by [`continuation`](@ref) or a [`Branch`](@ref).
+- `plot(brs::AbstractBranchResult...; branchlabel = [...], kwargs...)` plots several branches on the same axis and adds a legend.
+- `plot(brdc::DCResult; kwargs...)` plots all the branches computed by deflated continuation.
+- `plot(br::Branch{..., <: Vector{<: ContResult}}; kwargs...)` plots all the branches emanating from a multiple bifurcation point.
+- `plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), kwargs...)` plots the branches stored in a bifurcation diagram, see [`bifurcationdiagram`](@ref). `code` selects a subtree (see [`get_branch`](@ref)) and only branches whose level lies in `level` are drawn.
+
+$(_PLOT_KWARGS_DOC)
+
+# Returns
+- `(fig, ax)`: the Makie `Figure` and `Axis` on which the branches were drawn.
+- `nothing` if there is nothing to plot (empty branch or diagram without branch).
+
+# Example
+```julia
+using BifurcationKit, CairoMakie
+br = continuation(prob, PALC(), opts)
+fig, ax = BifurcationKit.plot(br)
+BifurcationKit.plot!(ax, br2; branchcolor = :red)
+```
+"""
 function plot(contres::AbstractBranchResult; kP...)
     if length(contres) == 0
         return
@@ -258,6 +304,14 @@ end
 plot(brdc::DCResult; kP...) = plot(brdc.branches...; kP...)
 
 # allow to plot a Branch holding several branches (from an Nd bifurcation point)
+"""
+$(TYPEDSIGNATURES)
+
+Add all the branches held in `br` (typically arising from an `Nd` bifurcation point) to the Makie axis `ax`. Each branch is drawn with [`plot!`](@ref) and receives the corresponding entry of `branchlabel` if it is provided.
+
+# Returns
+- `ax`: the Makie axis on which the branches were drawn.
+"""
 function plot!(ax1, br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}; kw...) where {Tkind, Tprob}
     for contres in getbranches(br)
         plot!(ax1, Branch(contres, getfield(br, :bp)); kw...)
@@ -284,6 +338,19 @@ end
 
 ####################################################################################################
 # plotting function of the periodic orbits
+"""
+$(TYPEDSIGNATURES)
+
+Plot a space-time representation of a periodic orbit as one or two heatmaps. This is mainly useful for periodic orbits of discretized PDEs.
+
+# Arguments
+- `outpof`: flattened vector containing the space-time solution; its last entry is discarded.
+- `n`: number of spatial points.
+- `M`: number of time steps.
+
+# Keyword arguments
+- `ratio = 2`: number of components stored in `outpof`. With `ratio == 1` a single heatmap is produced; with `ratio == 2` the two components are plotted side by side.
+"""
 function plot_periodic_potrap(outpof, n, M; ratio = 2)
     @assert ratio > 0 "You need at least one component"
     outpo = reshape(outpof[1:end-1], ratio * n, M)
@@ -301,6 +368,20 @@ function plot_periodic_potrap(outpof, n, M; ratio = 2)
 end
 ####################################################################################################
 # plot recipes for the bifurcation diagram
+"""
+$(TYPEDSIGNATURES)
+
+Plot the branches stored in the bifurcation diagram `bd` with the Makie backend. A new figure is created and displayed; see [`bifurcationdiagram`](@ref) for how to compute `bd`.
+
+# Keyword arguments
+- `code = ()`: tuple of indices selecting the subtree to draw, see [`get_branch`](@ref).
+- `level = (-Inf, Inf)`: tuple `(minlevel, maxlevel)`; only branches whose recursion level lies in this range are drawn.
+- `k...`: keyword arguments forwarded to [`plot!`](@ref) for each branch, e.g. any of the plotting keywords accepted by [`plot`](@ref).
+
+# Returns
+- `(fig, ax)`: the Makie `Figure` and `Axis` on which the diagram was drawn.
+- `nothing` if the diagram contains no branch.
+"""
 function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     if ~hasbranch(bd)
         return
@@ -315,6 +396,19 @@ function plot(bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     fig, ax
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Add the branches stored in the bifurcation diagram `bd` (or in the vector of diagrams `bd`) to the Makie axis `ax`.
+
+# Keyword arguments
+- `code = ()`: tuple of indices selecting the subtree to draw, see [`get_branch`](@ref).
+- `level = (-Inf, Inf)`: tuple `(minlevel, maxlevel)`; only branches whose recursion level lies in this range are drawn.
+- `k...`: keyword arguments forwarded to [`plot!`](@ref) for each branch.
+
+# Returns
+- `ax`: the Makie axis on which the branches were drawn.
+"""
 function plot!(ax, bd::BifDiagNode; code = (), level = (-Inf, Inf), k...)
     _plot_bifdiag_makie!(ax, bd; code, level, k...)
     return ax
@@ -345,6 +439,19 @@ function _plot_bifdiag_makie!(ax, bd::Vector{<:BifDiagNode}; code = (), level = 
     end
 end
 ####################################################################################################
+"""
+$(TYPEDSIGNATURES)
+
+Plot the eigenvalues stored along the branch `br` with the Makie backend.
+
+# Arguments
+- `with_param = true`: if `true`, the parameter selected by `var` is used as the horizontal coordinate; otherwise the index along the branch is used.
+
+# Keyword arguments
+- `var = :param`: field of `br.branch` used as the horizontal coordinate. Only used when `with_param = true`.
+- `applyY = identity`: function applied to the eigenvalues before plotting, e.g. `applyY = imag` to plot their imaginary parts.
+- `k...`: attributes forwarded to Makie `series`, e.g. `color` or `linewidth`.
+"""
 function plot_eigenvals(br::AbstractResult, with_param = true; var = :param, applyY = identity, k...)
     p = getproperty(br.branch, var)
     data = mapreduce(x -> applyY.(x.eigenvals), hcat, br.eig)

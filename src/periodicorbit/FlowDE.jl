@@ -1,4 +1,4 @@
-using SciMLBase: remake, ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace as isinplace_sciml
+using SciMLBase: ODEProblem, EnsembleProblem, EnsembleThreads, DAEProblem, isinplace as isinplace_sciml
 import SciMLBase
 
 @with_kw_noshow struct FlowDE{Tprob, Talg, Tjac, TprobMono, TalgMono, Tkwde, Tcb, Tvjp, TR01, TR11, TR20, TR30, Tδ} <: AbstractFlow
@@ -89,8 +89,7 @@ function vector_field(fl::FlowDE, x, pars)
 end
 
 function _flow(x, pars, tm, pb::ODEProblem, alg; kwargs...)
-    _prob = remake(pb; u0 = x, tspan = (zero(tm), tm), p = pars)
-    # the use of concrete_solve makes it compatible with Zygote
+    _prob = SciMLBase.remake(pb; u0 = x, tspan = (zero(tm), tm), p = pars)
     sol = SciMLBase.solve(_prob, alg; save_everystep = false, kwargs...)
     return (t = sol.t[end], u = sol.u[end])
 end
@@ -108,7 +107,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
     _prob_func = (prob, ctx_or_i, _rest...) -> begin
         ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
-        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+        SciMLBase.remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
     end
     _epb = setproperties(fl.odeprob, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
@@ -174,7 +173,7 @@ end
 # this gives access to the full solution
 # this function takes into account a parameter passed to the vector field and returns the full solution from the ODE solver. This is useful in Poincare Shooting to extract the period.
 function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractArray, pars, tm; kw...) where {T1 <: ODEProblem}
-    _prob = remake(fl.odeprob; u0 = x, tspan = (zero(tm), tm), p = pars)
+    _prob = SciMLBase.remake(fl.odeprob; u0 = x, tspan = (zero(tm), tm), p = pars)
     return SciMLBase.solve(_prob, fl.alg; fl.kwargsDE..., kw...)
 end
 
@@ -182,7 +181,7 @@ function evolve(fl::FlowDE{T1}, ::Val{:Full}, x::AbstractMatrix, pars, tm; kw...
     # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
     _prob_func = (prob, ctx_or_i, _rest...) -> begin
         ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
-        remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+        SciMLBase.remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
     end
     _epb = setproperties(fl.odeprob, prob_func = _prob_func)
     return SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), fl.kwargsDE..., kw...)
