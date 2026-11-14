@@ -309,9 +309,9 @@ let
     Jw = @time (BK.jacobian(BK.getprob(br_po), br_po.sol[3].x, @set par_sl.r = br_po.sol[3].p))
     J = (Jw) |> copy
     @test BK._eig_floquet_coll((J),N,m,Ntst,nev)[1] ≈ BK._eig_floquet_coll(sparse(J),N,m,Ntst,nev)[1] atol=1e-10
-    @test BK._eig_floquet_coll_small_n((J),N,m,Ntst,nev,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)))[1] ≈ 
+    @test BK._eig_floquet_coll_small_n((J),N,m,Ntst,nev,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)), true)[1] ≈ 
           BK._eig_floquet_coll((J),N,m,Ntst,2)[1] atol=1e-10
-    @test BK._eig_floquet_coll_small_n((J),N,m,Ntst,nev,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)))[1] ≈ 
+    @test BK._eig_floquet_coll_small_n((J),N,m,Ntst,nev,BK.COPCACHE(BK.get_discretization(BK.getprob(br_po)), Val(0)), true)[1] ≈ 
                 FloquetGEV(DefaultEig(),size(J,1)-1,2)(BK.get_discretization(BK.getprob(br_po)),Jw,2)[1]
 end
 ####################################################################################################

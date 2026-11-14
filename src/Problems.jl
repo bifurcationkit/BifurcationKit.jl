@@ -364,14 +364,17 @@ end
 
 const _dict_doc_string_prob = Dict(
     :BifurcationProblem => "Generic case, the user has to set most options.", 
-    :ODEBifProblem => "Specific to Ordinary Differential Equations  (ODE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
+    :ODEBifProblem => """Specific to Ordinary Differential Equations  (ODE). The options are set accordingly.
+    !!! tip "Continuation parameters"
+        - `nev` is set automatically.
+    🚧🚧 This is work in progress 🚧🚧.""", 
     :PDEBifProblem => "Specific to Partial Differential Equations   (PDE). The options are set accordingly.\n 🚧🚧 This is work in progress 🚧🚧.", 
 )
 
-save_solution_default(x, p) = x
-restore_problem_default(prob, x, pars) = prob
-update_default(args...; kwargs...) = true
-record_sol_default(x, p; kwargs...) = norm(x)
+@inline save_solution_default(x, p) = x
+@inline restore_problem_default(prob, x, pars) = prob
+@inline update_default(args...; kwargs...) = true
+@inline record_sol_default(x, p; kwargs...) = norm(x)
 plot_default(x, p; kwargs...) = nothing              # for Plots.jl
 plot_default(ax, x, p; kwargs...) = nothing, nothing # for Makie.jl
 
