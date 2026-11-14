@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file (hopefully).
 
 ## [0.9.0]
 
-### Breaking changes
+### Breaking changes 
 - `predictor` now returns an `EquilibriumPredictor` (equilibria), a `PeriodicOrbitPredictor` (periodic orbits) or an `EmptyPredictor` (no bifurcated branch, e.g. Fold) instead of method-dependent `NamedTuple`s / `nothing`. The core fields are `x0, x1, pnew, amp` (equilibria) and `orbitguess, pnew, prob, ampfactor, po` (periodic orbits); the method-specific fields are stored in `extras` (a `NamedTuple`, or `nothing`) and accessed as `pred.extras.<name>`. The former `pred.p` alias and the direct `pred.dsfactor` / `pred.δp` / `pred.ζc` accesses are removed: use `pred.pnew` and `pred.extras.<name>`. Code testing `isnothing(pred)` must use `pred isa EmptyPredictor`. The always-one `time_factor` field of the Collocation period-doubling predictor was removed
 - `BifurcationProblem` / `ODEBifProblem` / `PDEBifProblem` have a new field `restore_problem!`; this adds a type parameter, so archives saved with a previous version cannot be reloaded
 - the `a₃₀` coefficient of the Iooss normal form of a branch point of periodic orbit is renamed `c₃`: it is the coefficient of `ξ³` in the equation for `∂ξ`, not a term in the equation for `∂τ`. The `c3 = a30` alias is removed, so `nf.a30` must be replaced by `nf.c3`
