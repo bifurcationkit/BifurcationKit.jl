@@ -163,18 +163,18 @@ end
 # └         ┘
 function solve_bls_block(lbs::BorderingBLS, 
                          J, 
-                         b::NTuple{M, 𝒯vec}, 
-                         c::NTuple{M, 𝒯vec}, 
+                         b::NTuple{M, <:AbstractArray}, 
+                         c::NTuple{M, <:AbstractArray}, 
                          d::AbstractMatrix, 
                          rhst, 
-                         rhsb) where {M, 𝒯vec <: AbstractArray}
+                         rhsb) where {M}
     m = size(d, 1)
     if ~(length(b) == length(c) == m == M)
         error("Linear bordered solver, wrong sizes!")
     end
 
     x1, cv, it = lbs.solver(J, rhst)
-    x2s = Vector{𝒯vec}()
+    x2s = Vector{eltype(b)}()
     its = Int[]
     cv = true
     for ii in eachindex(b)
