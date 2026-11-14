@@ -48,7 +48,7 @@ end
 
 Base.length(b::BorderedArray{𝒯v, T}) where {𝒯v, T} = length(b.u) + length(b.p)
 Base.length(b::BorderedArray{𝒯v, T}) where {𝒯v, T <: Number} = length(b.u) + 1
-Base.length(u::VI.MinimalVec) = mapreduce(length, +, u.vec)
+Base.length(u::VI.MinimalVec) = mapreduce(length, +, u.vec) # TODO: TYPE PYRACY?
 
 VI.inner(a::BorderedArray, b::BorderedArray) = VI.inner(a.u, b.u) + VI.inner(a.p, b.p)
 

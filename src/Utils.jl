@@ -71,8 +71,11 @@ function compute_eigenvalues(eigsolver::AbstractEigenSolver,
                              u0,
                              par,
                              nev = getcontparams(iter).nev; kwargs...)
-    eigsolver(jacobian(getprob(iter), u0, par), nev; iter, state, kwargs...)
+    _compute_eigenvalues(eigsolver, getprob(iter), iter, state, u0, par, nev; kwargs...)
 end
+
+_compute_eigenvalues(eigsolver, prob, iter, state, u0, par, nev; kwargs...) =
+    eigsolver(jacobian(prob, u0, par), nev; iter, state, kwargs...)
 
 function compute_eigenvalues(eigsolver::AbstractEigenSolver, iter::ContIterable, state::ContState; kwargs...)
     # we compute more eigenvalues than the number of unstable eigenvalues in the previous step

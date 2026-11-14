@@ -15,14 +15,14 @@ function continuation(prob::AbstractDAEBifProblem,
     _deflated_continuation(prob, alg, contparams; kwargs...)
 end
 
-function compute_eigenvalues(eigsolver::AbstractEigenSolver, 
-                             iter::ContIterable{Tkind, Tprob},
+function _compute_eigenvalues(eigsolver,
+                             prob::AbstractDAEBifProblem,
+                             iter,
                              state,
                              u0,
                              par,
-                             nev = getcontparams(iter).nev; 
-                             kwargs...) where {Tkind <: AbstractContinuationKind, Tprob <: AbstractDAEBifProblem}
-    prob = getprob(iter)
+                             nev;
+                             kwargs...)
     M = getmassmatrix(prob, getx(state), setparam(iter, getp(state)))
-    return eigsolver(jacobian(getprob(iter), u0, par), M, nev; kwargs...)
+    return eigsolver(jacobian(prob, u0, par), M, nev; kwargs...)
 end
