@@ -22,14 +22,14 @@ br = continuation(prob, PALC(), ContinuationPar(dsmax = 0.05, n_inversion = 8))
 import OrdinaryDiffEq as ODE
 using OrdinaryDiffEqRosenbrock: Rodas5
 
-function record_from_solution(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function record_from_solution(x, p; iter, state, k...)
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
     _max = maximum(xtt[1,:])
     _min = minimum(xtt[1,:])
     return (max = _max,
             min = _min,
             amplitude = _max - _min,
-            period = getperiod(p.prob, x, p.p))
+            period = getperiod(BK.getprob(iter), x, BK.getparams(iter, state)))
 end
 
 begin

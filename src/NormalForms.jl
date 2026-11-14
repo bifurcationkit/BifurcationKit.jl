@@ -399,7 +399,7 @@ function get_normal_form1d(prob::AbstractBifurcationProblem,
 end
 
 get_normal_form1d(br::Branch{Tkind, Tprob, <: ContResult}, ind_bif::Int; kwargs...) where {Tkind, Tprob} = get_normal_form1d(getprob(br), get_contresult(br), ind_bif; kwargs...)
-get_normal_form1d(br::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}, ind_bif::Int; kwargs...) where {Tkind, Tprob} =
+get_normal_form1d(::Branch{Tkind, Tprob, <: Vector{ <: ContResult}}, ::Int; kwargs...) where {Tkind, Tprob} =
     throw(ArgumentError("This `Branch` holds several branches (`Vector{ContResult}`). Select one with `br[k]` (or `getbranches(br)[k]`) before computing the normal form."))
 get_normal_form1d(br::ContResult, ind_bif::Int; kwargs...) = get_normal_form1d(getprob(br), br, ind_bif; kwargs...)
 

@@ -412,7 +412,7 @@ function generate_ci_problem(psh::PoincareShooting,
     for n in normals; n ./= norm(n); end
     @assert length(normals) == length(centers) == M
 
-    probpsh = PoincareShooting(remake(prob_de, p = sol.prob.p), alg, normals, centers; lens = getlens(bifprob), par = sol.prob.p, ksh...)
+    probpsh = PoincareShooting(SciMLBase.remake(prob_de, p = sol.prob.p), alg, normals, centers; lens = getlens(bifprob), par = sol.prob.p, ksh...)
 
     # create initial guess. We have to pass it through the projection R
     cipsh = reduce(vcat, [R(probpsh, centers[k], k) for k in eachindex(centers)])

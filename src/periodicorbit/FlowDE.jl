@@ -107,7 +107,7 @@ function evolve(fl::FlowDE{T1}, x::AbstractArray, pars, tm; kw...) where {T1 <: 
     # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
     _prob_func = (prob, ctx_or_i, _rest...) -> begin
         ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
-        SciMLBase.remake(prob, u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
+        SciMLBase.remake(prob; u0 = x[:, ii], tspan = (zero(eltype(tm[ii])), tm[ii]), p = pars)
     end
     _epb = setproperties(fl.odeprob, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, fl.kwargsDE..., kw...)
@@ -123,7 +123,7 @@ end
 # Differential of the flow, aka JVP
 function _dflow_jvp_serial(x::AbstractVector, pars, dx, tm, pb_monodromy_jvp::ODEProblem, alg; k...)
     n = length(x)
-    _prob = remake(pb_monodromy_jvp; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
+    _prob = SciMLBase.remake(pb_monodromy_jvp; u0 = vcat(x, dx), tspan = (zero(tm), tm), p = pars)
     # the use of concrete_solve makes it compatible with Zygote
     sol = SciMLBase.solve(_prob, alg; save_everystep = false, k...).u[end]
     return (t = tm, u = sol[1:n], du = sol[n+1:end])
@@ -152,7 +152,7 @@ function jvp(fl::FlowDE{T1}, x::AbstractArray, pars, dx, tm;  kw...) where {T1 <
     # Compat: accept both SciMLBase v1/v2 (prob, i, repeat) and v3 (prob, ctx) prob_func signatures.
     _prob_func = (prob, ctx_or_i, _rest...) -> begin
         ii = ctx_or_i isa Integer ? ctx_or_i : ctx_or_i.sim_id
-        remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
+        SciMLBase.remake(prob, u0 = vcat(x[:, ii], dx[:, ii]), tspan = (zero(tm[ii]), tm[ii]), p = pars)
     end
     _epb = setproperties(fl.odeprob_mono, output_func = (sol, _ctx_or_i) -> ((t = sol.t[end], u = sol.u[end][1:N], du = sol.u[end][N+1:end]), false), prob_func = _prob_func)
     sol = SciMLBase.solve(_epb, fl.alg_mono, EnsembleThreads(); trajectories = size(x, 2), save_everystep = false, kw...)

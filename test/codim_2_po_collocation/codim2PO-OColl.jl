@@ -17,11 +17,11 @@ function Pop!(du, X, p, t = 0)
     du
 end
 
-function record_po_coll_codim2(x, p; k...)
-    xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+function record_po_coll_codim2(x, p; iter, state, k...)
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]),
             min = minimum(xtt[1,:]),
-            period = getperiod(p.prob, x, p.p))
+            period = getperiod(BK.getprob(iter), x, BK.getparams(iter, state)))
 end
 
 let

@@ -141,9 +141,13 @@ for (op, at) in (
     end
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-get_periodic_orbit(ns::NSMAProblem,u, p) = get_periodic_orbit(get_wrap_po(ns), u, p)
-get_periodic_orbit(pd::PDMAProblem,u, p) = get_periodic_orbit(get_wrap_po(pd), u, p)
-get_periodic_orbit(lpc::FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}}, u, p) where {Tprob <: AbstractPeriodicOrbitProblem} = get_periodic_orbit(get_wrap_po(lpc), u, p)
+for fn in (:get_periodic_orbit, :getperiod)
+    @eval begin
+        $fn(ns::NSMAProblem,u, p) = $fn(get_wrap_po(ns), u, p)
+        $fn(pd::PDMAProblem,u, p) = $fn(get_wrap_po(pd), u, p)
+        $fn(lpc::FoldMAProblem{ <: FoldMinimallyAugmentedFormulation{Tprob}}, u, p) where {Tprob <: AbstractPeriodicOrbitProblem} = $fn(get_wrap_po(lpc), u, p)
+    end
+end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 get_wrap_po(𝐏𝐛::FoldMAProblem) = get_wrap_po(𝐏𝐛.prob)
 get_wrap_po(𝐌𝐚::FoldMinimallyAugmentedFormulation) = get_wrap_po(𝐌𝐚.prob_vf)

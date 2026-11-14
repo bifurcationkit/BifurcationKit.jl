@@ -33,11 +33,11 @@ sol = ODE.solve(prob_de, alg)
 prob_de = ODE.ODEProblem(Pop!, sol.u[end], (0, 5), par_pop, reltol = 1e-10, abstol = 1e-12)
 sol = ODE.solve(prob_de, Rodas5())
 ################################################################################
-argspo = (record_from_solution = (x, p; k...) -> begin
-        xtt = BK.get_periodic_orbit(p.prob, x, p.p)
+argspo = (record_from_solution = (x, p; iter, state, k...) -> begin
+        xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
         return (max = maximum(xtt[1,:]),
                 min = minimum(xtt[1,:]),
-                period = getperiod(p.prob, x, p.p))
+                period = getperiod(BK.getprob(iter), x, BK.getparams(iter, state)))
     end,)
 ################################################################################
 probsh, cish = generate_ci_problem( Shooting(M=3), deepcopy(prob), deepcopy(prob_de), deepcopy(sol), 2.; 

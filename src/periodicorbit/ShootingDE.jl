@@ -10,7 +10,7 @@ function get_vector_field(odeprob::Union{ODEProblem, DAEProblem})
 end
 get_vector_field(pb::EnsembleProblem) = get_vector_field(pb.prob)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-###                                     STANDARD SHOOTING
+#                                     STANDARD SHOOTING
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _sync_jacobian!(sh) = @reset sh.flow.jacobian = sh.jacobian
 
@@ -83,7 +83,7 @@ function Shooting(prob1::ODEType, alg1, prob2::ODEType, alg2, centers::AbstractV
     _sync_jacobian!(sh)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-###                                     POINCARE SHOOTING
+#                                     POINCARE SHOOTING
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function PoincareShooting(prob::ODEProblem,
                                  alg,

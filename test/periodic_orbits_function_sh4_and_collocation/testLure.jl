@@ -29,17 +29,17 @@ function lurStack(u, p, t = 0.)
     [f[1], f[2], f[3], jvp[1], jvp[2], jvp[3]]
 end
 
-function plotPO(x, p; k...)
-    xtt = get_periodic_orbit(p.prob, x, p.p)
+function plotPO(x, p; iter, state, k...)
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
     plot!(xtt.t, xtt[1,:]; markersize = 2, marker = :d, k...)
     plot!(xtt.t, xtt[2,:]; k...)
     plot!(xtt.t, xtt[3,:]; legend = false, k...)
 end
 
 # record function
-function recordPO(x, p; k...)
-    xtt = get_periodic_orbit(p.prob, x, p.p)
-    period = getperiod(p.prob, x, p.p)
+function recordPO(x, p; iter, state, k...)
+    xtt = BK.get_periodic_orbit(BK.getprob(iter), x, BK.getparams(iter, state))
+    period = getperiod(BK.getprob(iter), x, BK.getparams(iter, state))
     return (max = maximum(xtt[1,:]), min = minimum(xtt[1,:]), period = period)
 end
 ####################################################################################################
