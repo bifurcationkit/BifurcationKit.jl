@@ -349,7 +349,7 @@ function get_bif_point_codim2(br::AbstractResult{Tkind, Tprob}, ind::Int) where 
     p1 = bifpt.x.p1
     p2 = bifpt.param
     parbif = _set(getparams(br), get_lenses(br), (p1, p2))
-    return (x0 = x0, parbif = parbif, saved = saved)
+    return (;x0 , parbif, saved)
 end
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """

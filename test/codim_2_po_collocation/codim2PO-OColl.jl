@@ -244,11 +244,11 @@ end
 
 
 end
-
+################################################################################################
+# test For Chenciner bifurcation
 function SL!(du, u, p, t = 0)
     (;k1, k2, k3, k4, k5, k6, k7, k₋₇, k8) = p
-    A,B,X,Y = u
-
+    A, B, X, Y = u
     du[1] = -k1*A*B*X - k3*A*B*Y + k7 - k₋₇*A
     du[2] = -k1*A*B*X - k3*A*B*Y + k8
     du[3] =  k1*A*B*X - 2*k2*X^2 + 2*k3*A*B*Y - k4*X+k6
@@ -258,7 +258,7 @@ end
 
 let 
 z0 = rand(4)
-par_sl = (k1=0.1631021, k2=1250., k3=0.046875, k4=20., k5=1.104, k6=0.001, k₋₇=0.1175, k7=1.5, k8=0.75)
+par_sl = (k1 = 0.1631021, k2 = 1250., k3 = 0.046875, k4 = 20., k5 = 1.104, k6 = 0.001, k₋₇ = 0.1175, k7 = 1.5, k8 = 0.75)
 bifprob = BK.ODEBifProblem(SL!, z0, par_sl, (@optic _.k8);)
 
 alg_ode = Rodas5()

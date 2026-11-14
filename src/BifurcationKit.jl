@@ -104,6 +104,8 @@ module BifurcationKit
     include("periodicorbit/NormalForms.jl")
 
     # periodic orbit codim 2
+    include("periodicorbit/codim2/BifurcationPoints.jl")
+    include("periodicorbit/codim2/NormalForms.jl")
     include("periodicorbit/codim2/codim2.jl")
     include("periodicorbit/codim2/utils.jl")
     # include("periodicorbit/codim2/PeriodicOrbitTrapeze.jl")
@@ -111,8 +113,6 @@ module BifurcationKit
     include("periodicorbit/codim2/StandardShooting.jl")
     include("periodicorbit/codim2/MinAugPD.jl")
     include("periodicorbit/codim2/MinAugNS.jl")
-    include("periodicorbit/codim2/BifurcationPoints.jl")
-    include("periodicorbit/codim2/NormalForms.jl")
 
     # BVP problem
     include("bvp/BVP.jl")

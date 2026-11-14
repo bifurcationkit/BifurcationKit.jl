@@ -97,7 +97,6 @@ function MonodromyQaD_matrix_free(sh::Shooting, x, p, du::AbstractVector)
     # extract the time slices
     xv = @view x[begin:end-1]
     xc = reshape(xv, N, M)
-
     out = copy(du)
 
     for ii in 1:M  # call the jacobian of the flow
@@ -577,12 +576,6 @@ end
             end
         end
         nev = min(n, nev, length(logvals))
-        I = sortperm(logvals, by = real, rev = true)[1:nev]
-        # floquet exponents
-        σ = logvals[I]
-        # give indications on the precision on the Floquet coefficients
-        _display_floquet_cv_info(σ)
-        return σ, nothing, true, 1
     else
         C0 = P0
         C1 = -P1
@@ -608,18 +601,15 @@ end
                 push!(vals, ev)
             end
         end
-
         nev = min(n, nev)
         logvals = @. -log(Complex(vals))
-        I = sortperm(logvals, by = real, rev = true)[1:nev]
-
-        # floquet exponents
-        σ = logvals[I]
-
-        # give indications on the precision on the Floquet coefficients
-        _display_floquet_cv_info(σ)
-        return σ, nothing, true, 1
     end
+    # floquet exponents
+    I = sortperm(logvals, by = real, rev = true)[1:nev]
+    σ = logvals[I]
+    # give indications on the precision on the Floquet coefficients
+    _display_floquet_cv_info(σ)
+    return σ, nothing, true, 1
 end
 
 @views function _eig_floquet_coll(J::AbstractMatrix{𝒯}, N, m, Ntst, nev, cache = nothing) where {𝒯}

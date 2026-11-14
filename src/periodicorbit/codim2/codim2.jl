@@ -564,7 +564,6 @@ function _continuation(zh::ZeroHopf, br::AbstractResult{Tkind, Tprob},
     )
     return Branch(branch, zh)
 end
-
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # shared implementation for the continuation of PD curves of periodic orbits
 function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
@@ -582,13 +581,13 @@ function _continuation_pd_po(br, ind_bif::Int64, lens2::AllOpticTypes,
     par = setparam(br, bifpt.param)
     pointguess = pd_point(br, ind_bif)
 
-    pbwrap = deepcopy(getprob(br))
-    restore_problem!(pbwrap, bifpt.x, par)
+    powrap = deepcopy(getprob(br))
+    restore_problem!(powrap, bifpt.x, par)
     x0 = saved_solution(pointguess.u)
 
-    (; ζ, ζad) = _init_pd_vectors_minaug(pbwrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
+    (; ζ, ζad) = _init_pd_vectors_minaug(powrap, x0, par, bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
-    return continuation_pd(pbwrap, alg,
+    return continuation_pd(powrap, alg,
         pointguess, par,
         getlens(br), lens2,
         ζ, ζad,
@@ -615,14 +614,14 @@ function _continuation_ns_po(br, ind_bif::Int64, lens2::AllOpticTypes,
     par = setparam(br, bifpt.param)
     pointguess = ns_point(br, ind_bif)
 
-    pbwrap = deepcopy(getprob(br))
-    restore_problem!(pbwrap, bifpt.x, par)
+    powrap = deepcopy(getprob(br))
+    restore_problem!(powrap, bifpt.x, par)
     x0 = saved_solution(pointguess.u)
 
     λ = br.eig[bifpt.idx].eigenvals[bifpt.ind_ev]
-    (; ζ, ζad) = _init_ns_vectors_minaug(pbwrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
+    (; ζ, ζad) = _init_ns_vectors_minaug(powrap, x0, par, imag(λ), bdlinsolver, bdlinsolver, nothing, nothing, norm)
 
-    return continuation_ns(pbwrap, alg,
+    return continuation_ns(powrap, alg,
         pointguess, par,
         getlens(br), lens2,
         ζ, ζad,

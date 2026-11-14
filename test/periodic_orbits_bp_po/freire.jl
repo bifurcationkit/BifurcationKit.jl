@@ -5,10 +5,8 @@ const BK = BifurcationKit
 function freire!(du, u, p, t = 0)
     x, y, z = u
     (;β, ν, γ, a₃, b₃, r) = p
-    
     δ = y - x
     δ³ = δ^3
-    
     du[1] = (-(β + ν) * x + β * y - a₃ * x^3 + b₃ * δ³) / r
     du[2] = β * x - (β + γ) * y - z - b₃ * δ³
     du[3] = y

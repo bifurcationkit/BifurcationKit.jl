@@ -1025,13 +1025,13 @@ function __save_po_solution_coll(coll::Collocation, x, pars)
 end
 
 ####
-function _generate_jacobian(coll::Collocation, J::FullSparseInplace, orbitguess, pars; k...)
+function _generate_jacobian(coll::Collocation, ::FullSparseInplace, orbitguess, pars; k...)
     _J = po_analytical_jacobian_sparse(coll, orbitguess, pars)
     indx = get_blocks(coll, _J)
     return (FullSparseInplace(), _J, indx)
 end
 
-function _generate_jacobian(coll::Collocation, J::DenseAnalyticalInplace, orbitguess, pars; Jcoll_matrix = nothing, k...)
+function _generate_jacobian(coll::Collocation, ::DenseAnalyticalInplace, orbitguess, pars; Jcoll_matrix = nothing, k...)
     _Jcoll_matrix = isnothing(Jcoll_matrix) ? po_analytical_jacobian(coll, orbitguess, pars) : Jcoll_matrix
     return (DenseAnalyticalInplace(), _Jcoll_matrix)
 end
