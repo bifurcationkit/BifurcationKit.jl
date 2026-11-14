@@ -163,6 +163,7 @@ $(TYPEDFIELDS)
 end
 Base.getindex(sol::BVPSolution, i...) = getindex(sol.u, i...)
 Base.axes(sol::BVPSolution, i) = axes(sol.u, i)
+saved_solution(sol::BVPSolution) = sol.u # used for codim 2 NF (R1, R2, ...)
 #━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function restore_problem!(wrap::PeriodicOrbitFunctionalSh, x, pars)
     sh = get_discretization(wrap)

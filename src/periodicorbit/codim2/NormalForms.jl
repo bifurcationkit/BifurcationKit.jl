@@ -42,12 +42,12 @@ for op in (:CuspPO, :R1, :R2, :R3, :R4, :GPD, :FoldNS, :FoldPD, :ChencinerPO)
                                 br,ind_bif;
                                 kwargs_nf...) where {Tprob}
             𝐌𝐚 = 𝐏𝐛.prob
-            powrap = 𝐌𝐚.prob_vf
+            powrap = get_wrap_po(𝐌𝐚)
             (; x0, parbif, saved) = get_bif_point_codim2(br, ind_bif)
             restore_problem!(powrap, saved, parbif)
-            po = get_periodic_orbit(powrap, x0, parbif)
+            # po = get_periodic_orbit(powrap, x0, parbif)
             period = getperiod(powrap, x0, parbif)
-            $op(po, period, parbif, get_lenses(br), nothing, nothing, nothing, powrap, false)
+            $op(x0, period, parbif, get_lenses(br), nothing, nothing, nothing, powrap, false)
         end
     end
 end
