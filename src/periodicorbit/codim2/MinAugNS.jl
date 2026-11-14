@@ -426,8 +426,8 @@ function _init_ns_vectors_minaug(prob, xₙₛ, parₙₛ, ω, bdlinsolver, bdli
         bdlinsolver, bdlinsolver_adjoint,
         L, L★, a, b, VI.zerovector(a), 𝒯)
 
-    @debug "RIGHT EIGENVECTORS" itv norminf(apply(L, v))
-    @debug "LEFT  EIGENVECTORS" itw norminf(apply(L★, w))
+    @debug "RIGHT EIGENVECTORS" itv ω norminf(apply(L, v))
+    @debug "LEFT  EIGENVECTORS" itw ω norminf(apply(L★, w))
 
     ζad = VI.scale(w, 1 / normC(w))
     ζ   = VI.scale(v, 1 / normC(v))

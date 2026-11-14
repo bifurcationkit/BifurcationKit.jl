@@ -156,7 +156,7 @@ module BifurcationKit
     # preconditioner based on deflation
     export PrecPartialSchurKrylovKit, PrecPartialSchurArnoldiMethod
 
-    export BorderedArray, zerovector
+    export BorderedArray
 
     # bordered linear problems
     export MatrixBLS, BorderingBLS, MatrixFreeBLS, LSFromBLS
@@ -171,7 +171,7 @@ module BifurcationKit
     export NewtonPar, Newton, newton, newton_palc, newton_hopf, NonLinearSolution, NewtonConverged
 
     # continuation methods
-    export ContinuationPar, ContResult, continuation, continuation!, continuation_fold, continuation_hopf, continuation_potrap, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
+    export ContinuationPar, ContResult, continuation, continuation!, continuation_fold, continuation_hopf, eigenvec, eigenvals, get_solx, get_solp, bifurcation_points, SpecialPoint
 
     # events
     export ContinuousEvent, DiscreteEvent, PairOfEvents, SetOfEvents, SaveAtEvent, FoldDetectEvent, BifDetectEvent
