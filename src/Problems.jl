@@ -527,8 +527,10 @@ for (op, at, kd) in (
             
             ## Optional argument
             - `R01` correspond to the computation of dₚF. Can be `AutoDiff(), FiniteDifferences()` or a function `dpF(x,par,p)`
+
+            A literal `inplace` keyword gives a concretely typed problem: the constructor propagates constants so the vector field's type is known at compile time.
             """
-            function $op(_F, u0, parms, lens = (@optic _);
+            Base.@constprop :aggressive function $op(_F, u0, parms, lens = (@optic _);
                          jvp = nothing,
                          vjp = nothing,
                          J = nothing,
