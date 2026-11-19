@@ -158,7 +158,14 @@ function corrector!(state::AbstractContinuationState,
                     alg::PALC;
                     kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
-        state.z_pred.p = clamp_predp(state.z_pred.p, it)
+        bound = clamp_predp(state.z_pred.p, it)
+        # The predictor stops where its line meets the bound. Clamping p alone leaves u a full step out, from which
+        # the fixed-parameter corrector can converge onto another branch.
+        if it.contparams.p_min <= state.z.p <= it.contparams.p_max
+            fraction = (bound - state.z.p) / (state.z_pred.p - state.z.p)
+            VI.add!(state.z_pred, state.z, 1 - fraction, fraction)
+        end
+        state.z_pred.p = bound
         return corrector!(state, it, Natural(); kwargs...)
     end
     sol = newton_palc(it, state, getdot(alg); 
@@ -242,6 +249,7 @@ function newton_palc(iter::AbstractContinuationIterable,
         ~flag && @debug "[newton_palc] Linear solver for J did not converge."
         itlineartot += sum(itlinear)
 
+        # F may be undefined outside [p_min, p_max]: the line search rejects a trial there, a full step there stops the corrector
         if linesearch
             line_step = false
             while !line_step && (α > αmin)
@@ -249,6 +257,10 @@ function newton_palc(iter::AbstractContinuationIterable,
                 _copyto!(x_pred, x); x_pred = VI.add!!(x_pred, u, -α)
 
                 p_pred = p - α * up
+                if !(p_min <= p_pred <= p_max)
+                    α /= 2
+                    continue
+                end
                 _copyto!(res_f, residual(prob, x_pred, set(par, paramlens, p_pred)))
 
                 res_n  = N(x_pred, p_pred)
@@ -260,9 +272,7 @@ function newton_palc(iter::AbstractContinuationIterable,
                     end
                     line_step = true
                     _copyto!(x, x_pred)
-
-                    # p = p_pred
-                    p  = clamp(p_pred, p_min, p_max)
+                    p = p_pred
                 else
                     α /= 2
                 end
@@ -274,8 +284,11 @@ function newton_palc(iter::AbstractContinuationIterable,
                 res_n  = N(x, p); res = normAC(res_f, res_n)
             end
         else
+            if !(p_min <= p - up <= p_max)
+                break
+            end
             x = minus!!(x, u)
-            p = clamp(p - up, p_min, p_max)
+            p = p - up
             _copyto!(res_f, residual(prob, x, set(par, paramlens, p)))
             res_n  = N(x, p); res = normAC(res_f, res_n)
         end
