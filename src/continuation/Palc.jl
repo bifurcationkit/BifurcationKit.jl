@@ -70,7 +70,7 @@ Additional information is available on the [website](https://bifurcationkit.gith
 $(TYPEDFIELDS)
 
 """
-@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot} <: AbstractContinuationAlgorithm
+@with_kw struct PALC{Ttang <: AbstractTangentComputation, Tbls <: AbstractLinearSolver, T, Tdot, Tcor} <: AbstractContinuationAlgorithm
     "Tangent (predictor), must be a subtype of `AbstractTangentComputation`. For example `Secant()` or `Bordered()`, etc."
     tangent::Ttang = Secant()
     "`θ` is a parameter in the arclength constraint. It is very **important** to tune it. It should be tuned for the continuation to work properly especially in the case of large problems where the < x - x_0, dx_0 > component in the constraint equation might be favoured too much. Also, large thetas favour p as the corresponding term in N involves the term 1-theta."
@@ -81,6 +81,8 @@ $(TYPEDFIELDS)
     bls::Tbls = MatrixBLS()
     "`dotθ = DotTheta()`, this sets up a dot product `(x, y) -> dot(x, y) / length(x)` used to define the weighted dot product (resp. norm) ``\\|(x, p)\\|^2_\\theta`` in the constraint ``N(x, p)`` (see online docs on [PALC](https://bifurcationkit.github.io/BifurcationKitDocs.jl/dev/PALC/)). This argument can be used to remove the factor `1/length(x)` for example in problems where the dimension of the state space changes (mesh adaptation, ...) or when a specific (FEM) dot product is provided."
     dotθ::Tdot = DotTheta()
+    "Corrector of the bordered system. `nothing` (default) is BifurcationKit's own Newton method [`newton_palc`](@ref); a [`NonlinearSolveCorrector`](@ref) solves it with NonlinearSolve.jl."
+    corrector::Tcor = nothing
 
     @assert ~(tangent isa Constant) "You cannot use a constant predictor with PALC"
     @assert 0 <= θ <= 1 "θ must belong to [0, 1]"
@@ -159,13 +161,20 @@ function corrector!(state::AbstractContinuationState,
                     kwargs...)
     if state.z_pred.p <= it.contparams.p_min || state.z_pred.p >= it.contparams.p_max
         state.z_pred.p = clamp_predp(state.z_pred.p, it)
-        return corrector!(state, it, Natural(); kwargs...)
+        return corrector!(state, it, Natural(false, alg.corrector); kwargs...)
     end
-    sol = newton_palc(it, state, getdot(alg); 
+    sol = _corrector_palc(alg.corrector, it, state, getdot(alg);
                       linearbdalgo = alg.bls, 
                       normN = it.normC, 
                       callback = it.callback_newton, 
                       kwargs...)
+    # a corrector from an interior predictor that converges past a bound (one that leaves `p` free, such as `NonlinearSolveCorrector`)
+    # is corrected at that bound from where it ended, like a predictor past the bound
+    if converged(sol) && !(it.contparams.p_min <= sol.u.p <= it.contparams.p_max)
+        _copyto!(state.z_pred, sol.u)
+        state.z_pred.p = clamp_predp(sol.u.p, it)
+        return corrector!(state, it, Natural(false, alg.corrector); kwargs...)
+    end
 
     # update fields, in particular the `converged` one
     _update_field_but_not_solution!(state, sol)
