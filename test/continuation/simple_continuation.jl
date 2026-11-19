@@ -96,6 +96,17 @@ let
     @test br.param[end] < 1
     @test endpoint(br).status == :guess
 end
+# a NaN ds is never at most dsmin, yet a failed step with one stops continuation instead of halving it forever
+let
+    opts = ContinuationPar(ds = 0.05, dsmin = 1e-3, dsmax = 0.1, p_min = 0., p_max = 2., max_steps = 400, detect_bifurcation = 0)
+    prob = BK.BifurcationProblem((u, p) -> u .- p.λ, [0.], (λ = 0.,), (@optic _.λ))
+    iter = ContIterable(prob, PALC(), opts)
+    state = iterate(iter)[2]
+    state.ds = NaN
+    state.converged = false
+    BK._step_size_control!(state, opts, 0)
+    @test state.stopcontinuation
+end
 ####################################################################################################
 # test continuation algorithm
 let

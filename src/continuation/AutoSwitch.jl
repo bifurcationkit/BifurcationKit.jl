@@ -73,3 +73,5 @@ function corrector!(state::AbstractContinuationState,
     end
     return true
 end
+
+_continuation_cache(alg::AutoSwitch, z, ::Type{T}) where {T} = _continuation_cache(alg.alg, z, T)
